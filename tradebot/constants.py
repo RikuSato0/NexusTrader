@@ -48,11 +48,12 @@ MARKET_URLS = {
             "stream_url": "wss://fstream.binance.com/pm/ws/"
         }
     },
+    
     "okex": {
-        
+        "public": "wss://ws.okx.com:8443/ws/v5/public",
+        "private": "wss://ws.okx.com:8443/ws/v5/private",
+        "business": "wss://ws.okx.com:8443/ws/v5/business",
     }
-
-        
 }
 
 

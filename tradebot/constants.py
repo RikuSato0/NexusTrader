@@ -49,10 +49,17 @@ MARKET_URLS = {
         }
     },
     
-    "okex": {
-        "public": "wss://ws.okx.com:8443/ws/v5/public",
-        "private": "wss://ws.okx.com:8443/ws/v5/private",
-        "business": "wss://ws.okx.com:8443/ws/v5/business",
+    "okx": {
+        "live": {
+            "public": "wss://ws.okx.com:8443/ws/v5/public",
+            "private": "wss://ws.okx.com:8443/ws/v5/private",
+            "business": "wss://ws.okx.com:8443/ws/v5/business",
+        },
+        "demo": {
+            "public": "wss://wspap.okx.com:8443/ws/v5/public",
+            "private": "wss://wspap.okx.com:8443/ws/v5/private",
+            "business": "wss://wspap.okx.com:8443/ws/v5/business",
+        }
     }
 }
 

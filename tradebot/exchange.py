@@ -8,7 +8,7 @@ import asyncio
 
 
 from typing import Any, Dict, List
-from typing import Literal
+from typing import Literal, Callable
 
 
 import orjson
@@ -109,13 +109,13 @@ class BinanceWebsocketManager(WebsocketManager):
             except Exception as e:
                 self.logger.error(f"Error keeping alive {typ} listen key: {e}")
     
-    async def _user_data_stream(self, listen_key:str, typ: Literal['spot', 'linear', 'inverse', 'portfolio']):
+    async def user_data_stream(self, listen_key:str, typ: Literal['spot', 'linear', 'inverse', 'portfolio'], callback: Callable[..., Any] = None, *args, **kwargs):
         stream_url = MARKET_URLS["binance"][typ]['stream_url']
         ws_url = f"{stream_url}{listen_key}"
         
         queue_id = f"{typ}_user_data"
         self.queues[queue_id] = asyncio.Queue()
-        self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=self._user_data_callback)))
+        self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=callback, *args, **kwargs)))
         while True:
             try:
                 async with client.connect(ws_url, ping_interval=5, ping_timeout=5, close_timeout=1, max_queue=24) as websocket:
@@ -163,9 +163,10 @@ class OkxWebsocketManager(WebsocketManager):
     def __init__(self, 
                  config: Dict[str, Any] = None, ping_interval: int = 5, 
                  ping_timeout: int = 5, 
-                 close_timeout: int = 1, max_queue: int = 12):
+                 close_timeout: int = 1, max_queue: int = 12, demo_trade: bool = False):
         super().__init__(config, ping_interval, ping_timeout, close_timeout, max_queue)
         self.rate_limiter = Limiter(3/1)
+        self.demo_trade = demo_trade
         
     def init_login_params(self, api_key: str, passphrase: str, secret: str):
         timestamp = self._get_server_time()
@@ -199,7 +200,7 @@ class OkxWebsocketManager(WebsocketManager):
             try:
                 await self.rate_limiter.wait()
                 async with client.connect(
-                    uri=MARKET_URLS["okex"]["public"],
+                    uri=MARKET_URLS["okx"]["demo"]["public"] if self.demo_trade else MARKET_URLS["okx"]["live"]["public"],
                     ping_interval=self.ping_interval,
                     ping_timeout=self.ping_timeout,
                     close_timeout=self.close_timeout,
@@ -229,7 +230,7 @@ class OkxWebsocketManager(WebsocketManager):
             try:
                 await self.rate_limiter.wait()
                 async with client.connect(
-                    uri=MARKET_URLS["okex"]["private"],
+                    uri=MARKET_URLS["okx"]["demo"]["private"] if self.demo_trade else MARKET_URLS["okx"]["live"]["private"],
                     ping_interval=self.ping_interval,
                     ping_timeout=self.ping_timeout,
                     close_timeout=self.close_timeout,
@@ -258,23 +259,23 @@ class OkxWebsocketManager(WebsocketManager):
                 self.logger.error(f"Error in watch for {queue_id}: {e}")
                 await asyncio.sleep(3)
     
-    # async def _watch_positions(self, typ: Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY"):
-    #     params = [{
-    #         "channel": "positions",
-    #         "instType": typ
-    #     }]
-    #     queue_id = f"{typ}_positions"
-    #     self.queues[queue_id] = asyncio.Queue()
-    #     self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=self._positions_callback)))
-    #     await self._private_subscribe(params, queue_id)
+    async def _watch_positions(self, typ: Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
+        params = [{
+            "channel": "positions",
+            "instType": typ
+        }]
+        queue_id = f"{typ}_positions"
+        self.queues[queue_id] = asyncio.Queue()
+        self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=callback, *args, **kwargs)))
+        await self._private_subscribe(params, queue_id)
     
-    async def _watch_account(self):
+    async def _watch_account(self, callback: Callable[..., Any] = None, *args, **kwargs):
         params = [{
             "channel": "account"
         }]
         queue_id = "account"
         self.queues[queue_id] = asyncio.Queue()
-        self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=self._account_callback)))
+        self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=callback, *args, **kwargs)))
         await self._private_subscribe(params, queue_id)
 
     

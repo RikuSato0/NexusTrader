@@ -2,7 +2,6 @@ import asyncio
 import uvloop
 
 from tradebot.exchange import OkxWebsocketManager
-from tradebot.constants import OKX_API_KEY, OKX_SECRET, OKX_PASSPHRASE
 from tradebot.entity import market
 
 

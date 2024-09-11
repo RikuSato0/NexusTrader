@@ -42,7 +42,7 @@ class RedisPool:
         if self._is_in_docker():
             self.pool = redis.ConnectionPool(host='redis', db=0, password='password')
         else:
-            self.pool = redis.ConnectionPool(host='localhost', port=6739, db=0, password='password')
+            self.pool = redis.ConnectionPool(host='localhost', port=6379, db=0, password='password')
     
     def _is_in_docker(self):
         try:

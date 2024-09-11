@@ -23,6 +23,7 @@ VALID_SYMBOLS = config['symbols']['VALID_SYMBOLS'].split(' ')
 OKX_API_KEY = config['okex_demo']['API_KEY']
 OKX_SECRET = config['okex_demo']['SECRET']
 OKX_PASSPHRASE = config['okex_demo']['PASSPHRASE']
+OKX_USER = config['okex_demo']['USER']
 
 LATENCY = defaultdict(list)
 

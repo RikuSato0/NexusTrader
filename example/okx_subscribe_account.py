@@ -1,15 +1,22 @@
 import asyncio
 import uvloop
 
+
+from tradebot.entity import redis_pool
+from tradebot.entity import Context
 from tradebot.exchange import OkxWebsocketManager
-from tradebot.constants import OKX_API_KEY, OKX_SECRET, OKX_PASSPHRASE
-from tradebot.entity import market
-from pprint import pprint
+from tradebot.constants import OKX_API_KEY, OKX_SECRET, OKX_PASSPHRASE, OKX_USER
+
+rc = redis_pool.get_client()
+rc.flushall()
+context = Context(redis_client=rc, user=OKX_USER)
 
 def cb(msg):
     if "data" in msg:
-        total_eq = msg["data"][0]["totalEq"]
-        print(f"Total Equity: {total_eq}")
+        for asset in msg["data"][0]["details"]:
+            context.portfolio_account[asset["ccy"]] = float(asset["availEq"])
+            print(f"{asset['ccy']}: {asset['availEq']}")
+            print("--------------------")
     
 async def main():
     try:
@@ -25,6 +32,7 @@ async def main():
         while True:
             await asyncio.sleep(1)
     except asyncio.CancelledError:
+        redis_pool.close()
         await okx_ws_manager.close()
         print("Websocket closed.")
 

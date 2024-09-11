@@ -1,0 +1,13 @@
+aiohttp==3.10.5
+asynciolimiter==1.0.0
+ccxt==4.3.90
+msgpack_python==0.5.6
+nats_py==2.9.0
+numpy==2.1.1
+orjson==3.10.7
+pandas==2.2.2
+pytest==8.3.2
+spdlog==2.0.6
+uvloop==0.20.0
+websockets==13.0.1
+redis==5.0.8

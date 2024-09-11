@@ -1,0 +1,22 @@
+version: '3.3'
+services:
+  tradebot:
+    build: .
+    container_name: tradebot
+    depends_on:
+      - redis
+    tty: true
+    stdin_open: true
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass "password"
+
+volumes:
+  redis_data:

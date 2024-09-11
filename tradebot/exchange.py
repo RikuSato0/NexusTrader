@@ -27,6 +27,24 @@ from tradebot.base import ExchangeManager, OrderManager, AccountManager, Websock
 
 
 
+class BybitExchangeManager(ExchangeManager):
+    pass
+
+class BybitOrderManager(OrderManager):
+    pass
+
+class BybitAccountManager(AccountManager):
+    pass
+
+class BybitWebsocketManager(WebsocketManager):
+    pass
+
+
+
+
+
+
+
 
 class BinanceExchangeManager(ExchangeManager):
     pass
@@ -182,11 +200,13 @@ class OkxWebsocketManager(WebsocketManager):
         url = "https://www.okx.com/api/v5/public/time"
         response = requests.get(url)
         if response.status_code == 200:
-            return response.json()['data'][0]['ts']
+            timestamp = int(int(response.json()['data'][0]['ts']) / 1000)
+            return str(timestamp)
         else:
             return ""
     
     async def _subscribe(self, symbol: str, typ: Literal["spot", "linear"], channel: Literal["books", "books5", "bbo-tbt", "trades"], queue_id: str):
+        self.call_test_count += 1
         if typ == "spot":
             s = symbol.replace('/USDT', '-USDT')
         else:
@@ -259,7 +279,7 @@ class OkxWebsocketManager(WebsocketManager):
                 self.logger.error(f"Error in watch for {queue_id}: {e}")
                 await asyncio.sleep(3)
     
-    async def _watch_positions(self, typ: Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
+    async def watch_positions(self, typ: Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
         params = [{
             "channel": "positions",
             "instType": typ
@@ -267,16 +287,15 @@ class OkxWebsocketManager(WebsocketManager):
         queue_id = f"{typ}_positions"
         self.queues[queue_id] = asyncio.Queue()
         self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=callback, *args, **kwargs)))
-        await self._private_subscribe(params, queue_id)
+        self.tasks.append(asyncio.create_task(self._private_subscribe(params, queue_id)))
     
-    async def _watch_account(self, callback: Callable[..., Any] = None, *args, **kwargs):
+    async def watch_account(self, callback: Callable[..., Any] = None, *args, **kwargs):
         params = [{
             "channel": "account"
         }]
         queue_id = "account"
         self.queues[queue_id] = asyncio.Queue()
         self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=callback, *args, **kwargs)))
-        await self._private_subscribe(params, queue_id)
+        self.tasks.append(asyncio.create_task(self._private_subscribe(params, queue_id)))
 
-    
     

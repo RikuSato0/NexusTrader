@@ -21,7 +21,7 @@ API_SECRET_UNI = config['binance_uni']['SECRET']
 VALID_SYMBOLS = config['symbols']['VALID_SYMBOLS'].split(' ')
 
 OKX_API_KEY = config['okex_demo']['API_KEY']
-OKX_API_SECRET = config['okex_demo']['SECRET']
+OKX_SECRET = config['okex_demo']['SECRET']
 OKX_PASSPHRASE = config['okex_demo']['PASSPHRASE']
 
 LATENCY = defaultdict(list)

@@ -51,11 +51,11 @@ class WebsocketManager(ABC):
     async def _subscribe(self, symbol: str, typ: str, channel: str, queue_id: str):
         pass
 
-    async def subscribe(self, symbols: List[str], typ: str, channel: str, callback: Callable[[Dict[str, Any]], None] = None):
+    async def subscribe(self, symbols: List[str], typ: str, channel: str, callback: Callable[[Dict[str, Any]], None] = None, *args, **kwargs):
         for symbol in symbols:
             queue_id = f"{symbol}_{typ}_{channel}"
             self.queues[queue_id] = asyncio.Queue()
-            self.tasks.append(asyncio.create_task(self.consume(queue_id, callback)))
+            self.tasks.append(asyncio.create_task(self.consume(queue_id, callback, *args, **kwargs)))
             self.tasks.append(asyncio.create_task(self._subscribe(symbol, typ, channel, queue_id)))
 
     async def close(self):

@@ -60,43 +60,36 @@ class RedisPool:
 
 @dataclass
 class Account:
-    USDT: float = 0
-    BNB: float = 0
-    FDUSD: float = 0
-    BTC: float = 0
-    ETH: float = 0
-    USDC: float = 0
-
-    def __init__(self, user: str, account_type: Literal['spot', 'future'], redis_client: redis.Redis):
+    def __init__(self, user: str, account_type: Literal['spot', 'linear'], redis_client: redis.Redis):
         self.r = redis_client
         self.account_type = f"{user}:account:{account_type}"
         self.load_account()
 
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
-        if key in self.keys():
-            self.r.hset(f"{self.account_type}", key, getattr(self, key))
+        if key not in ['r', 'account_type']:
+            self.r.hset(f"{self.account_type}", key, value)
             
+    def __getattr__(self, key):
+        if key not in ['r', 'account_type']:
+            value = self.r.hget(f"{self.account_type}", key)
+            if value is not None:
+                return float(value)
+            return 0
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
+
     def __getitem__(self, key):
-        if key in self.keys():
-            return getattr(self, key)
-        else:
-            raise KeyError(f"{key} is not a valid account field.")
+        return getattr(self, key)
 
     def __setitem__(self, key, value):
-        if key in self.keys():
-            setattr(self, key, value)
-        else:
-            raise KeyError(f"{key} is not a valid account field.")
+        setattr(self, key, value)
 
     def keys(self):
-        return [f.name for f in fields(self) if f.name not in ['r', 'account_type']]
+        return [k for k in self.__dict__.keys() if k not in ['r', 'account_type']]
 
     def load_account(self):
-        for key in self.keys():
-            value = self.r.hget(f"{self.account_type}", key)
-            if value:
-                setattr(self, key, float(value))
+        for key, value in self.r.hgetall(f"{self.account_type}").items():
+            setattr(self, key.decode(), float(value))
 
 
 @dataclass
@@ -175,12 +168,13 @@ class Context:
     def __init__(self, user: str, redis_client: redis.Redis):
         self.redis_client = redis_client
         self.user = user
+        self.portfolio_account = Account(user, 'portfolio', self.redis_client) # Portfolio-margin account
         self.spot_account = Account(user, 'spot', self.redis_client)
-        self.futures_account = Account(user, 'future', self.redis_client)
+        self.linear_account = Account(user, 'linear', self.redis_client)
         self.position = PositionDict(user, self.redis_client)
 
     def __setattr__(self, name, value):
-        if name in ['redis_client', 'user', 'spot_account', 'futures_account', 'position']:
+        if name in ['redis_client', 'user', 'portfolio_account', 'spot_account', 'linear_account', 'position']:
             super().__setattr__(name, value)
         else:
             self.__dict__[name] = value

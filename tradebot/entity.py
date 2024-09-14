@@ -7,6 +7,7 @@ import collections
 from pathlib import Path
 
 
+from decimal import Decimal
 from collections import defaultdict
 from typing import Literal, Callable
 from typing import Dict, List, Any
@@ -232,17 +233,50 @@ class RollingDiffSum:
         
 @dataclass(slots=True)
 class Quote:
-    ask: float = 0
-    bid: float = 0
-    ask_vol: float = 0
-    bid_vol: float = 0     
+    _ask: str = '0'
+    _bid: str = '0'
+    _ask_vol: str = '0'
+    _bid_vol: str = '0'
+    
+    @property
+    def ask(self) -> Decimal:
+        return Decimal(self._ask)
+
+    @ask.setter
+    def ask(self, value: str):
+        self._ask = value
+
+    @property
+    def bid(self) -> Decimal:
+        return Decimal(self._bid)
+
+    @bid.setter
+    def bid(self, value: str):
+        self._bid = value
+
+    @property
+    def ask_vol(self) -> Decimal:
+        return Decimal(self._ask_vol)
+
+    @ask_vol.setter
+    def ask_vol(self, value: str):
+        self._ask_vol = value
+
+    @property
+    def bid_vol(self) -> Decimal:
+        return Decimal(self._bid_vol)
+
+    @bid_vol.setter
+    def bid_vol(self, value: str):
+        self._bid_vol = value
+    
 
 
 class MarketDataStore:
     def __init__(self):
         self.quote = defaultdict(Quote)
     
-    def update(self, symbol: str, ask: float, bid: float, ask_vol: float, bid_vol: float):
+    def update(self, symbol: str, ask: str, bid: str, ask_vol: str, bid_vol: str):
         self.quote[symbol] = Quote(
             ask=ask,
             bid=bid,

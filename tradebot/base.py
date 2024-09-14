@@ -1,6 +1,9 @@
 import asyncio
 
 
+import ccxt.pro as ccxtpro
+
+
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any
 from typing import Callable
@@ -10,9 +13,30 @@ from tradebot.entity import log_register
 
 
 class ExchangeManager(ABC):
-    pass
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.api = self._init_exchange()
+        self.market = None
+    
+    def _init_exchange(self) -> ccxtpro.Exchange:
+        try:
+            exchange_class = getattr(ccxtpro, self.config["exchange_id"])
+        except AttributeError:
+            raise AttributeError(f"Exchange {self.config['exchange_id']} is not supported")
+        
+        api = exchange_class(self.config)
+        api.set_sandbox_mode(self.config.get("sandbox", False)) # Set sandbox mode if demo trade is enabled
+        
+        return api
+    
+    async def load_markets(self):
+        self.market = await self.api.load_markets()
+        return self.market
 
-
+    async def close(self):
+        await self.api.close()
+    
+        
 class AccountManager(ABC):
     pass
 
@@ -34,7 +58,7 @@ class WebsocketManager(ABC):
         if config:
             self.api_key = config.get("apiKey", None)
             self.secret = config.get("secret", None)
-            self.passphrase = config.get("passphrase", None)
+            self.password = config.get("password", None)
         
         self.logger = log_register.get_logger(self.__class__.__name__, level="INFO", flush=True)
         

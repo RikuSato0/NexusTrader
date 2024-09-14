@@ -42,10 +42,6 @@ class BybitWebsocketManager(WebsocketManager):
 
 
 
-
-
-
-
 class BinanceExchangeManager(ExchangeManager):
     pass
 
@@ -206,7 +202,19 @@ class OkxWebsocketManager(WebsocketManager):
             return ""
     
     async def _subscribe(self, symbol: str, typ: Literal["spot", "linear"], channel: Literal["books", "books5", "bbo-tbt", "trades"], queue_id: str):
-        self.call_test_count += 1
+        """
+        Subscribes to a specific symbol and channel on the exchange WebSocket.
+        Api documentation: https://www.okx.com/docs-v5/en/#order-book-trading-market-data-ws-order-book-channel
+        
+        Args:
+            symbol (str): The trading symbol to subscribe to.
+            typ (Literal["spot", "linear"]): The type of trading (spot or linear).
+            channel (Literal["books", "books5", "bbo-tbt", "trades"]): The channel to subscribe to.
+            queue_id (str): The ID of the queue to store the received messages.
+            
+        Returns:
+            None
+        """
         if typ == "spot":
             s = symbol.replace('/USDT', '-USDT')
         else:
@@ -258,7 +266,7 @@ class OkxWebsocketManager(WebsocketManager):
                 ) as ws:
                     self.logger.info(f"Connected to {queue_id}")
                     
-                    login_payload = self.init_login_params(self.api_key, self.passphrase, self.secret)
+                    login_payload = self.init_login_params(self.api_key, self.password, self.secret)
                     await ws.send(login_payload)
                     await asyncio.sleep(5) # wait for login 
                     payload = json.dumps({
@@ -298,4 +306,13 @@ class OkxWebsocketManager(WebsocketManager):
         self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=callback, *args, **kwargs)))
         self.tasks.append(asyncio.create_task(self._private_subscribe(params, queue_id)))
 
+    async def watch_orders(self, typ: Literal["SPOT", "MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
+        params = [{
+            "channel": "orders",
+            "instType": typ
+        }]
+        queue_id = f"{typ}_orders"
+        self.queues[queue_id] = asyncio.Queue()
+        self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=callback, *args, **kwargs)))
+        self.tasks.append(asyncio.create_task(self._private_subscribe(params, queue_id)))
     

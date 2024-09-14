@@ -16,14 +16,14 @@ def cb(msg):
         for asset in msg["data"][0]["details"]:
             context.portfolio_account[asset["ccy"]] = float(asset["availEq"])
             print(f"{asset['ccy']}: {asset['availEq']}")
-            print("--------------------")
+        print("--------------------")
     
 async def main():
     try:
         config = {
             'apiKey': OKX_API_KEY,
             'secret': OKX_SECRET,
-            'passphrase': OKX_PASSPHRASE
+            'password': OKX_PASSPHRASE
         }
         
         okx_ws_manager = OkxWebsocketManager(config=config, demo_trade=True)

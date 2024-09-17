@@ -5,6 +5,12 @@ from tradebot.exchange import BinanceWebsocketManager
 from tradebot.entity import log_register
 from tradebot.constants import MARKET_URLS
 
+# ratio description
+
+# 1. calulate the ratio of future price and spot price
+# 2. add ratio to a rolling window of size 20
+# 3. calculate the mean of the rolling window
+
 log = log_register.get_logger("BTCUSDT", level="INFO", flush=False)
 
 spot_stream = Stream()
@@ -13,9 +19,7 @@ future_stream = Stream()
 window_size = 20
 
 ratio = spot_stream.combine_latest(future_stream).map(lambda x: float(x[1]['p']) / float(x[0]['p']) - 1)
-
-# print moving average of window_size 20
-mean = ratio.sliding_window(window_size).map(lambda window: np.median(window)).sink(print) 
+mean = ratio.sliding_window(window_size).map(lambda window: np.mean(window)).sink(lambda x: print(f"Ratio Mean: {x:.8f}")) 
 
 
 def cb_future(msg):

@@ -20,14 +20,13 @@ def cb(msg):
     
 async def main():
     try:
-        config = {
-            'apiKey': OKX_API_KEY,
-            'secret': OKX_SECRET,
-            'password': OKX_PASSPHRASE
-        }
-        
-        okx_ws_manager = OkxWebsocketManager(config=config, demo_trade=True)
-        await okx_ws_manager.watch_account(callback=cb)
+        okx_ws_manager = OkxWebsocketManager(
+            base_url="wss://wspap.okx.com:8443/ws/v5",
+            api_key=OKX_API_KEY,
+            secret=OKX_SECRET,
+            passphrase=OKX_PASSPHRASE,
+        )
+        await okx_ws_manager.subscribe_account(callback=cb)
         
         while True:
             await asyncio.sleep(1)

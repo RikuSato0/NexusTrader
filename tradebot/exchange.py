@@ -214,6 +214,11 @@ class OkxWebsocketManager:
         
         
     async def _subscribe(self, payload: Dict[str, Any], subscription_id: str, auth: bool = False):
+        if auth:
+            self._base_url = f"{self._base_url}/private"
+        else:
+            self._base_url = f"{self._base_url}/public"
+            
         async for websocket in websockets.connect(
             uri = self._base_url,
             ping_interval=self._ping_interval,
@@ -223,8 +228,9 @@ class OkxWebsocketManager:
         ):
             try:
                 if auth:
-                    payload = self._get_auth_payload()
-                    await websocket.send(payload)
+                    auth_payload = self._get_auth_payload()
+                    await websocket.send(auth_payload)
+                    await asyncio.sleep(5)
                 payload = json.dumps(payload)
                 await websocket.send(payload)
                 async for msg in websocket:
@@ -283,6 +289,37 @@ class OkxWebsocketManager:
             self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id)))
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
+            
+    async def subscribe_account(self, callback: Callable[..., Any] = None, *args, **kwargs):
+        subscription_id = "account"
+        payload = {
+            "op": "subscribe",
+            "args": [{
+                "channel": "account"
+            }]
+        }
+        if subscription_id not in self._subscripions:
+            self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
+            self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id, auth=True)))
+        else:
+            self._log.info(f"Already subscribed to {subscription_id}")
+    
+    async def subscribe_position(self, inst_type:Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
+        subscription_id = "position"
+        payload = {
+            "op": "subscribe",
+            "args": [{
+                "channel": "positions",
+                "instType": inst_type
+            }]
+        }
+        if subscription_id not in self._subscripions:
+            self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
+            self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id, auth=True)))
+        else:
+            self._log.info(f"Already subscribed to {subscription_id}")
+    
+    
     
     async def close(self):
         for task in self._tasks:

@@ -21,7 +21,7 @@ def cb(msg):
 async def main():
     try:
         okx_ws_manager = OkxWebsocketManager(
-            base_url="wss://wspap.okx.com:8443/ws/v5",
+            base_url="wss://wspap.okx.com:8443/ws",
             api_key=OKX_API_KEY,
             secret=OKX_SECRET,
             passphrase=OKX_PASSPHRASE,

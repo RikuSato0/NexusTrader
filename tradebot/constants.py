@@ -59,6 +59,11 @@ MARKET_URLS = {
             "private": "wss://ws.okx.com:8443/ws/v5/private",
             "business": "wss://ws.okx.com:8443/ws/v5/business",
         },
+        "aws": {
+            "public": "wss://wsaws.okx.com:8443/ws/v5/public",
+            "private": "wss://wsaws.okx.com:8443/ws/v5/private",
+            "business": "wss://wsaws.okx.com:8443/ws/v5/business",
+        },
         "demo": {
             "public": "wss://wspap.okx.com:8443/ws/v5/public",
             "private": "wss://wspap.okx.com:8443/ws/v5/private",

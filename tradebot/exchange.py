@@ -245,157 +245,47 @@ class OkxWebsocketManager:
         payload = {"op": "login", "args": [arg]}
         return json.dumps(payload)
 
+    async def _consume(self, subscription_id: str, callback: Callable[..., Any] = None, *args, **kwargs):
+        while True:
+            msg = await self._subscripions[subscription_id].get()
+            if asyncio.iscoroutinefunction(callback):
+                await callback(msg, *args, **kwargs)
+            else:
+                callback(msg, *args, **kwargs)
+            self._subscripions[subscription_id].task_done()
     
-
-
-
-
-
-
-
-
-
-
-# class OkxWebsocketManager(WebsocketManager):
-#     def __init__(self, 
-#                  config: Dict[str, Any] = None, ping_interval: int = 5, 
-#                  ping_timeout: int = 5, 
-#                  close_timeout: int = 1, max_queue: int = 12, demo_trade: bool = False):
-#         super().__init__(config, ping_interval, ping_timeout, close_timeout, max_queue)
-#         self.rate_limiter = Limiter(3/1)
-#         self.demo_trade = demo_trade
-        
-#     def init_login_params(self, api_key: str, passphrase: str, secret: str):
-#         timestamp = self._get_server_time()
-#         message = str(timestamp) + 'GET' + '/users/self/verify'
-#         mac = hmac.new(bytes(secret, encoding='utf8'), bytes(message, encoding='utf-8'), digestmod='sha256')
-#         d = mac.digest()
-#         sign = base64.b64encode(d)
-#         arg = {"apiKey": api_key, "passphrase": passphrase, "timestamp": timestamp, "sign": sign.decode("utf-8")}
-#         payload = {"op": "login", "args": [arg]}
-#         return json.dumps(payload)
-
-#     def _get_server_time(self):
-#         url = "https://www.okx.com/api/v5/public/time"
-#         response = requests.get(url)
-#         if response.status_code == 200:
-#             timestamp = int(int(response.json()['data'][0]['ts']) / 1000)
-#             return str(timestamp)
-#         else:
-#             return ""
+    async def subscribe_order_book(self, symbol: str, channel: Literal["books", "books5", "bbo-tbt", "books-l2-tbt", "books50-l2-tbt"], callback: Callable[..., Any] = None, *args, **kwargs):
+        subscription_id = f"{channel}.{symbol}"
+        payload = {
+            "op": "subscribe",
+            "args": [{
+                "channel": channel,
+                "instId": symbol
+            }]
+        }
+        if subscription_id not in self._subscripions:
+            self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
+            self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id)))
+        else:
+            self._log.info(f"Already subscribed to {subscription_id}")
     
-#     async def _subscribe(self, symbol: str, typ: Literal["spot", "linear"], channel: Literal["books", "books5", "bbo-tbt", "trades"], queue_id: str):
-#         """
-#         Subscribes to a specific symbol and channel on the exchange WebSocket.
-#         Api documentation: https://www.okx.com/docs-v5/en/#order-book-trading-market-data-ws-order-book-channel
-        
-#         Args:
-#             symbol (str): The trading symbol to subscribe to.
-#             typ (Literal["spot", "linear"]): The type of trading (spot or linear).
-#             channel (Literal["books", "books5", "bbo-tbt", "trades"]): The channel to subscribe to.
-#             queue_id (str): The ID of the queue to store the received messages.
-            
-#         Returns:
-#             None
-#         """
-#         if typ == "spot":
-#             s = symbol.replace('/USDT', '-USDT')
-#         else:
-#             s = symbol.replace('/USDT', '-USDT-SWAP')
-#         params = [{
-#             "channel": channel,
-#             "instId": s
-#         }]
-        
-#         while True:
-#             try:
-#                 await self.rate_limiter.wait()
-#                 async with client.connect(
-#                     uri=MARKET_URLS["okx"]["demo"]["public"] if self.demo_trade else MARKET_URLS["okx"]["live"]["public"],
-#                     ping_interval=self.ping_interval,
-#                     ping_timeout=self.ping_timeout,
-#                     close_timeout=self.close_timeout,
-#                     max_queue=self.max_queue
-#                 ) as ws:
-#                     self.logger.info(f"Connected to {symbol} for {queue_id}")
-#                     payload = json.dumps({
-#                         "op": "subscribe",
-#                         "args": params
-#                     })
-#                     await ws.send(payload)
-                    
-#                     async for msg in ws:
-#                         msg = orjson.loads(msg)
-#                         await self.queues[queue_id].put(msg)
-#             except websockets.exceptions.ConnectionClosed as e:
-#                 self.logger.info(f"Connection closed for {queue_id}. Reconnecting...")
-#             except asyncio.CancelledError:
-#                 self.logger.info(f"Cancelling watch task for {queue_id}")
-#                 break
-#             except Exception as e:
-#                 self.logger.error(f"Error in watch for {queue_id}: {e}")
-#                 await asyncio.sleep(3)
+    async def subscribe_trade(self, symbol: str, callback: Callable[..., Any] = None, *args, **kwargs):
+        subscription_id = f"trades.{symbol}"
+        payload = {
+            "op": "subscribe",
+            "args": [{
+                "channel": "trades",
+                "instId": symbol
+            }]
+        }
+        if subscription_id not in self._subscripions:
+            self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
+            self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id)))
+        else:
+            self._log.info(f"Already subscribed to {subscription_id}")
     
-#     async def _private_subscribe(self, params: List[Dict[str, Any]], queue_id: str):
-#         while True:
-#             try:
-#                 await self.rate_limiter.wait()
-#                 async with client.connect(
-#                     uri=MARKET_URLS["okx"]["demo"]["private"] if self.demo_trade else MARKET_URLS["okx"]["live"]["private"],
-#                     ping_interval=self.ping_interval,
-#                     ping_timeout=self.ping_timeout,
-#                     close_timeout=self.close_timeout,
-#                     max_queue=self.max_queue
-#                 ) as ws:
-#                     self.logger.info(f"Connected to {queue_id}")
-                    
-#                     login_payload = self.init_login_params(self.api_key, self.password, self.secret)
-#                     await ws.send(login_payload)
-#                     await asyncio.sleep(5) # wait for login 
-#                     payload = json.dumps({
-#                         "op": "subscribe",
-#                         "args": params
-#                     })
-#                     await ws.send(payload)
-                    
-#                     async for msg in ws:
-#                         msg = orjson.loads(msg)
-#                         await self.queues[queue_id].put(msg)
-#             except websockets.exceptions.ConnectionClosed as e:
-#                 self.logger.info(f"Connection closed for {queue_id}. Reconnecting...")
-#             except asyncio.CancelledError:
-#                 self.logger.info(f"Cancelling watch task for {queue_id}")
-#                 break
-#             except Exception as e:
-#                 self.logger.error(f"Error in watch for {queue_id}: {e}")
-#                 await asyncio.sleep(3)
-    
-#     async def watch_positions(self, typ: Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
-#         params = [{
-#             "channel": "positions",
-#             "instType": typ
-#         }]
-#         queue_id = f"{typ}_positions"
-#         self.queues[queue_id] = asyncio.Queue()
-#         self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=callback, *args, **kwargs)))
-#         self.tasks.append(asyncio.create_task(self._private_subscribe(params, queue_id)))
-    
-#     async def watch_account(self, callback: Callable[..., Any] = None, *args, **kwargs):
-#         params = [{
-#             "channel": "account"
-#         }]
-#         queue_id = "account"
-#         self.queues[queue_id] = asyncio.Queue()
-#         self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=callback, *args, **kwargs)))
-#         self.tasks.append(asyncio.create_task(self._private_subscribe(params, queue_id)))
-
-#     async def watch_orders(self, typ: Literal["SPOT", "MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
-#         params = [{
-#             "channel": "orders",
-#             "instType": typ
-#         }]
-#         queue_id = f"{typ}_orders"
-#         self.queues[queue_id] = asyncio.Queue()
-#         self.tasks.append(asyncio.create_task(self.consume(queue_id, callback=callback, *args, **kwargs)))
-#         self.tasks.append(asyncio.create_task(self._private_subscribe(params, queue_id)))
-    
+    async def close(self):
+        for task in self._tasks:
+            task.cancel()
+        await asyncio.gather(*self._tasks, return_exceptions=True)
+        self._log.info("All WebSocket connections closed.")

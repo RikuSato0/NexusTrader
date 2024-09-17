@@ -215,9 +215,9 @@ class OkxWebsocketManager:
         
     async def _subscribe(self, payload: Dict[str, Any], subscription_id: str, auth: bool = False):
         if auth:
-            self._base_url = f"{self._base_url}/private"
+            self._base_url = f"{self._base_url}/v5/private"
         else:
-            self._base_url = f"{self._base_url}/public"
+            self._base_url = f"{self._base_url}/v5/public"
             
         async for websocket in websockets.connect(
             uri = self._base_url,

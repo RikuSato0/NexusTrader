@@ -23,15 +23,15 @@ def cb(msg):
 async def main():
     try:
         # For Production Trading Url
-        # Base url: "wss://ws.okx.com:8443/ws/v5"
+        # Base url: "wss://ws.okx.com:8443/ws"
         
         # For AWS Trading Url
-        # Base url: "wss://wsaws.okx.com:8443/ws/v5"
+        # Base url: "wss://wsaws.okx.com:8443/ws"
         
         # For Demo Trading Url
-        # Base url: "wss://wspap.okx.com:8443/ws/v5"
+        # Base url: "wss://wspap.okx.com:8443/ws"
         
-        okx = OkxWebsocketManager(base_url="wss://ws.okx.com:8443/ws/v5")
+        okx = OkxWebsocketManager(base_url="wss://ws.okx.com:8443/ws")
         await okx.subscribe_order_book("BTC-USDT-SWAP", channel="bbo-tbt", callback=cb)
         while True:
             await asyncio.sleep(1)

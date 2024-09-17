@@ -24,7 +24,7 @@ from websockets.asyncio import client
 from tradebot.constants import MARKET_URLS
 from tradebot.entity import log_register
 from tradebot.entity import EventSystem
-from tradebot.base import ExchangeManager, OrderManager, AccountManager
+from tradebot.base import ExchangeManager, OrderManager, AccountManager, WebsocketManager
 
 
 
@@ -52,17 +52,15 @@ class BinanceOrderManager(OrderManager):
 class BinanceAccountManager(AccountManager):
     pass
 
-class BinanceWebsocketManager:
+class BinanceWebsocketManager(WebsocketManager):
     def __init__(self, base_url: str):
-        self._base_url = base_url
-        self._ping_interval = 5
-        self._ping_timeout = 5
-        self._close_timeout = 1
-        self._max_queue = 12
-        
-        self._tasks: List[asyncio.Task] = []
-        self._subscripions = defaultdict(asyncio.Queue)
-        self._log = log_register.get_logger(name=type(self).__name__, level="INFO", flush=True)
+        super().__init__(
+            base_url=base_url,
+            ping_interval=5,
+            ping_timeout=5,
+            close_timeout=1,
+            max_queue=12,
+        )
     
     async def _subscribe(self, payload: Dict[str, Any], subscription_id: str):
         async for websocket in websockets.connect(
@@ -80,15 +78,6 @@ class BinanceWebsocketManager:
                     await self._subscripions[subscription_id].put(msg)
             except websockets.ConnectionClosed:
                 self._log.error(f"Connection closed, reconnecting...")
-    
-    async def _consume(self, subscription_id: str, callback: Callable[..., Any] = None, *args, **kwargs):
-        while True:
-            msg = await self._subscripions[subscription_id].get()
-            if asyncio.iscoroutinefunction(callback):
-                await callback(msg, *args, **kwargs)
-            else:
-                callback(msg, *args, **kwargs)
-            self._subscripions[subscription_id].task_done()
     
     async def subscribe_book_ticker(self, symbol: str, callback: Callable[..., Any] = None, *args, **kwargs):
         subscription_id = f"book_ticker.{symbol}"
@@ -144,36 +133,6 @@ class BinanceWebsocketManager:
     async def subscribe_agg_trades(self, symbols: List[str], callback: Callable[..., Any] = None, *args, **kwargs):
         for symbol in symbols:
             await self.subscribe_agg_trade(symbol, callback=callback, *args, **kwargs)
-    
-    async def close(self):
-        for task in self._tasks:
-            task.cancel()
-        await asyncio.gather(*self._tasks, return_exceptions=True)
-        self._log.info("All WebSocket connections closed.")
-    
-        
-    
-    
-            
-                
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -188,29 +147,19 @@ class OkxOrderManager(OrderManager):
 class OkxAccountManager(AccountManager):
     pass
 
-
-
-
-
-
-
-
-
-class OkxWebsocketManager:
+class OkxWebsocketManager(WebsocketManager):
     def __init__(self, base_url: str, api_key: str = None, secret: str = None, passphrase: str = None):
-        self._base_url = base_url
-        self._ping_interval = 5
-        self._ping_timeout = 5
-        self._close_timeout = 1
-        self._max_queue = 12
+        super().__init__(
+            base_url=base_url,
+            ping_interval=5,
+            ping_timeout=5,
+            close_timeout=1,
+            max_queue=12,
+        )
         
         self._api_key = api_key
         self._secret = secret
         self._passphrase = passphrase
-        
-        self._tasks: List[asyncio.Task] = []
-        self._subscripions = defaultdict(asyncio.Queue)
-        self._log = log_register.get_logger(name=type(self).__name__, level="INFO", flush=True)
         
         
     async def _subscribe(self, payload: Dict[str, Any], subscription_id: str, auth: bool = False):
@@ -318,11 +267,3 @@ class OkxWebsocketManager:
             self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id, auth=True)))
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
-    
-    
-    
-    async def close(self):
-        for task in self._tasks:
-            task.cancel()
-        await asyncio.gather(*self._tasks, return_exceptions=True)
-        self._log.info("All WebSocket connections closed.")

@@ -18,10 +18,6 @@ future_stream = Stream()
 
 window_size = 20
 
-ratio = spot_stream.combine_latest(future_stream).map(lambda x: float(x[1]['p']) / float(x[0]['p']) - 1)
-mean = ratio.sliding_window(window_size).map(lambda window: np.mean(window)).sink(lambda x: print(f"Ratio Mean: {x:.8f}")) 
-
-
 def cb_future(msg):
     if "e" in msg:
         future_stream.emit(msg)
@@ -36,6 +32,9 @@ async def main():
         ws_um_client = BinanceWebsocketManager(base_url = "wss://fstream.binance.com/ws")
         await ws_um_client.subscribe_trade("BTCUSDT", callback=cb_future)
         await ws_spot_client.subscribe_trade("BTCUSDT", callback=cb_spot)
+        
+        ratio = spot_stream.combine_latest(future_stream).map(lambda x: float(x[1]['p']) / float(x[0]['p']) - 1)
+        ratio.sliding_window(window_size).map(lambda window: np.mean(window)).sink(lambda x: print(f"Ratio Mean: {x:.8f}")) 
         # await ws_client.subscribe_book_ticker("ETHUSDT", callback=cb)
         # await ws_client.subscribe_agg_trades(["BTCUSDT", "ETHUSDT"], callback=cb)
         while True:

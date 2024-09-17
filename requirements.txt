@@ -11,3 +11,4 @@ spdlog==2.0.6
 uvloop==0.20.0
 websockets==13.0.1
 redis==5.0.8
+streamz==0.6.4

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from decimal import Decimal
 from collections import defaultdict
-from typing import Literal, Callable
+from typing import Literal, Callable, Union
 from typing import Dict, List, Any
 from dataclasses import dataclass, fields, asdict
 
@@ -69,14 +69,14 @@ class Account:
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
         if key not in ['r', 'account_type']:
-            self.r.hset(f"{self.account_type}", key, value)
+            self.r.hset(f"{self.account_type}", key, str(value))
             
     def __getattr__(self, key):
         if key not in ['r', 'account_type']:
             value = self.r.hget(f"{self.account_type}", key)
             if value is not None:
-                return float(value)
-            return 0
+                return Decimal(value.decode())
+            return Decimal('0')
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
 
     def __getitem__(self, key):
@@ -90,26 +90,44 @@ class Account:
 
     def load_account(self):
         for key, value in self.r.hgetall(f"{self.account_type}").items():
-            setattr(self, key.decode(), float(value))
+            setattr(self, key.decode(), Decimal(value.decode()))
 
 
 @dataclass
 class Position:
     symbol: str = None
-    amount: float = 0.0
-    last_price: float = 0.0
-    avg_price: float = 0.0
-    total_cost: float = 0.0
+    amount: Decimal = Decimal('0')
+    last_price: Decimal = Decimal('0')
+    avg_price: Decimal = Decimal('0')
+    total_cost: Decimal = Decimal('0')
 
-    def update(self, order_amount, order_price):
+    def update(self, order_amount: Union[str, float, Decimal], order_price: Union[str, float, Decimal]):
+        order_amount = Decimal(str(order_amount))
+        order_price = Decimal(str(order_price))
+        
         self.total_cost += order_amount * order_price
         self.amount += order_amount
-        self.avg_price = self.total_cost / self.amount if self.amount != 0 else 0
+        self.avg_price = self.total_cost / self.amount if self.amount != 0 else Decimal('0')
         self.last_price = order_price
 
     @classmethod
     def from_dict(cls, data):
-        return cls(**data)
+        return cls(
+            symbol=data['symbol'],
+            amount=Decimal(str(data['amount'])),
+            last_price=Decimal(str(data['last_price'])),
+            avg_price=Decimal(str(data['avg_price'])),
+            total_cost=Decimal(str(data['total_cost']))
+        )
+
+    def to_dict(self):
+        return {
+            'symbol': self.symbol,
+            'amount': str(self.amount),
+            'last_price': str(self.last_price),
+            'avg_price': str(self.avg_price),
+            'total_cost': str(self.total_cost)
+        }
 
 
 class PositionDict:
@@ -125,7 +143,7 @@ class PositionDict:
         return Position(symbol=symbol)
 
     def __setitem__(self, symbol: str, position: Position):
-        self.r.hset(self.key, symbol, orjson.dumps(asdict(position)))
+        self.r.hset(self.key, symbol, orjson.dumps(position.to_dict()))
 
     def __delitem__(self, symbol: str):
         self.r.hdel(self.key, symbol)
@@ -136,11 +154,11 @@ class PositionDict:
     def __iter__(self):
         return iter([k.decode('utf-8') for k in self.r.hkeys(self.key)])
 
-    def update(self, symbol: str, order_amount: float, order_price: float):
+    def update(self, symbol: str, order_amount: Union[str, float, Decimal], order_price: Union[str, float, Decimal]):
         position = self[symbol]
         position.update(order_amount, order_price)
         
-        if abs(position.amount) <= 1e-8:
+        if abs(position.amount) <= Decimal('1e-8'):
             del self[symbol]
         else:
             self[symbol] = position

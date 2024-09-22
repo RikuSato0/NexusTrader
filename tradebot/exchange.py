@@ -1,4 +1,5 @@
 import base64
+from decimal import Decimal
 import hmac
 import json
 import time
@@ -12,16 +13,17 @@ from typing import Any, Dict, List
 from typing import Literal, Callable
 
 
+
 import orjson
 import aiohttp
 import websockets
-
+import ccxt.pro as ccxtpro
 
 from asynciolimiter import Limiter
 from websockets.asyncio import client
 
 
-from tradebot.constants import MARKET_URLS
+from tradebot.constants import MARKET_URLS, IntervalType
 from tradebot.entity import log_register
 from tradebot.entity import EventSystem
 from tradebot.base import ExchangeManager, OrderManager, AccountManager, WebsocketManager
@@ -45,9 +47,24 @@ class BybitWebsocketManager:
 
 class BinanceExchangeManager(ExchangeManager):
     pass
+    
+    
 
 class BinanceOrderManager(OrderManager):
-    pass
+    def __init__(self, exchange: BinanceExchangeManager):
+        super().__init__(exchange)
+    
+    async def place_limit_order(
+        self,
+        symbol: str,
+        side: Literal["buy", "sell"],
+        amount: Decimal,
+        price: Decimal,
+        close_position: bool = False,
+        **kwargs,
+    ):
+        pass
+    
 
 class BinanceAccountManager(AccountManager):
     pass
@@ -133,6 +150,25 @@ class BinanceWebsocketManager(WebsocketManager):
     async def subscribe_agg_trades(self, symbols: List[str], callback: Callable[..., Any] = None, *args, **kwargs):
         for symbol in symbols:
             await self.subscribe_agg_trade(symbol, callback=callback, *args, **kwargs)
+    
+    async def subscribe_kline(self, symbol: str, interval: IntervalType, callback: Callable[..., Any] = None, *args, **kwargs):
+        subscription_id = f"kline.{symbol}.{interval}"
+        id = int(time.time() * 1000)
+        payload = {
+            "method": "SUBSCRIBE",
+            "params": [f"{symbol.lower()}@kline_{interval}"],
+            "id": id
+        }
+        if subscription_id not in self._subscripions:
+            self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
+            self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id)))
+        else:
+            self._log.info(f"Already subscribed to {subscription_id}")
+    
+    async def subscribe_klines(self, symbols: List[str], intervals: List[IntervalType], callback: Callable[..., Any] = None, *args, **kwargs):
+        for symbol in symbols:
+            for interval in intervals:
+                await self.subscribe_kline(symbol, interval, callback=callback, *args, **kwargs)
 
 
 
@@ -142,7 +178,8 @@ class OkxExchangeManager(ExchangeManager):
     pass
 
 class OkxOrderManager(OrderManager):
-    pass
+    def __init__(self, exchange: OkxExchangeManager):
+        super().__init__(exchange)
 
 class OkxAccountManager(AccountManager):
     pass

@@ -6,9 +6,9 @@ import ccxt.pro as ccxtpro
 
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any
-from typing import Callable
+from typing import Callable, Literal
 from collections import defaultdict
-
+from decimal import Decimal
 
 from tradebot.entity import log_register
 
@@ -43,7 +43,62 @@ class AccountManager(ABC):
 
 
 class OrderManager(ABC):
-    pass
+    def __init__(self, exchange: ExchangeManager):
+        self._exchange = exchange
+    
+    @abstractmethod
+    async def place_limit_order(
+        self,
+        symbol: str,
+        side: Literal["buy", "sell"],
+        amount: Decimal,
+        price: Decimal,
+        close_position: bool = False,
+        **kwargs,
+    ):
+        pass
+    
+    @abstractmethod
+    async def place_limit_order_ws(
+        self,
+        symbol: str,
+        side: Literal["buy", "sell"],
+        amount: Decimal,
+        price: Decimal,
+        close_position: bool = False,
+        **kwargs,
+    ):
+        pass
+    
+    @abstractmethod
+    async def place_market_order(
+        self,
+        symbol: str,
+        side: Literal["buy", "sell"],
+        amount: Decimal,
+        close_position: bool = False,
+        **kwargs,
+    ):
+        pass
+    
+    @abstractmethod
+    async def place_market_order_ws(
+        self,
+        symbol: str,
+        side: Literal["buy", "sell"],
+        amount: Decimal,
+        close_position: bool = False,
+        **kwargs,
+    ):
+        pass
+    
+    @abstractmethod
+    async def cancel_order(self, order_id: str, **kwargs):
+        pass
+    
+    @abstractmethod
+    async def cancel_order_ws(self, order_id: str, **kwargs):
+        pass
 
 
 class WebsocketManager(ABC):

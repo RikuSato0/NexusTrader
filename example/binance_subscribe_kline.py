@@ -21,6 +21,7 @@ async def main():
         ws_um_client = BinanceWebsocketManager(base_url = "wss://fstream.binance.com/ws")
         await ws_um_client.subscribe_kline("BTCUSDT", interval="1s", callback=cb_future)
         await ws_spot_client.subscribe_kline("BTCUSDT", interval='1s' ,callback=cb_spot)
+        await ws_spot_client.subscribe_klines(['ETHUSDT', 'SOLOUSDT'], interval='1s', callback=cb_spot)
         
         while True:
             await asyncio.sleep(1)

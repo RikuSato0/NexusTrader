@@ -165,10 +165,9 @@ class BinanceWebsocketManager(WebsocketManager):
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
     
-    async def subscribe_klines(self, symbols: List[str], intervals: List[IntervalType], callback: Callable[..., Any] = None, *args, **kwargs):
+    async def subscribe_klines(self, symbols: List[str], interval: IntervalType, callback: Callable[..., Any] = None, *args, **kwargs):
         for symbol in symbols:
-            for interval in intervals:
-                await self.subscribe_kline(symbol, interval, callback=callback, *args, **kwargs)
+            await self.subscribe_kline(symbol, interval, callback=callback, *args, **kwargs)
 
 
 

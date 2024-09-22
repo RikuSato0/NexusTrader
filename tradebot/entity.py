@@ -61,7 +61,7 @@ class RedisPool:
 
 @dataclass
 class Account:
-    def __init__(self, user: str, account_type: Literal['spot', 'linear'], redis_client: redis.Redis):
+    def __init__(self, user: str, account_type: str, redis_client: redis.Redis):
         self.r = redis_client
         self.account_type = f"{user}:account:{account_type}"
         self.load_account()
@@ -114,10 +114,10 @@ class Position:
     def from_dict(cls, data):
         return cls(
             symbol=data['symbol'],
-            amount=Decimal(str(data['amount'])),
-            last_price=Decimal(str(data['last_price'])),
-            avg_price=Decimal(str(data['avg_price'])),
-            total_cost=Decimal(str(data['total_cost']))
+            amount=Decimal(data['amount']),
+            last_price=Decimal(data['last_price']),
+            avg_price=Decimal(data['avg_price']),
+            total_cost=Decimal(data['total_cost'])
         )
 
     def to_dict(self):
@@ -174,35 +174,36 @@ class PositionDict:
     def symbols(self):
         return list(self)
 
-    @property
-    def spot(self):
-        return {symbol: position for symbol, position in self.items().items() if ':' not in symbol}
-
-    @property
-    def future(self):
-        return {symbol: position for symbol, position in self.items().items() if ':' in symbol}
-
 
 class Context:
     def __init__(self, user: str, redis_client: redis.Redis):
-        self.redis_client = redis_client
-        self.user = user
-        self.portfolio_account = Account(user, 'portfolio', self.redis_client) # Portfolio-margin account
-        self.spot_account = Account(user, 'spot', self.redis_client)
-        self.linear_account = Account(user, 'linear', self.redis_client)
-        self.position = PositionDict(user, self.redis_client)
+        self._redis_client = redis_client
+        self._user = user
+        self.portfolio_account = Account(user, 'portfolio', self._redis_client) # Portfolio-margin account    
+        self.position = PositionDict(user, self._redis_client)
 
     def __setattr__(self, name, value):
-        if name in ['redis_client', 'user', 'portfolio_account', 'spot_account', 'linear_account', 'position']:
+        if name in ['_redis_client', '_user', 'portfolio_account', 'position']:
             super().__setattr__(name, value)
         else:
-            self.__dict__[name] = value
+            self._redis_client.set(f"context:{self._user}:{name}", orjson.dumps(value))
 
     def __getattr__(self, name):
-        if name in self.__dict__:
-            return self.__dict__[name]
+        if name in ['_redis_client', '_user', 'portfolio_account', 'position']:
+            return super().__getattr__(name)
+        
+        value = self._redis_client.get(f"context:{self._user}:{name}")
+        if value is not None:
+            return orjson.loads(value)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
+    def clear(self, name: str = None):
+        if name is None:
+            for key in self._redis_client.keys(f"context:{self._user}:*"):
+                self._redis_client.delete(key)
+        else:
+            self._redis_client.delete(f"context:{self._user}:{name}")
+            
 
 class RollingMedian:
     def __init__(self, n=10):

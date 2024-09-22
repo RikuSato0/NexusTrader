@@ -115,19 +115,58 @@ def test_position_dict(redis_manager):
     position_dict.update('ENJ/USDT:USDT', -5, 1.6)
     position_dict.update('SOL/USDT:USDT', -5, 41)
     
-    assert "SOL/USDT" in position_dict.spot
-    assert "ENJ/USDT" in position_dict.spot
-    assert "SOL/USDT:USDT" not in position_dict.spot
-    assert "ENJ/USDT:USDT" not in position_dict.spot
-    assert "SOL/USDT" not in position_dict.future
-    assert "ENJ/USDT" not in position_dict.future
-    assert "SOL/USDT:USDT" in position_dict.future
-    assert "ENJ/USDT:USDT" in position_dict.future
-    
     assert "SOL/USDT" in position_dict
     assert "ENJ/USDT" in position_dict
     assert "SOL/USDT:USDT" in position_dict
     assert "ENJ/USDT:USDT" in position_dict
+
+
+def test_context_save_new_varibale(redis_manager):
+    
+    db = redis_manager.get_client()
+    db.flushall()
+    
+    context_new = Context('account_1',db)
+    
+    context_new.apple = 10
+    
+    assert context_new.apple == 10
+    
+    context_new.apple = 20
+    
+    assert context_new.apple == 20
+    
+    context_new.fruits = ['apple','banana','orange']
+    
+    assert "apple" in context_new.fruits
+    assert "banana" in context_new.fruits
+    assert "orange" in context_new.fruits
+    assert "grape" not in context_new.fruits
+    
+    context_new.fruits_store = {
+        'apple': 20,
+        'banana': 10,
+        'orange': 5
+    }
+    
+    assert context_new.fruits_store['apple'] == 20
+    assert context_new.fruits_store['banana'] == 10
+    assert context_new.fruits_store['orange'] == 5
+    
+    del context_new
+    
+    context_new = Context('account_1',db)
+    assert context_new.apple == 20
+    assert "apple" in context_new.fruits
+    assert "banana" in context_new.fruits
+    assert "orange" in context_new.fruits
+    assert "grape" not in context_new.fruits
+    
+    assert context_new.fruits_store['apple'] == 20
+    assert context_new.fruits_store['banana'] == 10
+    assert context_new.fruits_store['orange'] == 5
+    
+
 
 
 def test_context(redis_manager):
@@ -136,84 +175,37 @@ def test_context(redis_manager):
     db.flushall()
     context = Context('account_1',db)
     
-    context.spot_account.USDT = 100
-    context.spot_account.BNB = 10
-    context.spot_account.BTC = 5
-    context.spot_account.ETH = 2
-    context.linear_account.FDUSD = 100
-    context.linear_account.BTC = 10
+    context.portfolio_account.USDT = 100
+    context.portfolio_account.BNB = 10
+    context.portfolio_account.BTC = 5
+    context.portfolio_account.ETH = 2
+    context.portfolio_account.FDUSD = 100
     
-    assert context.spot_account.USDT == 100
-    assert context.spot_account.BNB == 10
-    assert context.spot_account.BTC == 5
-    assert context.spot_account.ETH == 2
-    assert context.spot_account.FDUSD == 0
-    assert context.spot_account.USDC == 0
-    assert context.spot_account['USDT'] == 100
-    assert context.spot_account['BNB'] == 10
-    assert context.spot_account['BTC'] == 5
-    assert context.spot_account['ETH'] == 2
-    assert context.spot_account['FDUSD'] == 0
-    assert context.spot_account['USDC'] == 0
-    assert context.linear_account.FDUSD == 100
-    assert context.linear_account.BTC == 10
-    assert context.linear_account.USDT == 0
-    assert context.linear_account.BNB == 0
-    assert context.linear_account.ETH == 0
-    assert context.linear_account.USDC == 0
-    assert context.linear_account['FDUSD'] == 100
-    assert context.linear_account['BTC'] == 10
-    assert context.linear_account['USDT'] == 0
-    assert context.linear_account['BNB'] == 0
-    assert context.linear_account['ETH'] == 0
-    assert context.linear_account['USDC'] == 0
+    assert context.portfolio_account.USDT == 100
+    assert context.portfolio_account.BNB == 10
+    assert context.portfolio_account.BTC == 5
+    assert context.portfolio_account.ETH == 2
+    assert context.portfolio_account.FDUSD == 100
+    
+    context.portfolio_account.USDT = 200
+    context.portfolio_account.BNB = 20
+    context.portfolio_account.BTC = 10
+    context.portfolio_account.ETH = 5
+    context.portfolio_account.FDUSD = 200
+    
+    assert context.portfolio_account.USDT == 200
+    assert context.portfolio_account.BNB == 20
+    assert context.portfolio_account.BTC == 10
+    assert context.portfolio_account.ETH == 5
+    assert context.portfolio_account.FDUSD == 200
     
     del context
     
     context = Context('account_1',db)
     
-    assert context.spot_account.USDT == 100
-    assert context.spot_account.BNB == 10
-    assert context.spot_account.BTC == 5
-    assert context.spot_account.ETH == 2
-    assert context.spot_account.FDUSD == 0
-    assert context.spot_account.USDC == 0
-    assert context.linear_account.FDUSD == 100
-    assert context.linear_account.BTC == 10
-    assert context.linear_account.USDT == 0
-    assert context.linear_account.BNB == 0
-    assert context.linear_account.ETH == 0
-    assert context.linear_account.USDC == 0
-    
-    context.level_time = defaultdict(int)
-    context.level_time['BTC/USDT'] = 10
-    context.level_time['ETH/USDT'] = 20
-    assert context.level_time['BTC/USDT'] == 10
-    assert context.level_time['ETH/USDT'] == 20
-
-    context.position.update('BTC/USDT', 10, 65200)
-    context.position.update('ETH/USDT', 10, 2847)
-    assert context.position['BTC/USDT'].amount == 10
-    assert context.position['BTC/USDT'].last_price == 65200
-    assert context.position['ETH/USDT'].amount == 10
-    assert context.position['ETH/USDT'].last_price == 2847
-    
-    context.position.update('BTC/USDT', -5, 65300)
-    assert context.position['BTC/USDT'].amount == 5
-    context.position.update('ETH/USDT', -2, 65400)
-    assert context.position['ETH/USDT'].amount == 8
-    
-    del context
-    
-    context = Context('account_1',db)
-    
-    assert context.position['BTC/USDT'].amount == 5
-    assert context.position['ETH/USDT'].amount == 8
-    
-    context.position.update('BTC/USDT', -5, 65300)
-    context.position.update('ETH/USDT', -8, 65400)
-    
-    assert "BTC/USDT" not in context.position
-    assert "ETH/USDT" not in context.position
-    
+    assert context.portfolio_account.USDT == 200
+    assert context.portfolio_account.BNB == 20
+    assert context.portfolio_account.BTC == 10
+    assert context.portfolio_account.ETH == 5
+    assert context.portfolio_account.FDUSD == 200
     

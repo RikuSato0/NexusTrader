@@ -14,7 +14,7 @@ context = Context(redis_client=rc, user=OKX_USER)
 def cb(msg):
     if "data" in msg:
         for asset in msg["data"][0]["details"]:
-            context.portfolio_account[asset["ccy"]] = float(asset["availEq"])
+            context.portfolio_account[asset["ccy"]] = asset["availEq"]
             print(f"{asset['ccy']}: {asset['availEq']}")
         print("--------------------")
     

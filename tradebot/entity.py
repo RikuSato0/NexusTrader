@@ -19,6 +19,36 @@ import orjson
 import spdlog as spd
 
 
+@dataclass
+class OrderResponse:
+    info: Dict[str, Any]
+    id: str
+    clientOrderId: str
+    timestamp: int
+    datetime: str
+    lastTradeTimestamp: str
+    lastUpdateTimestamp: str
+    symbol: str
+    type: str
+    timeInForce: str
+    postOnly: bool
+    reduceOnly: bool
+    side: str
+    price: float
+    triggerPrice: float
+    amount: float
+    cost: float
+    average: float
+    filled: float
+    remaining: float
+    status: str
+    fee: float
+    trades: List[Dict[str, Any]]
+    fees: List[Dict[str, Any]]
+    stopPrice: float
+    takeProfitPrice: float
+    stopLossPrice: float
+
 class EventSystem:
     _listeners: Dict[str, List[Callable]] = {}
 

@@ -20,8 +20,8 @@ API_SECRET = config['binance_2']['SECRET']
 API_KEY_UNI = config['binance_uni']['API_KEY']
 API_SECRET_UNI = config['binance_uni']['SECRET']
 
-BYBIT_API_KEY = config['bybit']['API_KEY']
-BYBIT_SECRET = config['bybit']['SECRET']
+# BYBIT_API_KEY = config['bybit']['API_KEY']
+# BYBIT_SECRET = config['bybit']['SECRET']
 VALID_SYMBOLS = config['symbols']['VALID_SYMBOLS'].split(' ')
 
 OKX_API_KEY = config['okex_demo']['API_KEY']

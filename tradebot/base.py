@@ -11,7 +11,8 @@ from collections import defaultdict
 from decimal import Decimal
 
 from tradebot.entity import log_register
-
+from tradebot.entity import OrderResponse
+from tradebot.exceptions import OrderResponseError
 
 class ExchangeManager(ABC):
     def __init__(self, config: Dict[str, Any]):
@@ -55,16 +56,21 @@ class OrderManager(ABC):
         close_position: bool = False,
         **params,
     ):
-        if close_position:
-            params["reduceOnly"] = True
-        res = await self._exchange.api.create_order(
-            symbol=symbol,
-            type="limit",
-            side=side,
-            amount=amount,
-            price=price,
-            params=params,
-        )
+        try:
+            if close_position:
+                params["reduceOnly"] = True
+            res = await self._exchange.api.create_order(
+                symbol=symbol,
+                type="limit",
+                side=side,
+                amount=amount,
+                price=price,
+                params=params,
+            )
+            return OrderResponse(**res)
+        except Exception as e:
+            raise OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, "price": price, **params})
+            
         
     
     async def place_limit_order_ws(
@@ -76,29 +82,43 @@ class OrderManager(ABC):
         close_position: bool = False,
         **params,
     ):
-        if close_position:
-            params["reduceOnly"] = True
-        res = await self._exchange.api.create_order_ws(
-            symbol=symbol,
-            type="limit",
-            side=side,
-            amount=amount,
-            price=price,
-            params=params,
-        )
+        try:
+            if close_position:
+                params["reduceOnly"] = True
+            res = await self._exchange.api.create_order_ws(
+                symbol=symbol,
+                type="limit",
+                side=side,
+                amount=amount,
+                price=price,
+                params=params,
+            )
+            return OrderResponse(**res)
+        except Exception as e:
+            raise OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, "price": price, **params})
     
-    @abstractmethod
     async def place_market_order(
         self,
         symbol: str,
         side: Literal["buy", "sell"],
         amount: Decimal,
         close_position: bool = False,
-        **kwargs,
+        **params,
     ):
-        pass
+        try:
+            if close_position:
+                params["reduceOnly"] = True
+            res = await self._exchange.api.create_order(
+                symbol=symbol,
+                type="market",
+                side=side,
+                amount=amount,
+                params=params,
+            )
+            return OrderResponse(**res)
+        except Exception as e:
+            raise OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, **params})
     
-    @abstractmethod
     async def place_market_order_ws(
         self,
         symbol: str,
@@ -107,13 +127,23 @@ class OrderManager(ABC):
         close_position: bool = False,
         **kwargs,
     ):
-        pass
+        try:
+            if close_position:
+                kwargs["reduceOnly"] = True
+            res = await self._exchange.api.create_order_ws(
+                symbol=symbol,
+                type="market",
+                side=side,
+                amount=amount,
+                params=kwargs,
+            )
+            return OrderResponse(**res)
+        except Exception as e:
+            raise OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, **kwargs})
     
-    @abstractmethod
     async def cancel_order(self, order_id: str, **kwargs):
         pass
     
-    @abstractmethod
     async def cancel_order_ws(self, order_id: str, **kwargs):
         pass
 

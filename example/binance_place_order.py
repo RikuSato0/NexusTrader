@@ -21,23 +21,23 @@ async def main():
         exchange = ExchangeManager(config)
         order_manager = OrderManager(exchange)
 
-        # res = await order_manager.place_market_order(
-        #     symbol='USDC/USDT',
-        #     side='buy',
-        #     amount=10,
-        #     newClientOrderId='test',
-        # )
+        res = await order_manager.place_market_order(
+            symbol='USDC/USDT',
+            side='buy',
+            amount=10,
+            newClientOrderId='test',
+        )
         
-        # pprint(res)
+        pprint(res)
         
-        # res = await order_manager.place_market_order(
-        #     symbol='USDC/USDT',
-        #     side='sell',
-        #     amount=10,
-        #     newClientOrderId='test',
-        # )
+        res = await order_manager.place_market_order(
+            symbol='USDC/USDT',
+            side='sell',
+            amount=10,
+            newClientOrderId='test',
+        )
         
-        # pprint(res)
+        pprint(res)
         
         res = await order_manager.place_limit_order(
             symbol='USDC/USDT',

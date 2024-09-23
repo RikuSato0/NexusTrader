@@ -46,7 +46,6 @@ class OrderManager(ABC):
     def __init__(self, exchange: ExchangeManager):
         self._exchange = exchange
     
-    @abstractmethod
     async def place_limit_order(
         self,
         symbol: str,
@@ -54,11 +53,20 @@ class OrderManager(ABC):
         amount: Decimal,
         price: Decimal,
         close_position: bool = False,
-        **kwargs,
+        **params,
     ):
-        pass
+        if close_position:
+            params["reduceOnly"] = True
+        res = await self._exchange.api.create_order(
+            symbol=symbol,
+            type="limit",
+            side=side,
+            amount=amount,
+            price=price,
+            params=params,
+        )
+        
     
-    @abstractmethod
     async def place_limit_order_ws(
         self,
         symbol: str,
@@ -66,9 +74,18 @@ class OrderManager(ABC):
         amount: Decimal,
         price: Decimal,
         close_position: bool = False,
-        **kwargs,
+        **params,
     ):
-        pass
+        if close_position:
+            params["reduceOnly"] = True
+        res = await self._exchange.api.create_order_ws(
+            symbol=symbol,
+            type="limit",
+            side=side,
+            amount=amount,
+            price=price,
+            params=params,
+        )
     
     @abstractmethod
     async def place_market_order(

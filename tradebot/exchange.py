@@ -54,17 +54,6 @@ class BinanceOrderManager(OrderManager):
     def __init__(self, exchange: BinanceExchangeManager):
         super().__init__(exchange)
     
-    async def place_limit_order(
-        self,
-        symbol: str,
-        side: Literal["buy", "sell"],
-        amount: Decimal,
-        price: Decimal,
-        close_position: bool = False,
-        **kwargs,
-    ):
-        pass
-    
 
 class BinanceAccountManager(AccountManager):
     pass

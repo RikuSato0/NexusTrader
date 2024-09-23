@@ -141,11 +141,19 @@ class OrderManager(ABC):
         except Exception as e:
             raise OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, **kwargs})
     
-    async def cancel_order(self, order_id: str, **kwargs):
-        pass
+    async def cancel_order(self, id: str, symbol: str,  **params):
+        try:
+            res = await self._exchange.api.cancel_order(id, symbol, params=params)
+            return OrderResponse(**res)
+        except Exception as e:
+            raise OrderResponseError(e, {"id": id, "symbol": symbol, **params})
     
-    async def cancel_order_ws(self, order_id: str, **kwargs):
-        pass
+    async def cancel_order_ws(self, order_id: str, **params):
+        try:
+            res = await self._exchange.api.cancel_order_ws(order_id, params=params)
+            return OrderResponse(**res)
+        except Exception as e:
+            raise OrderResponseError(e, {"order_id": order_id, **params})
 
 
 class WebsocketManager(ABC):

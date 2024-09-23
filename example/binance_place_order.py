@@ -21,20 +21,39 @@ async def main():
         exchange = ExchangeManager(config)
         order_manager = OrderManager(exchange)
 
-        res = await order_manager.place_market_order(
+        # res = await order_manager.place_market_order(
+        #     symbol='USDC/USDT',
+        #     side='buy',
+        #     amount=10,
+        #     newClientOrderId='test',
+        # )
+        
+        # pprint(res)
+        
+        # res = await order_manager.place_market_order(
+        #     symbol='USDC/USDT',
+        #     side='sell',
+        #     amount=10,
+        #     newClientOrderId='test',
+        # )
+        
+        # pprint(res)
+        
+        res = await order_manager.place_limit_order(
             symbol='USDC/USDT',
             side='buy',
             amount=10,
+            price=0.95,
             newClientOrderId='test',
         )
         
         pprint(res)
         
-        res = await order_manager.place_market_order(
+        await asyncio.sleep(1)
+        
+        res = await order_manager.cancel_order(
+            id=res.id,
             symbol='USDC/USDT',
-            side='sell',
-            amount=10,
-            newClientOrderId='test',
         )
         
         pprint(res)

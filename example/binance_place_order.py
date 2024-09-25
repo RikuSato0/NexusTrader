@@ -19,6 +19,7 @@ async def main():
         }
         
         exchange = ExchangeManager(config)
+        await exchange.load_markets()
         order_manager = OrderManager(exchange)
 
         res = await order_manager.place_market_order(

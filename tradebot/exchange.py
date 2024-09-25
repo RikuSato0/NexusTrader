@@ -163,7 +163,7 @@ class BinanceWebsocketManager(WebsocketManager):
             await self.subscribe_kline(symbol, interval, callback=callback, *args, **kwargs)
 
     async def subscribe_user_data(self, type: Literal['spot', 'linear', 'inverse', 'portfolio'] = 'portfolio', callback: Callable[..., Any] = None, *args, **kwargs):
-        subscription_id = "user_data.{type}"
+        subscription_id = f"user_data.{type}"
         
         listen_key = await self._get_listen_key(type)
         payload = {
@@ -225,6 +225,11 @@ class BinanceWebsocketManager(WebsocketManager):
                 break        
             except Exception as e:
                 self._log.error(f"Error keeping alive {type} listen key: {e}")
+    
+    async def close(self):
+        if self._session is not None:
+            await self._session.close()
+        await super().close()
         
 
 

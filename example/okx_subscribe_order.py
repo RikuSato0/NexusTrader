@@ -6,7 +6,7 @@ from pprint import pprint
 
 
 from tradebot.exchange import OkxWebsocketManager
-from tradebot.constants import CONFIG
+from tradebot.constants import CONFIG, Url
 
 OKX_API_KEY = CONFIG['okex_demo']['API_KEY']
 OKX_SECRET = CONFIG['okex_demo']['SECRET']
@@ -160,14 +160,8 @@ def cb(msg):
     pprint(msg)
     
 async def main():
-    try:
-        config = {
-            'apiKey': OKX_API_KEY,
-            'secret': OKX_SECRET,
-            'passphrase': OKX_PASSPHRASE
-        }
-        
-        okx_ws_manager = OkxWebsocketManager(config=config, demo_trade=True)
+    try:        
+        okx_ws_manager = OkxWebsocketManager(url=Url.Okx.Demo, api_key=OKX_API_KEY, secret=OKX_SECRET, passphrase=OKX_PASSPHRASE)
         await okx_ws_manager.watch_orders(callback=cb)
         
         while True:

@@ -75,20 +75,24 @@ class Url:
             STREAM_URL = "wss://dstream.binancefuture.com/ws"
             
     class Okx:
-        class Live:
-            PUBLIC = "wss://ws.okx.com:8443/ws/v5/public"
-            PRIVATE = "wss://ws.okx.com:8443/ws/v5/private"
-            BUSINESS = "wss://ws.okx.com:8443/ws/v5/business"
+        Live = "wss://ws.okx.com:8443/ws"
+        Aws = "wss://wsaws.okx.com:8443/ws"
+        Demo = "wss://wspap.okx.com:8443/ws"
+        
+        # class Live:
+        #     PUBLIC = "wss://ws.okx.com:8443/ws/v5/public"
+        #     PRIVATE = "wss://ws.okx.com:8443/ws/v5/private"
+        #     BUSINESS = "wss://ws.okx.com:8443/ws/v5/business"
 
-        class Aws:
-            PUBLIC = "wss://wsaws.okx.com:8443/ws/v5/public"
-            PRIVATE = "wss://wsaws.okx.com:8443/ws/v5/private"
-            BUSINESS = "wss://wsaws.okx.com:8443/ws/v5/business"
+        # class Aws:
+        #     PUBLIC = "wss://wsaws.okx.com:8443/ws/v5/public"
+        #     PRIVATE = "wss://wsaws.okx.com:8443/ws/v5/private"
+        #     BUSINESS = "wss://wsaws.okx.com:8443/ws/v5/business"
 
-        class Demo:
-            PUBLIC = "wss://wspap.okx.com:8443/ws/v5/public"
-            PRIVATE = "wss://wspap.okx.com:8443/ws/v5/private"
-            BUSINESS = "wss://wspap.okx.com:8443/ws/v5/business"
+        # class Demo:
+        #     PUBLIC = "wss://wspap.okx.com:8443/ws/v5/public"
+        #     PRIVATE = "wss://wspap.okx.com:8443/ws/v5/private"
+        #     BUSINESS = "wss://wspap.okx.com:8443/ws/v5/business"
 
 
 
@@ -153,7 +157,5 @@ UrlType = Union[
     Url.Binance.SpotTestnet,
     Url.Binance.UsdMFutureTestnet,
     Url.Binance.CoinMFutureTestnet,
-    Url.Okx.Live,
-    Url.Okx.Aws,
-    Url.Okx.Demo
+    Url.Okx
 ]

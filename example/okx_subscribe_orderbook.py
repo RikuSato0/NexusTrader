@@ -5,7 +5,7 @@ from pyinstrument import Profiler
 
 
 from tradebot.exchange import OkxWebsocketManager
-from tradebot.entity import market
+from tradebot.constants import Url
 
 
 def cb(msg):
@@ -31,7 +31,7 @@ async def main():
         # For Demo Trading Url
         # Base url: "wss://wspap.okx.com:8443/ws"
         
-        okx = OkxWebsocketManager(base_url="wss://ws.okx.com:8443/ws")
+        okx = OkxWebsocketManager(url=Url.Okx.Live)
         await okx.subscribe_order_book("BTC-USDT-SWAP", channel="bbo-tbt", callback=cb)
         while True:
             await asyncio.sleep(1)

@@ -5,7 +5,7 @@ import uvloop
 from tradebot.entity import redis_pool
 from tradebot.entity import Context
 from tradebot.exchange import OkxWebsocketManager
-from tradebot.constants import CONFIG
+from tradebot.constants import CONFIG, Url
 
 OKX_API_KEY = CONFIG['okex_demo']['API_KEY']
 OKX_SECRET = CONFIG['okex_demo']['SECRET']
@@ -26,7 +26,7 @@ def cb(msg):
 async def main():
     try:
         okx_ws_manager = OkxWebsocketManager(
-            base_url="wss://wspap.okx.com:8443/ws",
+            url=Url.Okx.Demo,
             api_key=OKX_API_KEY,
             secret=OKX_SECRET,
             passphrase=OKX_PASSPHRASE,

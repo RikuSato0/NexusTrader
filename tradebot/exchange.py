@@ -249,9 +249,9 @@ class OkxAccountManager(AccountManager):
     pass
 
 class OkxWebsocketManager(WebsocketManager):
-    def __init__(self, base_url: str, api_key: str = None, secret: str = None, passphrase: str = None):
+    def __init__(self, url: UrlType, api_key: str = None, secret: str = None, passphrase: str = None):
         super().__init__(
-            base_url=base_url,
+            base_url=url,
             ping_interval=5,
             ping_timeout=5,
             close_timeout=1,

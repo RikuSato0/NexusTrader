@@ -24,7 +24,7 @@ from asynciolimiter import Limiter
 from websockets.asyncio import client
 
 
-from tradebot.constants import MARKET_URLS, IntervalType
+from tradebot.constants import IntervalType, UrlType
 from tradebot.entity import log_register
 from tradebot.entity import EventSystem
 from tradebot.base import ExchangeManager, OrderManager, AccountManager, WebsocketManager
@@ -60,14 +60,15 @@ class BinanceAccountManager(AccountManager):
     pass
 
 class BinanceWebsocketManager(WebsocketManager):
-    def __init__(self, base_url: str, api_key: str = None, secret: str = None):
+    def __init__(self, url: UrlType, api_key: str = None, secret: str = None):
         super().__init__(
-            base_url=base_url,
+            base_url=url.STREAM_URL,
             ping_interval=5,
             ping_timeout=5,
             close_timeout=1,
             max_queue=12,
         )
+        self._url = url
         self._api_key = api_key
         self._secret = secret
         self._session: aiohttp.ClientSession = None
@@ -162,23 +163,24 @@ class BinanceWebsocketManager(WebsocketManager):
         for symbol in symbols:
             await self.subscribe_kline(symbol, interval, callback=callback, *args, **kwargs)
 
-    async def subscribe_user_data(self, type: Literal['spot', 'linear', 'inverse', 'portfolio'] = 'portfolio', callback: Callable[..., Any] = None, *args, **kwargs):
+    async def subscribe_user_data(self, callback: Callable[..., Any] = None, *args, **kwargs):
+        type = self._url.__name__.lower()
         subscription_id = f"user_data.{type}"
         
-        listen_key = await self._get_listen_key(type)
+        listen_key = await self._get_listen_key(self._url.BASE_URL)
         payload = {
             "method": "SUBSCRIBE",
             "params": [listen_key],
             "id": int(time.time() * 1000)
         }
         if subscription_id not in self._subscripions:
-            self._tasks.append(asyncio.create_task(self._keep_alive_listen_key(listen_key, type)))
+            self._tasks.append(asyncio.create_task(self._keep_alive_listen_key(listen_key)))
             self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
             self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id)))
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
     
-    async def _get_listen_key(self, type: Literal["spot", "linear", "inverse", "portfolio"] = "portfolio"):
+    async def _get_listen_key(self, base_url: str):
         # spot
         # https://api.binance.com/api/v3/userDataStream
         
@@ -190,25 +192,26 @@ class BinanceWebsocketManager(WebsocketManager):
         
         # portfolio
         # https://papi.binance.com/papi/v1/listenKey
-        url = MARKET_URLS["binance"][type]["base_url"]
+
         if self._session is None:
             self._session = aiohttp.ClientSession(
                 headers={"X-MBX-APIKEY": self._api_key}
             )
         try:
-            async with self._session.post(url) as response:
+            async with self._session.post(base_url) as response:
                 data = await response.json()
                 return data["listenKey"]
         except Exception as e:
             self._log.error(f"Failed to get listen key: {e}")
             return None
     
-    async def _keep_alive_listen_key(self, listen_key: str, type: Literal['spot', 'linear', 'inverse', 'portfolio'] = 'portfolio'):
+    async def _keep_alive_listen_key(self, listen_key: str):
         if self._session is None:
             self._session = aiohttp.ClientSession(
                 headers={"X-MBX-APIKEY": self._api_key}
             )
-        base_url = MARKET_URLS["binance"][type]['base_url']
+        base_url = self._url.BASE_URL
+        type = self._url.__name__.lower()
         while True:
             try:
                 self._log.info(f'Keep alive {type} listen key...')

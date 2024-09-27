@@ -3,3 +3,6 @@ __pycache__/
 .logs/
 .pytest_cache/
 .vscode/
+*.log
+*_log.py
+classified_events/

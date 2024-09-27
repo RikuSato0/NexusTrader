@@ -3,7 +3,7 @@ import asyncio
 
 from tradebot.exchange import BinanceWebsocketManager
 from tradebot.entity import log_register
-from tradebot.constants import MARKET_URLS
+from tradebot.constants import Url
 
 
 
@@ -17,8 +17,8 @@ def cb_spot(msg):
 async def main():
     global ratio
     try:
-        ws_spot_client = BinanceWebsocketManager(base_url = "wss://stream.binance.com:9443/ws")
-        ws_um_client = BinanceWebsocketManager(base_url = "wss://fstream.binance.com/ws")
+        ws_spot_client = BinanceWebsocketManager(Url.Binance.Spot)
+        ws_um_client = BinanceWebsocketManager(Url.Binance.UsdMFuture)
         await ws_um_client.subscribe_kline("BTCUSDT", interval="1s", callback=cb_future)
         await ws_spot_client.subscribe_kline("BTCUSDT", interval='1s' ,callback=cb_spot)
         await ws_spot_client.subscribe_klines(['ETHUSDT', 'SOLOUSDT'], interval='1s', callback=cb_spot)

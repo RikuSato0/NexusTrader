@@ -7,13 +7,13 @@ from enum import Enum
 
 from typing import Literal, Union
 
-CONFIG = ConfigParser()
 
 if not os.path.exists('.keys/'):
     os.makedirs('.keys/')
 if not os.path.exists('.keys/config.cfg'):
     raise FileNotFoundError("Config file not found, please create a config file at .keys/config.cfg")
 
+CONFIG = ConfigParser()
 CONFIG.read('.keys/config.cfg')
 
 # API_KEY = CONFIG['binance_2']['API_KEY']

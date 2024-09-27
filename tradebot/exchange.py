@@ -14,11 +14,11 @@ from typing import Any, Dict, List
 from typing import Literal, Callable
 
 
-
 import orjson
 import aiohttp
 import websockets
 import ccxt.pro as ccxtpro
+
 
 from asynciolimiter import Limiter
 from websockets.asyncio import client
@@ -44,11 +44,9 @@ class BybitWebsocketManager:
     pass
 
 
-
-
 class BinanceExchangeManager(ExchangeManager):
     pass
-    
+
     
 
 class BinanceOrderManager(OrderManager):

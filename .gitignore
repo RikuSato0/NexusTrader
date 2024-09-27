@@ -6,3 +6,4 @@ __pycache__/
 *.log
 *_log.py
 classified_events/
+license.py

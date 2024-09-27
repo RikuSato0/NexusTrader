@@ -31,7 +31,7 @@ async def main():
         # For Demo Trading Url
         # Base url: "wss://wspap.okx.com:8443/ws"
         
-        okx = OkxWebsocketManager(url=Url.Okx.Live)
+        okx = OkxWebsocketManager(url=Url.Okx.LIVE)
         await okx.subscribe_order_book("BTC-USDT-SWAP", channel="bbo-tbt", callback=cb)
         while True:
             await asyncio.sleep(1)

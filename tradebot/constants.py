@@ -75,9 +75,9 @@ class Url:
             STREAM_URL = "wss://dstream.binancefuture.com/ws"
             
     class Okx:
-        Live = "wss://ws.okx.com:8443/ws"
-        Aws = "wss://wsaws.okx.com:8443/ws"
-        Demo = "wss://wspap.okx.com:8443/ws"
+        LIVE = "wss://ws.okx.com:8443/ws"
+        AWS = "wss://wsaws.okx.com:8443/ws"
+        DEMO = "wss://wspap.okx.com:8443/ws"
         
         # class Live:
         #     PUBLIC = "wss://ws.okx.com:8443/ws/v5/public"

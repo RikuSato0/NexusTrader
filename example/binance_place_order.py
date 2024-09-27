@@ -1,8 +1,12 @@
 import asyncio
 from pprint import pprint
-from tradebot.constants import API_KEY_UNI, API_SECRET_UNI
+from tradebot.constants import CONFIG
 from tradebot.base import OrderManager, ExchangeManager
 from tradebot.exceptions import OrderResponseError
+
+
+BINANCE_API_KEY = CONFIG['binance_uni']['API_KEY']
+BINANCE_API_SECRET = CONFIG['binance_uni']['SECRET']
 
 
 async def main():
@@ -10,8 +14,8 @@ async def main():
         config = {
             'exchange_id': 'binance',
             'sandbox': False,
-            'apiKey': API_KEY_UNI,
-            'secret': API_SECRET_UNI, 
+            'apiKey': BINANCE_API_KEY,
+            'secret': BINANCE_API_SECRET, 
             'enableRateLimit': False,
             'options': {
                 'portfolioMargin': True,

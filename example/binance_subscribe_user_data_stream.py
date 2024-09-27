@@ -2,17 +2,17 @@ import asyncio
 
 
 from tradebot.exchange import BinanceWebsocketManager
-from tradebot.constants import API_KEY_UNI, API_SECRET_UNI, Url
+from tradebot.constants import CONFIG, Url
 
-
+BINANCE_API_KEY = CONFIG['binance_uni']['API_KEY']
+BINANCE_API_SECRET = CONFIG['binance_uni']['SECRET']
 
 def cb(msg):
     print(msg)
     
-
 async def main():
     try:
-        ws_client = BinanceWebsocketManager(Url.Binance.PortfolioMargin, api_key=API_KEY_UNI, secret=API_SECRET_UNI)
+        ws_client = BinanceWebsocketManager(Url.Binance.PortfolioMargin, api_key=BINANCE_API_KEY, secret=BINANCE_API_SECRET)
         await ws_client.subscribe_user_data(callback=cb)
         
         while True:

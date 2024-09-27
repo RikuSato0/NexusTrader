@@ -7,33 +7,33 @@ from enum import Enum
 
 from typing import Literal, Union
 
-config = ConfigParser()
+CONFIG = ConfigParser()
 
 if not os.path.exists('.keys/'):
     os.makedirs('.keys/')
 if not os.path.exists('.keys/config.cfg'):
     raise FileNotFoundError("Config file not found, please create a config file at .keys/config.cfg")
 
-config.read('.keys/config.cfg')
+CONFIG.read('.keys/config.cfg')
 
-API_KEY = config['binance_2']['API_KEY']
-API_SECRET = config['binance_2']['SECRET']
+# API_KEY = CONFIG['binance_2']['API_KEY']
+# API_SECRET = CONFIG['binance_2']['SECRET']
 
-API_KEY_TESTNET = config['binance_future_testnet']['API_KEY']
-API_SECRET_TESTNET = config['binance_future_testnet']['SECRET']
+# API_KEY_TESTNET = CONFIG['binance_future_testnet']['API_KEY']
+# API_SECRET_TESTNET = CONFIG['binance_future_testnet']['SECRET']
 
 
-API_KEY_UNI = config['binance_uni']['API_KEY']
-API_SECRET_UNI = config['binance_uni']['SECRET']
+# API_KEY_UNI = CONFIG['binance_uni']['API_KEY']
+# API_SECRET_UNI = CONFIG['binance_uni']['SECRET']
 
 # BYBIT_API_KEY = config['bybit']['API_KEY']
 # BYBIT_SECRET = config['bybit']['SECRET']
-VALID_SYMBOLS = config['symbols']['VALID_SYMBOLS'].split(' ')
+# VALID_SYMBOLS = CONFIG['symbols']['VALID_SYMBOLS'].split(' ')
 
-OKX_API_KEY = config['okex_demo']['API_KEY']
-OKX_SECRET = config['okex_demo']['SECRET']
-OKX_PASSPHRASE = config['okex_demo']['PASSPHRASE']
-OKX_USER = config['okex_demo']['USER']
+# OKX_API_KEY = CONFIG['okex_demo']['API_KEY']
+# OKX_SECRET = CONFIG['okex_demo']['SECRET']
+# OKX_PASSPHRASE = CONFIG['okex_demo']['PASSPHRASE']
+# OKX_USER = CONFIG['okex_demo']['USER']
 
 
 class Url:

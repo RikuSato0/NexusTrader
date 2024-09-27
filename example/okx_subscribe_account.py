@@ -5,7 +5,12 @@ import uvloop
 from tradebot.entity import redis_pool
 from tradebot.entity import Context
 from tradebot.exchange import OkxWebsocketManager
-from tradebot.constants import OKX_API_KEY, OKX_SECRET, OKX_PASSPHRASE, OKX_USER
+from tradebot.constants import CONFIG
+
+OKX_API_KEY = CONFIG['okex_demo']['API_KEY']
+OKX_SECRET = CONFIG['okex_demo']['SECRET']
+OKX_PASSPHRASE = CONFIG['okex_demo']['PASSPHRASE']
+OKX_USER = CONFIG['okex_demo']['USER']
 
 rc = redis_pool.get_client()
 rc.flushall()

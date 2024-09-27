@@ -355,12 +355,41 @@ class OkxWebsocketManager(WebsocketManager):
             self._log.info(f"Already subscribed to {subscription_id}")
     
     async def subscribe_position(self, inst_type:Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
-        subscription_id = "position"
+        subscription_id = f"position.{inst_type}"
         payload = {
             "op": "subscribe",
             "args": [{
                 "channel": "positions",
                 "instType": inst_type
+            }]
+        }
+        if subscription_id not in self._subscripions:
+            self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
+            self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id, auth=True)))
+        else:
+            self._log.info(f"Already subscribed to {subscription_id}")
+    
+    async def subscribe_order(self, inst_type: Literal["SPOT", "MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
+        subscription_id = f"order.{inst_type}"
+        payload = {
+            "op": "subscribe",
+            "args": [{
+                "channel": "orders",
+                "instType": inst_type
+            }]
+        }
+        if subscription_id not in self._subscripions:
+            self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
+            self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id, auth=True)))
+        else:
+            self._log.info(f"Already subscribed to {subscription_id}")
+    
+    async def subscribe_fills(self, callback: Callable[..., Any] = None, *args, **kwargs):
+        subscription_id = "fills"
+        payload = {
+            "op": "subscribe",
+            "args": [{
+                "channel": "fills"
             }]
         }
         if subscription_id not in self._subscripions:

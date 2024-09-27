@@ -167,7 +167,7 @@ class BinanceWebsocketManager(WebsocketManager):
         type = self._url.__name__.lower()
         subscription_id = f"user_data.{type}"
         
-        listen_key = await self._get_listen_key(self._url.BASE_URL)
+        listen_key = await self._get_listen_key()
         payload = {
             "method": "SUBSCRIBE",
             "params": [listen_key],
@@ -180,25 +180,13 @@ class BinanceWebsocketManager(WebsocketManager):
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
     
-    async def _get_listen_key(self, base_url: str):
-        # spot
-        # https://api.binance.com/api/v3/userDataStream
-        
-        # linear
-        # https://fapi.binance.com/fapi/v1/listenKey
-        
-        # inverse
-        # https://dapi.binance.com/dapi/v1/listenKey
-        
-        # portfolio
-        # https://papi.binance.com/papi/v1/listenKey
-
+    async def _get_listen_key(self):
         if self._session is None:
             self._session = aiohttp.ClientSession(
                 headers={"X-MBX-APIKEY": self._api_key}
             )
         try:
-            async with self._session.post(base_url) as response:
+            async with self._session.post(self._url.BASE_URL) as response:
                 data = await response.json()
                 return data["listenKey"]
         except Exception as e:
@@ -218,7 +206,7 @@ class BinanceWebsocketManager(WebsocketManager):
                 async with self._session.put(f'{base_url}?listenKey={listen_key}') as response:
                     self._log.info(f"Keep alive listen key status: {response.status}")
                     if response.status != 200:
-                        listen_key = await self._get_listen_key(base_url)
+                        listen_key = await self._get_listen_key()
                     else:
                         data = await response.json()
                         self._log.info(f"Keep alive {type} listen key: {data.get('listenKey', listen_key)}")

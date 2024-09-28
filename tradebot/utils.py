@@ -1,10 +1,12 @@
 import ast
 import ccxt
+
+
 from typing import Dict, Any
 from typing import Generator, Optional, Literal
 
 
-
+from tradebot.entity import OrderResponse
 
 
 
@@ -93,6 +95,6 @@ def parse_event_data(event_data: Dict[str, Any], market_id: Dict[str, Any], mark
                 }
             }
             """
-        
+            
         
         

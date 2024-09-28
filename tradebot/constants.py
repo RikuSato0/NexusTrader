@@ -1,4 +1,5 @@
 import os
+import ccxt
 
 from configparser import ConfigParser
 from collections import defaultdict
@@ -32,7 +33,6 @@ CONFIG.read('.keys/config.cfg')
 # OKX_SECRET = CONFIG['okex_demo']['SECRET']
 # OKX_PASSPHRASE = CONFIG['okex_demo']['PASSPHRASE']
 # OKX_USER = CONFIG['okex_demo']['USER']
-
 
 class Url:
     class Binance:
@@ -92,6 +92,8 @@ class Url:
         #     PRIVATE = "wss://wspap.okx.com:8443/ws/v5/private"
         #     BUSINESS = "wss://wspap.okx.com:8443/ws/v5/business"
 
+
+    
 
 
 
@@ -158,3 +160,6 @@ UrlType = Union[
     Url.Binance.CoinMFutureTestnet,
     Url.Okx
 ]
+
+
+

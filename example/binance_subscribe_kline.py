@@ -1,25 +1,43 @@
 import asyncio
-
+import ccxt
 
 from tradebot.exchange import BinanceWebsocketManager
 from tradebot.entity import log_register
 from tradebot.constants import Url
 
+from tradebot.utils import parse_event_data
 
+market_id = {}
+    
+market = ccxt.binance().load_markets()
+for _,v in market.items():
+    if v['subType'] == 'linear':
+        market_id[f"{v['id']}_swap"] = v
+    elif v['type'] == 'spot':
+        market_id[f"{v['id']}_spot"] = v
+    else:
+        market_id[v['id']] = v
 
-def cb_future(msg):
+def cb_cm_future(msg):
+    msg = parse_event_data(msg, market_id)
+    print(msg)
+
+def cb_um_future(msg):
+    msg = parse_event_data(msg, market_id, "swap")
     print(msg)
 
 def cb_spot(msg):
+    msg = parse_event_data(msg, market_id, "spot")
     print(msg)
     
 
 async def main():
-    global ratio
     try:
         ws_spot_client = BinanceWebsocketManager(Url.Binance.Spot)
         ws_um_client = BinanceWebsocketManager(Url.Binance.UsdMFuture)
-        await ws_um_client.subscribe_kline("BTCUSDT", interval="1s", callback=cb_future)
+        ws_cm_client = BinanceWebsocketManager(Url.Binance.CoinMFuture)
+        await ws_cm_client.subscribe_kline("BTCUSD_PERP", interval="1m", callback=cb_cm_future)
+        await ws_um_client.subscribe_kline("BTCUSDT", interval="1m", callback=cb_um_future)
         await ws_spot_client.subscribe_kline("BTCUSDT", interval='1s' ,callback=cb_spot)
         await ws_spot_client.subscribe_klines(['ETHUSDT', 'SOLOUSDT'], interval='1s', callback=cb_spot)
         

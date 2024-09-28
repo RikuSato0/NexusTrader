@@ -5,8 +5,6 @@ from tradebot.exchange import BinanceWebsocketManager
 from tradebot.entity import log_register
 from tradebot.constants import Url
 
-from tradebot.utils import parse_event_data
-
 market_id = {}
     
 market = ccxt.binance().load_markets()
@@ -19,15 +17,12 @@ for _,v in market.items():
         market_id[v['id']] = v
 
 def cb_cm_future(msg):
-    msg = parse_event_data(msg, market_id)
     print(msg)
 
 def cb_um_future(msg):
-    msg = parse_event_data(msg, market_id, "swap")
     print(msg)
 
 def cb_spot(msg):
-    msg = parse_event_data(msg, market_id, "spot")
     print(msg)
     
 

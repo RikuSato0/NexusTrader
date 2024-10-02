@@ -44,13 +44,32 @@ class BinanceOrderManager(OrderManager):
         self.exchange_id = exchange.config['exchange_id']
     
     async def handle_request_timeout(self, method: str, params: Dict[str, Any]):
+        symbol = params['symbol']
+        orders = await self.fetch_orders(symbol)
+        
         match method:
             case "place_limit_order":
-                pass
+                for order in orders:
+                    if (
+                        order.symbol == symbol
+                        and order.side == params['side']
+                        and order.amount == params['amount']
+                        and order.price == params['price']
+                        and order.type == 'limit'
+                        and order.status == 'open'
+                    ):
+                        pass
+                
+                
+                
+                
             case "place_market_order":
                 pass
             case "cancel_order":
                 pass
+            
+    
+            
                 
     async def place_limit_order(
         self, 
@@ -123,9 +142,11 @@ class BinanceOrderManager(OrderManager):
             )
         return parse_ccxt_order(res, self.exchange_id)
         
-    async def fetch_orders(self, symbol: str) -> List[OrderResponse]:
+    async def fetch_orders(self, symbol: str, since: int = None, limit: int = None) -> List[OrderResponse]:
         res = await self._exchange.api.fetch_orders(
             symbol = symbol,
+            since=since,
+            limit=limit
         )    
         return [parse_ccxt_order(order, self.exchange_id) for order in res]
         
@@ -300,6 +321,39 @@ class BinanceWebsocketManager(WebsocketManager):
         await super().close()
 
 
+
+def check_in_orders(orders: List[OrderResponse], method: str, params: Dict[str, Any], time_range: int = 15) -> bool:
+    current_time = int(time.time() * 1000)
+    
+    for order in orders:
+        if current_time - order.timestamp > 1000 * time_range:
+            continue
+        
+        match method:
+            case "place_limit_order":
+                if (
+                    order.symbol == params['symbol']
+                    and order.side == params['side']
+                    and order.amount == params['amount']
+                    and order.price == params['price']
+                    and order.type == 'limit'
+                ):
+                    return True
+            case "place_market_order":
+                if (
+                    order.symbol == params['symbol']
+                    and order.side == params['side']
+                    and order.amount == params['amount']
+                    and order.type == 'market'
+                ):
+                    return True
+            case "cancel_order":
+                if (
+                    order.symbol == params['symbol']
+                    and order.id == params['id']
+                    and order.status == 'canceled'
+                ):
+                    return True
 
 
 

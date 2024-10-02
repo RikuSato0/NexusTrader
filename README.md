@@ -11,77 +11,116 @@ TradeBotPro is a flexible and powerful trading bot framework designed to interac
 - Account management
 - Extensible architecture for easy addition of new exchanges
 
-## Project Structure
-
-The project is organized into several key components:
-
-1. `ExchangeManager`: Handles the initialization and management of exchange connections.
-2. `OrderManager`: Manages order-related operations such as placing and canceling orders.
-3. `AccountManager`: Manages account-related operations.
-4. `WebsocketManager`: Handles WebSocket connections for real-time data streaming.
-
 ## Installation
 
-(Add installation instructions here)
+To install TradeBotPro, use pip:
 
-## Usage
+```
+pip install tradebotpro
+```
+
+## Quick Start
 
 Here's a basic example of how to use TradeBotPro:
 
 ```python
 import asyncio
 from tradebot.exchange import BinanceExchangeManager, BinanceOrderManager
+from tradebot.constants import CONFIG
 
 async def main():
     config = {
-        "exchange_id": "binance",
-        "apiKey": "your_api_key",
-        "secret": "your_secret_key",
-        "enableRateLimit": True,
-        "sandbox": True  # Use sandbox mode for testing
+        'exchange_id': 'binance',
+        'sandbox': True,
+        'apiKey': CONFIG['binance_future_testnet']['API_KEY'],
+        'secret': CONFIG['binance_future_testnet']['SECRET'],
+        'enableRateLimit': False,
     }
-
+    
     exchange = BinanceExchangeManager(config)
-    order_manager = BinanceOrderManager(exchange)
-
     await exchange.load_markets()
-
-    # Place a limit order
-    order = await order_manager.place_limit_order(
-        symbol="BTC/USDT",
-        side="buy",
-        amount=0.001,
-        price=30000
+    order_manager = BinanceOrderManager(exchange)
+    
+    res = await order_manager.place_limit_order(
+        symbol='BTC/USDT:USDT',
+        side='buy',
+        price=59695,
+        amount=0.01,
+        positionSide='LONG',
     )
-
-    print(f"Order placed: {order}")
-
-    await exchange.close()
+    
+    print(res)
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+## Core Components
+
+### ExchangeManager
+
+The `ExchangeManager` class handles the initialization and management of exchange connections. It's responsible for loading markets and providing a unified interface for interacting with different exchanges.
+
+### OrderManager
+
+The `OrderManager` class manages order-related operations such as placing and canceling orders. It provides methods for creating limit and market orders, as well as canceling existing orders.
+
+### WebsocketManager
+
+The `WebsocketManager` class handles WebSocket connections for real-time data streaming. It provides methods for subscribing to various data streams such as order book updates, trades, and user data.
+
 ## Supported Exchanges
 
-- Binance
-- Bybit
-- OKX
+TradeBotPro currently supports the following exchanges:
 
-## WebSocket Subscriptions
+1. Binance
+2. Bybit
+3. OKX
 
-TradeBotPro supports various WebSocket subscriptions for real-time data:
+Each exchange has its own implementation of the core components, allowing for exchange-specific features and optimizations.
 
-- Order book updates
-- Trades
-- User account updates
-- Position updates
-- Order updates
-- Market data (e.g., klines)
+## Advanced Usage
 
-Each exchange implementation provides specific methods for subscribing to these data streams.
+### Subscribing to WebSocket Streams
 
+Here's an example of how to subscribe to a WebSocket stream:
+
+```python
+import asyncio
+from tradebot.exchange import BinanceWebsocketManager
+from tradebot.constants import Url
+
+async def callback(msg):
+    print(msg)
+
+async def main():
+    ws_manager = BinanceWebsocketManager(Url.Binance.Spot)
+    await ws_manager.subscribe_kline("BTCUSDT", interval='1s', callback=callback)
+    
+    while True:
+        await asyncio.sleep(1)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Error Handling
+
+TradeBotPro provides custom exceptions for better error handling. For example, the `OrderResponseError` is raised when there's an issue with an order operation:
+
+```python
+from tradebot.exceptions import OrderResponseError
+
+try:
+    res = await order_manager.place_limit_order(...)
+except OrderResponseError as e:
+    print(f"Error placing order: {e}")
+```
+
+## Contributing
+
+Contributions to TradeBotPro are welcome! Please refer to our [contribution guidelines](CONTRIBUTING.md) for more information on how to get started.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.# TradeBotPro
+TradeBotPro is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

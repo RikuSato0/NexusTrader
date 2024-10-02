@@ -1,3 +1,4 @@
+import time
 import asyncio
 from pprint import pprint
 from tradebot.constants import CONFIG
@@ -27,10 +28,6 @@ async def main():
         await exchange.load_markets()
         order_manager = BinanceOrderManager(exchange)
         
-        # res = await order_manager.fetch_orders(
-        #     symbol="TRX/USDT",
-        # )
-        # pprint(res)
         
         res = await order_manager.place_limit_order(
             symbol='BTC/USDT:USDT',
@@ -48,6 +45,15 @@ async def main():
             symbol='BTC/USDT:USDT',
         )
         
+        pprint(res)
+        
+        # await asyncio.sleep(1)
+        current_time = int(time.time() * 1000)
+        
+        res = await order_manager.fetch_orders(
+            symbol="BTC/USDT:USDT",
+            since=current_time - 1000 * 60,
+        )
         pprint(res)
         
         # res = await order_manager.place_market_order(

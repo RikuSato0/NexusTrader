@@ -26,13 +26,26 @@ async def main():
         exchange = ExchangeManager(config)
         await exchange.load_markets()
         order_manager = BinanceOrderManager(exchange)
-
-        res = await order_manager.place_market_order(
-            symbol='SFP/USDT',
-            side='sell',
-            amount=29,
-            # positionSide='LONG',
+        
+        # res = await order_manager.fetch_orders(
+        #     symbol="TRX/USDT",
+        # )
+        # pprint(res)
+        
+        res = await order_manager.place_limit_order(
+            symbol='BTC/USDT:USDT',
+            side='buy',
+            price=59695,
+            amount=0.01,
+            positionSide='LONG',
             # reduceOnly=True,
+        )
+        
+        pprint(res)
+        
+        res = await order_manager.cancel_order(
+            id = res.id,
+            symbol='BTC/USDT:USDT',
         )
         
         pprint(res)

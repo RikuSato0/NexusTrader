@@ -27,6 +27,7 @@ from websockets.asyncio import client
 
 from tradebot.constants import IntervalType, UrlType
 from tradebot.entity import log_register
+from tradebot.exceptions import OrderResponseError
 from tradebot.entity import EventSystem, OrderResponse
 from tradebot.base import ExchangeManager, OrderManager, AccountManager, WebsocketManager
 
@@ -40,8 +41,17 @@ class BinanceExchangeManager(ExchangeManager):
 class BinanceOrderManager(OrderManager):
     def __init__(self, exchange: BinanceExchangeManager):
         super().__init__(exchange)
+        self.exchange_id = exchange.config['exchange_id']
     
-    
+    async def handle_request_timeout(self, method: str, params: Dict[str, Any]):
+        match method:
+            case "place_limit_order":
+                pass
+            case "place_market_order":
+                pass
+            case "cancel_order":
+                pass
+                
     async def place_limit_order(
         self, 
         symbol: str, 
@@ -51,7 +61,23 @@ class BinanceOrderManager(OrderManager):
         **params
     ) -> OrderResponse:
         res = await super().place_limit_order(symbol, side, amount, price, **params)
-        return parse_ccxt_order(res, self._exchange.config['exchange_id'])
+        if isinstance(res, OrderResponseError):
+            self._log.error(str(res))
+            return OrderResponse(
+                raw={},
+                success=False,
+                exchange=self.exchange_id,
+                id=None,
+                client_order_id=None,
+                timestamp=int(time.time() * 1000),
+                symbol=symbol,
+                type='limit',
+                side=side,
+                status='failed',
+                price=price,
+                amount=amount,
+            )
+        return parse_ccxt_order(res, self.exchange_id)
 
     async def place_market_order(
         self, 
@@ -61,22 +87,47 @@ class BinanceOrderManager(OrderManager):
         **params
     ) -> OrderResponse:
         res = await super().place_market_order(symbol, side, amount, **params)
-        return parse_ccxt_order(res, self._exchange.config['exchange_id'])
+        if isinstance(res, OrderResponseError):
+            self._log.error(str(res))
+            return OrderResponse(
+                raw={},
+                success=False,
+                exchange=self.exchange_id,
+                id=None,
+                client_order_id=None,
+                timestamp=int(time.time() * 1000),
+                symbol=symbol,
+                type='market',
+                side=side,
+                status='failed',
+                amount=amount,
+            )
+        return parse_ccxt_order(res, self.exchange_id)
     
-    async def place_limit_order_ws(
-        self, 
-        symbol: str, 
-        side: Literal['buy', 'sell'], 
-        amount: Decimal, 
-        price: Decimal, 
-        **params
-    ) -> Dict[str, Any]:
-        res = await super().place_limit_order_ws(symbol, side, amount, price, **params)
-        return parse_ccxt_order(res, self._exchange.config['exchange_id'])
-    
+    async def cancel_order(self, id: str, symbol: str, **params) -> OrderResponse:
+        res = await super().cancel_order(id, symbol, **params)
+        if isinstance(res, OrderResponseError):
+            self._log.error(str(res))
+            return OrderResponse(
+                raw={},
+                success=False,
+                exchange=self.exchange_id,
+                id=id,
+                client_order_id=None,
+                timestamp=int(time.time() * 1000),
+                symbol=symbol,
+                type=None,
+                side=None,
+                status='failed',
+                amount=None,
+            )
+        return parse_ccxt_order(res, self.exchange_id)
         
-        
-    
+    async def fetch_orders(self, symbol: str) -> List[OrderResponse]:
+        res = await self._exchange.api.fetch_orders(
+            symbol = symbol,
+        )    
+        return [parse_ccxt_order(order, self.exchange_id) for order in res]
         
         
         
@@ -265,7 +316,7 @@ def parse_ccxt_order(res: Dict[str, Any], exchange: str) -> OrderResponse:
     amount = res.get('amount', None)
     filled = res.get('filled', None)
     remaining = res.get('remaining', None)
-    status = res.get('status', None)
+    status = raw.get('status', None).lower()
     cost = res.get('cost', None)
     reduce_only = raw.get('reduceOnly', None)
     position_side = raw.get('positionSide', '').lower() or None # long or short
@@ -273,6 +324,7 @@ def parse_ccxt_order(res: Dict[str, Any], exchange: str) -> OrderResponse:
     
     return OrderResponse(
         raw=raw,
+        success=True,
         exchange=exchange,
         id=id,
         client_order_id=client_order_id,

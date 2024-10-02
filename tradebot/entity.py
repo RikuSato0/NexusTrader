@@ -22,14 +22,15 @@ import spdlog as spd
 @dataclass
 class OrderResponse:
     raw: Dict[str, Any] 
+    success: bool
     exchange: str
     id: str
     client_order_id: str
     timestamp: int
     symbol: str
-    type: str
-    side: str
-    status: str
+    type: Literal['limit', 'market']
+    side: Literal['buy', 'sell']
+    status: Literal['new', 'partially_filled', 'filled', 'canceled', 'expired', 'failed']
     price: Optional[float] = None
     average: Optional[float] = None
     last_filled_price: Optional[float] = None

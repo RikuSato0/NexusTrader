@@ -20,7 +20,7 @@ def cb(msg):
 async def main():
     try:        
         okx_ws_manager = OkxWebsocketManager(url=Url.Okx.DEMO, api_key=OKX_API_KEY, secret=OKX_SECRET, passphrase=OKX_PASSPHRASE)
-        await okx_ws_manager.subscribe_orders(callback=cb)
+        await okx_ws_manager.subscribe_positions(callback=cb)
         
         while True:
             await asyncio.sleep(1)

@@ -10,9 +10,14 @@ from typing import Callable, Literal
 from collections import defaultdict
 from decimal import Decimal
 
+
+from ccxt.base.errors import RequestTimeout
+
+
 from tradebot.entity import log_register
 from tradebot.entity import OrderResponse
 from tradebot.exceptions import OrderResponseError
+
 
 class ExchangeManager(ABC):
     def __init__(self, config: Dict[str, Any]):
@@ -28,7 +33,6 @@ class ExchangeManager(ABC):
         
         api = exchange_class(self.config)
         api.set_sandbox_mode(self.config.get("sandbox", False)) # Set sandbox mode if demo trade is enabled
-        
         return api
     
     async def load_markets(self):
@@ -47,18 +51,19 @@ class OrderManager(ABC):
     def __init__(self, exchange: ExchangeManager):
         self._exchange = exchange
     
+    @abstractmethod
+    async def handle_request_timeout(self, method: str, params: Dict[str, Any]) -> None:
+        pass
+
     async def place_limit_order(
         self,
         symbol: str,
         side: Literal["buy", "sell"],
         amount: Decimal,
         price: Decimal,
-        close_position: bool = False,
         **params,
-    ):
+    ) -> Dict[str, Any]:
         try:
-            if close_position:
-                params["reduceOnly"] = True
             res = await self._exchange.api.create_order(
                 symbol=symbol,
                 type="limit",
@@ -67,24 +72,23 @@ class OrderManager(ABC):
                 price=price,
                 params=params,
             )
-            return OrderResponse(**res)
+            return res
+        except RequestTimeout:
+            await self.handle_request_timeout("place_limit_order", {
+                "symbol": symbol, "side": side, "amount": amount, "price": price, **params
+            })
         except Exception as e:
             raise OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, "price": price, **params})
             
-        
-    
     async def place_limit_order_ws(
         self,
         symbol: str,
         side: Literal["buy", "sell"],
         amount: Decimal,
         price: Decimal,
-        close_position: bool = False,
         **params,
-    ):
+    ) -> Dict[str, Any]:
         try:
-            if close_position:
-                params["reduceOnly"] = True
             res = await self._exchange.api.create_order_ws(
                 symbol=symbol,
                 type="limit",
@@ -93,21 +97,23 @@ class OrderManager(ABC):
                 price=price,
                 params=params,
             )
-            return OrderResponse(**res)
+            return res
+        except RequestTimeout:
+            await self.handle_request_timeout("place_limit_order_ws", {
+                "symbol": symbol, "side": side, "amount": amount, "price": price, **params
+            })
         except Exception as e:
             raise OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, "price": price, **params})
+    
     
     async def place_market_order(
         self,
         symbol: str,
         side: Literal["buy", "sell"],
         amount: Decimal,
-        close_position: bool = False,
         **params,
-    ):
+    ) -> Dict[str, Any]:
         try:
-            if close_position:
-                params["reduceOnly"] = True
             res = await self._exchange.api.create_order(
                 symbol=symbol,
                 type="market",
@@ -115,7 +121,11 @@ class OrderManager(ABC):
                 amount=amount,
                 params=params,
             )
-            return OrderResponse(**res)
+            return res
+        except RequestTimeout:
+            await self.handle_request_timeout("place_market_order", {
+                "symbol": symbol, "side": side, "amount": amount, **params
+            })
         except Exception as e:
             raise OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, **params})
     
@@ -124,12 +134,9 @@ class OrderManager(ABC):
         symbol: str,
         side: Literal["buy", "sell"],
         amount: Decimal,
-        close_position: bool = False,
         **kwargs,
-    ):
+    ) -> Dict[str, Any]:
         try:
-            if close_position:
-                kwargs["reduceOnly"] = True
             res = await self._exchange.api.create_order_ws(
                 symbol=symbol,
                 type="market",
@@ -137,23 +144,31 @@ class OrderManager(ABC):
                 amount=amount,
                 params=kwargs,
             )
-            return OrderResponse(**res)
+            return res
+        except RequestTimeout:
+            await self.handle_request_timeout("place_market_order_ws", 
+                {"symbol": symbol, "side": side, "amount": amount, **kwargs
+            })
         except Exception as e:
             raise OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, **kwargs})
     
-    async def cancel_order(self, id: str, symbol: str,  **params):
+    async def cancel_order(self, id: str, symbol: str,  **params) -> Dict[str, Any]:
         try:
             res = await self._exchange.api.cancel_order(id, symbol, params=params)
-            return OrderResponse(**res)
+            return res
+        except RequestTimeout:
+            await self.handle_request_timeout("cancel_order", {"id": id, "symbol": symbol, **params})
         except Exception as e:
             raise OrderResponseError(e, {"id": id, "symbol": symbol, **params})
     
-    async def cancel_order_ws(self, order_id: str, **params):
+    async def cancel_order_ws(self, id: str, symbol: str, **params) -> Dict[str, Any]:
         try:
-            res = await self._exchange.api.cancel_order_ws(order_id, params=params)
-            return OrderResponse(**res)
+            res = await self._exchange.api.cancel_order_ws(id, symbol, params=params)
+            return res
+        except RequestTimeout:
+            await self.handle_request_timeout("cancel_order_ws", {"id": id, "symbol": symbol, **params})
         except Exception as e:
-            raise OrderResponseError(e, {"order_id": order_id, **params})
+            raise OrderResponseError(e, {"id": id, **params})
 
 
 class WebsocketManager(ABC):

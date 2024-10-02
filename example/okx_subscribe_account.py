@@ -2,6 +2,9 @@ import asyncio
 import uvloop
 
 
+from pprint import pprint
+
+
 from tradebot.entity import redis_pool
 from tradebot.entity import Context
 from tradebot.exchange import OkxWebsocketManager
@@ -17,11 +20,12 @@ rc.flushall()
 context = Context(redis_client=rc, user=OKX_USER)
 
 def cb(msg):
-    if "data" in msg:
-        for asset in msg["data"][0]["details"]:
-            context.portfolio_account[asset["ccy"]] = asset["availEq"]
-            print(f"{asset['ccy']}: {asset['availEq']}")
-        print("--------------------")
+    print(msg)
+    # if "data" in msg:
+    #     for asset in msg["data"][0]["details"]:
+    #         context.portfolio_account[asset["ccy"]] = asset["availEq"]
+    #         print(f"{asset['ccy']}: {asset['availEq']}")
+    #     print("--------------------")
     
 async def main():
     try:

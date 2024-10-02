@@ -146,7 +146,7 @@ class OkxWebsocketManager(WebsocketManager):
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
     
-    async def subscribe_position(self, inst_type:Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
+    async def subscribe_positions(self, inst_type:Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
         subscription_id = f"position.{inst_type}"
         payload = {
             "op": "subscribe",
@@ -161,7 +161,7 @@ class OkxWebsocketManager(WebsocketManager):
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
     
-    async def subscribe_order(self, inst_type: Literal["SPOT", "MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
+    async def subscribe_orders(self, inst_type: Literal["SPOT", "MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY", callback: Callable[..., Any] = None, *args, **kwargs):
         subscription_id = f"order.{inst_type}"
         payload = {
             "op": "subscribe",
@@ -189,3 +189,99 @@ class OkxWebsocketManager(WebsocketManager):
             self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id, auth=True)))
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
+
+
+def parse_private_stream(msg: Dict[str, Any]):
+    if msg.get('event', None) is not None:
+        return 
+    if (arg := msg.get('arg', None)) is not None:
+        channel = arg['channel']
+        match channel:
+            case "account":
+                pass
+            case "positions":
+                pass
+            case "orders":
+                """
+                {
+                    'arg': {
+                        'channel': 'orders', // channel name
+                        'instType': 'ANY', // instrument type
+                        'uid': '422205842008504732' // User Identifier
+                    }, 
+                    'data': [
+                        {
+                            'instType': 'SPOT', // Instrument type
+                            'instId': 'BTC-USDT', // Instrument ID
+                            'tgtCcy': '', // Default is `quote_ccy` for buy, `base_ccy` for sell
+                            'ccy': '', // Margin currency only applicable to cross MARGIN orders in Spot and futures mode
+                            'ordId': '1848670189392691200', 
+                            'clOrdId': '', Client Order Id as assigned by the client
+                            'algoClOrdId': '', Client supplied algo ID
+                            'algoId': '', Algo ID
+                            'tag': '', Order tag
+                            'px': '65465.4', Price
+                            'sz': '3.00708129', The Original Order quantity, `SPOT/MARGIN`, in the unit of currency; `SWAP/FUTURES/OPTION`, in the unit of contract
+                            'notionalUsd': '196958.20937210717', // Estimated notional value in USD
+                            'ordType': 'limit', // market, limit, post_only, fok(fill or kill order), ioc(Immediate-or-cancel order), optimal_limit_ioc, mmp(Market Maker Protection), mmp_and_post_only: Market Maker Protection and Post Only order, op_fok: Simple options (fok)
+                            'side': 'sell', // order side, `buy` or `sell`
+                            'posSide': '', // Position side, long or short
+                            'tdMode': 'cross', // Trade mode of the order, `cross` or `isolated`   
+                            'accFillSz': '0', // Accumulated filled quantity
+                            'fillNotionalUsd': '', // Filled notional value in USD of the order
+                            'avgPx': '0', // Average filled price
+                            'state': 'live', // Order state, `canceled`, `live`, `partially_filled`, `filled`, `mmp_canceled`
+                            'lever': '5', // Leverage
+                            'pnl': '0', // Profit and loss
+                            'feeCcy': 'USDT', // Fee Currency
+                            'fee': '0', // Fee and rebate. For spot and margin, For spot and margin, it is accumulated fee charged by the platform. It is always negative, e.g. -0.01. For Expiry Futures, Perpetual Futures and Options, it is accumulated fee and rebate
+                            'rebateCcy': 'BTC', // Rebate currency, if there is no rebate, this field is "".
+                            'rebate': '0', // 返利
+                            'category': 'normal', 
+                            'uTime': '1727597064972', // update time
+                            'cTime': '1727597064972', // create time
+                            'source': '', 
+                            'reduceOnly': 'false', 
+                            'cancelSource': '', 
+                            'quickMgnType': '', 
+                            'stpId': '', 
+                            'stpMode': 'cancel_maker', 
+                            'attachAlgoClOrdId': '', 
+                            'lastPx': '65464.8', 
+                            'isTpLimit': 'false', 
+                            'slTriggerPx': '', 
+                            'slTriggerPxType': '', 
+                            'tpOrdPx': '', 
+                            'tpTriggerPx': '', 
+                            'tpTriggerPxType': '', 
+                            'slOrdPx': '', 
+                            'fillPx': '', 
+                            'tradeId': '', 
+                            'fillSz': '0', last filled quantity
+                            'fillTime': '', 
+                            'fillPnl': '0', 
+                            'fillFee': '0', 
+                            'fillFeeCcy': '', 
+                            'execType': '', 
+                            'fillPxVol': '', 
+                            'fillPxUsd': '', 
+                            'fillMarkVol': '', 
+                            'fillFwdPx': '', 
+                            'fillMarkPx': '', 
+                            'amendSource': '', 
+                            'reqId': '', 
+                            'amendResult': '', 
+                            'code': '0', 
+                            'msg': '', 
+                            'pxType': '', 
+                            'pxUsd': '', 
+                            'pxVol': '', 
+                            'linkedAlgoOrd': {'algoId': ''}, 
+                            'attachAlgoOrds': []
+                        }
+                    ]
+                }
+                """
+                pass
+    
+    

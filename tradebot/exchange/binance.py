@@ -27,7 +27,7 @@ from websockets.asyncio import client
 
 from tradebot.constants import IntervalType, UrlType
 from tradebot.entity import log_register
-from tradebot.entity import EventSystem
+from tradebot.entity import EventSystem, OrderResponse
 from tradebot.base import ExchangeManager, OrderManager, AccountManager, WebsocketManager
 
 
@@ -40,6 +40,47 @@ class BinanceExchangeManager(ExchangeManager):
 class BinanceOrderManager(OrderManager):
     def __init__(self, exchange: BinanceExchangeManager):
         super().__init__(exchange)
+    
+    
+    async def place_limit_order(
+        self, 
+        symbol: str, 
+        side: Literal['buy', 'sell'], 
+        amount: Decimal, 
+        price: float, 
+        **params
+    ) -> OrderResponse:
+        res = await super().place_limit_order(symbol, side, amount, price, **params)
+        return parse_ccxt_order(res, self._exchange.config['exchange_id'])
+
+    async def place_market_order(
+        self, 
+        symbol: str, 
+        side: Literal['buy', 'sell'], 
+        amount: Decimal, 
+        **params
+    ) -> OrderResponse:
+        res = await super().place_market_order(symbol, side, amount, **params)
+        return parse_ccxt_order(res, self._exchange.config['exchange_id'])
+    
+    async def place_limit_order_ws(
+        self, 
+        symbol: str, 
+        side: Literal['buy', 'sell'], 
+        amount: Decimal, 
+        price: Decimal, 
+        **params
+    ) -> Dict[str, Any]:
+        res = await super().place_limit_order_ws(symbol, side, amount, price, **params)
+        return parse_ccxt_order(res, self._exchange.config['exchange_id'])
+    
+        
+        
+    
+        
+        
+        
+        
     
 class BinanceAccountManager(AccountManager):
     pass
@@ -210,6 +251,49 @@ class BinanceWebsocketManager(WebsocketManager):
 
 
 
+
+def parse_ccxt_order(res: Dict[str, Any], exchange: str) -> OrderResponse:
+    raw = res.get('info', None)
+    id = res.get('id', None)
+    client_order_id = res.get('clientOrderId', None)
+    timestamp = res.get('timestamp', None)
+    symbol = res.get('symbol', None)
+    type = res.get('type', None) # market or limit
+    side = res.get('side', None) # buy or sell
+    price = res.get('price', None) # maybe empty for market order
+    average = res.get('average', None) # float everage filling price
+    amount = res.get('amount', None)
+    filled = res.get('filled', None)
+    remaining = res.get('remaining', None)
+    status = res.get('status', None)
+    cost = res.get('cost', None)
+    reduce_only = raw.get('reduceOnly', None)
+    position_side = raw.get('positionSide', '').lower() or None # long or short
+    time_in_force = res.get('timeInForce', None)
+    
+    return OrderResponse(
+        raw=raw,
+        exchange=exchange,
+        id=id,
+        client_order_id=client_order_id,
+        timestamp=timestamp,
+        symbol=symbol,
+        type=type,
+        side=side,
+        price=price,
+        average=average,
+        amount=amount,
+        filled=filled,
+        remaining=remaining,
+        status=status,
+        cost=cost,
+        reduce_only=reduce_only,
+        position_side=position_side,
+        time_in_force=time_in_force
+    )
+
+
+
 def parse_websocket_stream(event_data: Dict[str, Any], market_id: Dict[str, Any], market_type: Optional[Literal["spot", "swap"]] = None):
     event = event_data.get('e', None)
     match event:
@@ -252,37 +336,37 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
         case "ORDER_TRADE_UPDATE":
             """
             {
-                "e": "ORDER_TRADE_UPDATE", 
-                "T": 1727352962757, 
-                "E": 1727352962762, 
-                "fs": "UM", 
+                "e": "ORDER_TRADE_UPDATE", // Event type
+                "T": 1727352962757,  // Transaction time
+                "E": 1727352962762, // Event time
+                "fs": "UM", // Event business unit. 'UM' for USDS-M futures and 'CM' for COIN-M futures
                 "o": {
-                    "s": "NOTUSDT", 
-                    "c": "c-11WLU7VP1727352880uzcu2rj4ss0i", 
-                    "S": "SELL", 
-                    "o": "LIMIT", 
-                    "f": "GTC", 
-                    "q": "5488", 
-                    "p": "0.0084830", 
-                    "ap": "0", 
-                    "sp": "0", 
-                    "x": "NEW", 
-                    "X": "NEW", 
-                    "i": 4968510801, 
-                    "l": "0", 
-                    "z": "0", 
-                    "L": "0", 
-                    "n": "0", 
-                    "N": "USDT", 
-                    "T": 1727352962757, 
-                    "t": 0, 
-                    "b": "0", 
-                    "a": "46.6067521", 
-                    "m": false, 
-                    "R": false, 
-                    "ps": "BOTH", 
-                    "rp": "0", 
-                    "V": "EXPIRE_NONE", 
+                    "s": "NOTUSDT", // Symbol
+                    "c": "c-11WLU7VP1727352880uzcu2rj4ss0i", // Client order ID
+                    "S": "SELL", // Side
+                    "o": "LIMIT", // Order type
+                    "f": "GTC", // Time in force
+                    "q": "5488", // Original quantity
+                    "p": "0.0084830", // Original price
+                    "ap": "0", // Average price
+                    "sp": "0", // Ignore
+                    "x": "NEW", // Execution type
+                    "X": "NEW", // Order status
+                    "i": 4968510801, // Order ID
+                    "l": "0", // Order last filled quantity
+                    "z": "0", // Order filled accumulated quantity
+                    "L": "0", // Last filled price
+                    "n": "0", // Commission, will not be returned if no commission
+                    "N": "USDT", // Commission asset, will not be returned if no commission
+                    "T": 1727352962757, // Order trade time
+                    "t": 0, // Trade ID
+                    "b": "0", // Bids Notional
+                    "a": "46.6067521", // Ask Notional
+                    "m": false, // Is this trade the maker side?
+                    "R": false, // Is this reduce only
+                    "ps": "BOTH", // Position side
+                    "rp": "0", // Realized profit of the trade
+                    "V": "EXPIRE_NONE", // STP mode
                     "pm": "PM_NONE", 
                     "gtd": 0
                 }
@@ -290,9 +374,15 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
             """
             if (market := market_id.get(event_data['o']['s'], None)) is None:
                 id = f"{event_data['o']['s']}_swap"
-                market = market_id[id]
-            event_data['o']['s'] = market['symbol']
-            return event_data
+                market = market_id[id]    
+                ccxtpro.binance.create_order()
+            return OrderResponse(
+                info=event_data,
+                id=event_data['o']['i'],
+                clientOrderId=event_data['o']['c'],
+                timestamp=event_data['T'],
+                
+            )
         
         case "ACCOUNT_UPDATE":
             """
@@ -347,34 +437,34 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
         case "executionReport":
             """
             {
-                "e": "executionReport", 
-                "E": 1727353057267, 
-                "s": "ORDIUSDT", 
-                "c": "c-11WLU7VP2rj4ss0i", 
-                "S": "BUY", 
-                "o": "MARKET", 
-                "f": "GTC", 
-                "q": "0.50000000", 
-                "p": "0.00000000", 
-                "P": "0.00000000", 
-                "g": -1, 
-                "x": "TRADE", 
-                "X": "PARTIALLY_FILLED", 
-                "i": 2233880350, 
-                "l": "0.17000000", 
-                "z": "0.17000000", 
-                "L": "36.88000000", 
-                "n": "0.00000216", 
-                "N": "BNB", 
-                "T": 1727353057266, 
-                "t": 105069149, 
-                "w": false, 
-                "m": false, 
-                "O": 1727353057266, 
-                "Z": "6.26960000", 
-                "Y": "6.26960000", 
-                "V": "EXPIRE_MAKER", 
-                "I": 1495839281094
+                "e": "executionReport", // Event type
+                "E": 1727353057267, // Event time
+                "s": "ORDIUSDT", // Symbol
+                "c": "c-11WLU7VP2rj4ss0i", // Client order ID 
+                "S": "BUY", // Side
+                "o": "MARKET", // Order type
+                "f": "GTC", // Time in force
+                "q": "0.50000000", // Order quantity
+                "p": "0.00000000", // Order price
+                "P": "0.00000000", // Stop price
+                "g": -1, // Order list id
+                "x": "TRADE", // Execution type
+                "X": "PARTIALLY_FILLED", // Order status
+                "i": 2233880350, // Order ID
+                "l": "0.17000000", // last executed quantity
+                "z": "0.17000000", // Cumulative filled quantity
+                "L": "36.88000000", // Last executed price
+                "n": "0.00000216", // Commission amount
+                "N": "BNB", // Commission asset
+                "T": 1727353057266, // Transaction time
+                "t": 105069149, // Trade ID
+                "w": false, // Is the order on the book?
+                "m": false, // Is this trade the maker side?
+                "O": 1727353057266, // Order creation time
+                "Z": "6.26960000", // Cumulative quote asset transacted quantity
+                "Y": "6.26960000", // Last quote asset transacted quantity (i.e. lastPrice * lastQty)
+                "V": "EXPIRE_MAKER", // Self trade prevention Mode
+                "I": 1495839281094 // Ignore
             }
             """
             id = f"{event_data['s']}_spot"

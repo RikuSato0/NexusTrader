@@ -9,7 +9,7 @@ from pathlib import Path
 
 from decimal import Decimal
 from collections import defaultdict
-from typing import Literal, Callable, Union
+from typing import Literal, Callable, Union, Optional
 from typing import Dict, List, Any
 from dataclasses import dataclass, fields, asdict
 
@@ -21,34 +21,39 @@ import spdlog as spd
 
 @dataclass
 class OrderResponse:
-    info: Dict[str, Any]
+    raw: Dict[str, Any] 
+    exchange: str
     id: str
-    clientOrderId: str
+    client_order_id: str
     timestamp: int
-    datetime: str
-    lastTradeTimestamp: str
-    lastUpdateTimestamp: str
     symbol: str
     type: str
-    timeInForce: str
-    postOnly: bool
-    reduceOnly: bool
     side: str
-    price: float
-    triggerPrice: float
-    amount: float
-    cost: float
-    average: float
-    filled: float
-    remaining: float
     status: str
-    fee: float
-    trades: List[Dict[str, Any]]
-    fees: List[Dict[str, Any]]
-    stopPrice: float
-    takeProfitPrice: float
-    stopLossPrice: float
+    price: Optional[float] = None
+    average: Optional[float] = None
+    last_filled_price: Optional[float] = None
+    amount: Optional[Decimal] = None
+    filled: Optional[Decimal] = None
+    last_filled: Optional[Decimal] = None
+    remaining: Optional[Decimal] = None
+    fee: Optional[float] = None
+    fee_currency: Optional[str] = None
+    cost: Optional[float] = None
+    last_trade_timestamp: Optional[int] = None
+    reduce_only: Optional[bool] = None
+    position_side: Optional[str] = None  # 可以为 None，表示现货交易
+    time_in_force: Optional[str] = None
+    leverage: Optional[int] = None
 
+    def __post_init__(self):
+        decimal_fields = ['amount', 'filled', 'last_filled', 'remaining']
+        
+        for field in decimal_fields:
+            if getattr(self, field) is not None:
+                setattr(self, field, Decimal(str(getattr(self, field))))
+    
+    
 class EventSystem:
     _listeners: Dict[str, List[Callable]] = {}
 

@@ -1,22 +1,23 @@
 import asyncio
 from pprint import pprint
 from tradebot.constants import CONFIG
-from tradebot.base import ExchangeManager
-from tradebot.exchange import BinanceOrderManager
+from tradebot.base import OrderManager, ExchangeManager
 from tradebot.exceptions import OrderResponseError
 
 
-BINANCE_API_KEY = CONFIG['binance_future_testnet']['API_KEY']
-BINANCE_API_SECRET = CONFIG['binance_future_testnet']['SECRET']
+OKX_API_KEY = CONFIG['okex_demo']['API_KEY']
+OKX_SECRET = CONFIG['okex_demo']['SECRET']
+OKX_PASSPHRASE = CONFIG['okex_demo']['PASSPHRASE']
 
 
 async def main():
     try:
         config = {
-            'exchange_id': 'binance',
+            'exchange_id': 'okx',
             'sandbox': True,
-            'apiKey': BINANCE_API_KEY,
-            'secret': BINANCE_API_SECRET, 
+            'apiKey': OKX_API_KEY,
+            'secret': OKX_SECRET,
+            'password': OKX_PASSPHRASE,
             'enableRateLimit': False,
             # 'options': {
             #     'portfolioMargin': True,
@@ -25,13 +26,12 @@ async def main():
         
         exchange = ExchangeManager(config)
         await exchange.load_markets()
-        order_manager = BinanceOrderManager(exchange)
+        order_manager = OrderManager(exchange)
 
         res = await order_manager.place_market_order(
-            symbol='SFP/USDT',
-            side='sell',
-            amount=29,
-            # positionSide='LONG',
+            symbol='BTC/USDT:USDT',
+            side='buy',
+            amount=0.5,
             # reduceOnly=True,
         )
         

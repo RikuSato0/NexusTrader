@@ -35,6 +35,24 @@ CONFIG.read('.keys/config.cfg')
 # OKX_USER = CONFIG['okex_demo']['USER']
 
 class Url:
+    class Bybit:
+        class Spot:
+            MAINNET = "wss://stream.bybit.com/v5/public/spot"
+            TESTNET = "wss://stream-testnet.bybit.com/v5/public/spot"
+        
+        class Linear:
+            MAINNET = "wss://stream.bybit.com/v5/public/linear"
+            TESTNET = "wss://stream-testnet.bybit.com/v5/public/linear"
+        
+        class Inverse:
+            MAINNET = "wss://stream.bybit.com/v5/public/inverse"
+            TESTNET = "wss://stream-testnet.bybit.com/v5/public/inverse"
+        
+        class Option:
+            MAINNET = "wss://stream.bybit.com/v5/public/option"
+            TESTNET = "wss://stream-testnet.bybit.com/v5/public/option"
+    
+    
     class Binance:
         class Spot:
             BASE_URL = "https://api.binance.com/api/v3/userDataStream"
@@ -158,7 +176,11 @@ UrlType = Union[
     Url.Binance.SpotTestnet,
     Url.Binance.UsdMFutureTestnet,
     Url.Binance.CoinMFutureTestnet,
-    Url.Okx
+    Url.Okx,
+    Url.Bybit.Spot,
+    Url.Bybit.Linear,
+    Url.Bybit.Inverse,
+    Url.Bybit.Option,
 ]
 
 

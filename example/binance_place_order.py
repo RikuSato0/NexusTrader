@@ -2,26 +2,37 @@ import time
 import asyncio
 from pprint import pprint
 from tradebot.constants import CONFIG
-from tradebot.base import ExchangeManager
+from tradebot.base import ExchangeManager, OrderManager
 from tradebot.exchange import BinanceOrderManager
 from tradebot.exceptions import OrderResponseError
-
+import pandas as pd
 
 BINANCE_API_KEY = CONFIG['binance_future_testnet']['API_KEY']
 BINANCE_API_SECRET = CONFIG['binance_future_testnet']['SECRET']
 
+# BINANCE_API_KEY = CONFIG['binance_vip']['API_KEY']
+# BINANCE_API_SECRET = CONFIG['binance_vip']['SECRET']
+
 
 async def main():
     try:
+        # config = {
+        #     'exchange_id': 'binance',
+        #     'sandbox': False,
+        #     'apiKey': BINANCE_API_KEY,
+        #     'secret': BINANCE_API_SECRET, 
+        #     'enableRateLimit': False,
+        #     'options': {
+        #         'portfolioMargin': True,
+        #     }
+        # }
+        
         config = {
             'exchange_id': 'binance',
             'sandbox': True,
             'apiKey': BINANCE_API_KEY,
             'secret': BINANCE_API_SECRET, 
             'enableRateLimit': False,
-            # 'options': {
-            #     'portfolioMargin': True,
-            # }
         }
         
         exchange = ExchangeManager(config)
@@ -47,20 +58,21 @@ async def main():
         
         pprint(res)
         
-        # await asyncio.sleep(1)
-        current_time = int(time.time() * 1000)
+        # res = await order_manager.fetch_orders(
+        #     symbol="ICP/USDT:USDT",
+        # )
+        # orders = {}
         
-        res = await order_manager.fetch_orders(
-            symbol="BTC/USDT:USDT",
-            since=current_time - 1000 * 60,
-        )
-        pprint(res)
+        # for order in res:
+        #     datetime = pd.to_datetime(order.timestamp, unit='ms')
+        #     orders[datetime] = order
+        
+        # pprint(orders)
         
         # res = await order_manager.place_market_order(
-        #     symbol='USDC/USDT:USDT',
+        #     symbol='STRK/USDT',
         #     side='sell',
-        #     amount=10,
-        #     newClientOrderId='test',
+        #     amount=774,
         # )
         
         # pprint(res)

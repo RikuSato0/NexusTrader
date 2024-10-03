@@ -45,32 +45,18 @@ class BinanceOrderManager(OrderManager):
     
     async def handle_request_timeout(self, method: str, params: Dict[str, Any]):
         symbol = params['symbol']
-        orders = await self.fetch_orders(symbol)
+        current_time = int(time.time() * 1000)
+        orders = await self.fetch_orders(symbol, since = current_time - 1000 * 5)
         
-        match method:
-            case "place_limit_order":
-                for order in orders:
-                    if (
-                        order.symbol == symbol
-                        and order.side == params['side']
-                        and order.amount == params['amount']
-                        and order.price == params['price']
-                        and order.type == 'limit'
-                        and order.status == 'open'
-                    ):
-                        pass
-                
-                
-                
-                
-            case "place_market_order":
-                pass
-            case "cancel_order":
-                pass
+        if not in_orders(orders, method, params):
+            match method:
+                case "place_limit_order":
+                    return await self.retry_place_limit_order(params)
+                case "place_market_order":
+                    return await self.retry_place_market_order(params)
+                case "cancel_order":
+                    return await self.retry_cancel_order(params)
             
-    
-            
-                
     async def place_limit_order(
         self, 
         symbol: str, 
@@ -149,6 +135,99 @@ class BinanceOrderManager(OrderManager):
             limit=limit
         )    
         return [parse_ccxt_order(order, self.exchange_id) for order in res]
+    
+    async def _create_order(self, symbol, type, side, amount, price, **params):
+        res = await self._exchange.api.create_order(
+            symbol=symbol,
+            type=type,
+            side=side,
+            amount=amount,
+            price=price,
+            params=params
+        )
+        return parse_ccxt_order(res, self._exchange.config['exchange_id'])
+       
+    
+    
+    async def retry_place_limit_order(self, params: Dict[str, Any], max_retry: int = 3, interval: int = 3):
+        params['handle_timeout'] = False
+        for i in range(max_retry):
+            res = await super().place_limit_order(**params)
+            
+            if not isinstance(res, OrderResponseError):
+                return res
+            
+            if i == max_retry - 1:
+                return OrderResponse(
+                    raw={},
+                    success=False,
+                    exchange=self.exchange_id,
+                    id=params.get('id', None),
+                    client_order_id='',
+                    timestamp=int(time.time() * 1000),
+                    symbol=params.get('symbol', None),
+                    type='limit',
+                    side=params['side'],
+                    price=params.get('price', None),
+                    amount=params.get('amount', None),
+                    status='failed'
+                )
+            
+            self._log.warn(f"Order placement failed, attempting retry {i+1} of {max_retry}: {str(res)}")
+            await asyncio.sleep(interval)
+    
+    async def retry_place_market_order(self, params: Dict[str, Any], max_retry: int = 3, interval: int = 3):
+        params['handle_timeout'] = False
+        for i in range(max_retry):
+            res = await super().place_market_order(**params)
+            
+            if not isinstance(res, OrderResponseError):
+                return res
+            
+            if i == max_retry - 1:
+                return OrderResponse(
+                    raw={},
+                    success=False,
+                    exchange=self.exchange_id,
+                    id=params.get('id', None),
+                    client_order_id='',
+                    timestamp=int(time.time() * 1000),
+                    symbol=params.get('symbol', None),
+                    type='market',
+                    side=params.get('side', None),
+                    amount=params.get('amount', None),
+                    status='failed'
+                )
+            
+            self._log.warn(f"Order placement failed, attempting retry {i+1} of {max_retry}: {str(res)}")
+            await asyncio.sleep(interval)
+    
+
+    async def retry_cancel_order(self, params: Dict[str, Any], max_retry: int = 3, interval: int = 3):
+        params['handle_timeout'] = False
+        for i in range(max_retry):
+            res = await super().cancel_order(**params)
+            
+            if not isinstance(res, OrderResponseError):
+                return res
+            
+            if i == max_retry - 1:
+                return OrderResponse(
+                    raw={},
+                    success=False,
+                    exchange=self._exchange.config['exchange_id'],
+                    id=params.get('id', None),
+                    client_order_id='',
+                    timestamp=int(time.time() * 1000),
+                    symbol=params.get('symbol', None),
+                    type=params.get('type', None),
+                    side=params.get('side', None),
+                    status='failed',
+                    amount=params.get('amount', None),
+                )
+            
+            self._log.warn(f"Order cancellation failed, attempting retry {i+1} of {max_retry}: {str(res)}")
+            await asyncio.sleep(interval)
         
         
         
@@ -322,13 +401,8 @@ class BinanceWebsocketManager(WebsocketManager):
 
 
 
-def check_in_orders(orders: List[OrderResponse], method: str, params: Dict[str, Any], time_range: int = 15) -> bool:
-    current_time = int(time.time() * 1000)
-    
+def in_orders(orders: List[OrderResponse], method: str, params: Dict[str, Any]) -> bool:
     for order in orders:
-        if current_time - order.timestamp > 1000 * time_range:
-            continue
-        
         match method:
             case "place_limit_order":
                 if (

@@ -50,6 +50,11 @@ class AccountManager(ABC):
 class OrderManager(ABC):
     def __init__(self, exchange: ExchangeManager):
         self._exchange = exchange
+        self._log = log_register.get_logger(name=type(self).__name__, level="INFO", flush=True)
+    
+    @abstractmethod
+    async def handle_request_timeout(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        pass
 
     async def place_limit_order(
         self,
@@ -57,6 +62,7 @@ class OrderManager(ABC):
         side: Literal["buy", "sell"],
         amount: Decimal,
         price: Decimal,
+        handle_timeout: bool = True,  
         **params,
     ) -> Dict[str, Any]:
         try:
@@ -70,9 +76,14 @@ class OrderManager(ABC):
             )
             return res
         except RequestTimeout:
-            return await self.handle_request_timeout("place_limit_order", {
-                "symbol": symbol, "side": side, "amount": amount, "price": price, **params
-            })  
+            if handle_timeout:
+                return await self.handle_request_timeout("place_limit_order", {
+                    "symbol": symbol, "side": side, "amount": amount, "price": price, **params
+                })  
+            else:
+                return OrderResponseError(
+                    "Request Timeout", {"symbol": symbol, "side": side, "amount": amount, "price": price, **params}
+                )
         except Exception as e:
             return OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, "price": price, **params})
             
@@ -82,6 +93,7 @@ class OrderManager(ABC):
         side: Literal["buy", "sell"],
         amount: Decimal,
         price: Decimal,
+        handle_timeout: bool = True,  
         **params,
     ) -> Dict[str, Any]:
         try:
@@ -95,9 +107,14 @@ class OrderManager(ABC):
             )
             return res
         except RequestTimeout:
-            return await self.handle_request_timeout("place_limit_order_ws", {
-                "symbol": symbol, "side": side, "amount": amount, "price": price, **params
-            })
+            if handle_timeout:  
+                return await self.handle_request_timeout("place_limit_order_ws", {
+                    "symbol": symbol, "side": side, "amount": amount, "price": price, **params
+                })
+            else:
+                return OrderResponseError(
+                    "Request Timeout", {"symbol": symbol, "side": side, "amount": amount, "price": price, **params}
+                )
         except Exception as e:
             return OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, "price": price, **params})
     
@@ -107,6 +124,7 @@ class OrderManager(ABC):
         symbol: str,
         side: Literal["buy", "sell"],
         amount: Decimal,
+        handle_timeout: bool = True,  
         **params,
     ) -> Dict[str, Any]:
         try:
@@ -119,9 +137,14 @@ class OrderManager(ABC):
             )
             return res
         except RequestTimeout:
-            return await self.handle_request_timeout("place_market_order", {
-                "symbol": symbol, "side": side, "amount": amount, **params
-            })
+            if handle_timeout:  
+                return await self.handle_request_timeout("place_market_order", {
+                    "symbol": symbol, "side": side, "amount": amount, "price": None, **params
+                })
+            else:
+                return OrderResponseError(
+                    "Request Timeout", {"symbol": symbol, "side": side, "amount": amount, **params}
+                )
         except Exception as e:
             return OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, **params})
     
@@ -130,6 +153,7 @@ class OrderManager(ABC):
         symbol: str,
         side: Literal["buy", "sell"],
         amount: Decimal,
+        handle_timeout: bool = True,  
         **kwargs,
     ) -> Dict[str, Any]:
         try:
@@ -142,28 +166,39 @@ class OrderManager(ABC):
             )
             return res
         except RequestTimeout:
-            return await self.handle_request_timeout("place_market_order_ws", 
-                {"symbol": symbol, "side": side, "amount": amount, **kwargs
-            })
+            if handle_timeout:  
+                return await self.handle_request_timeout("place_market_order_ws", 
+                    {"symbol": symbol, "side": side, "amount": amount, "price": None, **kwargs
+                })
+            else:
+                return OrderResponseError(
+                    "Request Timeout", {"symbol": symbol, "side": side, "amount": amount, **kwargs}
+                )
         except Exception as e:
             return OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, **kwargs})
     
-    async def cancel_order(self, id: str, symbol: str,  **params) -> Dict[str, Any]:
+    async def cancel_order(self, id: str, symbol: str, handle_timeout: bool = True, **params) -> Dict[str, Any]:  # 修改此行
         try:
             res = await self._exchange.api.cancel_order(id, symbol, params=params)
             return res
         except RequestTimeout:
-            return self.handle_request_timeout("cancel_order", {"id": id, "symbol": symbol, **params})
+            if handle_timeout:  
+                return await self.handle_request_timeout("cancel_order", {"id": id, "symbol": symbol, **params})
+            else:
+                return OrderResponseError("Request Timeout", {"id": id, "symbol": symbol, **params})
         except Exception as e:
             return OrderResponseError(e, {"id": id, "symbol": symbol, **params})
     
-    async def cancel_order_ws(self, id: str, symbol: str, **params) -> Dict[str, Any]:
+    async def cancel_order_ws(self, id: str, symbol: str, handle_timeout: bool = True, **params) -> Dict[str, Any]:  # 修改此行
         try:
             res = await self._exchange.api.cancel_order_ws(id, symbol, params=params)
             return res
         except RequestTimeout:
-            res = await self.handle_request_timeout("cancel_order_ws", {"id": id, "symbol": symbol, **params})
-            return res
+            if handle_timeout:  
+                res = await self.handle_request_timeout("cancel_order_ws", {"id": id, "symbol": symbol, **params})
+                return res
+            else:
+                return OrderResponseError("Request Timeout", {"id": id, "symbol": symbol, **params})
         except Exception as e:
             return OrderResponseError(e, {"id": id, **params})
 
@@ -206,5 +241,4 @@ class WebsocketManager(ABC):
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
         self._log.info("All WebSocket connections closed.")
-    
     

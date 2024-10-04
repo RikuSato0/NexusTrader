@@ -1,6 +1,6 @@
 import ast
 import ccxt
-
+import json
 
 from typing import Dict, Any
 from typing import Generator, Optional, Literal
@@ -13,7 +13,7 @@ from tradebot.entity import OrderResponse
 def parse_log_line(line) -> Optional[Dict]:
     try:
         # json_str = line.split("user data stream: ")[-1]
-        return ast.literal_eval(line)
+        return json.loads(line.strip())
     except:
         return None
 

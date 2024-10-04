@@ -51,8 +51,13 @@ class OrderResponse:
         decimal_fields = ['amount', 'filled', 'last_filled', 'remaining']
         
         for field in decimal_fields:
-            if getattr(self, field) is not None:
+            if getattr(self, field) is not None and not isinstance(getattr(self, field), Decimal):
                 setattr(self, field, Decimal(str(getattr(self, field))))
+        
+        float_fields = ['price', 'average', 'last_filled_price', 'fee', 'cost']
+        for field in float_fields:
+            if getattr(self, field) is not None and not isinstance(getattr(self, field), float):
+                setattr(self, field, float(getattr(self, field)))
     
     
 class EventSystem:

@@ -94,7 +94,7 @@ async def test_place_limit_order_timeout(order_manager, mock_exchange):
     def side_effect(*args, **kwargs):
         if side_effect.call_count < 2:
             side_effect.call_count += 1
-            raise RequestTimeout('请求超时')
+            raise RequestTimeout('Timeout')
         else:
             return {
                 'amount': 0.01,

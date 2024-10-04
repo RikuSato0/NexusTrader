@@ -432,7 +432,7 @@ def in_orders(orders: List[OrderResponse], method: str, params: Dict[str, Any]) 
 
 
 def parse_ccxt_order(res: Dict[str, Any], exchange: str) -> OrderResponse:
-    raw = res.get('info', None)
+    raw = res.get('info', {})
     id = res.get('id', None)
     client_order_id = res.get('clientOrderId', None)
     timestamp = res.get('timestamp', None)
@@ -552,17 +552,43 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
                 }
             }
             """
-            if (market := market_id.get(event_data['o']['s'], None)) is None:
-                id = f"{event_data['o']['s']}_swap"
-                market = market_id[id]    
-                ccxtpro.binance.create_order()
-            return OrderResponse(
-                info=event_data,
-                id=event_data['o']['i'],
-                clientOrderId=event_data['o']['c'],
-                timestamp=event_data['T'],
+            if (event_data := event_data.get('o', None)):
+            
+                if (market := market_id.get(event_data['s'], None)) is None:
+                    id = f"{event_data['s']}_swap"
+                    market = market_id[id]    
                 
-            )
+                if (type := event_data['o'].lower()) == "market":
+                    cost = float(event_data.get('z', '0')) * float(event_data.get('ap', '0'))
+                elif type == "limit":
+                    cost = float(event_data.get('z', '0')) * float(event_data.get('p', '0'))
+                
+                return OrderResponse(
+                    raw = event_data,
+                    success = True,
+                    exchange = "binance",
+                    id = event_data.get('i', None),
+                    client_order_id=event_data.get('c', None),
+                    timestamp=event_data.get('T', None),
+                    symbol=market['symbol'],
+                    type = type,
+                    side = event_data.get('S', '').lower(),
+                    status=event_data.get('X', '').lower(),
+                    price = event_data.get('p', None),
+                    average=event_data.get('ap', None),
+                    last_filled_price=event_data.get('L', None),
+                    amount=event_data.get('q', None),
+                    filled=event_data.get('z', None),
+                    last_filled=event_data.get('l', None),
+                    remaining=Decimal(event_data['q']) - Decimal(event_data['z']),
+                    fee=event_data.get('n', None),
+                    fee_currency=event_data.get('N', None),
+                    cost=cost,
+                    last_trade_timestamp=event_data.get('T', None),
+                    reduce_only=event_data.get('R', None),
+                    position_side=event_data.get('ps','').lower(),
+                    time_in_force=event_data.get('f', None)
+                )
         
         case "ACCOUNT_UPDATE":
             """
@@ -649,8 +675,36 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
             """
             id = f"{event_data['s']}_spot"
             market = market_id[id]
-            event_data['s'] = market['symbol']
-            return event_data
+            
+            
+            return OrderResponse(
+                raw = event_data,
+                success = True,
+                exchange = "binance",
+                id = event_data.get('i', None),
+                client_order_id=event_data.get('c', None),
+                timestamp=event_data.get('T', None),
+                symbol=market['symbol'],
+                type = event_data.get('o', '').lower(),
+                side = event_data.get('S', '').lower(),
+                status=event_data.get('X', '').lower(),
+                price = event_data.get('p', None),
+                average=event_data.get('ap', None),
+                last_filled_price=event_data.get('L', None),
+                amount=event_data.get('q', None),
+                filled=event_data.get('z', None),
+                last_filled=event_data.get('l', None),
+                remaining=Decimal(event_data.get('q', '0')) - Decimal(event_data.get('z', '0')),
+                fee=event_data.get('n', None),
+                fee_currency=event_data.get('N', None),
+                cost=event_data.get('Z', None),
+                last_trade_timestamp=event_data.get('T', None),
+                time_in_force=event_data.get('f', None)
+            )
+            
+            
+            
+            
         
         case "outboundAccountPosition":
             """

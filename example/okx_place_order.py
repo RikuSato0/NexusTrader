@@ -1,8 +1,9 @@
 import asyncio
 from pprint import pprint
 from tradebot.constants import CONFIG
-from tradebot.base import OrderManager, ExchangeManager
+from tradebot.base import ExchangeManager
 from tradebot.exceptions import OrderResponseError
+from tradebot.exchange import OkxOrderManager
 
 
 OKX_API_KEY = CONFIG['okex_demo']['API_KEY']
@@ -26,17 +27,25 @@ async def main():
         
         exchange = ExchangeManager(config)
         await exchange.load_markets()
-        order_manager = OrderManager(exchange)
+        order_manager = OkxOrderManager(exchange)
 
-        res = await order_manager.place_market_order(
+        res = await order_manager.place_limit_order(
             symbol='BTC/USDT:USDT',
             side='buy',
             amount=0.5,
+            price=50000,
             # reduceOnly=True,
         )
         
         pprint(res)
         
+        
+        res = await order_manager.cancel_order(
+            id = res.id,
+            symbol='BTC/USDT:USDT',
+        )
+        
+        pprint(res)
         # res = await order_manager.place_market_order(
         #     symbol='USDC/USDT:USDT',
         #     side='sell',

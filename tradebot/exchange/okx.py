@@ -26,7 +26,8 @@ from websockets.asyncio import client
 
 from tradebot.constants import IntervalType, UrlType
 from tradebot.entity import log_register
-from tradebot.entity import EventSystem
+from tradebot.exceptions import OrderResponseError
+from tradebot.entity import EventSystem, OrderResponse
 from tradebot.base import ExchangeManager, OrderManager, AccountManager, WebsocketManager
 
 
@@ -36,7 +37,91 @@ class OkxExchangeManager(ExchangeManager):
 class OkxOrderManager(OrderManager):
     def __init__(self, exchange: OkxExchangeManager):
         super().__init__(exchange)
-
+        self.exchange_id = self._exchange.config['exchange_id']
+    
+    async def handle_request_timeout(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        pass
+    
+    async def place_limit_order(
+        self, 
+        symbol: str, 
+        side: Literal['buy'] | Literal['sell'], 
+        amount: Decimal, 
+        price: Decimal, 
+        handle_timeout: bool = True, 
+        **params
+    ) -> OrderResponse:
+        res = await super().place_limit_order(symbol, side, amount, price, handle_timeout, **params)
+        if isinstance(res, OrderResponseError):
+            self._log.error(str(res))
+            return OrderResponse(
+                raw={},
+                success=False,
+                exchange=self.exchange_id,
+                id=None,
+                client_order_id=None,
+                timestamp=int(time.time() * 1000),
+                symbol=symbol,
+                type='limit',
+                side=side,
+                status='failed',
+                price=price,
+                amount=amount,
+            )
+        params.update({"price": price, "amount": amount, "side": side, "status": "new"})
+        return parse_ccxt_order(res, self.exchange_id, **params)
+        
+    
+    async def place_market_order(
+        self, 
+        symbol: str, 
+        side: Literal['buy'] | Literal['sell'], 
+        amount: Decimal, 
+        handle_timeout: bool = True, 
+        **params
+    ) -> OrderResponse:
+        res = await super().place_market_order(symbol, side, amount, handle_timeout, **params)
+        if isinstance(res, OrderResponseError):
+            self._log.error(str(res))
+            return OrderResponse(
+                raw={},
+                success=False,
+                exchange=self.exchange_id,
+                id=None,
+                client_order_id=None,
+                timestamp=int(time.time() * 1000),
+                symbol=symbol,
+                type='market',
+                side=side,
+                status='failed',
+                amount=amount,
+            )
+        params.update({"amount": amount, "side": side, "filled": amount, "status": "new"})
+        return parse_ccxt_order(res, self.exchange_id, **params)
+        
+        
+    
+    async def cancel_order(self, id: str, symbol: str, handle_timeout: bool = True, **params) -> Dict[str, Any]:
+        res = await super().cancel_order(id, symbol, handle_timeout, **params)
+        if isinstance(res, OrderResponseError):
+            self._log.error(str(res))
+            return OrderResponse(
+                raw={},
+                success=False,
+                exchange=self.exchange_id,
+                id=id,
+                client_order_id=None,
+                timestamp=int(time.time() * 1000),
+                symbol=symbol,
+                type=None,
+                side=None,
+                status='failed',
+                amount=None,
+            )
+        params.update({"id": id, "symbol": symbol, "status": "canceled"})
+        return parse_ccxt_order(res, self.exchange_id, **params)
+    
+    
 class OkxAccountManager(AccountManager):
     pass
 
@@ -191,6 +276,117 @@ class OkxWebsocketManager(WebsocketManager):
             self._log.info(f"Already subscribed to {subscription_id}")
 
 
+
+
+def parse_ccxt_order(res: Dict[str, Any], exchange: str, **params) -> OrderResponse:
+    """
+    {'amount': None,
+     'average': None,
+     'clientOrderId': 'e847386590ce4dBC143d3105bb6368c4',
+     'cost': None,
+     'datetime': None,
+     'fee': None,
+     'fees': [],
+     'filled': None,
+     'id': '1862325188513431552',
+     'info': {'clOrdId': 'e847386590ce4dBC143d3105bb6368c4',
+             'ordId': '1862325188513431552',
+             'sCode': '0',
+             'sMsg': 'Order placed',
+             'tag': 'e847386590ce4dBC',
+             'ts': '1728004015658'},
+     'lastTradeTimestamp': None,
+     'lastUpdateTimestamp': None,
+     'postOnly': None,
+     'price': None,
+     'reduceOnly': False,
+     'remaining': None,
+     'side': 'buy',
+     'status': None,
+     'stopLossPrice': None,
+     'stopPrice': None,
+     'symbol': 'BTC/USDT:USDT',
+     'takeProfitPrice': None,
+     'timeInForce': None,
+     'timestamp': None,
+     'trades': [],
+     'triggerPrice': None,
+     'type': 'limit'}
+     
+    {'amount': None,
+     'average': None,
+     'clientOrderId': 'e847386590ce4dBC143d3105bb6368c4',
+     'cost': None,
+     'datetime': None,
+     'fee': None,
+     'fees': [],
+     'filled': None,
+     'id': '1862325188513431552',
+     'info': {'clOrdId': 'e847386590ce4dBC143d3105bb6368c4',
+             'ordId': '1862325188513431552',
+             'sCode': '0',
+             'sMsg': '',
+             'ts': '1728003495240'},
+     'lastTradeTimestamp': None,
+     'lastUpdateTimestamp': None,
+     'postOnly': None,
+     'price': None,
+     'reduceOnly': False,
+     'remaining': None,
+     'side': None,
+     'status': None,
+     'stopLossPrice': None,
+     'stopPrice': None,
+     'symbol': 'BTC/USDT:USDT',
+     'takeProfitPrice': None,
+     'timeInForce': None,
+     'timestamp': None,
+     'trades': [],
+     'triggerPrice': None,
+     'type': None}
+    """
+    raw = res.get('info', {})
+    id = res.get('id', None)
+    client_order_id = res.get('clientOrderId', None)
+    timestamp = raw.get('ts', None)
+    symbol = res.get('symbol', None)
+    type = res.get('type', None)
+    side = params.get('side', None)
+    price = params.get('price', None)
+    average = params.get('average', None)
+    amount = params.get('amount', None)
+    filled = params.get('filled', None)
+    remaining = res.get('remaining', None)
+    cost = res.get('cost', None)
+    reduce_only = res.get('reduceOnly', False)
+    position_side = params.get('posSide', None)
+    time_in_force = res.get('timeInForce', None)
+    success = raw.get('sCode', None) == '0'
+    status = params.get('status', None)
+    
+    return OrderResponse(
+        raw = raw,
+        exchange=exchange,
+        id = id,
+        client_order_id = client_order_id,
+        timestamp=timestamp,
+        symbol=symbol,
+        type=type,
+        side=side,
+        price=price,
+        average=average,
+        amount=amount,
+        filled=filled,
+        remaining=remaining,
+        cost=cost,
+        reduce_only=reduce_only,
+        position_side=position_side,
+        time_in_force=time_in_force,
+        success=success,
+        status=status,
+    )
+    
+    
 def parse_private_stream(msg: Dict[str, Any]):
     if msg.get('event', None) is not None:
         return 

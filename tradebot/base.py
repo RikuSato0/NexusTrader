@@ -15,8 +15,8 @@ from ccxt.base.errors import RequestTimeout
 
 
 from tradebot.entity import log_register
-from tradebot.entity import OrderResponse
-from tradebot.exceptions import OrderResponseError
+from tradebot.entity import Order
+from tradebot.exceptions import OrderError
 
 
 class ExchangeManager(ABC):
@@ -81,11 +81,11 @@ class OrderManager(ABC):
                     "symbol": symbol, "side": side, "amount": amount, "price": price, **params
                 })  
             else:
-                return OrderResponseError(
+                return OrderError(
                     "Request Timeout", {"symbol": symbol, "side": side, "amount": amount, "price": price, **params}
                 )
         except Exception as e:
-            return OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, "price": price, **params})
+            return OrderError(e, {"symbol": symbol, "side": side, "amount": amount, "price": price, **params})
             
     async def place_limit_order_ws(
         self,
@@ -112,11 +112,11 @@ class OrderManager(ABC):
                     "symbol": symbol, "side": side, "amount": amount, "price": price, **params
                 })
             else:
-                return OrderResponseError(
+                return OrderError(
                     "Request Timeout", {"symbol": symbol, "side": side, "amount": amount, "price": price, **params}
                 )
         except Exception as e:
-            return OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, "price": price, **params})
+            return OrderError(e, {"symbol": symbol, "side": side, "amount": amount, "price": price, **params})
     
     
     async def place_market_order(
@@ -142,11 +142,11 @@ class OrderManager(ABC):
                     "symbol": symbol, "side": side, "amount": amount, "price": None, **params
                 })
             else:
-                return OrderResponseError(
+                return OrderError(
                     "Request Timeout", {"symbol": symbol, "side": side, "amount": amount, **params}
                 )
         except Exception as e:
-            return OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, **params})
+            return OrderError(e, {"symbol": symbol, "side": side, "amount": amount, **params})
     
     async def place_market_order_ws(
         self,
@@ -171,11 +171,11 @@ class OrderManager(ABC):
                     {"symbol": symbol, "side": side, "amount": amount, "price": None, **kwargs
                 })
             else:
-                return OrderResponseError(
+                return OrderError(
                     "Request Timeout", {"symbol": symbol, "side": side, "amount": amount, **kwargs}
                 )
         except Exception as e:
-            return OrderResponseError(e, {"symbol": symbol, "side": side, "amount": amount, **kwargs})
+            return OrderError(e, {"symbol": symbol, "side": side, "amount": amount, **kwargs})
     
     async def cancel_order(self, id: str, symbol: str, handle_timeout: bool = True, **params) -> Dict[str, Any]:  # 修改此行
         try:
@@ -185,9 +185,9 @@ class OrderManager(ABC):
             if handle_timeout:  
                 return await self.handle_request_timeout("cancel_order", {"id": id, "symbol": symbol, **params})
             else:
-                return OrderResponseError("Request Timeout", {"id": id, "symbol": symbol, **params})
+                return OrderError("Request Timeout", {"id": id, "symbol": symbol, **params})
         except Exception as e:
-            return OrderResponseError(e, {"id": id, "symbol": symbol, **params})
+            return OrderError(e, {"id": id, "symbol": symbol, **params})
     
     async def cancel_order_ws(self, id: str, symbol: str, handle_timeout: bool = True, **params) -> Dict[str, Any]:  # 修改此行
         try:
@@ -198,9 +198,9 @@ class OrderManager(ABC):
                 res = await self.handle_request_timeout("cancel_order_ws", {"id": id, "symbol": symbol, **params})
                 return res
             else:
-                return OrderResponseError("Request Timeout", {"id": id, "symbol": symbol, **params})
+                return OrderError("Request Timeout", {"id": id, "symbol": symbol, **params})
         except Exception as e:
-            return OrderResponseError(e, {"id": id, **params})
+            return OrderError(e, {"id": id, **params})
 
 
 class WebsocketManager(ABC):

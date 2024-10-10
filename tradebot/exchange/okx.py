@@ -26,8 +26,8 @@ from websockets.asyncio import client
 
 from tradebot.constants import IntervalType, UrlType
 from tradebot.entity import log_register
-from tradebot.exceptions import OrderResponseError
-from tradebot.entity import EventSystem, OrderResponse
+from tradebot.exceptions import OrderError
+from tradebot.entity import EventSystem, Order
 from tradebot.base import ExchangeManager, OrderManager, AccountManager, WebsocketManager
 
 
@@ -50,11 +50,11 @@ class OkxOrderManager(OrderManager):
         price: Decimal, 
         handle_timeout: bool = True, 
         **params
-    ) -> OrderResponse:
+    ) -> Order:
         res = await super().place_limit_order(symbol, side, amount, price, handle_timeout, **params)
-        if isinstance(res, OrderResponseError):
+        if isinstance(res, OrderError):
             self._log.error(str(res))
-            return OrderResponse(
+            return Order(
                 raw={},
                 success=False,
                 exchange=self.exchange_id,
@@ -79,11 +79,11 @@ class OkxOrderManager(OrderManager):
         amount: Decimal, 
         handle_timeout: bool = True, 
         **params
-    ) -> OrderResponse:
+    ) -> Order:
         res = await super().place_market_order(symbol, side, amount, handle_timeout, **params)
-        if isinstance(res, OrderResponseError):
+        if isinstance(res, OrderError):
             self._log.error(str(res))
-            return OrderResponse(
+            return Order(
                 raw={},
                 success=False,
                 exchange=self.exchange_id,
@@ -103,9 +103,9 @@ class OkxOrderManager(OrderManager):
     
     async def cancel_order(self, id: str, symbol: str, handle_timeout: bool = True, **params) -> Dict[str, Any]:
         res = await super().cancel_order(id, symbol, handle_timeout, **params)
-        if isinstance(res, OrderResponseError):
+        if isinstance(res, OrderError):
             self._log.error(str(res))
-            return OrderResponse(
+            return Order(
                 raw={},
                 success=False,
                 exchange=self.exchange_id,
@@ -278,7 +278,7 @@ class OkxWebsocketManager(WebsocketManager):
 
 
 
-def parse_ccxt_order(res: Dict[str, Any], exchange: str, **params) -> OrderResponse:
+def parse_ccxt_order(res: Dict[str, Any], exchange: str, **params) -> Order:
     """
     {'amount': None,
      'average': None,
@@ -364,7 +364,7 @@ def parse_ccxt_order(res: Dict[str, Any], exchange: str, **params) -> OrderRespo
     success = raw.get('sCode', None) == '0'
     status = params.get('status', None)
     
-    return OrderResponse(
+    return Order(
         raw = raw,
         exchange=exchange,
         id = id,

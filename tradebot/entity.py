@@ -11,7 +11,7 @@ from decimal import Decimal
 from collections import defaultdict
 from typing import Literal, Callable, Union, Optional
 from typing import Dict, List, Any
-from dataclasses import dataclass, fields, asdict
+from dataclasses import dataclass, field, asdict
 
 
 import redis
@@ -20,8 +20,8 @@ import spdlog as spd
 
 
 @dataclass
-class OrderResponse:
-    raw: Dict[str, Any] 
+class Order:
+    raw: Dict[str, Any]
     success: bool
     exchange: str
     id: str
@@ -31,21 +31,22 @@ class OrderResponse:
     type: Literal['limit', 'market']
     side: Literal['buy', 'sell']
     status: Literal['new', 'partially_filled', 'filled', 'canceled', 'expired', 'failed']
-    price: Optional[float] = None
-    average: Optional[float] = None
-    last_filled_price: Optional[float] = None
-    amount: Optional[Decimal] = None
-    filled: Optional[Decimal] = None
-    last_filled: Optional[Decimal] = None
-    remaining: Optional[Decimal] = None
-    fee: Optional[float] = None
-    fee_currency: Optional[str] = None
-    cost: Optional[float] = None
-    last_trade_timestamp: Optional[int] = None
-    reduce_only: Optional[bool] = None
-    position_side: Optional[str] = None  # 可以为 None，表示现货交易
-    time_in_force: Optional[str] = None
-    leverage: Optional[int] = None
+    price: Optional[float] = field(default=None)
+    average: Optional[float] = field(default=None)
+    last_filled_price: Optional[float] = field(default=None)
+    amount: Optional[Decimal] = field(default=None)
+    filled: Optional[Decimal] = field(default=None)
+    last_filled: Optional[Decimal] = field(default=None)
+    remaining: Optional[Decimal] = field(default=None)
+    fee: Optional[float] = field(default=None)
+    fee_currency: Optional[str] = field(default=None)
+    cost: Optional[float] = field(default=None)
+    last_trade_timestamp: Optional[int] = field(default=None)
+    reduce_only: Optional[bool] = field(default=None)
+    position_side: Optional[str] = field(default=None)
+    time_in_force: Optional[str] = field(default=None)
+    leverage: Optional[int] = field(default=None)
+
 
     def __post_init__(self):
         decimal_fields = ['amount', 'filled', 'last_filled', 'remaining']

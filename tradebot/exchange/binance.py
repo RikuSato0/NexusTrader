@@ -27,8 +27,8 @@ from websockets.asyncio import client
 
 from tradebot.constants import IntervalType, UrlType
 from tradebot.entity import log_register
-from tradebot.exceptions import OrderResponseError
-from tradebot.entity import EventSystem, OrderResponse
+from tradebot.exceptions import OrderError
+from tradebot.entity import EventSystem, Order
 from tradebot.base import ExchangeManager, OrderManager, AccountManager, WebsocketManager
 
 
@@ -64,11 +64,11 @@ class BinanceOrderManager(OrderManager):
         amount: Decimal, 
         price: float, 
         **params
-    ) -> OrderResponse:
+    ) -> Order:
         res = await super().place_limit_order(symbol, side, amount, price, **params)
-        if isinstance(res, OrderResponseError):
+        if isinstance(res, OrderError):
             self._log.error(str(res))
-            return OrderResponse(
+            return Order(
                 raw={},
                 success=False,
                 exchange=self.exchange_id,
@@ -90,11 +90,11 @@ class BinanceOrderManager(OrderManager):
         side: Literal['buy', 'sell'], 
         amount: Decimal, 
         **params
-    ) -> OrderResponse:
+    ) -> Order:
         res = await super().place_market_order(symbol, side, amount, **params)
-        if isinstance(res, OrderResponseError):
+        if isinstance(res, OrderError):
             self._log.error(str(res))
-            return OrderResponse(
+            return Order(
                 raw={},
                 success=False,
                 exchange=self.exchange_id,
@@ -109,11 +109,11 @@ class BinanceOrderManager(OrderManager):
             )
         return parse_ccxt_order(res, self.exchange_id)
     
-    async def cancel_order(self, id: str, symbol: str, **params) -> OrderResponse:
+    async def cancel_order(self, id: str, symbol: str, **params) -> Order:
         res = await super().cancel_order(id, symbol, **params)
-        if isinstance(res, OrderResponseError):
+        if isinstance(res, OrderError):
             self._log.error(str(res))
-            return OrderResponse(
+            return Order(
                 raw={},
                 success=False,
                 exchange=self.exchange_id,
@@ -128,7 +128,7 @@ class BinanceOrderManager(OrderManager):
             )
         return parse_ccxt_order(res, self.exchange_id)
         
-    async def fetch_orders(self, symbol: str, since: int = None, limit: int = None) -> List[OrderResponse]:
+    async def fetch_orders(self, symbol: str, since: int = None, limit: int = None) -> List[Order]:
         res = await self._exchange.api.fetch_orders(
             symbol = symbol,
             since=since,
@@ -154,11 +154,11 @@ class BinanceOrderManager(OrderManager):
         for i in range(max_retry):
             res = await super().place_limit_order(**params)
             
-            if not isinstance(res, OrderResponseError):
+            if not isinstance(res, OrderError):
                 return res
             
             if i == max_retry - 1:
-                return OrderResponse(
+                return Order(
                     raw={},
                     success=False,
                     exchange=self.exchange_id,
@@ -181,11 +181,11 @@ class BinanceOrderManager(OrderManager):
         for i in range(max_retry):
             res = await super().place_market_order(**params)
             
-            if not isinstance(res, OrderResponseError):
+            if not isinstance(res, OrderError):
                 return res
             
             if i == max_retry - 1:
-                return OrderResponse(
+                return Order(
                     raw={},
                     success=False,
                     exchange=self.exchange_id,
@@ -208,11 +208,11 @@ class BinanceOrderManager(OrderManager):
         for i in range(max_retry):
             res = await super().cancel_order(**params)
             
-            if not isinstance(res, OrderResponseError):
+            if not isinstance(res, OrderError):
                 return res
             
             if i == max_retry - 1:
-                return OrderResponse(
+                return Order(
                     raw={},
                     success=False,
                     exchange=self._exchange.config['exchange_id'],
@@ -401,7 +401,7 @@ class BinanceWebsocketManager(WebsocketManager):
 
 
 
-def in_orders(orders: List[OrderResponse], method: str, params: Dict[str, Any]) -> bool:
+def in_orders(orders: List[Order], method: str, params: Dict[str, Any]) -> bool:
     for order in orders:
         match method:
             case "place_limit_order":
@@ -431,7 +431,7 @@ def in_orders(orders: List[OrderResponse], method: str, params: Dict[str, Any]) 
 
 
 
-def parse_ccxt_order(res: Dict[str, Any], exchange: str) -> OrderResponse:
+def parse_ccxt_order(res: Dict[str, Any], exchange: str) -> Order:
     raw = res.get('info', {})
     id = res.get('id', None)
     client_order_id = res.get('clientOrderId', None)
@@ -450,7 +450,7 @@ def parse_ccxt_order(res: Dict[str, Any], exchange: str) -> OrderResponse:
     position_side = raw.get('positionSide', '').lower() or None # long or short
     time_in_force = res.get('timeInForce', None)
     
-    return OrderResponse(
+    return Order(
         raw=raw,
         success=True,
         exchange=exchange,
@@ -563,7 +563,7 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
                 elif type == "limit":
                     cost = float(event_data.get('z', '0')) * float(event_data.get('p', '0'))
                 
-                return OrderResponse(
+                return Order(
                     raw = event_data,
                     success = True,
                     exchange = "binance",
@@ -672,12 +672,45 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
                 "V": "EXPIRE_MAKER", // Self trade prevention Mode
                 "I": 1495839281094 // Ignore
             }
+            
+            # Example of an execution report event for a partially filled market buy order
+            {
+                "e": "executionReport", // Event type
+                "E": 1727353057267, // Event time
+                "s": "ORDIUSDT", // Symbol
+                "c": "c-11WLU7VP2rj4ss0i", // Client order ID 
+                "S": "BUY", // Side
+                "o": "MARKET", // Order type
+                "f": "GTC", // Time in force
+                "q": "0.50000000", // Order quantity
+                "p": "0.00000000", // Order price
+                "P": "0.00000000", // Stop price
+                "g": -1, // Order list id
+                "x": "TRADE", // Execution type
+                "X": "PARTIALLY_FILLED", // Order status
+                "i": 2233880350, // Order ID
+                "l": "0.17000000", // last executed quantity
+                "z": "0.34000000", // Cumulative filled quantity
+                "L": "36.88000000", // Last executed price
+                "n": "0.00000216", // Commission amount
+                "N": "BNB", // Commission asset
+                "T": 1727353057266, // Transaction time
+                "t": 105069150, // Trade ID
+                "w": false, // Is the order on the book?
+                "m": false, // Is this trade the maker side?
+                "O": 1727353057266, // Order creation time
+                "Z": "12.53920000", // Cumulative quote asset transacted quantity
+                "Y": "6.26960000", // Last quote asset transacted quantity (i.e. lastPrice * lastQty)
+                "V": "EXPIRE_MAKER", // Self trade prevention Mode
+                "I": 1495839281094 // Ignore
+            }
+            
             """
             id = f"{event_data['s']}_spot"
             market = market_id[id]
             
             
-            return OrderResponse(
+            return Order(
                 raw = event_data,
                 success = True,
                 exchange = "binance",

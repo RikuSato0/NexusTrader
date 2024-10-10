@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from ccxt.base.errors import RequestTimeout
 from tradebot.exchange.binance import BinanceOrderManager, BinanceExchangeManager
-from tradebot.entity import OrderResponse
+from tradebot.entity import Order
 
 @pytest.fixture
 def mock_exchange():
@@ -80,7 +80,7 @@ async def test_place_limit_order_success(order_manager, mock_exchange):
         positionSide="LONG",
     )
 
-    assert isinstance(result, OrderResponse)
+    assert isinstance(result, Order)
     assert result.id == '4060681953'
     assert result.symbol == 'BTC/USDT:USDT'
     assert result.type == 'limit'
@@ -167,7 +167,7 @@ async def test_place_limit_order_timeout(order_manager, mock_exchange):
         handle_timeout=True
     )
 
-    assert isinstance(result, OrderResponse)
+    assert isinstance(result, Order)
     assert result.success == True
     assert result.status == 'new'
     assert result.id == '4060681953'
@@ -184,7 +184,7 @@ async def test_place_market_order_error(order_manager, mock_exchange):
 
     result = await order_manager.place_market_order('BTC/USDT', 'sell', Decimal('1.0'))
 
-    assert isinstance(result, OrderResponse)
+    assert isinstance(result, Order)
     assert result.success == False
 
 @pytest.mark.asyncio
@@ -244,7 +244,7 @@ async def test_cancel_order_success(order_manager, mock_exchange):
 
     result = await order_manager.cancel_order('4060706981', 'BTC/USDT"USDT')
 
-    assert isinstance(result, OrderResponse)
+    assert isinstance(result, Order)
     assert result.success == True
     assert result.symbol == 'BTC/USDT:USDT'
     assert result.status == 'canceled'
@@ -324,7 +324,7 @@ async def test_cancel_order_timeout(order_manager, mock_exchange):
         symbol = "BTC/USDT:USDT",
     )
 
-    assert isinstance(result, OrderResponse)
+    assert isinstance(result, Order)
     assert result.success == True
     assert result.symbol == 'BTC/USDT:USDT'
     assert result.status == 'canceled'

@@ -6,7 +6,7 @@ from typing import Dict, Any
 from typing import Generator, Optional, Literal
 
 
-from tradebot.entity import OrderResponse
+from tradebot.entity import Order
 
 
 

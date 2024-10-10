@@ -1,4 +1,4 @@
-class OrderResponseError(Exception):
+class OrderError(Exception):
     def __init__(self, original_error: Exception, params: dict):
         self.original_error = original_error
         self.params = params

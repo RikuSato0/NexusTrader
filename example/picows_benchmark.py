@@ -14,6 +14,9 @@ latency = []
 class BinanceListener(WSListener):
     def on_ws_connected(self, transport: WSTransport):
         print("Connected to Binance Websocket.")
+    
+    def on_ws_disconnected(self, transport: WSTransport):
+        print("Disconnected from Binance Websocket.")
 
     def on_ws_frame(self, transport: WSTransport, frame: WSFrame):
         if frame.msg_type == WSMsgType.PING:
@@ -23,8 +26,6 @@ class BinanceListener(WSListener):
         picows[data.get('t', 'test')] = time.time_ns()
             
 
-    def on_close(self, code: WSCloseCode):
-        print(f"Connection closed with code: {code}")
 
 
 class BinanceWebscokets:
@@ -54,13 +55,14 @@ async def main():
     try:
         url = Url.Binance.Spot.STREAM_URL + "/ws/btcusdt@trade"
         ws_client = BinanceWebscokets(url)
-        await ws_connect(BinanceListener, url, enable_auto_ping=True, auto_ping_idle_timeout=2, auto_ping_reply_timeout=1)
+        transport = await ws_connect(BinanceListener, url, enable_auto_ping=True, auto_ping_idle_timeout=2, auto_ping_reply_timeout=1)
         await ws_client.subscribe()
         
         while True:
             await asyncio.sleep(1)
         
     except asyncio.CancelledError:
+        await transport.di
         await ws_client.close()
         print("Websocket closed.")
 

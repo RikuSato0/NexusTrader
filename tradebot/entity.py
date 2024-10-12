@@ -28,9 +28,11 @@ class Order:
     client_order_id: str
     timestamp: int
     symbol: str
-    type: Literal['limit', 'market']
-    side: Literal['buy', 'sell']
-    status: Literal['new', 'partially_filled', 'filled', 'canceled', 'expired', 'failed']
+    type: Literal["limit", "market"]
+    side: Literal["buy", "sell"]
+    status: Literal[
+        "new", "partially_filled", "filled", "canceled", "expired", "failed"
+    ]
     price: Optional[float] = field(default=None)
     average: Optional[float] = field(default=None)
     last_filled_price: Optional[float] = field(default=None)
@@ -47,20 +49,23 @@ class Order:
     time_in_force: Optional[str] = field(default=None)
     leverage: Optional[int] = field(default=None)
 
-
     def __post_init__(self):
-        decimal_fields = ['amount', 'filled', 'last_filled', 'remaining']
-        
+        decimal_fields = ["amount", "filled", "last_filled", "remaining"]
+
         for field in decimal_fields:
-            if getattr(self, field) is not None and not isinstance(getattr(self, field), Decimal):
+            if getattr(self, field) is not None and not isinstance(
+                getattr(self, field), Decimal
+            ):
                 setattr(self, field, Decimal(str(getattr(self, field))))
-        
-        float_fields = ['price', 'average', 'last_filled_price', 'fee', 'cost']
+
+        float_fields = ["price", "average", "last_filled_price", "fee", "cost"]
         for field in float_fields:
-            if getattr(self, field) is not None and not isinstance(getattr(self, field), float):
+            if getattr(self, field) is not None and not isinstance(
+                getattr(self, field), float
+            ):
                 setattr(self, field, float(getattr(self, field)))
-    
-    
+
+
 class EventSystem:
     _listeners: Dict[str, List[Callable]] = {}
 
@@ -78,25 +83,27 @@ class EventSystem:
                     await callback(*args, **kwargs)
                 else:
                     callback(*args, **kwargs)
-                    
-                    
+
+
 class RedisPool:
     def __init__(self):
         if self._is_in_docker():
-            self.pool = redis.ConnectionPool(host='redis', db=0, password='password')
+            self.pool = redis.ConnectionPool(host="redis", db=0, password="password")
         else:
-            self.pool = redis.ConnectionPool(host='localhost', port=6379, db=0, password='password')
-    
-    def _is_in_docker(self):
+            self.pool = redis.ConnectionPool(
+                host="localhost", port=6379, db=0, password="password"
+            )
+
+    def _is_in_docker(self) -> bool | None:
         try:
-            socket.gethostbyname('redis')
+            socket.gethostbyname("redis")
             return True
         except socket.gaierror:
             return False
-    
+
     def get_client(self) -> redis.Redis:
         return redis.Redis(connection_pool=self.pool)
-    
+
     def close(self):
         self.pool.close()
 
@@ -110,16 +117,18 @@ class Account:
 
     def __setattr__(self, key, value):
         super().__setattr__(key, value)
-        if key not in ['r', 'account_type']:
+        if key not in ["r", "account_type"]:
             self.r.hset(f"{self.account_type}", key, str(value))
-            
+
     def __getattr__(self, key):
-        if key not in ['r', 'account_type']:
+        if key not in ["r", "account_type"]:
             value = self.r.hget(f"{self.account_type}", key)
             if value is not None:
                 return Decimal(value.decode())
-            return Decimal('0')
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{key}'")
+            return Decimal("0")
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{key}'"
+        )
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -128,7 +137,7 @@ class Account:
         setattr(self, key, value)
 
     def keys(self):
-        return [k for k in self.__dict__.keys() if k not in ['r', 'account_type']]
+        return [k for k in self.__dict__.keys() if k not in ["r", "account_type"]]
 
     def load_account(self):
         for key, value in self.r.hgetall(f"{self.account_type}").items():
@@ -138,37 +147,43 @@ class Account:
 @dataclass
 class Position:
     symbol: str = None
-    amount: Decimal = Decimal('0')
-    last_price: Decimal = Decimal('0')
-    avg_price: Decimal = Decimal('0')
-    total_cost: Decimal = Decimal('0')
+    amount: Decimal = Decimal("0")
+    last_price: Decimal = Decimal("0")
+    avg_price: Decimal = Decimal("0")
+    total_cost: Decimal = Decimal("0")
 
-    def update(self, order_amount: Union[str, float, Decimal], order_price: Union[str, float, Decimal]):
+    def update(
+        self,
+        order_amount: Union[str, float, Decimal],
+        order_price: Union[str, float, Decimal],
+    ):
         order_amount = Decimal(str(order_amount))
         order_price = Decimal(str(order_price))
-        
+
         self.total_cost += order_amount * order_price
         self.amount += order_amount
-        self.avg_price = self.total_cost / self.amount if self.amount != 0 else Decimal('0')
+        self.avg_price = (
+            self.total_cost / self.amount if self.amount != 0 else Decimal("0")
+        )
         self.last_price = order_price
 
     @classmethod
     def from_dict(cls, data):
         return cls(
-            symbol=data['symbol'],
-            amount=Decimal(data['amount']),
-            last_price=Decimal(data['last_price']),
-            avg_price=Decimal(data['avg_price']),
-            total_cost=Decimal(data['total_cost'])
+            symbol=data["symbol"],
+            amount=Decimal(data["amount"]),
+            last_price=Decimal(data["last_price"]),
+            avg_price=Decimal(data["avg_price"]),
+            total_cost=Decimal(data["total_cost"]),
         )
 
     def to_dict(self):
         return {
-            'symbol': self.symbol,
-            'amount': str(self.amount),
-            'last_price': str(self.last_price),
-            'avg_price': str(self.avg_price),
-            'total_cost': str(self.total_cost)
+            "symbol": self.symbol,
+            "amount": str(self.amount),
+            "last_price": str(self.last_price),
+            "avg_price": str(self.avg_price),
+            "total_cost": str(self.total_cost),
         }
 
 
@@ -194,20 +209,28 @@ class PositionDict:
         return self.r.hexists(self.key, symbol)
 
     def __iter__(self):
-        return iter([k.decode('utf-8') for k in self.r.hkeys(self.key)])
+        return iter([k.decode("utf-8") for k in self.r.hkeys(self.key)])
 
-    def update(self, symbol: str, order_amount: Union[str, float, Decimal], order_price: Union[str, float, Decimal]):
+    def update(
+        self,
+        symbol: str,
+        order_amount: Union[str, float, Decimal],
+        order_price: Union[str, float, Decimal],
+    ):
         position = self[symbol]
         position.update(order_amount, order_price)
-        
-        if abs(position.amount) <= Decimal('1e-8'):
+
+        if abs(position.amount) <= Decimal("1e-8"):
             del self[symbol]
         else:
             self[symbol] = position
 
     def items(self) -> Dict[str, Position]:
         all_positions = self.r.hgetall(self.key)
-        return {k.decode(): Position.from_dict(orjson.loads(v)) for k, v in all_positions.items()}
+        return {
+            k.decode(): Position.from_dict(orjson.loads(v))
+            for k, v in all_positions.items()
+        }
 
     def __repr__(self):
         return repr(self.items())
@@ -221,23 +244,27 @@ class Context:
     def __init__(self, user: str, redis_client: redis.Redis):
         self._redis_client = redis_client
         self._user = user
-        self.portfolio_account = Account(user, 'portfolio', self._redis_client) # Portfolio-margin account    
+        self.portfolio_account = Account(
+            user, "portfolio", self._redis_client
+        )  # Portfolio-margin account
         self.position = PositionDict(user, self._redis_client)
 
     def __setattr__(self, name, value):
-        if name in ['_redis_client', '_user', 'portfolio_account', 'position']:
+        if name in ["_redis_client", "_user", "portfolio_account", "position"]:
             super().__setattr__(name, value)
         else:
             self._redis_client.set(f"context:{self._user}:{name}", orjson.dumps(value))
 
     def __getattr__(self, name):
-        if name in ['_redis_client', '_user', 'portfolio_account', 'position']:
+        if name in ["_redis_client", "_user", "portfolio_account", "position"]:
             return super().__getattr__(name)
-        
+
         value = self._redis_client.get(f"context:{self._user}:{name}")
         if value is not None:
             return orjson.loads(value)
-        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{name}'"
+        )
 
     def clear(self, name: str = None):
         if name is None:
@@ -245,7 +272,7 @@ class Context:
                 self._redis_client.delete(key)
         else:
             self._redis_client.delete(f"context:{self._user}:{name}")
-            
+
 
 class RollingMedian:
     def __init__(self, n=10):
@@ -290,15 +317,15 @@ class RollingDiffSum:
             return rolling_sum
         else:
             return 0
-        
-        
+
+
 @dataclass(slots=True)
 class Quote:
-    _ask: str = '0'
-    _bid: str = '0'
-    _ask_vol: str = '0'
-    _bid_vol: str = '0'
-    
+    _ask: str = "0"
+    _bid: str = "0"
+    _ask_vol: str = "0"
+    _bid_vol: str = "0"
+
     @property
     def ask(self) -> Decimal:
         return Decimal(self._ask)
@@ -330,20 +357,14 @@ class Quote:
     @bid_vol.setter
     def bid_vol(self, value: str):
         self._bid_vol = value
-    
 
 
 class MarketDataStore:
     def __init__(self):
         self.quote = defaultdict(Quote)
-    
+
     def update(self, symbol: str, ask: str, bid: str, ask_vol: str, bid_vol: str):
-        self.quote[symbol] = Quote(
-            ask=ask,
-            bid=bid,
-            ask_vol=ask_vol,
-            bid_vol=bid_vol
-        )
+        self.quote[symbol] = Quote(ask=ask, bid=bid, ask_vol=ask_vol, bid_vol=bid_vol)
 
 
 class LogRegister:
@@ -351,22 +372,25 @@ class LogRegister:
     1. spdlog.DailyLogger(name: str, filename: str, multithreaded: bool = False, hour: int = 0, minute: int = 0)
     2. spdlog.DailyLogger(name: str, filename: str, multithreaded: bool = False, hour: int = 0, minute: int = 0, async_mode: bool)
     """
+
     def __init__(self, log_dir=".logs"):
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.loggers = {}
-        
+
         self.setup_error_handling()
-    
+
     def setup_error_handling(self):
-        self.error_logger = self.get_logger('error', level='ERROR', flush=True)
+        self.error_logger = self.get_logger("error", level="ERROR", flush=True)
 
         def handle_exception(exc_type, exc_value, exc_traceback):
             if issubclass(exc_type, KeyboardInterrupt):
                 sys.__excepthook__(exc_type, exc_value, exc_traceback)
                 return
             self.error_logger.error(str(exc_value))
-            self.error_logger.error("Traceback:", exc_info=(exc_type, exc_value, exc_traceback))
+            self.error_logger.error(
+                "Traceback:", exc_info=(exc_type, exc_value, exc_traceback)
+            )
 
         sys.excepthook = handle_exception
 
@@ -375,31 +399,46 @@ class LogRegister:
             self.error_logger.error(f"Caught async exception: {msg}")
             if "exception" in async_context:
                 exception = async_context["exception"]
-                self.error_logger.error("Traceback:", exc_info=(type(exception), exception, exception.__traceback__))
+                self.error_logger.error(
+                    "Traceback:",
+                    exc_info=(type(exception), exception, exception.__traceback__),
+                )
             else:
                 self.error_logger.error(f"Context: {async_context}")
 
         asyncio.get_event_loop().set_exception_handler(handle_async_exception)
 
-    def get_logger(self, name, level: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'] = 'INFO', flush: bool = False):
+    def get_logger(
+        self,
+        name,
+        level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
+        flush: bool = False,
+    ):
         if name not in self.loggers:
-            logger_instance = spd.DailyLogger(name=name, filename=str(self.log_dir / f"{name}.log"), hour=0, minute=0, async_mode=True)
+            logger_instance = spd.DailyLogger(
+                name=name,
+                filename=str(self.log_dir / f"{name}.log"),
+                hour=0,
+                minute=0,
+                async_mode=True,
+            )
             logger_instance.set_level(self.parse_level(level))
             if flush:
                 logger_instance.flush_on(self.parse_level(level))
             self.loggers[name] = logger_instance
         return self.loggers[name]
-    
-    def parse_level(self, level: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']):
+
+    def parse_level(
+        self, level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    ):
         levels = {
-            'DEBUG': spd.LogLevel.DEBUG,
-            'INFO': spd.LogLevel.INFO,
-            'WARNING': spd.LogLevel.WARN,
-            'ERROR': spd.LogLevel.ERR,
-            'CRITICAL': spd.LogLevel.CRITICAL
+            "DEBUG": spd.LogLevel.DEBUG,
+            "INFO": spd.LogLevel.INFO,
+            "WARNING": spd.LogLevel.WARN,
+            "ERROR": spd.LogLevel.ERR,
+            "CRITICAL": spd.LogLevel.CRITICAL,
         }
         return levels[level]
-
 
 
 redis_pool = RedisPool()

@@ -274,12 +274,15 @@ class BinanceWebsocketManager(WebsocketManager):
                     msg = orjson.loads(msg)
                     await self._subscripions[subscription_id].put(msg)
             except websockets.ConnectionClosed:
-                self._log.error(f"Connection closed, reconnecting...")
+                self._log.error("Connection closed, reconnecting...")
 
-    async def _picows_subscribe(self, payload: Dict[str, Any], subscription_id: str):
-        # while True:
-        transport, _ = await ws_connect(
-            WSListenerManager,
+    async def _picows_subscribe(
+        self, payload: Dict[str, Any], callback: Callable[..., Any], *args, **kwargs
+    ):
+        WSFactory = lambda: WSListenerManager("binance")  # noqa: E731
+
+        transport, listener = await ws_connect(
+            WSFactory,
             self._base_url,
             enable_auto_ping=True,
             auto_ping_idle_timeout=2,  # ? TBD
@@ -288,11 +291,33 @@ class BinanceWebsocketManager(WebsocketManager):
         )
         try:
             transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))
+            while True:
+                msg = await listener.msg_queue.get()
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(msg, *args, **kwargs)
+                else:
+                    callback(msg, *args, **kwargs)
+                listener.msg_queue.task_done()
             # transport.wait_disconnected()
             # await asyncio.sleep(5)
-            
+
         except WSError as e:
             self._log.error(f"Connection error: {e}")
+    
+    async def subscribe_book_ticker_v2(
+        self, symbol, callback: Callable[..., Any] = None, *args, **kwargs
+    ):
+        id = int(time.time() * 1000)
+        payload = {
+            "method": "SUBSCRIBE",
+            "params": [f"{symbol.lower()}@bookTicker"],
+            "id": id,
+        }
+        self._tasks.append(
+            asyncio.create_task(self._picows_subscribe(payload, callback=callback, *args, **kwargs))
+        )
+    
+    
 
     async def subscribe_book_ticker(
         self, symbol: str, callback: Callable[..., Any] = None, *args, **kwargs

@@ -341,26 +341,27 @@ class WebsocketManager(ABC):
 
 
 class WSListenerManager(WSListener):
-    def __init__(self, exchange_id: str = "", *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, exchange_id: str = ""):
         self._exchange_id = exchange_id
+        self.msg_queue = asyncio.Queue()
         self._log = log_register.get_logger(
             name=type(self).__name__, level="INFO", flush=True
         )
+        
 
     def on_ws_connected(self, transport: WSTransport):
         self._log.info(f"Connected to {self._exchange_id} Websocket.")
+    
+    def on_ws_disconnected(self, transport: WSTransport):
+        self._log.info(f"Disconnected from {self._exchange_id} Websocket.")
 
     def on_ws_frame(self, transport: WSTransport, frame: WSFrame):
         if frame.msg_type == WSMsgType.PING:
             return
 
-        data = orjson.loads(frame.get_payload_as_bytes())
-        self._log.info(f"Received binary: {data}")
+        msg = orjson.loads(frame.get_payload_as_bytes())
+        # self._log.info(f"Received binary: {data}")
         # TODO: push msg to queue
+        self.msg_queue.put_nowait(msg)
 
-    def on_close(self, code: WSCloseCode):
-        self._log.info(f"WebSocket closed with code: {code}")
 
-    def on_error(self, error: Exception):
-        self._log.error(f"WebSocket error occurred: {error}")

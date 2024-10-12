@@ -1,0 +1,69 @@
+# ruff.toml
+
+# Enable all rules
+select = ["ALL"]
+
+# Ignore some rules
+ignore = [
+    "D203",  # No blank line required before class docstring
+    "D212",  # Multi-line docstring summary should start at the first line
+    "D417",  # Missing argument descriptions in the docstring
+]
+
+# Line length setting
+line-length = 88
+
+# Target Python version
+target-version = "py311"
+
+# Respect gitignore
+respect-gitignore = true
+
+# Exclude certain directories or files
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+# Per-file-ignores
+[per-file-ignores]
+"__init__.py" = ["F401"]  # Ignore unused imports in __init__.py files
+
+# McCabe complexity checker
+[mccabe]
+max-complexity = 10
+
+# Pycodestyle
+[pycodestyle]
+max-doc-length = 88
+
+# Pydocstyle
+[pydocstyle]
+convention = "google"
+
+# Pylint
+[pylint]
+max-args = 5
+
+# Flake8-bugbear
+[flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path"]

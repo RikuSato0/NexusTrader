@@ -559,9 +559,10 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
                     market = market_id[id]    
                 
                 if (type := event_data['o'].lower()) == "market":
-                    cost = float(event_data.get('z', '0')) * float(event_data.get('ap', '0'))
+                    cost = float(event_data.get('l', '0')) * float(event_data.get('ap', '0'))
                 elif type == "limit":
-                    cost = float(event_data.get('z', '0')) * float(event_data.get('p', '0'))
+                    price = float(event_data.get('ap', '0')) or float(event_data.get('p', '0')) # if average price is 0 or empty, use price
+                    cost = float(event_data.get('l', '0')) * price
                 
                 return Order(
                     raw = event_data,
@@ -730,7 +731,7 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
                 remaining=Decimal(event_data.get('q', '0')) - Decimal(event_data.get('z', '0')),
                 fee=event_data.get('n', None),
                 fee_currency=event_data.get('N', None),
-                cost=event_data.get('Z', None),
+                cost=event_data.get('Y', None),
                 last_trade_timestamp=event_data.get('T', None),
                 time_in_force=event_data.get('f', None)
             )

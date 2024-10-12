@@ -72,8 +72,22 @@ class Account:
     
     def update_asset(self, order: Order, markets: Dict):
         market = markets[order.symbol]
+        base = market['base']
+        quote = market['quote']
+        symbol_type = market['type']
+        if symbol_type != 'spot':
+            raise ValueError(f"Symbol type {symbol_type} is not supported")
+        exchange = order.exchange
         
-        
+        match exchange:
+            case "binance":
+                pass
+            
+            case "okx":
+                pass
+            
+            case "bybit":
+                pass
 
     
 

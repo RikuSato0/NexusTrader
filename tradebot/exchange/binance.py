@@ -13,6 +13,7 @@ import aiohttp
 from collections import defaultdict
 from typing import Any, Dict, List
 from typing import Literal, Callable, Optional
+from functools import cached_property
 
 
 import orjson
@@ -29,25 +30,30 @@ from tradebot.constants import IntervalType, UrlType
 from tradebot.entity import log_register
 from tradebot.exceptions import OrderError
 from tradebot.entity import EventSystem, Order
-from tradebot.base import ExchangeManager, OrderManager, AccountManager, WebsocketManager
-
-
-
+from tradebot.base import (
+    ExchangeManager,
+    OrderManager,
+    AccountManager,
+    WebsocketManager,
+    WSListenerManager,
+)
+from picows import ws_connect, WSError, WSMsgType
 
 
 class BinanceExchangeManager(ExchangeManager):
     pass
 
+
 class BinanceOrderManager(OrderManager):
     def __init__(self, exchange: BinanceExchangeManager):
         super().__init__(exchange)
-        self.exchange_id = exchange.config['exchange_id']
-    
+        self.exchange_id = exchange.config["exchange_id"]
+
     async def handle_request_timeout(self, method: str, params: Dict[str, Any]):
-        symbol = params['symbol']
+        symbol = params["symbol"]
         current_time = int(time.time() * 1000)
-        orders = await self.fetch_orders(symbol, since = current_time - 1000 * 5)
-        
+        orders = await self.fetch_orders(symbol, since=current_time - 1000 * 5)
+
         if not in_orders(orders, method, params):
             match method:
                 case "place_limit_order":
@@ -56,14 +62,14 @@ class BinanceOrderManager(OrderManager):
                     return await self.retry_place_market_order(params)
                 case "cancel_order":
                     return await self.retry_cancel_order(params)
-            
+
     async def place_limit_order(
-        self, 
-        symbol: str, 
-        side: Literal['buy', 'sell'], 
-        amount: Decimal, 
-        price: float, 
-        **params
+        self,
+        symbol: str,
+        side: Literal["buy", "sell"],
+        amount: Decimal,
+        price: float,
+        **params,
     ) -> Order:
         res = await super().place_limit_order(symbol, side, amount, price, **params)
         if isinstance(res, OrderError):
@@ -76,20 +82,16 @@ class BinanceOrderManager(OrderManager):
                 client_order_id=None,
                 timestamp=int(time.time() * 1000),
                 symbol=symbol,
-                type='limit',
+                type="limit",
                 side=side,
-                status='failed',
+                status="failed",
                 price=price,
                 amount=amount,
             )
         return parse_ccxt_order(res, self.exchange_id)
 
     async def place_market_order(
-        self, 
-        symbol: str, 
-        side: Literal['buy', 'sell'], 
-        amount: Decimal, 
-        **params
+        self, symbol: str, side: Literal["buy", "sell"], amount: Decimal, **params
     ) -> Order:
         res = await super().place_market_order(symbol, side, amount, **params)
         if isinstance(res, OrderError):
@@ -102,13 +104,13 @@ class BinanceOrderManager(OrderManager):
                 client_order_id=None,
                 timestamp=int(time.time() * 1000),
                 symbol=symbol,
-                type='market',
+                type="market",
                 side=side,
-                status='failed',
+                status="failed",
                 amount=amount,
             )
         return parse_ccxt_order(res, self.exchange_id)
-    
+
     async def cancel_order(self, id: str, symbol: str, **params) -> Order:
         res = await super().cancel_order(id, symbol, **params)
         if isinstance(res, OrderError):
@@ -123,19 +125,19 @@ class BinanceOrderManager(OrderManager):
                 symbol=symbol,
                 type=None,
                 side=None,
-                status='failed',
+                status="failed",
                 amount=None,
             )
         return parse_ccxt_order(res, self.exchange_id)
-        
-    async def fetch_orders(self, symbol: str, since: int = None, limit: int = None) -> List[Order]:
+
+    async def fetch_orders(
+        self, symbol: str, since: int = None, limit: int = None
+    ) -> List[Order]:
         res = await self._exchange.api.fetch_orders(
-            symbol = symbol,
-            since=since,
-            limit=limit
-        )    
+            symbol=symbol, since=since, limit=limit
+        )
         return [parse_ccxt_order(order, self.exchange_id) for order in res]
-    
+
     async def _create_order(self, symbol, type, side, amount, price, **params):
         res = await self._exchange.api.create_order(
             symbol=symbol,
@@ -143,98 +145,105 @@ class BinanceOrderManager(OrderManager):
             side=side,
             amount=amount,
             price=price,
-            params=params
+            params=params,
         )
-        return parse_ccxt_order(res, self._exchange.config['exchange_id'])
-       
-    
-    
-    async def retry_place_limit_order(self, params: Dict[str, Any], max_retry: int = 3, interval: int = 3):
-        params['handle_timeout'] = False
+        return parse_ccxt_order(res, self._exchange.config["exchange_id"])
+
+    async def retry_place_limit_order(
+        self, params: Dict[str, Any], max_retry: int = 3, interval: int = 3
+    ):
+        params["handle_timeout"] = False
         for i in range(max_retry):
             res = await super().place_limit_order(**params)
-            
+
             if not isinstance(res, OrderError):
                 return res
-            
+
             if i == max_retry - 1:
                 return Order(
                     raw={},
                     success=False,
                     exchange=self.exchange_id,
-                    id=params.get('id', None),
-                    client_order_id='',
+                    id=params.get("id", None),
+                    client_order_id="",
                     timestamp=int(time.time() * 1000),
-                    symbol=params.get('symbol', None),
-                    type='limit',
-                    side=params['side'],
-                    price=params.get('price', None),
-                    amount=params.get('amount', None),
-                    status='failed'
+                    symbol=params.get("symbol", None),
+                    type="limit",
+                    side=params["side"],
+                    price=params.get("price", None),
+                    amount=params.get("amount", None),
+                    status="failed",
                 )
-            
-            self._log.warn(f"Order placement failed, attempting retry {i+1} of {max_retry}: {str(res)}")
+
+            self._log.warn(
+                f"Order placement failed, attempting retry {i+1} of {max_retry}: {str(res)}"
+            )
             await asyncio.sleep(interval)
-    
-    async def retry_place_market_order(self, params: Dict[str, Any], max_retry: int = 3, interval: int = 3):
-        params['handle_timeout'] = False
+
+    async def retry_place_market_order(
+        self, params: Dict[str, Any], max_retry: int = 3, interval: int = 3
+    ):
+        params["handle_timeout"] = False
         for i in range(max_retry):
             res = await super().place_market_order(**params)
-            
+
             if not isinstance(res, OrderError):
                 return res
-            
+
             if i == max_retry - 1:
                 return Order(
                     raw={},
                     success=False,
                     exchange=self.exchange_id,
-                    id=params.get('id', None),
-                    client_order_id='',
+                    id=params.get("id", None),
+                    client_order_id="",
                     timestamp=int(time.time() * 1000),
-                    symbol=params.get('symbol', None),
-                    type='market',
-                    side=params.get('side', None),
-                    amount=params.get('amount', None),
-                    status='failed'
+                    symbol=params.get("symbol", None),
+                    type="market",
+                    side=params.get("side", None),
+                    amount=params.get("amount", None),
+                    status="failed",
                 )
-            
-            self._log.warn(f"Order placement failed, attempting retry {i+1} of {max_retry}: {str(res)}")
-            await asyncio.sleep(interval)
-    
 
-    async def retry_cancel_order(self, params: Dict[str, Any], max_retry: int = 3, interval: int = 3):
-        params['handle_timeout'] = False
+            self._log.warn(
+                f"Order placement failed, attempting retry {i+1} of {max_retry}: {str(res)}"
+            )
+            await asyncio.sleep(interval)
+
+    async def retry_cancel_order(
+        self, params: Dict[str, Any], max_retry: int = 3, interval: int = 3
+    ):
+        params["handle_timeout"] = False
         for i in range(max_retry):
             res = await super().cancel_order(**params)
-            
+
             if not isinstance(res, OrderError):
                 return res
-            
+
             if i == max_retry - 1:
                 return Order(
                     raw={},
                     success=False,
-                    exchange=self._exchange.config['exchange_id'],
-                    id=params.get('id', None),
-                    client_order_id='',
+                    exchange=self._exchange.config["exchange_id"],
+                    id=params.get("id", None),
+                    client_order_id="",
                     timestamp=int(time.time() * 1000),
-                    symbol=params.get('symbol', None),
-                    type=params.get('type', None),
-                    side=params.get('side', None),
-                    status='failed',
-                    amount=params.get('amount', None),
+                    symbol=params.get("symbol", None),
+                    type=params.get("type", None),
+                    side=params.get("side", None),
+                    status="failed",
+                    amount=params.get("amount", None),
                 )
-            
-            self._log.warn(f"Order cancellation failed, attempting retry {i+1} of {max_retry}: {str(res)}")
+
+            self._log.warn(
+                f"Order cancellation failed, attempting retry {i+1} of {max_retry}: {str(res)}"
+            )
             await asyncio.sleep(interval)
-        
-        
-        
-        
-    
+
+
 class BinanceAccountManager(AccountManager):
     pass
+
 
 class BinanceWebsocketManager(WebsocketManager):
     def __init__(self, url: UrlType, api_key: str = None, secret: str = None):
@@ -249,10 +258,10 @@ class BinanceWebsocketManager(WebsocketManager):
         self._api_key = api_key
         self._secret = secret
         self._session: aiohttp.ClientSession = None
-    
+
     async def _subscribe(self, payload: Dict[str, Any], subscription_id: str):
         async for websocket in websockets.connect(
-            uri = self._base_url,
+            uri=self._base_url,
             ping_interval=self._ping_interval,
             ping_timeout=self._ping_timeout,
             close_timeout=self._close_timeout,
@@ -266,97 +275,176 @@ class BinanceWebsocketManager(WebsocketManager):
                     await self._subscripions[subscription_id].put(msg)
             except websockets.ConnectionClosed:
                 self._log.error(f"Connection closed, reconnecting...")
-    
-    async def subscribe_book_ticker(self, symbol: str, callback: Callable[..., Any] = None, *args, **kwargs):
+
+    async def _picows_subscribe(self, payload: Dict[str, Any], subscription_id: str):
+        # while True:
+        transport, _ = await ws_connect(
+            WSListenerManager,
+            self._base_url,
+            enable_auto_ping=True,
+            auto_ping_idle_timeout=2,  # ? TBD
+            # auto_ping_reply_timeout=self._ping_timeout, # not work?
+            auto_ping_reply_timeout=1,
+        )
+        try:
+            transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))
+            # transport.wait_disconnected()
+            # await asyncio.sleep(5)
+            
+        except WSError as e:
+            self._log.error(f"Connection error: {e}")
+
+    async def subscribe_book_ticker(
+        self, symbol: str, callback: Callable[..., Any] = None, *args, **kwargs
+    ):
         subscription_id = f"book_ticker.{symbol}"
         id = int(time.time() * 1000)
         payload = {
             "method": "SUBSCRIBE",
             "params": [f"{symbol.lower()}@bookTicker"],
-            "id": id
+            "id": id,
         }
         if subscription_id not in self._subscripions:
-            self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
-            self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id)))
+            self._tasks.append(
+                asyncio.create_task(
+                    self._consume(subscription_id, callback=callback, *args, **kwargs)
+                )
+            )
+            self._tasks.append(
+                asyncio.create_task(self._subscribe(payload, subscription_id))
+            )
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
-    
-    async def subscribe_book_tickers(self, symbols: List[str], callback: Callable[..., Any] = None, *args, **kwargs):
+
+    async def subscribe_book_tickers(
+        self, symbols: List[str], callback: Callable[..., Any] = None, *args, **kwargs
+    ):
         for symbol in symbols:
             await self.subscribe_book_ticker(symbol, callback=callback, *args, **kwargs)
-        
-    async def subscribe_trade(self, symbol: str, callback: Callable[..., Any] = None, *args, **kwargs):
+
+    async def subscribe_trade(
+        self, symbol: str, callback: Callable[..., Any] = None, *args, **kwargs
+    ):
         subscription_id = f"trade.{symbol}"
         id = int(time.time() * 1000)
         payload = {
             "method": "SUBSCRIBE",
             "params": [f"{symbol.lower()}@trade"],
-            "id": id
+            "id": id,
         }
-        if subscription_id not in self._subscripions: 
-            self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
-            self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id)))
+        if subscription_id not in self._subscripions:
+            self._tasks.append(
+                asyncio.create_task(
+                    self._consume(subscription_id, callback=callback, *args, **kwargs)
+                )
+            )
+            self._tasks.append(
+                asyncio.create_task(self._subscribe(payload, subscription_id))
+            )
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
-    
-    
-    async def subscribe_trades(self, symbols: List[str], callback: Callable[..., Any] = None, *args, **kwargs):
+
+    async def subscribe_trades(
+        self, symbols: List[str], callback: Callable[..., Any] = None, *args, **kwargs
+    ):
         for symbol in symbols:
             await self.subscribe_trade(symbol, callback=callback, *args, **kwargs)
-    
-    async def subscribe_agg_trade(self, symbol: str, callback: Callable[..., Any] = None, *args, **kwargs):
+
+    async def subscribe_agg_trade(
+        self, symbol: str, callback: Callable[..., Any] = None, *args, **kwargs
+    ):
         subscription_id = f"agg_trade.{symbol}"
         id = int(time.time() * 1000)
         payload = {
             "method": "SUBSCRIBE",
             "params": [f"{symbol.lower()}@aggTrade"],
-            "id": id
+            "id": id,
         }
         if subscription_id not in self._subscripions:
-            self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
-            self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id)))
+            self._tasks.append(
+                asyncio.create_task(
+                    self._consume(subscription_id, callback=callback, *args, **kwargs)
+                )
+            )
+            self._tasks.append(
+                asyncio.create_task(self._subscribe(payload, subscription_id))
+            )
         else:
-            self._log.info(f"Already subscribed to {subscription_id}")  
-    
-    async def subscribe_agg_trades(self, symbols: List[str], callback: Callable[..., Any] = None, *args, **kwargs):
+            self._log.info(f"Already subscribed to {subscription_id}")
+
+    async def subscribe_agg_trades(
+        self, symbols: List[str], callback: Callable[..., Any] = None, *args, **kwargs
+    ):
         for symbol in symbols:
             await self.subscribe_agg_trade(symbol, callback=callback, *args, **kwargs)
-    
-    async def subscribe_kline(self, symbol: str, interval: IntervalType, callback: Callable[..., Any] = None, *args, **kwargs):
+
+    async def subscribe_kline(
+        self,
+        symbol: str,
+        interval: IntervalType,
+        callback: Callable[..., Any] = None,
+        *args,
+        **kwargs,
+    ):
         subscription_id = f"kline.{symbol}.{interval}"
         id = int(time.time() * 1000)
         payload = {
             "method": "SUBSCRIBE",
             "params": [f"{symbol.lower()}@kline_{interval}"],
-            "id": id
+            "id": id,
         }
         if subscription_id not in self._subscripions:
-            self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
-            self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id)))
+            self._tasks.append(
+                asyncio.create_task(
+                    self._consume(subscription_id, callback=callback, *args, **kwargs)
+                )
+            )
+            self._tasks.append(
+                asyncio.create_task(self._picows_subscribe(payload, subscription_id))
+            )
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
-    
-    async def subscribe_klines(self, symbols: List[str], interval: IntervalType, callback: Callable[..., Any] = None, *args, **kwargs):
-        for symbol in symbols:
-            await self.subscribe_kline(symbol, interval, callback=callback, *args, **kwargs)
 
-    async def subscribe_user_data(self, callback: Callable[..., Any] = None, *args, **kwargs):
+    async def subscribe_klines(
+        self,
+        symbols: List[str],
+        interval: IntervalType,
+        callback: Callable[..., Any] = None,
+        *args,
+        **kwargs,
+    ):
+        for symbol in symbols:
+            await self.subscribe_kline(
+                symbol, interval, callback=callback, *args, **kwargs
+            )
+
+    async def subscribe_user_data(
+        self, callback: Callable[..., Any] = None, *args, **kwargs
+    ):
         type = self._url.__name__.lower()
         subscription_id = f"user_data.{type}"
-        
+
         listen_key = await self._get_listen_key()
         payload = {
             "method": "SUBSCRIBE",
             "params": [listen_key],
-            "id": int(time.time() * 1000)
+            "id": int(time.time() * 1000),
         }
         if subscription_id not in self._subscripions:
-            self._tasks.append(asyncio.create_task(self._keep_alive_listen_key(listen_key)))
-            self._tasks.append(asyncio.create_task(self._consume(subscription_id, callback=callback, *args, **kwargs)))
-            self._tasks.append(asyncio.create_task(self._subscribe(payload, subscription_id)))
+            self._tasks.append(
+                asyncio.create_task(self._keep_alive_listen_key(listen_key))
+            )
+            self._tasks.append(
+                asyncio.create_task(
+                    self._consume(subscription_id, callback=callback, *args, **kwargs)
+                )
+            )
+            self._tasks.append(
+                asyncio.create_task(self._subscribe(payload, subscription_id))
+            )
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
-    
+
     async def _get_listen_key(self):
         if self._session is None:
             self._session = aiohttp.ClientSession(
@@ -369,7 +457,7 @@ class BinanceWebsocketManager(WebsocketManager):
         except Exception as e:
             self._log.error(f"Failed to get listen key: {e}")
             return None
-    
+
     async def _keep_alive_listen_key(self, listen_key: str):
         if self._session is None:
             self._session = aiohttp.ClientSession(
@@ -379,26 +467,29 @@ class BinanceWebsocketManager(WebsocketManager):
         type = self._url.__name__.lower()
         while True:
             try:
-                self._log.info(f'Keep alive {type} listen key...')
-                async with self._session.put(f'{base_url}?listenKey={listen_key}') as response:
+                self._log.info(f"Keep alive {type} listen key...")
+                async with self._session.put(
+                    f"{base_url}?listenKey={listen_key}"
+                ) as response:
                     self._log.info(f"Keep alive listen key status: {response.status}")
                     if response.status != 200:
                         listen_key = await self._get_listen_key()
                     else:
                         data = await response.json()
-                        self._log.info(f"Keep alive {type} listen key: {data.get('listenKey', listen_key)}")
+                        self._log.info(
+                            f"Keep alive {type} listen key: {data.get('listenKey', listen_key)}"
+                        )
                     await asyncio.sleep(60 * 20)
             except asyncio.CancelledError:
                 self._log.info(f"Cancelling keep alive task for {type} listen key")
-                break        
+                break
             except Exception as e:
                 self._log.error(f"Error keeping alive {type} listen key: {e}")
-    
+
     async def close(self):
         if self._session is not None:
             await self._session.close()
         await super().close()
-
 
 
 def in_orders(orders: List[Order], method: str, params: Dict[str, Any]) -> bool:
@@ -406,50 +497,49 @@ def in_orders(orders: List[Order], method: str, params: Dict[str, Any]) -> bool:
         match method:
             case "place_limit_order":
                 if (
-                    order.symbol == params['symbol']
-                    and order.side == params['side']
-                    and order.amount == params['amount']
-                    and order.price == params['price']
-                    and order.type == 'limit'
+                    order.symbol == params["symbol"]
+                    and order.side == params["side"]
+                    and order.amount == params["amount"]
+                    and order.price == params["price"]
+                    and order.type == "limit"
                 ):
                     return True
             case "place_market_order":
                 if (
-                    order.symbol == params['symbol']
-                    and order.side == params['side']
-                    and order.amount == params['amount']
-                    and order.type == 'market'
+                    order.symbol == params["symbol"]
+                    and order.side == params["side"]
+                    and order.amount == params["amount"]
+                    and order.type == "market"
                 ):
                     return True
             case "cancel_order":
                 if (
-                    order.symbol == params['symbol']
-                    and order.id == params['id']
-                    and order.status == 'canceled'
+                    order.symbol == params["symbol"]
+                    and order.id == params["id"]
+                    and order.status == "canceled"
                 ):
                     return True
 
 
-
 def parse_ccxt_order(res: Dict[str, Any], exchange: str) -> Order:
-    raw = res.get('info', {})
-    id = res.get('id', None)
-    client_order_id = res.get('clientOrderId', None)
-    timestamp = res.get('timestamp', None)
-    symbol = res.get('symbol', None)
-    type = res.get('type', None) # market or limit
-    side = res.get('side', None) # buy or sell
-    price = res.get('price', None) # maybe empty for market order
-    average = res.get('average', None) # float everage filling price
-    amount = res.get('amount', None)
-    filled = res.get('filled', None)
-    remaining = res.get('remaining', None)
-    status = raw.get('status', None).lower()
-    cost = res.get('cost', None)
-    reduce_only = raw.get('reduceOnly', None)
-    position_side = raw.get('positionSide', '').lower() or None # long or short
-    time_in_force = res.get('timeInForce', None)
-    
+    raw = res.get("info", {})
+    id = res.get("id", None)
+    client_order_id = res.get("clientOrderId", None)
+    timestamp = res.get("timestamp", None)
+    symbol = res.get("symbol", None)
+    type = res.get("type", None)  # market or limit
+    side = res.get("side", None)  # buy or sell
+    price = res.get("price", None)  # maybe empty for market order
+    average = res.get("average", None)  # float everage filling price
+    amount = res.get("amount", None)
+    filled = res.get("filled", None)
+    remaining = res.get("remaining", None)
+    status = raw.get("status", None).lower()
+    cost = res.get("cost", None)
+    reduce_only = raw.get("reduceOnly", None)
+    position_side = raw.get("positionSide", "").lower() or None  # long or short
+    time_in_force = res.get("timeInForce", None)
+
     return Order(
         raw=raw,
         success=True,
@@ -469,13 +559,16 @@ def parse_ccxt_order(res: Dict[str, Any], exchange: str) -> Order:
         cost=cost,
         reduce_only=reduce_only,
         position_side=position_side,
-        time_in_force=time_in_force
+        time_in_force=time_in_force,
     )
 
 
-
-def parse_websocket_stream(event_data: Dict[str, Any], market_id: Dict[str, Any], market_type: Optional[Literal["spot", "swap"]] = None):
-    event = event_data.get('e', None)
+def parse_websocket_stream(
+    event_data: Dict[str, Any],
+    market_id: Dict[str, Any],
+    market_type: Optional[Literal["spot", "swap"]] = None,
+):
+    event = event_data.get("e", None)
     match event:
         case "kline":
             """
@@ -504,14 +597,14 @@ def parse_websocket_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
                 }
             }
             """
-            id = f"{event_data['s']}_{market_type}" if market_type else event_data['s']
+            id = f"{event_data['s']}_{market_type}" if market_type else event_data["s"]
             market = market_id[id]
-            event_data['s'] = market['symbol']
+            event_data["s"] = market["symbol"]
             return event_data
 
 
 def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]):
-    event = event_data.get('e', None)
+    event = event_data.get("e", None)
     match event:
         case "ORDER_TRADE_UPDATE":
             """
@@ -552,45 +645,48 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
                 }
             }
             """
-            if (event_data := event_data.get('o', None)):
-            
-                if (market := market_id.get(event_data['s'], None)) is None:
+            if event_data := event_data.get("o", None):
+                if (market := market_id.get(event_data["s"], None)) is None:
                     id = f"{event_data['s']}_swap"
-                    market = market_id[id]    
-                
-                if (type := event_data['o'].lower()) == "market":
-                    cost = float(event_data.get('l', '0')) * float(event_data.get('ap', '0'))
+                    market = market_id[id]
+
+                if (type := event_data["o"].lower()) == "market":
+                    cost = float(event_data.get("l", "0")) * float(
+                        event_data.get("ap", "0")
+                    )
                 elif type == "limit":
-                    price = float(event_data.get('ap', '0')) or float(event_data.get('p', '0')) # if average price is 0 or empty, use price
-                    cost = float(event_data.get('l', '0')) * price
-                
+                    price = float(event_data.get("ap", "0")) or float(
+                        event_data.get("p", "0")
+                    )  # if average price is 0 or empty, use price
+                    cost = float(event_data.get("l", "0")) * price
+
                 return Order(
-                    raw = event_data,
-                    success = True,
-                    exchange = "binance",
-                    id = event_data.get('i', None),
-                    client_order_id=event_data.get('c', None),
-                    timestamp=event_data.get('T', None),
-                    symbol=market['symbol'],
-                    type = type,
-                    side = event_data.get('S', '').lower(),
-                    status=event_data.get('X', '').lower(),
-                    price = event_data.get('p', None),
-                    average=event_data.get('ap', None),
-                    last_filled_price=event_data.get('L', None),
-                    amount=event_data.get('q', None),
-                    filled=event_data.get('z', None),
-                    last_filled=event_data.get('l', None),
-                    remaining=Decimal(event_data['q']) - Decimal(event_data['z']),
-                    fee=event_data.get('n', None),
-                    fee_currency=event_data.get('N', None),
+                    raw=event_data,
+                    success=True,
+                    exchange="binance",
+                    id=event_data.get("i", None),
+                    client_order_id=event_data.get("c", None),
+                    timestamp=event_data.get("T", None),
+                    symbol=market["symbol"],
+                    type=type,
+                    side=event_data.get("S", "").lower(),
+                    status=event_data.get("X", "").lower(),
+                    price=event_data.get("p", None),
+                    average=event_data.get("ap", None),
+                    last_filled_price=event_data.get("L", None),
+                    amount=event_data.get("q", None),
+                    filled=event_data.get("z", None),
+                    last_filled=event_data.get("l", None),
+                    remaining=Decimal(event_data["q"]) - Decimal(event_data["z"]),
+                    fee=event_data.get("n", None),
+                    fee_currency=event_data.get("N", None),
                     cost=cost,
-                    last_trade_timestamp=event_data.get('T', None),
-                    reduce_only=event_data.get('R', None),
-                    position_side=event_data.get('ps','').lower(),
-                    time_in_force=event_data.get('f', None)
+                    last_trade_timestamp=event_data.get("T", None),
+                    reduce_only=event_data.get("R", None),
+                    position_side=event_data.get("ps", "").lower(),
+                    time_in_force=event_data.get("f", None),
                 )
-        
+
         case "ACCOUNT_UPDATE":
             """
             {
@@ -619,15 +715,15 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
             }
             """
             positions = []
-            for position in event_data['a']['P']:
-                if (market := market_id.get(position['s'], None)) is None:
+            for position in event_data["a"]["P"]:
+                if (market := market_id.get(position["s"], None)) is None:
                     id = f"{position['s']}_swap"
                     market = market_id[id]
-                position['s'] = market['symbol']
+                position["s"] = market["symbol"]
                 positions.append(position)
-            event_data['a']['P'] = positions
+            event_data["a"]["P"] = positions
             return event_data
-        
+
         case "balanceUpdate":
             """
             {
@@ -640,7 +736,7 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
             }
             """
             return event_data
-        
+
         case "executionReport":
             """
             {
@@ -709,37 +805,33 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
             """
             id = f"{event_data['s']}_spot"
             market = market_id[id]
-            
-            
+
             return Order(
-                raw = event_data,
-                success = True,
-                exchange = "binance",
-                id = event_data.get('i', None),
-                client_order_id=event_data.get('c', None),
-                timestamp=event_data.get('T', None),
-                symbol=market['symbol'],
-                type = event_data.get('o', '').lower(),
-                side = event_data.get('S', '').lower(),
-                status=event_data.get('X', '').lower(),
-                price = event_data.get('p', None),
-                average=event_data.get('ap', None),
-                last_filled_price=event_data.get('L', None),
-                amount=event_data.get('q', None),
-                filled=event_data.get('z', None),
-                last_filled=event_data.get('l', None),
-                remaining=Decimal(event_data.get('q', '0')) - Decimal(event_data.get('z', '0')),
-                fee=event_data.get('n', None),
-                fee_currency=event_data.get('N', None),
-                cost=event_data.get('Y', None),
-                last_trade_timestamp=event_data.get('T', None),
-                time_in_force=event_data.get('f', None)
+                raw=event_data,
+                success=True,
+                exchange="binance",
+                id=event_data.get("i", None),
+                client_order_id=event_data.get("c", None),
+                timestamp=event_data.get("T", None),
+                symbol=market["symbol"],
+                type=event_data.get("o", "").lower(),
+                side=event_data.get("S", "").lower(),
+                status=event_data.get("X", "").lower(),
+                price=event_data.get("p", None),
+                average=event_data.get("ap", None),
+                last_filled_price=event_data.get("L", None),
+                amount=event_data.get("q", None),
+                filled=event_data.get("z", None),
+                last_filled=event_data.get("l", None),
+                remaining=Decimal(event_data.get("q", "0"))
+                - Decimal(event_data.get("z", "0")),
+                fee=event_data.get("n", None),
+                fee_currency=event_data.get("N", None),
+                cost=event_data.get("Y", None),
+                last_trade_timestamp=event_data.get("T", None),
+                time_in_force=event_data.get("f", None),
             )
-            
-            
-            
-            
-        
+
         case "outboundAccountPosition":
             """
             {

@@ -36,7 +36,7 @@ class BinanceWsManager:
         self._ping_reply_timeout = 1
         self._listener = None
         self._transport = None
-        self._tasks = []
+        self._subscriptions = {}
         self._limiter = Limiter(5/1) # 5 requests per second
 
     async def _connect(self, reconnect: bool = False):
@@ -56,33 +56,49 @@ class BinanceWsManager:
             try:
                 await self._connect(reconnect)
                 # TODO: when reconnecting, need to resubscribe to the channels
+                await self._resubscribe()
                 await self._transport.wait_disconnected()
             except WSError as e:
                 print(f"Connection error: {e}")
             reconnect = True
             await asyncio.sleep(1)
+    
+    async def _resubscribe(self):
+        for _, payload in self._subscriptions.items():
+            await self._limiter.wait()
+            self._transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))
 
     async def subscribe_book_ticker(self, symbol):
-        await self._connect()
-        await self._limiter.wait()
-        id = int(time.time() * 1000)
-        payload = {
-            "method": "SUBSCRIBE",
-            "params": [f"{symbol.lower()}@bookTicker"],
-            "id": id,
-        }
-        self._transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))
+        subscription_id = f"book_ticker.{symbol}" 
+        if subscription_id not in self._subscriptions:
+            await self._connect()
+            await self._limiter.wait()
+            id = int(time.time() * 1000)
+            payload = {
+                "method": "SUBSCRIBE",
+                "params": [f"{symbol.lower()}@bookTicker"],
+                "id": id,
+            }
+            self._subscriptions[subscription_id] = payload
+            self._transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))
+        else:
+            print(f"Already subscribed to {subscription_id}")
     
     async def subscribe_trade(self, symbol):
-        await self._connect()
-        await self._limiter.wait()
-        id = int(time.time() * 1000)
-        payload = {
+        subscription_id = f"trade.{symbol}"
+        if subscription_id not in self._subscriptions:
+            await self._connect()
+            await self._limiter.wait()
+            id = int(time.time() * 1000)
+            payload = {
             "method": "SUBSCRIBE",
             "params": [f"{symbol.lower()}@trade"],
             "id": id,
-        }
-        self._transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))
+            }
+            self._subscriptions[subscription_id] = payload
+            self._transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))
+        else:
+            print(f"Already subscribed to {subscription_id}")
         
     async def _msg_handler(self):
         while True:

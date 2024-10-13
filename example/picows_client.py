@@ -5,10 +5,6 @@ import orjson
 import time
 
 
-def cb(msg):
-    print(msg)
-
-
 class WSClient(WSListener):
     def __init__(self, exchange_id: str = ""):
         self._exchange_id = exchange_id

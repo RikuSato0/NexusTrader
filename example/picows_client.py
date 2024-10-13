@@ -3,6 +3,7 @@ import asyncio
 import json
 import orjson
 import time
+import asynciolimiter
 
 
 class WSClient(WSListener):
@@ -20,9 +21,12 @@ class WSClient(WSListener):
         if frame.msg_type == WSMsgType.PING:
             transport.send_pong(frame.get_payload_as_bytes())
             return
-
-        msg = orjson.loads(frame.get_payload_as_bytes())
-        self.msg_queue.put_nowait(msg)
+        try:
+            msg = orjson.loads(frame.get_payload_as_bytes())
+            self.msg_queue.put_nowait(msg)
+        except Exception as e:
+            print(frame.get_payload_as_bytes())
+            print(f"Error parsing message: {e}")
 
 
 class BinanceWsManager:
@@ -33,6 +37,7 @@ class BinanceWsManager:
         self._listener = None
         self._transport = None
         self._tasks = []
+        self._limiter = asynciolimiter.Limiter(5/1) # 5 requests per second
 
     async def _connect(self):
         if not self._transport and not self._listener:
@@ -57,6 +62,7 @@ class BinanceWsManager:
 
     async def subscribe_book_ticker(self, symbol):
         await self._connect()
+        await self._limiter.wait()
         id = int(time.time() * 1000)
         payload = {
             "method": "SUBSCRIBE",
@@ -64,7 +70,18 @@ class BinanceWsManager:
             "id": id,
         }
         self._transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))
-
+    
+    async def subscribe_trade(self, symbol):
+        await self._connect()
+        await self._limiter.wait()
+        id = int(time.time() * 1000)
+        payload = {
+            "method": "SUBSCRIBE",
+            "params": [f"{symbol.lower()}@trade"],
+            "id": id,
+        }
+        self._transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))
+        
     async def _msg_handler(self):
         while True:
             msg = await self._listener.msg_queue.get()
@@ -83,6 +100,12 @@ async def main():
         ws_manager = BinanceWsManager(url)
         await ws_manager.subscribe_book_ticker("BTCUSDT")
         await ws_manager.subscribe_book_ticker("ETHUSDT")
+        await ws_manager.subscribe_book_ticker("SOLUSDT")
+        await ws_manager.subscribe_book_ticker("BNBUSDT")
+        await ws_manager.subscribe_trade("BTCUSDT")
+        await ws_manager.subscribe_trade("ETHUSDT")
+        await ws_manager.subscribe_trade("BNBUSDT")
+        await ws_manager.subscribe_trade("SOLUSDT")
         await ws_manager.start()
 
     except asyncio.CancelledError:

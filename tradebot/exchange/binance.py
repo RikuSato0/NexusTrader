@@ -35,7 +35,7 @@ from tradebot.base import (
     OrderManager,
     AccountManager,
     WebsocketManager,
-    WSListenerManager,
+    WSClient,
 )
 from picows import ws_connect, WSError, WSMsgType
 
@@ -279,30 +279,27 @@ class BinanceWebsocketManager(WebsocketManager):
     async def _picows_subscribe(
         self, payload: Dict[str, Any], callback: Callable[..., Any], *args, **kwargs
     ):
-        WSFactory = lambda: WSListenerManager("binance")  # noqa: E731
-
-        transport, listener = await ws_connect(
-            WSFactory,
-            self._base_url,
-            enable_auto_ping=True,
-            auto_ping_idle_timeout=2,  # ? TBD
-            # auto_ping_reply_timeout=self._ping_timeout, # not work?
-            auto_ping_reply_timeout=1,
-        )
-        try:
-            transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))
-            while True:
-                msg = await listener.msg_queue.get()
-                if asyncio.iscoroutinefunction(callback):
-                    await callback(msg, *args, **kwargs)
-                else:
-                    callback(msg, *args, **kwargs)
-                listener.msg_queue.task_done()
-            # transport.wait_disconnected()
-            # await asyncio.sleep(5)
-
-        except WSError as e:
-            self._log.error(f"Connection error: {e}")
+        WSClientFactory = lambda: WSClient("Binance")  # noqa: E731
+        while True:
+            transport, listener = await ws_connect(
+                WSClientFactory,
+                self._base_url,
+                enable_auto_ping=True,
+                auto_ping_idle_timeout=self._ping_interval, 
+                auto_ping_reply_timeout=self._ping_timeout,
+            )
+            try:
+                transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))
+                while True:
+                    msg = await listener.msg_queue.get()
+                    if asyncio.iscoroutinefunction(callback):
+                        await callback(msg, *args, **kwargs)
+                    else:
+                        callback(msg, *args, **kwargs)
+                    listener.msg_queue.task_done()
+            except WSError as e:
+                self._log.error(f"Connection error: {e}")
+            await asyncio.sleep(1)
     
     async def subscribe_book_ticker_v2(
         self, symbol, callback: Callable[..., Any] = None, *args, **kwargs

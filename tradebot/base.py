@@ -340,7 +340,7 @@ class WebsocketManager(ABC):
         self._log.info("All WebSocket connections closed.")
 
 
-class WSListenerManager(WSListener):
+class WSClient(WSListener):
     def __init__(self, exchange_id: str = ""):
         self._exchange_id = exchange_id
         self.msg_queue = asyncio.Queue()

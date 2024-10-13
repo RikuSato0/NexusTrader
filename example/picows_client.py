@@ -3,7 +3,7 @@ import asyncio
 import json
 import orjson
 import time
-from asyncio_limiter import Limiter
+from asynciolimiter import Limiter
 
 
 class WSClient(WSListener):

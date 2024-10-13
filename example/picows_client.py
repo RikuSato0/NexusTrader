@@ -3,7 +3,7 @@ import asyncio
 import json
 import orjson
 import time
-import asynciolimiter
+from asyncio_limiter import Limiter
 
 
 class WSClient(WSListener):
@@ -37,7 +37,7 @@ class BinanceWsManager:
         self._listener = None
         self._transport = None
         self._tasks = []
-        self._limiter = asynciolimiter.Limiter(5/1) # 5 requests per second
+        self._limiter = Limiter(5/1) # 5 requests per second
 
     async def _connect(self):
         if not self._transport and not self._listener:

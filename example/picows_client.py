@@ -39,8 +39,8 @@ class BinanceWsManager:
         self._tasks = []
         self._limiter = Limiter(5/1) # 5 requests per second
 
-    async def _connect(self):
-        if not self._transport and not self._listener:
+    async def _connect(self, reconnect: bool = False):
+        if not self._transport and not self._listener or reconnect:
             WSClientFactory = lambda: WSClient("Binance")  # noqa: E731
             self._transport, self._listener = await ws_connect(
                 WSClientFactory,
@@ -51,13 +51,15 @@ class BinanceWsManager:
             )
 
     async def _handle_connection(self):
+        reconnect = False
         while True:
             try:
-                await self._connect()
+                await self._connect(reconnect)
                 # TODO: when reconnecting, need to resubscribe to the channels
                 await self._transport.wait_disconnected()
             except WSError as e:
                 print(f"Connection error: {e}")
+            reconnect = True
             await asyncio.sleep(1)
 
     async def subscribe_book_ticker(self, symbol):

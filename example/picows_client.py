@@ -4,6 +4,24 @@ import json
 import orjson
 import time
 from asynciolimiter import Limiter
+import os
+import logging
+from collections import defaultdict
+import numpy as np
+
+file_path = os.path.join(".logs", "picows_client.log")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    filename=file_path,
+    filemode="a",
+)
+
+# Create a logger
+logger = logging.getLogger("picows_client")
+
+LATENCY = defaultdict(list)
 
 
 class WSClient(WSListener):
@@ -12,10 +30,10 @@ class WSClient(WSListener):
         self.msg_queue = asyncio.Queue()
 
     def on_ws_connected(self, transport: WSTransport):
-        print(f"Connected to {self._exchange_id} Websocket.")
+        logger.info(f"Connected to {self._exchange_id} Websocket.")
 
     def on_ws_disconnected(self, transport: WSTransport):
-        print(f"Disconnected from {self._exchange_id} Websocket.")
+        logger.info(f"Disconnected from {self._exchange_id} Websocket.")
 
     def on_ws_frame(self, transport: WSTransport, frame: WSFrame):
         if frame.msg_type == WSMsgType.PING:
@@ -25,8 +43,8 @@ class WSClient(WSListener):
             msg = orjson.loads(frame.get_payload_as_bytes())
             self.msg_queue.put_nowait(msg)
         except Exception as e:
-            print(frame.get_payload_as_bytes())
-            print(f"Error parsing message: {e}")
+            logger.error(frame.get_payload_as_bytes())
+            logger.error(f"Error parsing message: {e}")
 
 
 class BinanceMsgDispatcher:
@@ -43,7 +61,7 @@ class BinanceWsManager(BinanceMsgDispatcher):
         self._listener = None
         self._transport = None
         self._subscriptions = {}
-        self._limiter = Limiter(5 / 1)  # 5 requests per second
+        self._limiter = Limiter(3 / 1)  # 3 requests per second
 
     @property
     def connected(self):
@@ -93,7 +111,7 @@ class BinanceWsManager(BinanceMsgDispatcher):
                 await self._resubscribe()
                 await self._transport.wait_disconnected()
             except WSError as e:
-                print(f"Connection error: {e}")
+                logger.error(f"Connection error: {e}")
             reconnect = True
             await asyncio.sleep(1)
 
@@ -118,7 +136,7 @@ class BinanceWsManager(BinanceMsgDispatcher):
             self._subscriptions[subscription_id] = payload
             self._send_payload(payload)
         else:
-            print(f"Already subscribed to {subscription_id}")
+            logger.info(f"Already subscribed to {subscription_id}")
 
     async def subscribe_trade(self, symbol):
         subscription_id = f"trade.{symbol}"
@@ -133,13 +151,19 @@ class BinanceWsManager(BinanceMsgDispatcher):
             self._subscriptions[subscription_id] = payload
             self._send_payload(payload)
         else:
-            print(f"Already subscribed to {subscription_id}")
+            logger.info(f"Already subscribed to {subscription_id}")
+
+    def callback(self, msg):
+        if "E" in msg:
+            local = int(time.time() * 1000)
+            latency = local - msg["E"]
+            LATENCY[msg["s"]].append(latency)
 
     async def _msg_handler(self):
         while True:
             msg = await self._listener.msg_queue.get()
             # TODO: handle different event types of messages
-            print(msg)
+            self.callback(msg)
             self._listener.msg_queue.task_done()
 
     async def start(self):
@@ -153,18 +177,75 @@ async def main():
         url = "wss://stream.binance.com:9443/ws"
         ws_manager = BinanceWsManager(url)
         await ws_manager.connect()
-        await ws_manager.subscribe_book_ticker("BTCUSDT")
-        await ws_manager.subscribe_book_ticker("ETHUSDT")
-        await ws_manager.subscribe_book_ticker("SOLUSDT")
-        await ws_manager.subscribe_book_ticker("BNBUSDT")
-        await ws_manager.subscribe_trade("BTCUSDT")
-        await ws_manager.subscribe_trade("ETHUSDT")
-        await ws_manager.subscribe_trade("BNBUSDT")
-        await ws_manager.subscribe_trade("SOLUSDT")
+
+        # generate 50 symbols
+        symbols = [
+            "BTCUSDT",
+            "ETHUSDT",
+            "SOLUSDT",
+            "BNBUSDT",
+            "ADAUSDT",
+            "XRPUSDT",
+            "DOGEUSDT",
+            "DOTUSDT",
+            "UNIUSDT",
+            "LTCUSDT",
+            "LINKUSDT",
+            "MATICUSDT",
+            "XLMUSDT",
+            "BCHUSDT",
+            "ATOMUSDT",
+            "ETCUSDT",
+            "VETUSDT",
+            "FILUSDT",
+            "TRXUSDT",
+            "EOSUSDT",
+            "THETAUSDT",
+            "AAVEUSDT",
+            "XMRUSDT",
+            "NEOUSDT",
+            "MKRUSDT",
+            "ALGOUSDT",
+            "COMPUSDT",
+            "DASHUSDT",
+            "ZECUSDT",
+            "XTZUSDT",
+            "WAVESUSDT",
+            "SNXUSDT",
+            "YFIUSDT",
+            "KSMUSDT",
+            "ONTUSDT",
+            "BATUSDT",
+            "ICXUSDT",
+            "ZILUSDT",
+            "ZRXUSDT",
+            "QTUMUSDT",
+            "OMGUSDT",
+            "RVNUSDT",
+            "NANOUSDT",
+            "ENJUSDT",
+            "DGBUSDT",
+            "SCUSDT",
+            "LRCUSDT",
+            "KNCUSDT",
+            "REPUSDT",
+            "STORJUSDT",
+        ]
+        for symbol in symbols:
+            # await ws_manager.subscribe_book_ticker(symbol)
+            await ws_manager.subscribe_trade(symbol)
+
         await ws_manager.start()
 
     except asyncio.CancelledError:
-        print("Websocket closed.")
+        logger.info("Websocket closed.")
+
+    finally:
+        for symbol, latencies in LATENCY.items():
+            avg_latency = np.mean(latencies)
+            print(
+                f"Symbol: {symbol}, Avg: {avg_latency:.2f} ms, Median: {np.median(latencies):.2f} ms, Std: {np.std(latencies):.2f} ms 95%: {np.percentile(latencies, 95):.2f} ms, 99%: {np.percentile(latencies, 99):.2f} ms min: {np.min(latencies):.2f} ms max: {np.max(latencies):.2f} ms"
+            )
 
 
 if __name__ == "__main__":

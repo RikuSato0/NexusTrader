@@ -11,6 +11,9 @@ import numpy as np
 
 file_path = os.path.join(".logs", "picows_client.log")
 
+if not os.path.exists(".logs"):
+    os.makedirs(".logs")
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -22,6 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger("picows_client")
 
 LATENCY = defaultdict(list)
+
 
 class WSClient(WSListener):
     def __init__(self, exchange_id: str = ""):
@@ -140,61 +144,81 @@ async def main():
         url = "wss://stream.binance.com:9443/ws"
         ws_manager = BinanceWsManager(url)
 
-        # generate 50 symbols
         symbols = [
-            "BTCUSDT",
-            "ETHUSDT",
-            "SOLUSDT",
-            "BNBUSDT",
-            "ADAUSDT",
-            "XRPUSDT",
-            "DOGEUSDT",
-            "DOTUSDT",
-            "UNIUSDT",
-            "LTCUSDT",
-            "LINKUSDT",
-            "MATICUSDT",
-            "XLMUSDT",
-            "BCHUSDT",
-            "ATOMUSDT",
-            "ETCUSDT",
-            "VETUSDT",
-            "FILUSDT",
-            "TRXUSDT",
-            "EOSUSDT",
-            "THETAUSDT",
-            "AAVEUSDT",
-            "XMRUSDT",
-            "NEOUSDT",
-            "MKRUSDT",
-            "ALGOUSDT",
-            "COMPUSDT",
-            "DASHUSDT",
+            "ARKMUSDT",
             "ZECUSDT",
-            "XTZUSDT",
-            "WAVESUSDT",
-            "SNXUSDT",
-            "YFIUSDT",
+            "MANTAUSDT",
+            "ENAUSDT",
+            "ARKUSDT",
+            "RIFUSDT",
+            "BEAMXUSDT",
+            "METISUSDT",
+            "1000SATSUSDT",
+            "AMBUSDT",
+            "CHZUSDT",
+            "RENUSDT",
+            "BANANAUSDT",
+            "TAOUSDT",
+            "RAREUSDT",
+            "SXPUSDT",
+            "IDUSDT",
+            "LQTYUSDT",
+            "RPLUSDT",
+            "COMBOUSDT",
+            "SEIUSDT",
+            "RDNTUSDT",
+            "BNXUSDT",
+            "NKNUSDT",
+            "BNBUSDT",
+            "APTUSDT",
+            "OXTUSDT",
+            "LEVERUSDT",
+            "AIUSDT",
+            "OMNIUSDT",
+            "KDAUSDT",
+            "ALPACAUSDT",
+            "STRKUSDT",
+            "FETUSDT",
+            "FIDAUSDT",
+            "MKRUSDT",
+            "GMTUSDT",
+            "VIDTUSDT",
+            "UMAUSDT",
+            "RONINUSDT",
+            "FIOUSDT",
+            "BALUSDT",
+            "IOUSDT",
+            "LDOUSDT",
             "KSMUSDT",
-            "ONTUSDT",
-            "BATUSDT",
-            "ICXUSDT",
-            "ZILUSDT",
-            "ZRXUSDT",
-            "QTUMUSDT",
-            "OMGUSDT",
-            "RVNUSDT",
-            "NANOUSDT",
-            "ENJUSDT",
-            "DGBUSDT",
-            "SCUSDT",
+            "TURBOUSDT",
+            "GUSDT",
+            "POLUSDT",
+            "XVSUSDT",
+            "SUNUSDT",
+            "TIAUSDT",
             "LRCUSDT",
-            "KNCUSDT",
-            "REPUSDT",
-            "STORJUSDT",
+            "1MBABYDOGEUSDT",
+            "ZKUSDT",
+            "ZENUSDT",
+            "HOTUSDT",
+            "DARUSDT",
+            "AXSUSDT",
+            "TRXUSDT",
+            "LOKAUSDT",
+            "LSKUSDT",
+            "GLMUSDT",
+            "ETHFIUSDT",
+            "ONTUSDT",
+            "ONGUSDT",
+            "CATIUSDT",
+            "REZUSDT",
+            "NEIROUSDT",
+            "VANRYUSDT",
+            "ANKRUSDT",
+            "ALPHAUSDT",
         ]
+
         for symbol in symbols:
-            # await ws_manager.subscribe_book_ticker(symbol)
             await ws_manager.subscribe_trade(symbol)
 
         await ws_manager.start()
@@ -205,7 +229,9 @@ async def main():
     finally:
         for symbol, latencies in LATENCY.items():
             avg_latency = np.mean(latencies)
-            print(f"Symbol: {symbol}, Avg: {avg_latency:.2f} ms, Median: {np.median(latencies):.2f} ms, Std: {np.std(latencies):.2f} ms 95%: {np.percentile(latencies, 95):.2f} ms, 99%: {np.percentile(latencies, 99):.2f} ms min: {np.min(latencies):.2f} ms max: {np.max(latencies):.2f} ms")
+            print(
+                f"Symbol: {symbol}, Avg: {avg_latency:.2f} ms, Median: {np.median(latencies):.2f} ms, Std: {np.std(latencies):.2f} ms 95%: {np.percentile(latencies, 95):.2f} ms, 99%: {np.percentile(latencies, 99):.2f} ms min: {np.min(latencies):.2f} ms max: {np.max(latencies):.2f} ms"
+            )
 
 
 if __name__ == "__main__":

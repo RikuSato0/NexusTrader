@@ -89,10 +89,9 @@ class BinanceWsManager(BinanceMsgDispatcher):
                     await self._connect()
                     await self._resubscribe()
 
-                # why need to catch `WSError`:
                 # ws_connect may throw any exception that asyncio.Loop.create_connection can throw.
                 # ws_connect may throw WSError when there is an error during websocket negotiation phase.
-                except WSError as e:
+                except Exception as e:
                     print(f"Connection error: {e}")
                     # should reconnect
                     self._transport, self._listener = None, None
@@ -102,18 +101,6 @@ class BinanceWsManager(BinanceMsgDispatcher):
 
             # TODO: progressively retry
             await asyncio.sleep(0.2)
-
-    async def _handle_connection(self):
-        reconnect = False
-        while True:
-            try:
-                await self._connect(reconnect=reconnect)
-                await self._resubscribe()
-                await self._transport.wait_disconnected()
-            except WSError as e:
-                logger.error(f"Connection error: {e}")
-            reconnect = True
-            await asyncio.sleep(1)
 
     def _send_payload(self, payload: dict):
         self._transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))

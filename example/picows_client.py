@@ -154,7 +154,6 @@ class BinanceWsManager(BinanceMsgDispatcher):
             self._listener.msg_queue.task_done()
 
     async def start(self):
-        asyncio.create_task(self._msg_handler())
         while True:
             await asyncio.sleep(1)
 
@@ -164,6 +163,7 @@ async def main():
         url = "wss://stream.binance.com:9443/ws"
         ws_manager = BinanceWsManager(url)
         await ws_manager.connect()
+        asyncio.create_task(ws_manager._msg_handler())
 
         # generate 50 symbols
         symbols = [
@@ -220,6 +220,7 @@ async def main():
         ]
         for symbol in symbols:
             # await ws_manager.subscribe_book_ticker(symbol)
+            print(symbol)
             await ws_manager.subscribe_trade(symbol)
 
         await ws_manager.start()

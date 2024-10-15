@@ -8,21 +8,22 @@ from collections import defaultdict
 import numpy as np
 
 
-logger = SpdLog.get_logger("Picows", level="INFO", flush=True)
+
 
 LATENCY = defaultdict(list)
 
 
 class WSClient(WSListener):
-    def __init__(self, exchange_id: str = ""):
+    def __init__(self, exchange_id: str = "", logger = None):
         self._exchange_id = exchange_id
         self.msg_queue = asyncio.Queue()
-
+        self._log = logger
+        
     def on_ws_connected(self, transport: WSTransport):
-        logger.info(f"Connected to {self._exchange_id} Websocket.")
+        self._log.info(f"Connected to {self._exchange_id} Websocket.")
 
     def on_ws_disconnected(self, transport: WSTransport):
-        logger.info(f"Disconnected from {self._exchange_id} Websocket.")
+        self._log.info(f"Disconnected from {self._exchange_id} Websocket.")
 
     def on_ws_frame(self, transport: WSTransport, frame: WSFrame):
         if frame.msg_type == WSMsgType.PING:
@@ -32,8 +33,8 @@ class WSClient(WSListener):
             msg = orjson.loads(frame.get_payload_as_bytes())
             self.msg_queue.put_nowait(msg)
         except Exception as e:
-            logger.error(frame.get_payload_as_bytes())
-            logger.error(f"Error parsing message: {e}")
+            self._log.error(frame.get_payload_as_bytes())
+            self._log.error(f"Error parsing message: {e}")
 
 
 class BinanceMsgDispatcher:
@@ -52,13 +53,14 @@ class BinanceWsManager(BinanceMsgDispatcher):
         self._transport = None
         self._subscriptions = {}
         self._limiter = Limiter(3 / 1)  # 3 requests per second
+        self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
 
     @property
     def connected(self):
         return self._transport and self._listener
 
     async def _connect(self):
-        WSClientFactory = lambda: WSClient("Binance")  # noqa: E731
+        WSClientFactory = lambda: WSClient("Binance", self._log)  # noqa: E731
         self._transport, self._listener = await ws_connect(
             WSClientFactory,
             self._url,
@@ -81,7 +83,7 @@ class BinanceWsManager(BinanceMsgDispatcher):
                 else:
                     await self._transport.wait_disconnected()
             except Exception as e:
-                logger.error(f"Connection error: {e}")
+                self._log.error(f"Connection error: {e}")
             finally:
                 self._transport, self._listener = None, None
                 await asyncio.sleep(self._reconnect_interval)
@@ -107,7 +109,7 @@ class BinanceWsManager(BinanceMsgDispatcher):
             self._subscriptions[subscription_id] = payload
             self._send(payload)
         else:
-            logger.info(f"Already subscribed to {subscription_id}")
+            self._log.info(f"Already subscribed to {subscription_id}")
 
     async def subscribe_trade(self, symbol):
         subscription_id = f"trade.{symbol}"
@@ -122,10 +124,10 @@ class BinanceWsManager(BinanceMsgDispatcher):
             self._subscriptions[subscription_id] = payload
             self._send(payload)
         else:
-            logger.info(f"Already subscribed to {subscription_id}")
+            self._log.info(f"Already subscribed to {subscription_id}")
 
     def callback(self, msg):
-        logger.info(str(msg))
+        self._log.info(str(msg))
         # if "E" in msg:
         #     # print(msg)
         #     local = int(time.time() * 1000)
@@ -236,7 +238,7 @@ async def main():
 
     except asyncio.CancelledError:
         ws_manager.disconnect()
-        logger.info("Websocket closed.")
+        print("Websocket closed.")
 
     # finally:
     #     for symbol, latencies in LATENCY.items():

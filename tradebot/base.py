@@ -411,6 +411,7 @@ class WSManager(ABC):
             except Exception as e:
                 self._log.error(f"Connection error: {e}")
             finally:
+                self._log.info("_connection_handler try to reconnect...")
                 if self._msg_handler_task:
                     self._msg_handler_task.cancel()
                 self._transport, self._listener = None, None

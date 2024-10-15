@@ -287,6 +287,7 @@ class BinanceWSManager(WSManager):
             self._log.info(f"Already subscribed to {subscription_id}")
     
     def _callback(self, msg: Dict):
+        #TODO: remove the log, parse different events
         self._log.info(str(msg))
         
 

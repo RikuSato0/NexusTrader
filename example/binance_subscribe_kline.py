@@ -2,7 +2,6 @@ import asyncio
 import ccxt
 
 from tradebot.exchange import BinanceWebsocketManager
-from tradebot.entity import log_register
 from tradebot.constants import Url
 
 market_id = {}

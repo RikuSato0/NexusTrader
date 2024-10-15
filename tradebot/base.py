@@ -371,7 +371,7 @@ class WSManager:
         self._transport = None
         self._subscriptions = {}
         self._limiter = limiter
-        self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=False)
+        self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
 
     @property
     def connected(self):

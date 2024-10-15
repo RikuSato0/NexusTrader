@@ -347,7 +347,7 @@ class WSClient(WSListener):
         self.msg_queue = asyncio.Queue()
 
     def on_ws_connected(self, transport: WSTransport):
-        self._log.info("Connected to Websocket.")
+        self._log.info("Connected to Websocket...")
 
     def on_ws_disconnected(self, transport: WSTransport):
         self._log.info("Disconnected from Websocket.")
@@ -411,7 +411,7 @@ class WSManager(ABC):
             except Exception as e:
                 self._log.error(f"Connection error: {e}")
             finally:
-                self._log.info("_connection_handler try to reconnect...")
+                self._log.info("Websocket reconnecting...")
                 if self._msg_handler_task:
                     self._msg_handler_task.cancel()
                 self._transport, self._listener = None, None

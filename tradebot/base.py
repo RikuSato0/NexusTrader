@@ -405,7 +405,8 @@ class WSManager(ABC):
             except Exception as e:
                 self._log.error(f"Connection error: {e}")
             finally:
-                self._msg_handler_task.cancel()
+                if self._msg_handler_task:
+                    self._msg_handler_task.cancel()
                 self._transport, self._listener = None, None
                 await asyncio.sleep(self._reconnect_interval)
 
@@ -417,12 +418,12 @@ class WSManager(ABC):
             await self._limiter.wait()
             self._send(payload)
 
-    async def _msg_handler(self, msg_queue: asyncio.Queue):
+    async def _msg_handler(self, queue: asyncio.Queue):
         while True:
-            msg = await msg_queue.get()
+            msg = await queue.get()
             # TODO: handle different event types of messages
             self.callback(msg)
-            msg_queue.task_done()
+            queue.task_done()
     
     def disconnect(self):
         if self.connected:

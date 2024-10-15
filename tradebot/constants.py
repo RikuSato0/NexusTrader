@@ -6,6 +6,10 @@ from collections import defaultdict
 
 from typing import Literal, Union
 
+from enum import Enum
+
+
+
 
 if not os.path.exists('.keys/'):
     os.makedirs('.keys/')
@@ -185,3 +189,11 @@ UrlType = Union[
 
 
 
+class EventType(Enum):
+    BOOK_L1 = 0
+    TRADE = 1
+
+class Exchange(Enum):
+    BINANCE = 0
+    OKX = 1
+    BYBIT = 2

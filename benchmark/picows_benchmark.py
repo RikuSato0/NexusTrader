@@ -1,79 +1,245 @@
+from picows import WSListener, WSTransport, WSFrame, WSMsgType, ws_connect
 import asyncio
-import uvloop
 import orjson
-from tradebot.constants import Url
 import time
-from picows import ws_connect, WSFrame, WSTransport, WSListener, WSMsgType, WSCloseCode
-import websockets
+from asynciolimiter import Limiter
+from tradebot.log import SpdLog
+from collections import defaultdict
 import numpy as np
 
-picows = {}
-websockets_dict = {}
-latency = []
 
-class BinanceListener(WSListener):
+logger = SpdLog.get_logger("Picows", level="INFO", flush=True)
+
+LATENCY = defaultdict(list)
+
+
+class WSClient(WSListener):
+    def __init__(self, exchange_id: str = ""):
+        self._exchange_id = exchange_id
+        self.msg_queue = asyncio.Queue()
+
     def on_ws_connected(self, transport: WSTransport):
-        print("Connected to Binance Websocket.")
-    
+        logger.info(f"Connected to {self._exchange_id} Websocket.")
+
     def on_ws_disconnected(self, transport: WSTransport):
-        print("Disconnected from Binance Websocket.")
+        logger.info(f"Disconnected from {self._exchange_id} Websocket.")
 
     def on_ws_frame(self, transport: WSTransport, frame: WSFrame):
         if frame.msg_type == WSMsgType.PING:
+            transport.send_pong(frame.get_payload_as_bytes())
             return
-            
-        data = orjson.loads(frame.get_payload_as_bytes())
-        picows[data.get('t', 'test')] = time.time_ns()
-            
+        try:
+            msg = orjson.loads(frame.get_payload_as_bytes())
+            self.msg_queue.put_nowait(msg)
+        except Exception as e:
+            logger.error(frame.get_payload_as_bytes())
+            logger.error(f"Error parsing message: {e}")
 
 
+class BinanceMsgDispatcher:
+    def _fund(): ...
 
-class BinanceWebscokets:
+    def _trade(): ...
+
+
+class BinanceWsManager(BinanceMsgDispatcher):
     def __init__(self, url: str):
-        self.url = url
-        self.tasks = []
-    
-    async def _subscribe(self):
-        async with websockets.connect(self.url) as websocket:
+        self._url = url
+        self._reconnect_interval = 0.2  # Reconnection interval in seconds
+        self._ping_idle_timeout = 2
+        self._ping_reply_timeout = 1
+        self._listener = None
+        self._transport = None
+        self._subscriptions = {}
+        self._limiter = Limiter(3 / 1)  # 3 requests per second
+
+    @property
+    def connected(self):
+        return self._transport and self._listener
+
+    async def _connect(self):
+        WSClientFactory = lambda: WSClient("Binance")  # noqa: E731
+        self._transport, self._listener = await ws_connect(
+            WSClientFactory,
+            self._url,
+            enable_auto_ping=True,
+            auto_ping_idle_timeout=self._ping_idle_timeout,
+            auto_ping_reply_timeout=self._ping_reply_timeout,
+        )
+
+    async def connect(self):
+        if not self.connected:
+            await self._connect()
+            asyncio.create_task(self._connection_handler())
+
+    async def _connection_handler(self):
+        while True:
             try:
-                async for message in websocket:
-                    data = orjson.loads(message)
-                    websockets_dict[data.get('t', 'test')] = time.time_ns()
-            except websockets.ConnectionClosed:
-                print("Connection closed.")
-    
-    async def subscribe(self):
-        self.tasks.append(asyncio.create_task(self._subscribe()))
-    
-    async def close(self):
-        for task in self.tasks:
-            task.cancel()
-        await asyncio.gather(*self.tasks, return_exceptions=True)
-        print("All WebSocket connections closed.")
+                if not self.connected:
+                    await self._connect()
+                    await self._resubscribe()
+                else:
+                    await self._transport.wait_disconnected()
+            except Exception as e:
+                logger.error(f"Connection error: {e}")
+            finally:
+                self._transport, self._listener = None, None
+                await asyncio.sleep(self._reconnect_interval)
+
+    def _send(self, payload: dict):
+        self._transport.send(WSMsgType.TEXT, orjson.dumps(payload))
+
+    async def _resubscribe(self):
+        for _, payload in self._subscriptions.items():
+            await self._limiter.wait()
+            self._send(payload)
+
+    async def subscribe_book_ticker(self, symbol):
+        subscription_id = f"book_ticker.{symbol}"
+        if subscription_id not in self._subscriptions:
+            await self._limiter.wait()
+            id = int(time.time() * 1000)
+            payload = {
+                "method": "SUBSCRIBE",
+                "params": [f"{symbol.lower()}@bookTicker"],
+                "id": id,
+            }
+            self._subscriptions[subscription_id] = payload
+            self._send(payload)
+        else:
+            logger.info(f"Already subscribed to {subscription_id}")
+
+    async def subscribe_trade(self, symbol):
+        subscription_id = f"trade.{symbol}"
+        if subscription_id not in self._subscriptions:
+            await self._limiter.wait()
+            id = int(time.time() * 1000)
+            payload = {
+                "method": "SUBSCRIBE",
+                "params": [f"{symbol.lower()}@trade"],
+                "id": id,
+            }
+            self._subscriptions[subscription_id] = payload
+            self._send(payload)
+        else:
+            logger.info(f"Already subscribed to {subscription_id}")
+
+    def callback(self, msg):
+        logger.info(str(msg))
+        # if "E" in msg:
+        #     # print(msg)
+        #     local = int(time.time() * 1000)
+        #     latency = local - msg["E"]
+        #     LATENCY[msg["s"]].append(latency)
+
+    async def _msg_handler(self):
+        while True:
+            msg = await self._listener.msg_queue.get()
+            # TODO: handle different event types of messages
+            self.callback(msg)
+            self._listener.msg_queue.task_done()
+
 
 async def main():
     try:
-        url = Url.Binance.Spot.STREAM_URL + "/ws/btcusdt@trade"
-        ws_client = BinanceWebscokets(url)
-        transport = await ws_connect(BinanceListener, url, enable_auto_ping=True, auto_ping_idle_timeout=2, auto_ping_reply_timeout=1)
-        await ws_client.subscribe()
-        
+        SpdLog.initialize()
+        url = "wss://stream.binance.com:9443/ws"
+        ws_manager = BinanceWsManager(url)
+        await ws_manager.connect()
+        asyncio.create_task(ws_manager._msg_handler())
+
+        symbols = [
+            "ARKMUSDT",
+            "ZECUSDT",
+            "MANTAUSDT",
+            "ENAUSDT",
+            "ARKUSDT",
+            "RIFUSDT",
+            "BEAMXUSDT",
+            "METISUSDT",
+            "1000SATSUSDT",
+            "AMBUSDT",
+            "CHZUSDT",
+            "RENUSDT",
+            "BANANAUSDT",
+            "TAOUSDT",
+            "RAREUSDT",
+            "SXPUSDT",
+            "IDUSDT",
+            "LQTYUSDT",
+            "RPLUSDT",
+            "COMBOUSDT",
+            "SEIUSDT",
+            "RDNTUSDT",
+            "BNXUSDT",
+            "NKNUSDT",
+            "BNBUSDT",
+            "APTUSDT",
+            "OXTUSDT",
+            "LEVERUSDT",
+            "AIUSDT",
+            "OMNIUSDT",
+            "KDAUSDT",
+            "ALPACAUSDT",
+            "STRKUSDT",
+            "FETUSDT",
+            "FIDAUSDT",
+            "MKRUSDT",
+            "GMTUSDT",
+            "VIDTUSDT",
+            "UMAUSDT",
+            "RONINUSDT",
+            "FIOUSDT",
+            "BALUSDT",
+            "IOUSDT",
+            "LDOUSDT",
+            "KSMUSDT",
+            "TURBOUSDT",
+            "GUSDT",
+            "POLUSDT",
+            "XVSUSDT",
+            "SUNUSDT",
+            "TIAUSDT",
+            "LRCUSDT",
+            "1MBABYDOGEUSDT",
+            "ZKUSDT",
+            "ZENUSDT",
+            "HOTUSDT",
+            "DARUSDT",
+            "AXSUSDT",
+            "TRXUSDT",
+            "LOKAUSDT",
+            "LSKUSDT",
+            "GLMUSDT",
+            "ETHFIUSDT",
+            "ONTUSDT",
+            "ONGUSDT",
+            "CATIUSDT",
+            "REZUSDT",
+            "NEIROUSDT",
+            "VANRYUSDT",
+            "ANKRUSDT",
+            "ALPHAUSDT",
+        ]
+
+        for symbol in symbols:
+            # await ws_manager.subscribe_book_ticker(symbol)
+            # print(symbol)
+            await ws_manager.subscribe_trade(symbol)
+
         while True:
             await asyncio.sleep(1)
-        
+
     except asyncio.CancelledError:
-        await transport.di
-        await ws_client.close()
-        print("Websocket closed.")
+        logger.info("Websocket closed.")
+
+    finally:
+        for symbol, latencies in LATENCY.items():
+            avg_latency = np.mean(latencies)
+            print(
+                f"Symbol: {symbol}, Avg: {avg_latency:.2f} ms, Median: {np.median(latencies):.2f} ms, Std: {np.std(latencies):.2f} ms 95%: {np.percentile(latencies, 95):.2f} ms, 99%: {np.percentile(latencies, 99):.2f} ms min: {np.min(latencies):.2f} ms max: {np.max(latencies):.2f} ms"
+            )
 
 
 if __name__ == "__main__":
-    try:
-        uvloop.run(main())
-    except KeyboardInterrupt:
-        for k,v in picows.items():
-            if k in websockets_dict:
-                latency.append(websockets_dict[k] - v)
-        
-        print(f"Latency: {np.mean(latency)/1e6} ms, std: {np.std(latency)}, 95%: {np.percentile(latency, 95)/1e6} ms, 99%: {np.percentile(latency, 99)/1e6} ms")
-        print("KeyboardInterrupt")
+    asyncio.run(main())

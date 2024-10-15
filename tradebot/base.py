@@ -12,19 +12,20 @@ from collections import defaultdict
 from decimal import Decimal
 
 
+from asynciolimiter import Limiter
 from ccxt.base.errors import RequestTimeout
 
 
-from tradebot.entity import log_register
+from tradebot.log import SpdLog
 from tradebot.entity import Order
 from tradebot.exceptions import OrderError
 
 from picows import (
+    ws_connect,
     WSFrame,
     WSTransport,
     WSListener,
     WSMsgType,
-    WSCloseCode,
 )
 
 
@@ -63,7 +64,7 @@ class AccountManager(ABC):
 class OrderManager(ABC):
     def __init__(self, exchange: ExchangeManager):
         self._exchange = exchange
-        self._log = log_register.get_logger(
+        self._log = SpdLog.get_logger(
             name=type(self).__name__, level="INFO", flush=True
         )
 
@@ -314,7 +315,7 @@ class WebsocketManager(ABC):
 
         self._tasks: List[asyncio.Task] = []
         self._subscripions = defaultdict(asyncio.Queue)
-        self._log = log_register.get_logger(
+        self._log = SpdLog.get_logger(
             name=type(self).__name__, level="INFO", flush=True
         )
 
@@ -341,27 +342,88 @@ class WebsocketManager(ABC):
 
 
 class WSClient(WSListener):
-    def __init__(self, exchange_id: str = ""):
-        self._exchange_id = exchange_id
+    def __init__(self, logger):
+        self._log = logger
         self.msg_queue = asyncio.Queue()
-        self._log = log_register.get_logger(
-            name=type(self).__name__, level="INFO", flush=True
-        )
-        
 
     def on_ws_connected(self, transport: WSTransport):
-        self._log.info(f"Connected to {self._exchange_id} Websocket.")
-    
+        self._log.info("Connected to Websocket.")
+
     def on_ws_disconnected(self, transport: WSTransport):
-        self._log.info(f"Disconnected from {self._exchange_id} Websocket.")
+        self._log.info("Disconnected from Websocket.")
 
     def on_ws_frame(self, transport: WSTransport, frame: WSFrame):
         if frame.msg_type == WSMsgType.PING:
+            transport.send_pong(frame.get_payload_as_bytes())
             return
-
         msg = orjson.loads(frame.get_payload_as_bytes())
-        # self._log.info(f"Received binary: {data}")
-        # TODO: push msg to queue
         self.msg_queue.put_nowait(msg)
+        
 
 
+class WSManager:
+    def __init__(self, url: str, limiter: Limiter):
+        self._url = url
+        self._reconnect_interval = 0.2  # Reconnection interval in seconds
+        self._ping_idle_timeout = 2
+        self._ping_reply_timeout = 1
+        self._listener = None
+        self._transport = None
+        self._subscriptions = {}
+        self._limiter = limiter
+        self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=False)
+
+    @property
+    def connected(self):
+        return self._transport and self._listener
+
+    async def _connect(self):
+        WSClientFactory = lambda: WSClient(self._log)  # noqa: E731
+        self._transport, self._listener = await ws_connect(
+            WSClientFactory,
+            self._url,
+            enable_auto_ping=True,
+            auto_ping_idle_timeout=self._ping_idle_timeout,
+            auto_ping_reply_timeout=self._ping_reply_timeout,
+        )
+
+    async def connect(self):
+        if not self.connected:
+            await self._connect()
+            asyncio.create_task(self._msg_handler())
+            
+
+    async def _connection_handler(self):
+        while True:
+            try:
+                if not self.connected:
+                    await self._connect()
+                    await self._resubscribe()
+                else:
+                    await self._transport.wait_disconnected()
+            except Exception as e:
+                self._log.error(f"Connection error: {e}")
+            finally:
+                self._transport, self._listener = None, None
+                await asyncio.sleep(self._reconnect_interval)
+    
+    async def _resubscribe(self):
+        for _, payload in self._subscriptions.items():
+            await self._limiter.wait()
+            self._send(payload)
+        
+
+    def _send(self, payload: dict):
+        self._transport.send(WSMsgType.TEXT, orjson.dumps(payload))
+
+
+    async def _msg_handler(self):
+        while True:
+            msg = await self._listener.msg_queue.get()
+            # TODO: handle different event types of messages
+            self._callback(msg)
+            self._listener.msg_queue.task_done()
+    
+    @abstractmethod
+    def _callback(self, msg: dict):
+        pass

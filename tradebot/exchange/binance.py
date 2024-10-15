@@ -27,7 +27,6 @@ from websockets.asyncio import client
 
 
 from tradebot.constants import IntervalType, UrlType
-from tradebot.entity import log_register
 from tradebot.exceptions import OrderError
 from tradebot.entity import EventSystem, Order
 from tradebot.base import (
@@ -35,9 +34,9 @@ from tradebot.base import (
     OrderManager,
     AccountManager,
     WebsocketManager,
-    WSClient,
+    WSManager,
 )
-from picows import ws_connect, WSError, WSMsgType
+
 
 
 class BinanceExchangeManager(ExchangeManager):
@@ -245,6 +244,55 @@ class BinanceAccountManager(AccountManager):
     pass
 
 
+
+
+
+class BinanceWSManager(WSManager):
+    def __init__(self, url: UrlType, api_key: str = None, secret: str = None):
+        super().__init__(url=url.STREAM_URL, limiter=Limiter(3 / 1))
+        self._api_key = api_key
+        self._secret = secret
+        self._session: aiohttp.ClientSession = None
+
+    async def subscribe_book_ticker(self, symbol: str):
+        subscription_id = f"book_ticker.{symbol}"
+        if subscription_id not in self._subscriptions:
+            await self._limiter.wait()
+            id = int(time.time() * 1000)
+            payload = {
+                "method": "SUBSCRIBE",
+                "params": [f"{symbol.lower()}@bookTicker"],
+                "id": id,
+            }
+            self._subscriptions[subscription_id] = payload
+            self._send(payload)
+            self._log.info(f"Subscribed to {subscription_id}")
+        else:
+            self._log.info(f"Already subscribed to {subscription_id}")
+    
+    async def subscribe_trade(self, symbol: str):
+        subscription_id = f"trade.{symbol}"
+        if subscription_id not in self._subscriptions:
+            await self._limiter.wait()
+            id = int(time.time() * 1000)
+            payload = {
+                "method": "SUBSCRIBE",
+                "params": [f"{symbol.lower()}@trade"],
+                "id": id,
+            }
+            self._subscriptions[subscription_id] = payload
+            self._send(payload)
+            self._log.info(f"Subscribed to {subscription_id}")
+        else:
+            self._log.info(f"Already subscribed to {subscription_id}")
+    
+    def _callback(self, msg: Dict):
+        self._log.info(str(msg))
+        
+
+
+
+
 class BinanceWebsocketManager(WebsocketManager):
     def __init__(self, url: UrlType, api_key: str = None, secret: str = None):
         super().__init__(
@@ -275,46 +323,6 @@ class BinanceWebsocketManager(WebsocketManager):
                     await self._subscripions[subscription_id].put(msg)
             except websockets.ConnectionClosed:
                 self._log.error("Connection closed, reconnecting...")
-
-    async def _picows_subscribe(
-        self, payload: Dict[str, Any], callback: Callable[..., Any], *args, **kwargs
-    ):
-        WSClientFactory = lambda: WSClient("Binance")  # noqa: E731
-        while True:
-            transport, listener = await ws_connect(
-                WSClientFactory,
-                self._base_url,
-                enable_auto_ping=True,
-                auto_ping_idle_timeout=self._ping_interval, 
-                auto_ping_reply_timeout=self._ping_timeout,
-            )
-            try:
-                transport.send(WSMsgType.TEXT, json.dumps(payload).encode("utf-8"))
-                while True:
-                    msg = await listener.msg_queue.get()
-                    if asyncio.iscoroutinefunction(callback):
-                        await callback(msg, *args, **kwargs)
-                    else:
-                        callback(msg, *args, **kwargs)
-                    listener.msg_queue.task_done()
-            except WSError as e:
-                self._log.error(f"Connection error: {e}")
-            await asyncio.sleep(1)
-    
-    async def subscribe_book_ticker_v2(
-        self, symbol, callback: Callable[..., Any] = None, *args, **kwargs
-    ):
-        id = int(time.time() * 1000)
-        payload = {
-            "method": "SUBSCRIBE",
-            "params": [f"{symbol.lower()}@bookTicker"],
-            "id": id,
-        }
-        self._tasks.append(
-            asyncio.create_task(self._picows_subscribe(payload, callback=callback, *args, **kwargs))
-        )
-    
-    
 
     async def subscribe_book_ticker(
         self, symbol: str, callback: Callable[..., Any] = None, *args, **kwargs

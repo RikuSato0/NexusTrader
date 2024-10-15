@@ -25,7 +25,6 @@ from websockets.asyncio import client
 
 
 from tradebot.constants import IntervalType, UrlType
-from tradebot.entity import log_register
 from tradebot.exceptions import OrderError
 from tradebot.entity import EventSystem, Order
 from tradebot.base import ExchangeManager, OrderManager, AccountManager, WebsocketManager

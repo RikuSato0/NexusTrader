@@ -24,7 +24,6 @@ from asynciolimiter import Limiter
 from websockets.asyncio.connection import Connection
 
 from tradebot.constants import IntervalType, UrlType
-from tradebot.entity import log_register
 from tradebot.entity import EventSystem
 from tradebot.base import ExchangeManager, OrderManager, AccountManager, WebsocketManager
 

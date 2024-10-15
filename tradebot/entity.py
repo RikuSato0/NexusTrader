@@ -2,6 +2,7 @@ import sys
 import asyncio
 import socket
 import collections
+import traceback
 
 
 from pathlib import Path
@@ -369,58 +370,68 @@ class MarketDataStore:
 
 class LogRegister:
     """
-    1. spdlog.DailyLogger(name: str, filename: str, multithreaded: bool = False, hour: int = 0, minute: int = 0)
-    2. spdlog.DailyLogger(name: str, filename: str, multithreaded: bool = False, hour: int = 0, minute: int = 0, async_mode: bool)
+    Log registration class responsible for creating and managing loggers.
+
+    Features:
+    - Supports multiple log levels
+    - Structured log output (e.g., JSON format)
+    - Captures and logs both synchronous and asynchronous exceptions
+    - Supports log rotation
+    - Log settings can be managed via configuration files or environment variables
     """
 
-    def __init__(self, log_dir=".logs"):
+    def __init__(self, log_dir: str = ".logs", async_mode: bool = True):
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.loggers = {}
+        self.async_mode = async_mode
 
         self.setup_error_handling()
 
     def setup_error_handling(self):
-        self.error_logger = self.get_logger("error", level="ERROR", flush=True)
+        self.error_logger = self.get_logger("ERROR", level="ERROR", flush=True)
 
         def handle_exception(exc_type, exc_value, exc_traceback):
             if issubclass(exc_type, KeyboardInterrupt):
                 sys.__excepthook__(exc_type, exc_value, exc_traceback)
                 return
-            self.error_logger.error(str(exc_value))
-            self.error_logger.error(
-                "Traceback:", exc_info=(exc_type, exc_value, exc_traceback)
-            )
+            tb_str = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+            self.error_logger.error(tb_str)
 
         sys.excepthook = handle_exception
 
         def handle_async_exception(loop, async_context):
-            msg = async_context.get("exception", async_context["message"])
-            self.error_logger.error(f"Caught async exception: {msg}")
+            msg = async_context.get("exception", async_context.get("message", "Unknown async exception"))
             if "exception" in async_context:
                 exception = async_context["exception"]
-                self.error_logger.error(
-                    "Traceback:",
-                    exc_info=(type(exception), exception, exception.__traceback__),
-                )
+                tb_str = ''.join(traceback.format_exception(type(exception), exception, exception.__traceback__))
+                self.error_logger.error(tb_str)
             else:
-                self.error_logger.error(f"Context: {async_context}")
+                self.error_logger.error(f"Caught async exception: {msg}")
 
         asyncio.get_event_loop().set_exception_handler(handle_async_exception)
 
     def get_logger(
         self,
-        name,
+        name: str,
         level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
         flush: bool = False,
-    ):
+    ) -> spd.Logger:
+        """
+        Get a logger with the specified name. Create a new one if it doesn't exist.
+
+        :param name: Logger name
+        :param level: Log level
+        :param flush: Whether to flush after each log record
+        :return: spdlog.Logger instance
+        """
         if name not in self.loggers:
             logger_instance = spd.DailyLogger(
                 name=name,
                 filename=str(self.log_dir / f"{name}.log"),
                 hour=0,
                 minute=0,
-                async_mode=True,
+                async_mode=self.async_mode,
             )
             logger_instance.set_level(self.parse_level(level))
             if flush:
@@ -430,7 +441,13 @@ class LogRegister:
 
     def parse_level(
         self, level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-    ):
+    ) -> spd.LogLevel:
+        """
+        Parse log level string to spdlog.LogLevel.
+
+        :param level: Log level string
+        :return: spdlog.LogLevel
+        """
         levels = {
             "DEBUG": spd.LogLevel.DEBUG,
             "INFO": spd.LogLevel.INFO,
@@ -440,7 +457,18 @@ class LogRegister:
         }
         return levels[level]
 
+    def close_all_loggers(self):
+        """
+        Close all loggers and release resources.
+        """
+        for logger in self.loggers.values():
+            logger.flush()
+            logger.drop()
+
+    def __del__(self):
+        self.close_all_loggers()
+
 
 redis_pool = RedisPool()
-log_register = LogRegister()
+# log_register = LogRegister()
 market = MarketDataStore()

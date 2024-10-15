@@ -138,6 +138,10 @@ class BinanceWsManager(BinanceMsgDispatcher):
             # TODO: handle different event types of messages
             self.callback(msg)
             self._listener.msg_queue.task_done()
+    
+    def disconnect(self):
+        if self.connected:
+            self._transport.disconnect()
 
 
 async def main():
@@ -231,14 +235,15 @@ async def main():
             await asyncio.sleep(1)
 
     except asyncio.CancelledError:
+        ws_manager.disconnect()
         logger.info("Websocket closed.")
 
-    finally:
-        for symbol, latencies in LATENCY.items():
-            avg_latency = np.mean(latencies)
-            print(
-                f"Symbol: {symbol}, Avg: {avg_latency:.2f} ms, Median: {np.median(latencies):.2f} ms, Std: {np.std(latencies):.2f} ms 95%: {np.percentile(latencies, 95):.2f} ms, 99%: {np.percentile(latencies, 99):.2f} ms min: {np.min(latencies):.2f} ms max: {np.max(latencies):.2f} ms"
-            )
+    # finally:
+    #     for symbol, latencies in LATENCY.items():
+    #         avg_latency = np.mean(latencies)
+    #         print(
+    #             f"Symbol: {symbol}, Avg: {avg_latency:.2f} ms, Median: {np.median(latencies):.2f} ms, Std: {np.std(latencies):.2f} ms 95%: {np.percentile(latencies, 95):.2f} ms, 99%: {np.percentile(latencies, 99):.2f} ms min: {np.min(latencies):.2f} ms max: {np.max(latencies):.2f} ms"
+    #         )
 
 
 if __name__ == "__main__":

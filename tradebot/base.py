@@ -370,6 +370,8 @@ class WSManager(ABC):
         self._transport = None
         self._subscriptions = {}
         self._limiter = limiter
+        self._msg_handler_task = None
+        self._connection_handler_task = None
         self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
 
     @property
@@ -389,20 +391,21 @@ class WSManager(ABC):
     async def connect(self):
         if not self.connected:
             await self._connect()
-            asyncio.create_task(self._msg_handler())
-            asyncio.create_task(self._connection_handler())
+            self._msg_handler_task = asyncio.create_task(self._msg_handler(self._listener.msg_queue))
+            self._connection_handler_task = asyncio.create_task(self._connection_handler())
 
     async def _connection_handler(self):
         while True:
             try:
                 if not self.connected:
                     await self._connect()
-                    await self._resubscribe()
-                else:
-                    await self._transport.wait_disconnected()
+                    self._msg_handler_task = asyncio.create_task(self._msg_handler(self._listener.msg_queue))
+                    await self._resubscribe()    
+                await self._transport.wait_disconnected()
             except Exception as e:
                 self._log.error(f"Connection error: {e}")
             finally:
+                self._msg_handler_task.cancel()
                 self._transport, self._listener = None, None
                 await asyncio.sleep(self._reconnect_interval)
 
@@ -414,12 +417,12 @@ class WSManager(ABC):
             await self._limiter.wait()
             self._send(payload)
 
-    async def _msg_handler(self):
+    async def _msg_handler(self, msg_queue: asyncio.Queue):
         while True:
-            msg = await self._listener.msg_queue.get()
+            msg = await msg_queue.get()
             # TODO: handle different event types of messages
             self.callback(msg)
-            self._listener.msg_queue.task_done()
+            msg_queue.task_done()
     
     def disconnect(self):
         if self.connected:

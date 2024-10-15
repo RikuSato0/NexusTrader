@@ -14,7 +14,7 @@ async def main():
             await asyncio.sleep(1)
 
     except asyncio.CancelledError:
-        ws_client._transport.disconnect()
+        ws_client.disconnect()
         print("Websocket closed")
 
 

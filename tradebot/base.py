@@ -360,8 +360,7 @@ class WSClient(WSListener):
         self.msg_queue.put_nowait(msg)
         
 
-
-class WSManager:
+class WSManager(ABC):
     def __init__(self, url: str, limiter: Limiter):
         self._url = url
         self._reconnect_interval = 0.2  # Reconnection interval in seconds
@@ -391,7 +390,7 @@ class WSManager:
         if not self.connected:
             await self._connect()
             asyncio.create_task(self._msg_handler())
-            
+            asyncio.create_task(self._connection_handler())
 
     async def _connection_handler(self):
         while True:
@@ -406,24 +405,26 @@ class WSManager:
             finally:
                 self._transport, self._listener = None, None
                 await asyncio.sleep(self._reconnect_interval)
-    
-    async def _resubscribe(self):
-        for _, payload in self._subscriptions.items():
-            await self._limiter.wait()
-            self._send(payload)
-        
 
     def _send(self, payload: dict):
         self._transport.send(WSMsgType.TEXT, orjson.dumps(payload))
 
+    async def _resubscribe(self):
+        for _, payload in self._subscriptions.items():
+            await self._limiter.wait()
+            self._send(payload)
 
     async def _msg_handler(self):
         while True:
             msg = await self._listener.msg_queue.get()
             # TODO: handle different event types of messages
-            self._callback(msg)
+            self.callback(msg)
             self._listener.msg_queue.task_done()
     
+    def disconnect(self):
+        if self.connected:
+            self._transport.disconnect()
+    
     @abstractmethod
-    def _callback(self, msg: dict):
+    def callback(self, msg):
         pass

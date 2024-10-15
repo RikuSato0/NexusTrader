@@ -5,36 +5,31 @@ import time
 from asynciolimiter import Limiter
 from tradebot.log import SpdLog
 from collections import defaultdict
-import numpy as np
-
-
+from abc import ABC, abstractmethod
 
 
 LATENCY = defaultdict(list)
 
 
 class WSClient(WSListener):
-    def __init__(self, exchange_id: str = "", logger = None):
-        self._exchange_id = exchange_id
+    def __init__(self, logger = None):
         self.msg_queue = asyncio.Queue()
         self._log = logger
         
     def on_ws_connected(self, transport: WSTransport):
-        self._log.info(f"Connected to {self._exchange_id} Websocket.")
+        self._log.info("Connected to Websocket.")
 
     def on_ws_disconnected(self, transport: WSTransport):
-        self._log.info(f"Disconnected from {self._exchange_id} Websocket.")
+        self._log.info("Disconnected from Websocket.")
 
     def on_ws_frame(self, transport: WSTransport, frame: WSFrame):
         if frame.msg_type == WSMsgType.PING:
             transport.send_pong(frame.get_payload_as_bytes())
             return
-        try:
-            msg = orjson.loads(frame.get_payload_as_bytes())
-            self.msg_queue.put_nowait(msg)
-        except Exception as e:
-            self._log.error(frame.get_payload_as_bytes())
-            self._log.error(f"Error parsing message: {e}")
+
+        msg = orjson.loads(frame.get_payload_as_bytes())
+        self.msg_queue.put_nowait(msg)
+        
 
 
 class BinanceMsgDispatcher:
@@ -42,9 +37,8 @@ class BinanceMsgDispatcher:
 
     def _trade(): ...
 
-
-class BinanceWsManager(BinanceMsgDispatcher):
-    def __init__(self, url: str):
+class WsManager(ABC):
+    def __init__(self, url: str, limiter: Limiter):
         self._url = url
         self._reconnect_interval = 0.2  # Reconnection interval in seconds
         self._ping_idle_timeout = 2
@@ -52,7 +46,7 @@ class BinanceWsManager(BinanceMsgDispatcher):
         self._listener = None
         self._transport = None
         self._subscriptions = {}
-        self._limiter = Limiter(3 / 1)  # 3 requests per second
+        self._limiter = limiter
         self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
 
     @property
@@ -60,7 +54,7 @@ class BinanceWsManager(BinanceMsgDispatcher):
         return self._transport and self._listener
 
     async def _connect(self):
-        WSClientFactory = lambda: WSClient("Binance", self._log)  # noqa: E731
+        WSClientFactory = lambda: WSClient(self._log)  # noqa: E731
         self._transport, self._listener = await ws_connect(
             WSClientFactory,
             self._url,
@@ -72,6 +66,7 @@ class BinanceWsManager(BinanceMsgDispatcher):
     async def connect(self):
         if not self.connected:
             await self._connect()
+            asyncio.create_task(self._msg_handler())
             asyncio.create_task(self._connection_handler())
 
     async def _connection_handler(self):
@@ -95,6 +90,27 @@ class BinanceWsManager(BinanceMsgDispatcher):
         for _, payload in self._subscriptions.items():
             await self._limiter.wait()
             self._send(payload)
+
+    async def _msg_handler(self):
+        while True:
+            msg = await self._listener.msg_queue.get()
+            # TODO: handle different event types of messages
+            self.callback(msg)
+            self._listener.msg_queue.task_done()
+    
+    def disconnect(self):
+        if self.connected:
+            self._transport.disconnect()
+    
+    @abstractmethod
+    def callback(self, msg):
+        pass
+
+class BinanceWsManager(WsManager):
+    def __init__(self, url: str, api_key: str = None, secret: str = None):
+        super().__init__(url, limiter=Limiter(3/1))
+        self._api_key = api_key
+        self._secret = secret
 
     async def subscribe_book_ticker(self, symbol):
         subscription_id = f"book_ticker.{symbol}"
@@ -134,17 +150,6 @@ class BinanceWsManager(BinanceMsgDispatcher):
         #     latency = local - msg["E"]
         #     LATENCY[msg["s"]].append(latency)
 
-    async def _msg_handler(self):
-        while True:
-            msg = await self._listener.msg_queue.get()
-            # TODO: handle different event types of messages
-            self.callback(msg)
-            self._listener.msg_queue.task_done()
-    
-    def disconnect(self):
-        if self.connected:
-            self._transport.disconnect()
-
 
 async def main():
     try:
@@ -152,7 +157,6 @@ async def main():
         url = "wss://stream.binance.com:9443/ws"
         ws_manager = BinanceWsManager(url)
         await ws_manager.connect()
-        asyncio.create_task(ws_manager._msg_handler())
 
         symbols = [
             "ARKMUSDT",

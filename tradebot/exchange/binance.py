@@ -244,17 +244,14 @@ class BinanceAccountManager(AccountManager):
     pass
 
 
-
-
-
 class BinanceWSManager(WSManager):
     def __init__(self, url: UrlType, api_key: str = None, secret: str = None):
-        super().__init__(url=url.STREAM_URL, limiter=Limiter(3 / 1))
+        super().__init__(url.STREAM_URL, limiter=Limiter(3/1))
         self._api_key = api_key
         self._secret = secret
         self._session: aiohttp.ClientSession = None
 
-    async def subscribe_book_ticker(self, symbol: str):
+    async def subscribe_book_ticker(self, symbol):
         subscription_id = f"book_ticker.{symbol}"
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
@@ -266,11 +263,10 @@ class BinanceWSManager(WSManager):
             }
             self._subscriptions[subscription_id] = payload
             self._send(payload)
-            self._log.info(f"Subscribed to {subscription_id}")
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
-    
-    async def subscribe_trade(self, symbol: str):
+
+    async def subscribe_trade(self, symbol):
         subscription_id = f"trade.{symbol}"
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
@@ -282,12 +278,11 @@ class BinanceWSManager(WSManager):
             }
             self._subscriptions[subscription_id] = payload
             self._send(payload)
-            self._log.info(f"Subscribed to {subscription_id}")
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
-    
-    def _callback(self, msg: Dict):
-        #TODO: remove the log, parse different events
+
+    def callback(self, msg):
+        #TODO: Implement different callbacks for different events and remove log
         self._log.info(str(msg))
         
 

@@ -358,7 +358,7 @@ class WSClient(WSListener):
             return
         msg = orjson.loads(frame.get_payload_as_bytes())
         self.msg_queue.put_nowait(msg)
-        
+
 
 class WSManager(ABC):
     def __init__(self, url: str, limiter: Limiter):
@@ -391,20 +391,27 @@ class WSManager(ABC):
     async def connect(self):
         if not self.connected:
             await self._connect()
-            self._msg_handler_task = asyncio.create_task(self._msg_handler(self._listener.msg_queue))
-            self._connection_handler_task = asyncio.create_task(self._connection_handler())
+            self._msg_handler_task = asyncio.create_task(
+                self._msg_handler(self._listener.msg_queue)
+            )
+            self._connection_handler_task = asyncio.create_task(
+                self._connection_handler()
+            )
 
     async def _connection_handler(self):
         while True:
             try:
                 if not self.connected:
                     await self._connect()
-                    self._msg_handler_task = asyncio.create_task(self._msg_handler(self._listener.msg_queue))
-                    await self._resubscribe()    
+                    self._msg_handler_task = asyncio.create_task(
+                        self._msg_handler(self._listener.msg_queue)
+                    )
+                    await self._resubscribe()
                 await self._transport.wait_disconnected()
             except Exception as e:
                 self._log.error(f"Connection error: {e}")
             finally:
+                self._log.info("_connection_handler try to reconnect...")
                 if self._msg_handler_task:
                     self._msg_handler_task.cancel()
                 self._transport, self._listener = None, None
@@ -424,11 +431,11 @@ class WSManager(ABC):
             # TODO: handle different event types of messages
             self.callback(msg)
             queue.task_done()
-    
+
     def disconnect(self):
         if self.connected:
             self._transport.disconnect()
-    
+
     @abstractmethod
     def callback(self, msg):
         pass

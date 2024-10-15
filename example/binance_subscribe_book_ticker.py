@@ -6,7 +6,7 @@ from tradebot.log import SpdLog
 
 async def active_disconnect(ws_client: BinanceWSManager):
     while True:
-        await asyncio.sleep(5)
+        await asyncio.sleep(3)
         ws_client._transport.disconnect()
 
 

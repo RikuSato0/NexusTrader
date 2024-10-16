@@ -13,7 +13,6 @@ import aiohttp
 from collections import defaultdict
 from typing import Any, Dict, List
 from typing import Literal, Callable, Optional
-from functools import cached_property
 
 
 import orjson
@@ -72,7 +71,7 @@ class BinanceOrderManager(OrderManager):
 
     async def handle_request_timeout(self, method: str, params: Dict[str, Any]):
         symbol = params["symbol"]
-        current_time = int(time.time() * 1000)
+        current_time = time.time_ns() // 1_000_000
         orders = await self.fetch_orders(symbol, since=current_time - 1000 * 5)
 
         if not in_orders(orders, method, params):
@@ -101,7 +100,7 @@ class BinanceOrderManager(OrderManager):
                 exchange=self.exchange_id,
                 id=None,
                 client_order_id=None,
-                timestamp=int(time.time() * 1000),
+                timestamp=time.time_ns() // 1_000_000,
                 symbol=symbol,
                 type="limit",
                 side=side,
@@ -123,7 +122,7 @@ class BinanceOrderManager(OrderManager):
                 exchange=self.exchange_id,
                 id=None,
                 client_order_id=None,
-                timestamp=int(time.time() * 1000),
+                timestamp=time.time_ns() // 1_000_000,
                 symbol=symbol,
                 type="market",
                 side=side,
@@ -142,7 +141,7 @@ class BinanceOrderManager(OrderManager):
                 exchange=self.exchange_id,
                 id=id,
                 client_order_id=None,
-                timestamp=int(time.time() * 1000),
+                timestamp=time.time_ns() // 1_000_000,
                 symbol=symbol,
                 type=None,
                 side=None,
@@ -187,7 +186,7 @@ class BinanceOrderManager(OrderManager):
                     exchange=self.exchange_id,
                     id=params.get("id", None),
                     client_order_id="",
-                    timestamp=int(time.time() * 1000),
+                    timestamp=time.time_ns() // 1_000_000,
                     symbol=params.get("symbol", None),
                     type="limit",
                     side=params["side"],
@@ -218,7 +217,7 @@ class BinanceOrderManager(OrderManager):
                     exchange=self.exchange_id,
                     id=params.get("id", None),
                     client_order_id="",
-                    timestamp=int(time.time() * 1000),
+                    timestamp=time.time_ns() // 1_000_000,
                     symbol=params.get("symbol", None),
                     type="market",
                     side=params.get("side", None),
@@ -248,7 +247,7 @@ class BinanceOrderManager(OrderManager):
                     exchange=self._exchange.config["exchange_id"],
                     id=params.get("id", None),
                     client_order_id="",
-                    timestamp=int(time.time() * 1000),
+                    timestamp=time.time_ns() // 1_000_000,
                     symbol=params.get("symbol", None),
                     type=params.get("type", None),
                     side=params.get("side", None),
@@ -298,7 +297,7 @@ class BinanceWSManager(WSManager):
         subscription_id = f"book_ticker.{symbol}"
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
-            id = int(time.time() * 1000)
+            id = time.time_ns() // 1_000_000
             payload = {
                 "method": "SUBSCRIBE",
                 "params": [f"{symbol.lower()}@bookTicker"],
@@ -313,7 +312,7 @@ class BinanceWSManager(WSManager):
         subscription_id = f"trade.{symbol}"
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
-            id = int(time.time() * 1000)
+            id = time.time_ns() // 1_000_000
             payload = {
                 "method": "SUBSCRIBE",
                 "params": [f"{symbol.lower()}@trade"],

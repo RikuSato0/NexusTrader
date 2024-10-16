@@ -448,180 +448,83 @@ class WSManager(ABC):
         pass
 
 
-class AsyncHttpRequests(object):
+class AsyncHttpRequests:
     """Asynchronous HTTP Request Client."""
 
-    # Every domain name holds a connection client, for less system resource utilization and faster request speed.
-    _CLIENTS = {}  # {"domain-name": client, ... }
+    _clients = {}  # {"domain-name": client, ... }
     _log = SpdLog.get_logger(name="AsyncHttpRequests", level="INFO", flush=True)
+    _config = {}
 
     @classmethod
-    async def fetch(
-        cls,
-        method,
-        url,
-        params=None,
-        body=None,
-        data=None,
-        headers=None,
-        timeout=30,
-        **kwargs,
-    ):
-        """Create a HTTP request.
+    async def get(cls, url, **kwargs):
+        """Public method for HTTP GET requests."""
+        return await cls._fetch("GET", url, **kwargs)
 
-        Args:
-            method: HTTP request method. `GET` / `POST` / `PUT` / `DELETE`
-            url: Request url.
-            params: HTTP query params.
-            body: HTTP request body, string or bytes format.
-            data: HTTP request body, dict format.
-            headers: HTTP request header.
-            timeout: HTTP request timeout(seconds), default is 30s.
+    @classmethod
+    async def post(cls, url, **kwargs):
+        """Public method for HTTP POST requests."""
+        return await cls._fetch("POST", url, **kwargs)
 
-            kwargs:
-                proxy: HTTP proxy.
+    @classmethod
+    async def put(cls, url, **kwargs):
+        """Public method for HTTP PUT requests."""
+        return await cls._fetch("PUT", url, **kwargs)
 
-        Return:
-            code: HTTP response code.
-            success: HTTP response data. If something wrong, this field is None.
-            error: If something wrong, this field will holding a Error information, otherwise it's None.
+    @classmethod
+    async def delete(cls, url, **kwargs):
+        """Public method for HTTP DELETE requests."""
+        return await cls._fetch("DELETE", url, **kwargs)
 
-        Raises:
-            HTTP request exceptions or response data parse exceptions. All the exceptions will be captured and return
-            Error information.
-        """
+    @classmethod
+    async def _fetch(cls, method, url, **kwargs):
+        """Internal method to handle all HTTP requests."""
         client = cls._get_client(url)
+        timeout = kwargs.pop('timeout', 30)
+        params = kwargs.pop('params', None)
+        data = kwargs.pop('data', None)
+        json = kwargs.pop('json', None)
+        headers = kwargs.pop('headers', None)
+
         try:
-            if method == "GET":
-                response = await client.get(
-                    url,
-                    params=params,
-                    headers=headers,
-                    timeouts=aiosonic.timeout.Timeouts(sock_read=timeout),
-                    **kwargs,
-                )
-            elif method == "POST":
-                response = await client.post(
-                    url,
-                    params=params,
-                    data=body,
-                    json=data,
-                    headers=headers,
-                    timeouts=aiosonic.timeout.Timeouts(sock_read=timeout),
-                    **kwargs,
-                )
-            elif method == "PUT":
-                response = await client.put(
-                    url,
-                    params=params,
-                    data=body,
-                    json=data,
-                    headers=headers,
-                    timeouts=aiosonic.timeout.Timeouts(sock_read=timeout),
-                    **kwargs,
-                )
-            elif method == "DELETE":
-                response = await client.delete(
-                    url,
-                    params=params,
-                    data=body,
-                    json=data,
-                    headers=headers,
-                    timeouts=aiosonic.timeout.Timeouts(sock_read=timeout),
-                    **kwargs,
-                )
-            else:
-                error = "HTTP method error!"
-                return None, None, error
+            response = await client.request(
+                url,
+                method=method,
+                params=params,
+                data=data,
+                json=json,
+                headers=headers,
+                timeouts=aiosonic.timeout.Timeouts(sock_read=timeout),
+                **kwargs
+            )
         except Exception as e:
-            cls._log.error(
-                f"Method: {method}, URL: {url}, Headers: {headers}, Params: {params}, "
-                f"Body: {body}, Data: {data}, Error: {e}"
-            )
-            return None, None, e
+            cls._log.error(f"Request failed: {method} {url} - Error: {e}")
+            return None, None, str(e)
+
         code = response.status_code
-        if code not in (200, 201, 202, 203, 204, 205, 206):
+        if code not in range(200, 300):
             text = await response.text()
-            cls._log.error(
-                f"Method: {method}, URL: {url}, Headers: {headers}, Params: {params}, "
-                f"Body: {body}, Data: {data}, Code: {code}, Result: {text}"
-            )
+            cls._log.error(f"Request failed: {method} {url} - Code: {code}, Result: {text}")
             return code, None, text
+
         try:
             result = await response.json()
-        except Exception as e:
+        except Exception:
             result = await response.text()
-            cls._log.warn(
-                "Response data is not JSON format!",
-                f"Method: {method}, URL: {url}, Headers: {headers}, Params: {params}, "
-                f"Body: {body}, Data: {data}, Code: {code}, Result: {result}",
-            )
-        cls._log.debug(
-            f"Method: {method}, URL: {url}, Headers: {headers}, Params: {params}, "
-            f"Body: {body}, Data: {data}, Code: {code}, Result: {result}"
-        )
+            cls._log.warn(f"Response is not JSON: {method} {url} - Code: {code}, Result: {result}")
+
+        cls._log.debug(f"Request successful: {method} {url} - Code: {code}, Result: {result}")
         return code, result, None
 
     @classmethod
-    async def get(
-        cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs
-    ):
-        """HTTP GET"""
-        result = await cls.fetch(
-            "GET", url, params, body, data, headers, timeout, **kwargs
-        )
-        return result
-
-    @classmethod
-    async def post(
-        cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs
-    ):
-        """HTTP POST"""
-        result = await cls.fetch(
-            "POST", url, params, body, data, headers, timeout, **kwargs
-        )
-        return result
-
-    @classmethod
-    async def delete(
-        cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs
-    ):
-        """HTTP DELETE"""
-        result = await cls.fetch(
-            "DELETE", url, params, body, data, headers, timeout, **kwargs
-        )
-        return result
-
-    @classmethod
-    async def put(
-        cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs
-    ):
-        """HTTP PUT"""
-        result = await cls.fetch(
-            "PUT", url, params, body, data, headers, timeout, **kwargs
-        )
-        return result
-
-    @classmethod
     def _get_client(cls, url):
-        """Get the connection client for url's domain, if no client, create a new.
-
-        Args:
-            url: HTTP request url.
-
-        Returns:
-            client: HTTP request client.
-        """
+        """Internal method to get or create an HTTP client for a given URL."""
         parsed_url = urlparse(url)
         key = parsed_url.netloc or parsed_url.hostname
-        if key not in cls._CLIENTS:
-            proxy = cls.config.get("proxy")
-            if proxy:
-                client = aiosonic.HTTPClient(proxy=aiosonic.Proxy(proxy))
-            else:
-                client = aiosonic.HTTPClient()
-            cls._CLIENTS[key] = client
-        return cls._CLIENTS[key]
+        if key not in cls._clients:
+            proxy = getattr(cls, 'config', {}).get("proxy")
+            client = aiosonic.HTTPClient(proxy=aiosonic.Proxy(proxy) if proxy else None)
+            cls._clients[key] = client
+        return cls._clients[key]
 
 
 

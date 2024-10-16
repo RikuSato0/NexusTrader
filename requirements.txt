@@ -12,3 +12,4 @@ streamz==0.6.4
 uvloop==0.20.0
 websockets==13.1
 picows==1.5.0
+aiosonic==0.21.0

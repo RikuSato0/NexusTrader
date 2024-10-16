@@ -1,7 +1,7 @@
 import asyncio
 import orjson
 
-
+import aiosonic
 import ccxt.pro as ccxtpro
 
 
@@ -10,7 +10,7 @@ from typing import Dict, List, Any
 from typing import Callable, Literal
 from collections import defaultdict
 from decimal import Decimal
-
+from urllib.parse import urlparse
 
 from asynciolimiter import Limiter
 from ccxt.base.errors import RequestTimeout
@@ -27,6 +27,8 @@ from picows import (
     WSListener,
     WSMsgType,
 )
+
+
 
 
 class ExchangeManager(ABC):
@@ -439,3 +441,133 @@ class WSManager(ABC):
     @abstractmethod
     def callback(self, msg):
         pass
+
+
+
+class AsyncHttpRequests(object):
+    """ Asynchronous HTTP Request Client.
+    """
+
+    # Every domain name holds a connection client, for less system resource utilization and faster request speed.
+    _CLIENTS = {}  # {"domain-name": client, ... }
+    _log = SpdLog.get_logger(name = "AsyncHttpRequests", level="INFO", flush=True)
+
+    @classmethod
+    async def fetch(cls, method, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs):
+        """ Create a HTTP request.
+
+        Args:
+            method: HTTP request method. `GET` / `POST` / `PUT` / `DELETE`
+            url: Request url.
+            params: HTTP query params.
+            body: HTTP request body, string or bytes format.
+            data: HTTP request body, dict format.
+            headers: HTTP request header.
+            timeout: HTTP request timeout(seconds), default is 30s.
+
+            kwargs:
+                proxy: HTTP proxy.
+
+        Return:
+            code: HTTP response code.
+            success: HTTP response data. If something wrong, this field is None.
+            error: If something wrong, this field will holding a Error information, otherwise it's None.
+
+        Raises:
+            HTTP request exceptions or response data parse exceptions. All the exceptions will be captured and return
+            Error information.
+        """
+        client = cls._get_client(url)
+        try:
+            if method == "GET":
+                response = await client.get(url, params=params, headers=headers, timeouts=aiosonic.timeout.Timeouts(sock_read=timeout), **kwargs)
+            elif method == "POST":
+                response = await client.post(url, params=params, data=body, json=data, headers=headers,
+                                              timeouts=aiosonic.timeout.Timeouts(sock_read=timeout), **kwargs)
+            elif method == "PUT":
+                response = await client.put(url, params=params, data=body, json=data, headers=headers,
+                                             timeouts=aiosonic.timeout.Timeouts(sock_read=timeout), **kwargs)
+            elif method == "DELETE":
+                response = await client.delete(url, params=params, data=body, json=data, headers=headers,
+                                                timeouts=aiosonic.timeout.Timeouts(sock_read=timeout), **kwargs)
+            else:
+                error = "HTTP method error!"
+                return None, None, error
+        except Exception as e:
+            cls._log.error(
+                f"Method: {method}, URL: {url}, Headers: {headers}, Params: {params}, "
+                f"Body: {body}, Data: {data}, Error: {e}"
+            )
+            return None, None, e
+        code = response.status_code
+        if code not in (200, 201, 202, 203, 204, 205, 206):
+            text = await response.text()
+            cls._log.error(
+                f"Method: {method}, URL: {url}, Headers: {headers}, Params: {params}, "
+                f"Body: {body}, Data: {data}, Code: {code}, Result: {text}"
+            )
+            return code, None, text
+        try:
+            result = await response.json()
+        except Exception as e:
+            result = await response.text()
+            cls._log.warn(
+                "Response data is not JSON format!",
+                f"Method: {method}, URL: {url}, Headers: {headers}, Params: {params}, "
+                f"Body: {body}, Data: {data}, Code: {code}, Result: {result}"
+            )
+        cls._log.debug(
+            f"Method: {method}, URL: {url}, Headers: {headers}, Params: {params}, "
+            f"Body: {body}, Data: {data}, Code: {code}, Result: {result}"
+        )
+        return code, result, None
+
+    @classmethod
+    async def get(cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs):
+        """ HTTP GET
+        """
+        result = await cls.fetch("GET", url, params, body, data, headers, timeout, **kwargs)
+        return result
+
+    @classmethod
+    async def post(cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs):
+        """ HTTP POST
+        """
+        result = await cls.fetch("POST", url, params, body, data, headers, timeout, **kwargs)
+        return result
+
+    @classmethod
+    async def delete(cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs):
+        """ HTTP DELETE
+        """
+        result = await cls.fetch("DELETE", url, params, body, data, headers, timeout, **kwargs)
+        return result
+
+    @classmethod
+    async def put(cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs):
+        """ HTTP PUT
+        """
+        result = await cls.fetch("PUT", url, params, body, data, headers, timeout, **kwargs)
+        return result
+
+    @classmethod
+    def _get_client(cls, url):
+        """ Get the connection client for url's domain, if no client, create a new.
+
+        Args:
+            url: HTTP request url.
+
+        Returns:
+            client: HTTP request client.
+        """
+        parsed_url = urlparse(url)
+        key = parsed_url.netloc or parsed_url.hostname
+        if key not in cls._CLIENTS:
+            proxy = cls.config.get("proxy")
+            if proxy:
+                client = aiosonic.HTTPClient(proxy=aiosonic.Proxy(proxy))
+            else:
+                client = aiosonic.HTTPClient()
+            cls._CLIENTS[key] = client
+        return cls._CLIENTS[key]
+

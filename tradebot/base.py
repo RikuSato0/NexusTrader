@@ -448,6 +448,8 @@ class WSManager(ABC):
         pass
 
 
+
+
 class AsyncHttpRequests:
     """Asynchronous HTTP Request Client."""
 
@@ -482,8 +484,10 @@ class AsyncHttpRequests:
         timeout = kwargs.pop('timeout', 30)
         params = kwargs.pop('params', None)
         data = kwargs.pop('data', None)
-        json = kwargs.pop('json', None)
+        json_payload = kwargs.pop('json', None)
         headers = kwargs.pop('headers', None)
+
+        timeouts = aiosonic.timeout.Timeouts(sock_read=timeout)
 
         try:
             response = await client.request(
@@ -491,29 +495,48 @@ class AsyncHttpRequests:
                 method=method,
                 params=params,
                 data=data,
-                json=json,
+                json=json_payload,
                 headers=headers,
-                timeouts=aiosonic.timeout.Timeouts(sock_read=timeout),
+                timeouts=timeouts,
                 **kwargs
             )
+            
+            # Raise an exception for non-2xx HTTP status codes
+            if not response.ok:
+                text = await response.text()
+                error_message = f"HTTP Error: {method} {url} - Status: {response.status_code} - Response: {text}"
+                cls._log.error(error_message)
+                raise aiosonic.exceptions.HTTPError(error_message)
+
+            try:
+                result = await response.json()
+            except orjson.JSONDecodeError:
+                result = await response.text()
+                cls._log.warning(f"Non-JSON Response: {method} {url} - Status: {response.status_code} - Response: {result}")
+
+            cls._log.debug(f"Request Successful: {method} {url} - Status: {response.status_code} - Response: {result}")
+            return result
+
+        except asyncio.TimeoutError:
+            error_message = f"Timeout Error: {method} {url} - Timeout after {timeout} seconds"
+            cls._log.error(error_message)
+            raise aiosonic.exceptions.TimeoutError(error_message)
+        except aiosonic.exceptions.ProxyError as e:
+            error_message = f"Proxy Error: {method} {url} - {e}"
+            cls._log.error(error_message)
+            raise aiosonic.exceptions.ProxyError(error_message)
+        except aiosonic.exceptions.ConnectionError as e:
+            error_message = f"Connection Error: {method} {url} - {e}"
+            cls._log.error(error_message)
+            raise aiosonic.exceptions.ConnectionError(error_message)
+        except aiosonic.exceptions.AiosonicError as e:
+            error_message = f"Aiosonic Error: {method} {url} - {e}"
+            cls._log.error(error_message)
+            raise aiosonic.exceptions.AiosonicError(error_message)
         except Exception as e:
-            cls._log.error(f"Request failed: {method} {url} - Error: {e}")
-            return None, None, str(e)
-
-        code = response.status_code
-        if code not in range(200, 300):
-            text = await response.text()
-            cls._log.error(f"Request failed: {method} {url} - Code: {code}, Result: {text}")
-            return code, None, text
-
-        try:
-            result = await response.json()
-        except Exception:
-            result = await response.text()
-            cls._log.warn(f"Response is not JSON: {method} {url} - Code: {code}, Result: {result}")
-
-        cls._log.debug(f"Request successful: {method} {url} - Code: {code}, Result: {result}")
-        return code, result, None
+            error_message = f"Unexpected Error: {method} {url} - {e}"
+            cls._log.error(error_message)
+            raise Exception(error_message)
 
     @classmethod
     def _get_client(cls, url):
@@ -521,13 +544,7 @@ class AsyncHttpRequests:
         parsed_url = urlparse(url)
         key = parsed_url.netloc or parsed_url.hostname
         if key not in cls._clients:
-            proxy = getattr(cls, 'config', {}).get("proxy")
+            proxy = cls._config.get("proxy")
             client = aiosonic.HTTPClient(proxy=aiosonic.Proxy(proxy) if proxy else None)
             cls._clients[key] = client
         return cls._clients[key]
-
-
-
-
-    
-    

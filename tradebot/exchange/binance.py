@@ -26,7 +26,9 @@ from asynciolimiter import Limiter
 from websockets.asyncio import client
 
 
+from tradebot.types import BookL1, Trade
 from tradebot.constants import IntervalType, UrlType
+from tradebot.constants import Url, EventType
 from tradebot.exceptions import OrderError
 from tradebot.entity import EventSystem, Order
 from tradebot.base import (
@@ -36,7 +38,6 @@ from tradebot.base import (
     WebsocketManager,
     WSManager,
 )
-
 
 
 class BinanceExchangeManager(ExchangeManager):
@@ -245,11 +246,27 @@ class BinanceAccountManager(AccountManager):
 
 
 class BinanceWSManager(WSManager):
-    def __init__(self, url: UrlType, api_key: str = None, secret: str = None):
-        super().__init__(url.STREAM_URL, limiter=Limiter(3/1))
+    def __init__(
+        self,
+        url: UrlType,
+        market_id: Dict[str, Any],
+        api_key: str = None,
+        secret: str = None,
+    ):
+        super().__init__(url.STREAM_URL, limiter=Limiter(3 / 1))
+        self._market_type = self._get_market_type(url)
         self._api_key = api_key
         self._secret = secret
         self._session: aiohttp.ClientSession = None
+        self._market_id = market_id
+
+    def _get_market_type(self, url: UrlType):
+        if isinstance(url, Url.Binance.Spot) or isinstance(url, Url.Binance.Margin):
+            self._market_type = "_spot"
+        elif isinstance(url, Url.Binance.UsdMFuture):
+            self._market_type = "_swap"
+        else:
+            self._market_type = ""
 
     async def subscribe_book_ticker(self, symbol):
         subscription_id = f"book_ticker.{symbol}"
@@ -282,11 +299,65 @@ class BinanceWSManager(WSManager):
             self._log.info(f"Already subscribed to {subscription_id}")
 
     def callback(self, msg):
-        #TODO: Implement different callbacks for different events and remove log
-        self._log.info(str(msg))
-        
+        if "e" in msg:
+            match msg["e"]:
+                case "trade":
+                    self._parse_trade(msg)
+                case "bookTicker":
+                    self._parse_book_ticker(msg)
 
+    def _parse_trade(self, res: Dict[str, Any], exchange: str = "binance") -> Trade:
+        """
+        {
+            "e": "trade",       // Event type
+            "E": 1672515782136, // Event time
+            "s": "BNBBTC",      // Symbol
+            "t": 12345,         // Trade ID
+            "p": "0.001",       // Price
+            "q": "100",         // Quantity
+            "T": 1672515782136, // Trade time
+            "m": true,          // Is the buyer the market maker?
+            "M": true           // Ignore
+        }
+        """
+        id = res["s"] + self._market_type
+        market = self._market_id[id]
 
+        trade = Trade(
+            exchange=exchange,
+            symbol=market["symbol"],
+            price=float(res["p"]),
+            size=float(res["q"]),
+            timestamp=res.get("T", time.time_ns() // 1_000_000),
+        )
+        EventSystem.emit(EventType.TRADE, trade)
+
+    def _parse_book_ticker(
+        self, res: Dict[str, Any], exchange: str = "binance"
+    ) -> BookL1:
+        """
+        {
+            "u":400900217,     // order book updateId
+            "s":"BNBUSDT",     // symbol
+            "b":"25.35190000", // best bid price
+            "B":"31.21000000", // best bid qty
+            "a":"25.36520000", // best ask price
+            "A":"40.66000000"  // best ask qty
+        }
+        """
+        id = res["s"] + self._market_type
+        market = self._market_id[id]
+
+        bookl1 = BookL1(
+            exchange=exchange,
+            symbol=market["symbol"],
+            bid=float(res["b"]),
+            ask=float(res["a"]),
+            bid_size=float(res["B"]),
+            ask_size=float(res["A"]),
+            timestamp=res.get("T", time.time_ns() // 1_000_000),
+        )
+        EventSystem.emit(EventType.BOOKL1, bookl1)
 
 
 class BinanceWebsocketManager(WebsocketManager):

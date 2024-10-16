@@ -17,9 +17,7 @@ from ccxt.base.errors import RequestTimeout
 
 
 from tradebot.log import SpdLog
-from tradebot.entity import Order
 from tradebot.exceptions import OrderError
-
 from picows import (
     ws_connect,
     WSFrame,
@@ -27,8 +25,6 @@ from picows import (
     WSListener,
     WSMsgType,
 )
-
-
 
 
 class ExchangeManager(ABC):
@@ -431,7 +427,7 @@ class WSManager(ABC):
         while True:
             msg = await queue.get()
             # TODO: handle different event types of messages
-            self.callback(msg)
+            self._callback(msg)
             queue.task_done()
 
     def disconnect(self):
@@ -439,22 +435,30 @@ class WSManager(ABC):
             self._transport.disconnect()
 
     @abstractmethod
-    def callback(self, msg):
+    def _callback(self, msg):
         pass
 
 
-
 class AsyncHttpRequests(object):
-    """ Asynchronous HTTP Request Client.
-    """
+    """Asynchronous HTTP Request Client."""
 
     # Every domain name holds a connection client, for less system resource utilization and faster request speed.
     _CLIENTS = {}  # {"domain-name": client, ... }
-    _log = SpdLog.get_logger(name = "AsyncHttpRequests", level="INFO", flush=True)
+    _log = SpdLog.get_logger(name="AsyncHttpRequests", level="INFO", flush=True)
 
     @classmethod
-    async def fetch(cls, method, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs):
-        """ Create a HTTP request.
+    async def fetch(
+        cls,
+        method,
+        url,
+        params=None,
+        body=None,
+        data=None,
+        headers=None,
+        timeout=30,
+        **kwargs,
+    ):
+        """Create a HTTP request.
 
         Args:
             method: HTTP request method. `GET` / `POST` / `PUT` / `DELETE`
@@ -480,16 +484,43 @@ class AsyncHttpRequests(object):
         client = cls._get_client(url)
         try:
             if method == "GET":
-                response = await client.get(url, params=params, headers=headers, timeouts=aiosonic.timeout.Timeouts(sock_read=timeout), **kwargs)
+                response = await client.get(
+                    url,
+                    params=params,
+                    headers=headers,
+                    timeouts=aiosonic.timeout.Timeouts(sock_read=timeout),
+                    **kwargs,
+                )
             elif method == "POST":
-                response = await client.post(url, params=params, data=body, json=data, headers=headers,
-                                              timeouts=aiosonic.timeout.Timeouts(sock_read=timeout), **kwargs)
+                response = await client.post(
+                    url,
+                    params=params,
+                    data=body,
+                    json=data,
+                    headers=headers,
+                    timeouts=aiosonic.timeout.Timeouts(sock_read=timeout),
+                    **kwargs,
+                )
             elif method == "PUT":
-                response = await client.put(url, params=params, data=body, json=data, headers=headers,
-                                             timeouts=aiosonic.timeout.Timeouts(sock_read=timeout), **kwargs)
+                response = await client.put(
+                    url,
+                    params=params,
+                    data=body,
+                    json=data,
+                    headers=headers,
+                    timeouts=aiosonic.timeout.Timeouts(sock_read=timeout),
+                    **kwargs,
+                )
             elif method == "DELETE":
-                response = await client.delete(url, params=params, data=body, json=data, headers=headers,
-                                                timeouts=aiosonic.timeout.Timeouts(sock_read=timeout), **kwargs)
+                response = await client.delete(
+                    url,
+                    params=params,
+                    data=body,
+                    json=data,
+                    headers=headers,
+                    timeouts=aiosonic.timeout.Timeouts(sock_read=timeout),
+                    **kwargs,
+                )
             else:
                 error = "HTTP method error!"
                 return None, None, error
@@ -514,7 +545,7 @@ class AsyncHttpRequests(object):
             cls._log.warn(
                 "Response data is not JSON format!",
                 f"Method: {method}, URL: {url}, Headers: {headers}, Params: {params}, "
-                f"Body: {body}, Data: {data}, Code: {code}, Result: {result}"
+                f"Body: {body}, Data: {data}, Code: {code}, Result: {result}",
             )
         cls._log.debug(
             f"Method: {method}, URL: {url}, Headers: {headers}, Params: {params}, "
@@ -523,36 +554,48 @@ class AsyncHttpRequests(object):
         return code, result, None
 
     @classmethod
-    async def get(cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs):
-        """ HTTP GET
-        """
-        result = await cls.fetch("GET", url, params, body, data, headers, timeout, **kwargs)
+    async def get(
+        cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs
+    ):
+        """HTTP GET"""
+        result = await cls.fetch(
+            "GET", url, params, body, data, headers, timeout, **kwargs
+        )
         return result
 
     @classmethod
-    async def post(cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs):
-        """ HTTP POST
-        """
-        result = await cls.fetch("POST", url, params, body, data, headers, timeout, **kwargs)
+    async def post(
+        cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs
+    ):
+        """HTTP POST"""
+        result = await cls.fetch(
+            "POST", url, params, body, data, headers, timeout, **kwargs
+        )
         return result
 
     @classmethod
-    async def delete(cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs):
-        """ HTTP DELETE
-        """
-        result = await cls.fetch("DELETE", url, params, body, data, headers, timeout, **kwargs)
+    async def delete(
+        cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs
+    ):
+        """HTTP DELETE"""
+        result = await cls.fetch(
+            "DELETE", url, params, body, data, headers, timeout, **kwargs
+        )
         return result
 
     @classmethod
-    async def put(cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs):
-        """ HTTP PUT
-        """
-        result = await cls.fetch("PUT", url, params, body, data, headers, timeout, **kwargs)
+    async def put(
+        cls, url, params=None, body=None, data=None, headers=None, timeout=30, **kwargs
+    ):
+        """HTTP PUT"""
+        result = await cls.fetch(
+            "PUT", url, params, body, data, headers, timeout, **kwargs
+        )
         return result
 
     @classmethod
     def _get_client(cls, url):
-        """ Get the connection client for url's domain, if no client, create a new.
+        """Get the connection client for url's domain, if no client, create a new.
 
         Args:
             url: HTTP request url.
@@ -570,4 +613,3 @@ class AsyncHttpRequests(object):
                 client = aiosonic.HTTPClient()
             cls._CLIENTS[key] = client
         return cls._CLIENTS[key]
-

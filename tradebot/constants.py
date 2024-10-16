@@ -190,7 +190,7 @@ UrlType = Union[
 
 
 class EventType(Enum):
-    BOOK_L1 = 0
+    BOOKL1 = 0
     TRADE = 1
 
 class ExchangeType(Enum):

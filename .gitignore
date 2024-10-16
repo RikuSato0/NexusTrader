@@ -8,3 +8,4 @@ classified_events/
 license.py
 okx_markets.json
 binance_markets.json
+build/

@@ -14,11 +14,9 @@ from typing import Literal, Callable, Union, Optional
 from typing import Dict, List, Any
 from dataclasses import dataclass, field, asdict
 
-
 import redis
 import orjson
 import spdlog as spd
-
 
 @dataclass
 class Order:
@@ -68,22 +66,55 @@ class Order:
 
 
 class EventSystem:
-    _listeners: Dict[str, List[Callable]] = {}
+    _listeners: Dict[str, List[Callable]] = defaultdict(list)
 
     @classmethod
-    def on(cls, event: str, callback: Callable):
-        if event not in cls._listeners:
-            cls._listeners[event] = []
+    def on(cls, event: str, callback: Optional[Callable] = None):
+        """
+        Register an event listener. Can be used as a decorator or as a direct method.
+
+        Usage as a method:
+            EventSystem.on('order_update', callback_function)
+
+        Usage as a decorator:
+            @EventSystem.on('order_update')
+            def callback_function(msg):
+                ...
+        """
+        if callback is None:
+            def decorator(fn: Callable):
+                if event not in cls._listeners:
+                    cls._listeners[event] = []
+                cls._listeners[event].append(fn)
+                return fn
+            return decorator
+
         cls._listeners[event].append(callback)
+        return callback  # Optionally return the callback for chaining
 
     @classmethod
-    async def emit(cls, event: str, *args: Any, **kwargs: Any):
-        if event in cls._listeners:
-            for callback in cls._listeners[event]:
-                if asyncio.iscoroutinefunction(callback):
-                    await callback(*args, **kwargs)
-                else:
-                    callback(*args, **kwargs)
+    def emit(cls, event: str, *args: Any, **kwargs: Any):
+        """
+        Emit an event to all registered synchronous listeners.
+
+        :param event: The event name.
+        :param args: Positional arguments to pass to the listeners.
+        :param kwargs: Keyword arguments to pass to the listeners.
+        """ 
+        for callback in cls._listeners.get(event, []):
+            callback(*args, **kwargs)
+
+    @classmethod
+    async def aemit(cls, event: str, *args: Any, **kwargs: Any):
+        """
+        Asynchronously emit an event to all registered asynchronous listeners.
+
+        :param event: The event name.
+        :param args: Positional arguments to pass to the listeners.
+        :param kwargs: Keyword arguments to pass to the listeners.
+        """
+        for callback in cls._listeners.get(event, []):
+            await callback(*args, **kwargs)
 
 
 class RedisPool:

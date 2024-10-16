@@ -1,6 +1,0 @@
-
-
-
-class EventSystem:
-    pass
-    

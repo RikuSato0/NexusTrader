@@ -193,7 +193,7 @@ class EventType(Enum):
     BOOK_L1 = 0
     TRADE = 1
 
-class Exchange(Enum):
+class ExchangeType(Enum):
     BINANCE = 0
     OKX = 1
     BYBIT = 2

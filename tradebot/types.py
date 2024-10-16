@@ -20,4 +20,8 @@ class Trade:
     timestamp: int
     
 
-    
+
+
+
+
+

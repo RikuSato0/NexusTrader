@@ -115,58 +115,6 @@ class Url:
         #     BUSINESS = "wss://wspap.okx.com:8443/ws/v5/business"
 
 
-    
-
-
-
-MARKET_URLS = {
-    "binance": {
-        "spot": {
-            "base_url": "https://api.binance.com/api/v3/userDataStream",
-            "stream_url": "wss://stream.binance.com:9443/ws/"
-        },
-        "margin": {
-            "base_url": "https://api.binance.com/sapi/v1/userDataStream",
-            "stream_url": "wss://stream.binance.com:9443/ws/"
-        },
-        "isolated-margin": {
-            "base_url": "https://api.binance.com/sapi/v1/userDataStream/isolated",
-            "stream_url": "wss://stream.binance.com:9443/ws/"
-        },
-        "linear": {
-            "base_url": "https://fapi.binance.com/fapi/v1/listenKey",
-            "stream_url": "wss://fstream.binance.com/ws/"
-        },
-        "inverse": {
-            "base_url": "https://dapi.binance.com/dapi/v1/listenKey",
-            "stream_url": "wss://dstream.binance.com/ws/"
-        },
-        "portfolio": {
-            "base_url": "https://papi.binance.com/papi/v1/listenKey",
-            "stream_url": "wss://fstream.binance.com/pm/ws/"
-        }
-    },
-    
-    "okx": {
-        "live": {
-            "public": "wss://ws.okx.com:8443/ws/v5/public",
-            "private": "wss://ws.okx.com:8443/ws/v5/private",
-            "business": "wss://ws.okx.com:8443/ws/v5/business",
-        },
-        "aws": {
-            "public": "wss://wsaws.okx.com:8443/ws/v5/public",
-            "private": "wss://wsaws.okx.com:8443/ws/v5/private",
-            "business": "wss://wsaws.okx.com:8443/ws/v5/business",
-        },
-        "demo": {
-            "public": "wss://wspap.okx.com:8443/ws/v5/public",
-            "private": "wss://wspap.okx.com:8443/ws/v5/private",
-            "business": "wss://wspap.okx.com:8443/ws/v5/business",
-        }
-    }
-}
-
-
 IntervalType = Literal["1s", "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"]
 
 
@@ -197,3 +145,62 @@ class ExchangeType(Enum):
     BINANCE = 0
     OKX = 1
     BYBIT = 2
+
+
+
+
+
+
+class BinanceAccountType(Enum):
+    SPOT = 0
+    MARGIN = 1
+    ISOLATED_MARGIN = 2
+    USD_M_FUTURE = 3
+    COIN_M_FUTURE = 4
+    PORTFOLIO_MARGIN = 5
+    SPOT_TESTNET = 6
+    USD_M_FUTURE_TESTNET = 7
+    COIN_M_FUTURE_TESTNET = 8
+
+
+class OkxAccountType(Enum):
+    LIVE = 0
+    AWS = 1
+    DEMO = 2
+
+
+class BybitAccountType(Enum):
+    SPOT = 0
+    LINEAR = 1
+    INVERSE = 2
+    OPTION = 3
+    SPOT_TESTNET = 4
+    LINEAR_TESTNET = 5
+    INVERSE_TESTNET = 6
+    OPTION_TESTNET = 7
+
+
+STREAM_URLS = {
+    BinanceAccountType.SPOT: "wss://stream.binance.com:9443/ws",
+    BinanceAccountType.MARGIN: "wss://stream.binance.com:9443/ws",
+    BinanceAccountType.ISOLATED_MARGIN: "wss://stream.binance.com:9443/ws",
+    BinanceAccountType.USD_M_FUTURE: "wss://fstream.binance.com/ws",
+    BinanceAccountType.COIN_M_FUTURE: "wss://dstream.binance.com/ws",
+    BinanceAccountType.PORTFOLIO_MARGIN: "wss://fstream.binance.com/pm/ws",
+    BinanceAccountType.SPOT_TESTNET: "wss://testnet.binance.vision/ws",
+    BinanceAccountType.USD_M_FUTURE_TESTNET: "wss://stream.binancefuture.com/ws",
+    BinanceAccountType.COIN_M_FUTURE_TESTNET: "wss://dstream.binancefuture.com/ws",
+    
+    OkxAccountType.LIVE: "wss://ws.okx.com:8443/ws",
+    OkxAccountType.AWS: "wss://wsaws.okx.com:8443/ws",
+    OkxAccountType.DEMO: "wss://wspap.okx.com:8443/ws",
+    
+    BybitAccountType.SPOT: "wss://stream.bybit.com/v5/public/spot",
+    BybitAccountType.LINEAR: "wss://stream.bybit.com/v5/public/linear",
+    BybitAccountType.INVERSE: "wss://stream.bybit.com/v5/public/inverse",
+    BybitAccountType.OPTION: "wss://stream.bybit.com/v5/public/option",
+    BybitAccountType.SPOT_TESTNET: "wss://stream-testnet.bybit.com/v5/public/spot",
+    BybitAccountType.LINEAR_TESTNET: "wss://stream-testnet.bybit.com/v5/public/linear",
+    BybitAccountType.INVERSE_TESTNET: "wss://stream-testnet.bybit.com/v5/public/inverse",
+    BybitAccountType.OPTION_TESTNET: "wss://stream-testnet.bybit.com/v5/public/option",
+}

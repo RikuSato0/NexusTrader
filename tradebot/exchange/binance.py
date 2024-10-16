@@ -28,7 +28,8 @@ from websockets.asyncio import client
 
 from tradebot.types import BookL1, Trade
 from tradebot.constants import IntervalType, UrlType
-from tradebot.constants import Url, EventType
+from tradebot.constants import Url, EventType, BinanceAccountType
+from tradebot.constants import STREAM_URLS
 from tradebot.exceptions import OrderError
 from tradebot.entity import EventSystem, Order
 from tradebot.base import (
@@ -41,7 +42,27 @@ from tradebot.base import (
 
 
 class BinanceExchangeManager(ExchangeManager):
-    pass
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.market_id = None
+
+    async def load_markets(self):
+        await super().load_markets()
+        self._get_market_id()
+
+    def _get_market_id(self):
+        self.market_id = {}
+        if not self.market:
+            raise ValueError(
+                "Market data not loaded, please call `load_markets()` first"
+            )
+        for _, v in self.market.items():
+            if v["subType"] == "linear":
+                self.market_id[f"{v['id']}_swap"] = v
+            elif v["type"] == "spot":
+                self.market_id[f"{v['id']}_spot"] = v
+            else:
+                self.market_id[v["id"]] = v
 
 
 class BinanceOrderManager(OrderManager):
@@ -248,22 +269,27 @@ class BinanceAccountManager(AccountManager):
 class BinanceWSManager(WSManager):
     def __init__(
         self,
-        url: UrlType,
-        market_id: Dict[str, Any],
-        api_key: str = None,
-        secret: str = None,
+        account_type: BinanceAccountType,
+        exchange: BinanceExchangeManager,
     ):
-        super().__init__(url.STREAM_URL, limiter=Limiter(3 / 1))
-        self._market_type = self._get_market_type(url)
-        self._api_key = api_key
-        self._secret = secret
-        self._session: aiohttp.ClientSession = None
-        self._market_id = market_id
+        url = STREAM_URLS[account_type]
+        super().__init__(url, limiter=Limiter(3 / 1))
+        self._get_market_type(account_type)
+        self._api_key = exchange.api_key
+        self._secret = exchange.secret
+        self._market_id = exchange.market_id
+        self._exchange_id = exchange.exchange_id
 
-    def _get_market_type(self, url: UrlType):
-        if isinstance(url, Url.Binance.Spot) or isinstance(url, Url.Binance.Margin):
+    def _get_market_type(self, account_type: BinanceAccountType):
+        if (
+            account_type == BinanceAccountType.SPOT
+            or account_type == BinanceAccountType.SPOT_TESTNET
+        ):
             self._market_type = "_spot"
-        elif isinstance(url, Url.Binance.UsdMFuture):
+        elif (
+            account_type == BinanceAccountType.USD_M_FUTURE
+            or account_type == BinanceAccountType.USD_M_FUTURE_TESTNET
+        ):
             self._market_type = "_swap"
         else:
             self._market_type = ""
@@ -298,15 +324,18 @@ class BinanceWSManager(WSManager):
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
 
-    def callback(self, msg):
+    def _callback(self, msg):
+        # self._log.info(str(msg))
         if "e" in msg:
             match msg["e"]:
                 case "trade":
                     self._parse_trade(msg)
                 case "bookTicker":
                     self._parse_book_ticker(msg)
+        elif "u" in msg:
+            self._parse_book_ticker(msg) # spot book ticker doesn't have "e" key. FUCK BINANCE
 
-    def _parse_trade(self, res: Dict[str, Any], exchange: str = "binance") -> Trade:
+    def _parse_trade(self, res: Dict[str, Any]) -> Trade:
         """
         {
             "e": "trade",       // Event type
@@ -319,12 +348,21 @@ class BinanceWSManager(WSManager):
             "m": true,          // Is the buyer the market maker?
             "M": true           // Ignore
         }
+        
+        {
+            "u":400900217,     // order book updateId
+            "s":"BNBUSDT",     // symbol
+            "b":"25.35190000", // best bid price
+            "B":"31.21000000", // best bid qty
+            "a":"25.36520000", // best ask price
+            "A":"40.66000000"  // best ask qty
+        }
         """
         id = res["s"] + self._market_type
         market = self._market_id[id]
 
         trade = Trade(
-            exchange=exchange,
+            exchange=self._exchange_id,
             symbol=market["symbol"],
             price=float(res["p"]),
             size=float(res["q"]),
@@ -333,7 +371,7 @@ class BinanceWSManager(WSManager):
         EventSystem.emit(EventType.TRADE, trade)
 
     def _parse_book_ticker(
-        self, res: Dict[str, Any], exchange: str = "binance"
+        self, res: Dict[str, Any]
     ) -> BookL1:
         """
         {
@@ -349,7 +387,7 @@ class BinanceWSManager(WSManager):
         market = self._market_id[id]
 
         bookl1 = BookL1(
-            exchange=exchange,
+            exchange=self._exchange_id,
             symbol=market["symbol"],
             bid=float(res["b"]),
             ask=float(res["a"]),
@@ -958,3 +996,5 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
             }
             """
             return event_data
+
+

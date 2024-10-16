@@ -30,8 +30,17 @@ from picows import (
 class ExchangeManager(ABC):
     def __init__(self, config: Dict[str, Any]):
         self.config = config
+        self.api_key = config.get("api_key", None)
+        self.secret = config.get("secret", None)
+        self.exchange_id = config.get("exchange_id", None)
         self.api = self._init_exchange()
+        self._log = SpdLog.get_logger(
+            name=type(self).__name__, level="INFO", flush=True
+        )
         self.market = None
+        
+        if not self.api_key or not self.secret:
+            self._log.warn("API Key and Secret not provided, So some features related to trading will not work")
 
     def _init_exchange(self) -> ccxtpro.Exchange:
         try:
@@ -613,3 +622,9 @@ class AsyncHttpRequests(object):
                 client = aiosonic.HTTPClient()
             cls._CLIENTS[key] = client
         return cls._CLIENTS[key]
+
+
+
+
+    
+    

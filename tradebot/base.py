@@ -1,9 +1,10 @@
 import asyncio
 import orjson
 
+
 import aiosonic
 import ccxt.pro as ccxtpro
-
+import aiosonic.exceptions as aiosonic_exceptions
 
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any
@@ -11,6 +12,7 @@ from typing import Callable, Literal
 from collections import defaultdict
 from decimal import Decimal
 from urllib.parse import urlparse
+
 
 from asynciolimiter import Limiter
 from ccxt.base.errors import RequestTimeout
@@ -38,9 +40,11 @@ class ExchangeManager(ABC):
             name=type(self).__name__, level="INFO", flush=True
         )
         self.market = None
-        
+
         if not self.api_key or not self.secret:
-            self._log.warn("API Key and Secret not provided, So some features related to trading will not work")
+            self._log.warn(
+                "API Key and Secret not provided, So some features related to trading will not work"
+            )
 
     def _init_exchange(self) -> ccxtpro.Exchange:
         try:
@@ -448,8 +452,6 @@ class WSManager(ABC):
         pass
 
 
-
-
 class AsyncHttpRequests:
     """Asynchronous HTTP Request Client."""
 
@@ -481,11 +483,11 @@ class AsyncHttpRequests:
     async def _fetch(cls, method, url, **kwargs):
         """Internal method to handle all HTTP requests."""
         client = cls._get_client(url)
-        timeout = kwargs.pop('timeout', 30)
-        params = kwargs.pop('params', None)
-        data = kwargs.pop('data', None)
-        json_payload = kwargs.pop('json', None)
-        headers = kwargs.pop('headers', None)
+        timeout = kwargs.pop("timeout", 30)
+        params = kwargs.pop("params", None)
+        data = kwargs.pop("data", None)
+        json_payload = kwargs.pop("json", None)
+        headers = kwargs.pop("headers", None)
 
         timeouts = aiosonic.timeout.Timeouts(sock_read=timeout)
 
@@ -498,43 +500,70 @@ class AsyncHttpRequests:
                 json=json_payload,
                 headers=headers,
                 timeouts=timeouts,
-                **kwargs
+                **kwargs,
             )
-            
+
             # Raise an exception for non-2xx HTTP status codes
             if not response.ok:
                 text = await response.text()
                 error_message = f"HTTP Error: {method} {url} - Status: {response.status_code} - Response: {text}"
                 cls._log.error(error_message)
-                raise aiosonic.exceptions.HTTPError(error_message)
+                raise Exception(error_message)
 
             try:
                 result = await response.json()
             except orjson.JSONDecodeError:
                 result = await response.text()
-                cls._log.warning(f"Non-JSON Response: {method} {url} - Status: {response.status_code} - Response: {result}")
+                cls._log.warning(
+                    f"Non-JSON Response: {method} {url} - Status: {response.status_code} - Response: {result}"
+                )
 
-            cls._log.debug(f"Request Successful: {method} {url} - Status: {response.status_code} - Response: {result}")
+            cls._log.debug(
+                f"Request Successful: {method} {url} - Status: {response.status_code} - Response: {result}"
+            )
             return result
 
-        except asyncio.TimeoutError:
-            error_message = f"Timeout Error: {method} {url} - Timeout after {timeout} seconds"
+        except (
+            aiosonic_exceptions.BaseTimeout,
+            aiosonic_exceptions.ConnectTimeout,
+            aiosonic_exceptions.ReadTimeout,
+            aiosonic_exceptions.RequestTimeout,
+        ) as e:
+            error_message = f"Timeout Error: {type(e).__name__} - {str(e)}"
             cls._log.error(error_message)
-            raise aiosonic.exceptions.TimeoutError(error_message)
-        except aiosonic.exceptions.ProxyError as e:
-            error_message = f"Proxy Error: {method} {url} - {e}"
+            raise TimeoutError(error_message)
+
+        except aiosonic_exceptions.HttpParsingError as e:
+            error_message = f"HTTP Parsing Error: {str(e)}"
             cls._log.error(error_message)
-            raise aiosonic.exceptions.ProxyError(error_message)
-        except aiosonic.exceptions.ConnectionError as e:
-            error_message = f"Connection Error: {method} {url} - {e}"
+            raise ValueError(error_message)
+
+        except aiosonic_exceptions.ConnectionDisconnected as e:
+            error_message = f"Connection Disconnected: {str(e)}"
             cls._log.error(error_message)
-            raise aiosonic.exceptions.ConnectionError(error_message)
-        except aiosonic.exceptions.AiosonicError as e:
-            error_message = f"Aiosonic Error: {method} {url} - {e}"
-            cls._log.error(error_message)
-            raise aiosonic.exceptions.AiosonicError(error_message)
+            raise ConnectionError(error_message)
+
         except Exception as e:
-            error_message = f"Unexpected Error: {method} {url} - {e}"
+            # Prepare error message with non-None parameters
+            error_params = {
+                "method": method,
+                "url": url,
+                "timeout": timeout,
+                **{
+                    k: v
+                    for k, v in {
+                        "params": params,
+                        "data": data,
+                        "json": json_payload,
+                        "headers": headers,
+                    }.items()
+                    if v is not None
+                },
+                **kwargs,
+            }
+            error_message = (
+                f"Error: {type(e).__name__} - {str(e)} - Parameters: {error_params}"
+            )
             cls._log.error(error_message)
             raise Exception(error_message)
 

@@ -25,7 +25,7 @@ from asynciolimiter import Limiter
 from websockets.asyncio import client
 
 
-from tradebot.types import BookL1, Trade, Kline
+from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
 from tradebot.constants import IntervalType, UrlType
 from tradebot.constants import Url, EventType, BinanceAccountType
 from tradebot.constants import STREAM_URLS
@@ -340,6 +340,24 @@ class BinanceWSManager(WSManager):
             self._send(payload)
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
+    
+    async def subscribe_mark_price(self, symbol, interval: Literal["1s", "3s"] = "1s"):
+        if self._market_type == "_spot":
+            raise ValueError("Spot market doesn't have mark price")
+        subscription_id = f"mark_price.{symbol}"
+        if subscription_id not in self._subscriptions:
+            await self._limiter.wait()
+            id = time.time_ns() // 1_000_000
+            payload = {
+                "method": "SUBSCRIBE",
+                "params": [f"{symbol.lower()}@markPrice@{interval}"],
+                "id": id,
+            }
+            self._subscriptions[subscription_id] = payload
+            self._send(payload)
+        else:
+            self._log.info(f"Already subscribed to {subscription_id}")
+    
 
     def _callback(self, msg):
         # self._log.info(str(msg))
@@ -351,6 +369,8 @@ class BinanceWSManager(WSManager):
                     self._parse_book_ticker(msg)
                 case "kline":
                     self._parse_kline(msg)
+                case "markPriceUpdate":
+                    self._parse_mark_price(msg)
                     
         elif "u" in msg:
             self._parse_book_ticker(msg) # spot book ticker doesn't have "e" key. FUCK BINANCE
@@ -460,6 +480,49 @@ class BinanceWSManager(WSManager):
             timestamp=res.get("T", time.time_ns() // 1_000_000),
         )
         EventSystem.emit(EventType.BOOKL1, bookl1)
+    
+    def _parse_mark_price(self, res: Dict[str, Any]):
+        """
+         {
+            "e": "markPriceUpdate",     // Event type
+            "E": 1562305380000,         // Event time
+            "s": "BTCUSDT",             // Symbol
+            "p": "11794.15000000",      // Mark price
+            "i": "11784.62659091",      // Index price
+            "P": "11784.25641265",      // Estimated Settle Price, only useful in the last hour before the settlement starts
+            "r": "0.00038167",          // Funding rate
+            "T": 1562306400000          // Next funding time
+        }
+        """
+        id = res["s"] + self._market_type
+        market = self._market_id[id]
+        
+        mark_price = MarkPrice(
+            exchange=self._exchange_id,
+            symbol=market["symbol"],
+            price=float(res["p"]),
+            timestamp=res.get("E", time.time_ns() // 1_000_000),
+        )
+        
+        funding_rate = FundingRate(
+            exchange=self._exchange_id,
+            symbol=market["symbol"],
+            rate=float(res["r"]),
+            timestamp=res.get("E", time.time_ns() // 1_000_000),
+            next_funding_time=res.get("T", time.time_ns() // 1_000_000),
+        )
+        
+        index_price = IndexPrice(
+            exchange=self._exchange_id,
+            symbol=market["symbol"],
+            price=float(res["i"]),
+            timestamp=res.get("E", time.time_ns() // 1_000_000),
+        )
+        
+        EventSystem.emit(EventType.MARK_PRICE, mark_price)
+        EventSystem.emit(EventType.FUNDING_RATE, funding_rate)
+        EventSystem.emit(EventType.INDEX_PRICE, index_price)
+        
 
 
 class BinanceWebsocketManager(WebsocketManager):

@@ -32,6 +32,27 @@ class Kline:
     volume: float
     timestamp: int
 
+@dataclass(slots=True)
+class MarkPrice:
+    exchange: str
+    symbol: str
+    price: float
+    timestamp: int
+
+@dataclass(slots=True)
+class FundingRate:
+    exchange: str
+    symbol: str
+    rate: float
+    timestamp: int
+    next_funding_time: int
+
+@dataclass(slots=True)
+class IndexPrice:
+    exchange: str
+    symbol: str
+    price: float
+    timestamp: int
 
 
 

@@ -141,6 +141,9 @@ class EventType(Enum):
     BOOKL1 = 0
     TRADE = 1
     KLINE = 2
+    MARK_PRICE = 3
+    FUNDING_RATE = 4
+    INDEX_PRICE = 5
 
 class ExchangeType(Enum):
     BINANCE = 0

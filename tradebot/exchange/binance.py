@@ -1,6 +1,7 @@
 import base64
 from decimal import Decimal
 import hmac
+import hashlib
 import json
 import time
 
@@ -13,7 +14,7 @@ import aiohttp
 from collections import defaultdict
 from typing import Any, Dict, List
 from typing import Literal, Callable, Optional
-
+from urllib.parse import urljoin
 
 import orjson
 import aiohttp
@@ -27,8 +28,8 @@ from websockets.asyncio import client
 
 from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
 from tradebot.constants import IntervalType, UrlType
-from tradebot.constants import Url, EventType, BinanceAccountType
-from tradebot.constants import STREAM_URLS
+from tradebot.constants import Url, EventType, BinanceAccountType, BinanceEndpointsType
+from tradebot.constants import STREAM_URLS, BASE_URLS, BINANCE_ENDPOINTS
 from tradebot.exceptions import OrderError
 from tradebot.entity import EventSystem, Order
 from tradebot.base import (
@@ -37,7 +38,53 @@ from tradebot.base import (
     AccountManager,
     WebsocketManager,
     WSManager,
+    RestApi,
 )
+
+
+class BinanceRestApi(RestApi):
+    def __init__(self, api_key: str, secret: str, account_type: BinanceAccountType, **kwargs):
+        self._api_key = api_key
+        self._secret = secret
+        self._account_type = account_type
+        self._base_url = BASE_URLS[account_type]
+        super().__init__(headers=self._get_headers(), **kwargs)
+        
+    def _get_headers(self) -> Dict[str, str]:
+        headers = {
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36",
+        }
+        if self._api_key:
+            headers["X-MBX-APIKEY"] = self._api_key
+        return headers
+    
+    def _generate_signature(self, query: str) -> str:
+        signature = hmac.new(self._secret.encode(), query.encode(), hashlib.sha256).hexdigest()
+        return signature
+
+    async def _fetch(self, method: str, endpoint: str, params: Dict[str, Any] = {}, data: Dict[str, Any] = {}) -> Any:
+        url = urljoin(self._base_url, endpoint)
+        
+        params["timestamp"] = time.time_ns() // 1_000_000
+        query = "&".join([f"{k}={v}" for k, v in params.items()])
+        
+        signature = self._generate_signature(query)
+        params["signature"] = signature
+        
+        return await self._request(method, url, params=params, data=data)
+    
+    async def start_user_data_stream(self) -> Dict[str, Any]:
+        endpoint = await self._generate_endpoint(BinanceEndpointsType.USER_DATA_STREAM)
+        return await self._fetch("POST", endpoint)
+
+    async def keep_alive_user_data_stream(self, listen_key: str) -> Dict[str, Any]:
+        endpoint = await self._generate_endpoint(BinanceEndpointsType.USER_DATA_STREAM)
+        return await self._fetch("PUT", endpoint, params={"listenKey": listen_key})
+    
+    async def _generate_endpoint(self, endpoint_type: BinanceEndpointsType) -> str:
+        return BINANCE_ENDPOINTS[endpoint_type][self._account_type]
+        
 
 
 class BinanceExchangeManager(ExchangeManager):
@@ -293,7 +340,6 @@ class BinanceWSManager(WSManager):
         else:
             self._market_type = ""
 
-
     async def subscribe_kline(self, symbol: str, interval: IntervalType):
         subscription_id = f"kline.{symbol}.{interval}"
         if subscription_id not in self._subscriptions:
@@ -308,8 +354,6 @@ class BinanceWSManager(WSManager):
             self._send(payload)
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
-        
-        
 
     async def subscribe_book_ticker(self, symbol):
         subscription_id = f"book_ticker.{symbol}"
@@ -340,7 +384,7 @@ class BinanceWSManager(WSManager):
             self._send(payload)
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
-    
+
     async def subscribe_mark_price(self, symbol, interval: Literal["1s", "3s"] = "1s"):
         if self._market_type == "_spot":
             raise ValueError("Spot market doesn't have mark price")
@@ -357,7 +401,6 @@ class BinanceWSManager(WSManager):
             self._send(payload)
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
-    
 
     def _callback(self, msg):
         # self._log.info(str(msg))
@@ -371,10 +414,12 @@ class BinanceWSManager(WSManager):
                     self._parse_kline(msg)
                 case "markPriceUpdate":
                     self._parse_mark_price(msg)
-                    
+
         elif "u" in msg:
-            self._parse_book_ticker(msg) # spot book ticker doesn't have "e" key. FUCK BINANCE
-    
+            self._parse_book_ticker(
+                msg
+            )  # spot book ticker doesn't have "e" key. FUCK BINANCE
+
     def _parse_kline(self, res: Dict[str, Any]) -> Kline:
         """
         {
@@ -404,7 +449,7 @@ class BinanceWSManager(WSManager):
         """
         id = res["s"] + self._market_type
         market = self._market_id[id]
-        
+
         ticker = Kline(
             exchange=self._exchange_id,
             symbol=market["symbol"],
@@ -417,7 +462,6 @@ class BinanceWSManager(WSManager):
             timestamp=res.get("E", time.time_ns() // 1_000_000),
         )
         EventSystem.emit(EventType.KLINE, ticker)
-    
 
     def _parse_trade(self, res: Dict[str, Any]) -> Trade:
         """
@@ -432,7 +476,7 @@ class BinanceWSManager(WSManager):
             "m": true,          // Is the buyer the market maker?
             "M": true           // Ignore
         }
-        
+
         {
             "u":400900217,     // order book updateId
             "s":"BNBUSDT",     // symbol
@@ -454,9 +498,7 @@ class BinanceWSManager(WSManager):
         )
         EventSystem.emit(EventType.TRADE, trade)
 
-    def _parse_book_ticker(
-        self, res: Dict[str, Any]
-    ) -> BookL1:
+    def _parse_book_ticker(self, res: Dict[str, Any]) -> BookL1:
         """
         {
             "u":400900217,     // order book updateId
@@ -480,7 +522,7 @@ class BinanceWSManager(WSManager):
             timestamp=res.get("T", time.time_ns() // 1_000_000),
         )
         EventSystem.emit(EventType.BOOKL1, bookl1)
-    
+
     def _parse_mark_price(self, res: Dict[str, Any]):
         """
          {
@@ -496,14 +538,14 @@ class BinanceWSManager(WSManager):
         """
         id = res["s"] + self._market_type
         market = self._market_id[id]
-        
+
         mark_price = MarkPrice(
             exchange=self._exchange_id,
             symbol=market["symbol"],
             price=float(res["p"]),
             timestamp=res.get("E", time.time_ns() // 1_000_000),
         )
-        
+
         funding_rate = FundingRate(
             exchange=self._exchange_id,
             symbol=market["symbol"],
@@ -511,18 +553,17 @@ class BinanceWSManager(WSManager):
             timestamp=res.get("E", time.time_ns() // 1_000_000),
             next_funding_time=res.get("T", time.time_ns() // 1_000_000),
         )
-        
+
         index_price = IndexPrice(
             exchange=self._exchange_id,
             symbol=market["symbol"],
             price=float(res["i"]),
             timestamp=res.get("E", time.time_ns() // 1_000_000),
         )
-        
+
         EventSystem.emit(EventType.MARK_PRICE, mark_price)
         EventSystem.emit(EventType.FUNDING_RATE, funding_rate)
         EventSystem.emit(EventType.INDEX_PRICE, index_price)
-        
 
 
 class BinanceWebsocketManager(WebsocketManager):
@@ -1123,5 +1164,3 @@ def parse_user_data_stream(event_data: Dict[str, Any], market_id: Dict[str, Any]
             }
             """
             return event_data
-
-

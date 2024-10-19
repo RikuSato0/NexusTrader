@@ -208,3 +208,62 @@ STREAM_URLS = {
     BybitAccountType.INVERSE_TESTNET: "wss://stream-testnet.bybit.com/v5/public/inverse",
     BybitAccountType.OPTION_TESTNET: "wss://stream-testnet.bybit.com/v5/public/option",
 }
+
+LISTEN_KEY_URLS = {
+    BinanceAccountType.SPOT: "https://api.binance.com/api/v3/userDataStream",
+    BinanceAccountType.MARGIN: "https://api.binance.com/sapi/v1/userDataStream",
+    BinanceAccountType.ISOLATED_MARGIN: "https://api.binance.com/sapi/v1/userDataStream/isolated",
+    BinanceAccountType.USD_M_FUTURE: "https://fapi.binance.com/fapi/v1/listenKey",
+    BinanceAccountType.COIN_M_FUTURE: "https://dapi.binance.com/dapi/v1/listenKey",
+    BinanceAccountType.PORTFOLIO_MARGIN: "https://papi.binance.com/papi/v1/listenKey",
+    BinanceAccountType.SPOT_TESTNET: "https://testnet.binance.vision/api/v3/userDataStream",
+    BinanceAccountType.USD_M_FUTURE_TESTNET: "https://testnet.binancefuture.com/fapi/v1/listenKey",
+    BinanceAccountType.COIN_M_FUTURE_TESTNET: "https://testnet.binancefuture.com/dapi/v1/listenKey",
+}
+
+BASE_URLS = {
+    BinanceAccountType.SPOT: "https://api.binance.com",
+    BinanceAccountType.MARGIN: "https://api.binance.com",
+    BinanceAccountType.ISOLATED_MARGIN: "https://api.binance.com",
+    BinanceAccountType.USD_M_FUTURE: "https://fapi.binance.com",
+    BinanceAccountType.COIN_M_FUTURE: "https://dapi.binance.com",
+    BinanceAccountType.PORTFOLIO_MARGIN: "https://papi.binance.com",
+    BinanceAccountType.SPOT_TESTNET: "https://testnet.binance.vision",
+    BinanceAccountType.USD_M_FUTURE_TESTNET: "https://testnet.binancefuture.com",
+    BinanceAccountType.COIN_M_FUTURE_TESTNET: "https://testnet.binancefuture.com",
+}
+
+
+class BinanceEndpointsType(Enum):
+    USER_DATA_STREAM = 0
+    ACCOUNT = 1
+    Trading = 2
+    Market = 3
+    General = 4
+
+
+BINANCE_ENDPOINTS = {
+    BinanceEndpointsType.USER_DATA_STREAM: {
+        BinanceAccountType.SPOT: "/api/v3/userDataStream",
+        BinanceAccountType.MARGIN: "/sapi/v1/userDataStream",
+        BinanceAccountType.ISOLATED_MARGIN: "/sapi/v1/userDataStream/isolated",
+        BinanceAccountType.USD_M_FUTURE: "/fapi/v1/listenKey",
+        BinanceAccountType.COIN_M_FUTURE: "/dapi/v1/listenKey",
+        BinanceAccountType.PORTFOLIO_MARGIN: "/papi/v1/listenKey",
+        BinanceAccountType.SPOT_TESTNET: "/api/v3/userDataStream",
+        BinanceAccountType.USD_M_FUTURE_TESTNET: "/fapi/v1/listenKey",
+        BinanceAccountType.COIN_M_FUTURE_TESTNET: "/dapi/v1/listenKey",
+    },
+    
+    BinanceEndpointsType.ACCOUNT: {
+        BinanceAccountType.SPOT: "/api/v3/account",
+        BinanceAccountType.MARGIN: "/sapi/v1/margin/account",
+        BinanceAccountType.ISOLATED_MARGIN: "/sapi/v1/margin/isolated/account",
+        BinanceAccountType.USD_M_FUTURE: "/fapi/v2/account",
+        BinanceAccountType.COIN_M_FUTURE: "/dapi/v1/account",
+        BinanceAccountType.PORTFOLIO_MARGIN: "/papi/v1/account",
+        BinanceAccountType.SPOT_TESTNET: "/api/v3/account",
+        BinanceAccountType.USD_M_FUTURE_TESTNET: "/fapi/v2/account",
+        BinanceAccountType.COIN_M_FUTURE_TESTNET: "/dapi/v1/account",
+    }
+}

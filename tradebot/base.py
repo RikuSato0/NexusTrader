@@ -2,6 +2,7 @@ import asyncio
 import orjson
 
 
+import aiohttp
 import aiosonic
 import ccxt.pro as ccxtpro
 import aiosonic.exceptions as aiosonic_exceptions
@@ -16,6 +17,7 @@ from urllib.parse import urlparse
 
 from asynciolimiter import Limiter
 from ccxt.base.errors import RequestTimeout
+from aiohttp.client_exceptions import ClientResponseError, ClientError
 
 
 from tradebot.log import SpdLog
@@ -577,3 +579,101 @@ class AsyncHttpRequests:
             client = aiosonic.HTTPClient(proxy=aiosonic.Proxy(proxy) if proxy else None)
             cls._clients[key] = client
         return cls._clients[key]
+
+
+class RestApi:
+    def __init__(self, **client_kwargs):
+        self._session = None
+        self._log = SpdLog.get_logger(
+            name=type(self).__name__, level="INFO", flush=True
+        )
+        self._client_kwargs = client_kwargs
+
+    async def init_session(self):
+        if self._session is None:
+            self._session = aiohttp.ClientSession(**self._client_kwargs)
+
+    async def close_session(self):
+        if self._session:
+            await self._session.close()
+
+    async def _request(self, method: str, url: str, **kwargs) -> Any:
+        """
+        Perform an HTTP request without using async context managers.
+
+        :param method: HTTP method (GET, POST, PUT, DELETE, etc.).
+        :param url: The URL for the request. If base_url is set, this can be a relative path.
+        :param kwargs: Additional arguments for the request (e.g., params, json, data).
+        :return: The parsed JSON response or raw text based on response headers.
+        :raises: ClientResponseError, ClientError, Exception
+        """
+        if self._session is None:
+            await self.init_session()
+
+        try:
+            response = await self._session.request(method, url, **kwargs)
+            response.raise_for_status()
+
+            content_type = response.headers.get("Content-Type", "")
+            if "application/json" in content_type:
+                data = await response.json()
+            else:
+                data = await response.text()
+
+            self._log.info(
+                f"Request {method} {url} succeeded with status {response.status}."
+            )
+            return data
+
+        except ClientResponseError as e:
+            self._log.error(f"HTTP Error {e.status}: {e.message} for URL: {url}")
+            raise
+        except ClientError as e:
+            self._log.error(f"Client Error: {str(e)} for URL: {url}")
+            raise
+        except asyncio.TimeoutError:
+            self._log.error(f"Request timed out for URL: {url}")
+            raise
+        except Exception as e:
+            self._log.exception(f"Unexpected error during request to {url}: {str(e)}")
+            raise
+
+    async def get(self, url: str, **kwargs) -> Any:
+        """
+        Perform an HTTP GET request.
+
+        :param url: The URL for the GET request.
+        :param kwargs: Additional arguments for the request.
+        :return: The response data.
+        """
+        return await self._request("GET", url, **kwargs)
+
+    async def post(self, url: str, **kwargs) -> Any:
+        """
+        Perform an HTTP POST request.
+
+        :param url: The URL for the POST request.
+        :param kwargs: Additional arguments for the request.
+        :return: The response data.
+        """
+        return await self._request("POST", url, **kwargs)
+
+    async def put(self, url: str, **kwargs) -> Any:
+        """
+        Perform an HTTP PUT request.
+
+        :param url: The URL for the PUT request.
+        :param kwargs: Additional arguments for the request.
+        :return: The response data.
+        """
+        return await self._request("PUT", url, **kwargs)
+
+    async def delete(self, url: str, **kwargs) -> Any:
+        """
+        Perform an HTTP DELETE request.
+
+        :param url: The URL for the DELETE request.
+        :param kwargs: Additional arguments for the request.
+        :return: The response data.
+        """
+        return await self._request("DELETE", url, **kwargs)

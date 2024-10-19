@@ -20,7 +20,17 @@ class Trade:
     timestamp: int
     
 
-
+@dataclass(slots=True)
+class Kline:
+    exchange: str
+    symbol: str
+    interval: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+    timestamp: int
 
 
 

@@ -25,7 +25,7 @@ from asynciolimiter import Limiter
 from websockets.asyncio import client
 
 
-from tradebot.types import BookL1, Trade
+from tradebot.types import BookL1, Trade, Kline
 from tradebot.constants import IntervalType, UrlType
 from tradebot.constants import Url, EventType, BinanceAccountType
 from tradebot.constants import STREAM_URLS
@@ -293,6 +293,24 @@ class BinanceWSManager(WSManager):
         else:
             self._market_type = ""
 
+
+    async def subscribe_kline(self, symbol: str, interval: IntervalType):
+        subscription_id = f"kline.{symbol}.{interval}"
+        if subscription_id not in self._subscriptions:
+            await self._limiter.wait()
+            id = time.time_ns() // 1_000_000
+            payload = {
+                "method": "SUBSCRIBE",
+                "params": [f"{symbol.lower()}@kline_{interval}"],
+                "id": id,
+            }
+            self._subscriptions[subscription_id] = payload
+            self._send(payload)
+        else:
+            self._log.info(f"Already subscribed to {subscription_id}")
+        
+        
+
     async def subscribe_book_ticker(self, symbol):
         subscription_id = f"book_ticker.{symbol}"
         if subscription_id not in self._subscriptions:
@@ -331,8 +349,55 @@ class BinanceWSManager(WSManager):
                     self._parse_trade(msg)
                 case "bookTicker":
                     self._parse_book_ticker(msg)
+                case "kline":
+                    self._parse_kline(msg)
+                    
         elif "u" in msg:
             self._parse_book_ticker(msg) # spot book ticker doesn't have "e" key. FUCK BINANCE
+    
+    def _parse_kline(self, res: Dict[str, Any]) -> Kline:
+        """
+        {
+            "e": "kline",     // Event type
+            "E": 1672515782136,   // Event time
+            "s": "BNBBTC",    // Symbol
+            "k": {
+                "t": 123400000, // Kline start time
+                "T": 123460000, // Kline close time
+                "s": "BNBBTC",  // Symbol
+                "i": "1m",      // Interval
+                "f": 100,       // First trade ID
+                "L": 200,       // Last trade ID
+                "o": "0.0010",  // Open price
+                "c": "0.0020",  // Close price
+                "h": "0.0025",  // High price
+                "l": "0.0015",  // Low price
+                "v": "1000",    // Base asset volume
+                "n": 100,       // Number of trades
+                "x": false,     // Is this kline closed?
+                "q": "1.0000",  // Quote asset volume
+                "V": "500",     // Taker buy base asset volume
+                "Q": "0.500",   // Taker buy quote asset volume
+                "B": "123456"   // Ignore
+            }
+        }
+        """
+        id = res["s"] + self._market_type
+        market = self._market_id[id]
+        
+        ticker = Kline(
+            exchange=self._exchange_id,
+            symbol=market["symbol"],
+            interval=res["k"]["i"],
+            open=float(res["k"]["o"]),
+            high=float(res["k"]["h"]),
+            low=float(res["k"]["l"]),
+            close=float(res["k"]["c"]),
+            volume=float(res["k"]["v"]),
+            timestamp=res.get("E", time.time_ns() // 1_000_000),
+        )
+        EventSystem.emit(EventType.KLINE, ticker)
+    
 
     def _parse_trade(self, res: Dict[str, Any]) -> Trade:
         """

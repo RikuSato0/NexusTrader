@@ -14,6 +14,9 @@ def on_bookl1(data):
 def on_trade(data):
     print(data)
 
+@EventSystem.on(EventType.KLINE)
+def on_kline(data):
+    print(data)
 
 async def main():
     try:
@@ -29,8 +32,9 @@ async def main():
         binance_ws_manager = BinanceWSManager(BinanceAccountType.SPOT, exchange)
         
         await binance_ws_manager.connect()
-        await binance_ws_manager.subscribe_book_ticker("BTCUSDT")
-        await binance_ws_manager.subscribe_trade("BTCUSDT")
+        # await binance_ws_manager.subscribe_book_ticker("BTCUSDT")
+        # await binance_ws_manager.subscribe_trade("BTCUSDT")
+        await binance_ws_manager.subscribe_kline("BTCUSDT", "1s")
         
         while True:
             await asyncio.sleep(1)

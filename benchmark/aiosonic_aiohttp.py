@@ -23,9 +23,9 @@ async def aiohttp_test():
         for i in range(NUM_REQUESTS):
             tasks.append(aio_request(session, i))
 
-        start_time = time.time()
+        start_time = time.perf_counter()
         await asyncio.gather(*tasks)
-        end_time = time.time()
+        end_time = time.perf_counter()
 
     return end_time - start_time
 
@@ -42,9 +42,9 @@ async def aiosonic_test():
     for i in range(NUM_REQUESTS):
         tasks.append(aiosonic_request(client, i))
 
-    start_time = time.time()
+    start_time = time.perf_counter()
     await asyncio.gather(*tasks)
-    end_time = time.time()
+    end_time = time.perf_counter()
 
     return end_time - start_time
 

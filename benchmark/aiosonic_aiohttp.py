@@ -37,7 +37,8 @@ async def aiosonic_request(client: aiosonic.HTTPClient, index: int):
 
 
 async def aiosonic_test():
-    client = aiosonic.HTTPClient()
+    connector = aiosonic.TCPConnector()
+    client = aiosonic.HTTPClient(connector)
     tasks = []
     for i in range(NUM_REQUESTS):
         tasks.append(aiosonic_request(client, i))

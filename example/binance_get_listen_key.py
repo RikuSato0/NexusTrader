@@ -22,6 +22,11 @@ async def main():
         print(listen_key)
         res = await rest_api.keep_alive_user_data_stream(listen_key)
         print(res)
+        
+        res = await rest_api.new_order("BTCUSDT", "BUY", "MARKET", quantity=0.01)
+        print(res)
+        
+        
     finally:
         await rest_api.close_session()
     

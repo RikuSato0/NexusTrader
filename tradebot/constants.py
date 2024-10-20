@@ -237,9 +237,9 @@ BASE_URLS = {
 class BinanceEndpointsType(Enum):
     USER_DATA_STREAM = 0
     ACCOUNT = 1
-    Trading = 2
-    Market = 3
-    General = 4
+    TRADING = 2
+    MARKET = 3
+    GENERAL = 4
 
 
 BINANCE_ENDPOINTS = {
@@ -255,15 +255,15 @@ BINANCE_ENDPOINTS = {
         BinanceAccountType.COIN_M_FUTURE_TESTNET: "/dapi/v1/listenKey",
     },
     
-    BinanceEndpointsType.ACCOUNT: {
-        BinanceAccountType.SPOT: "/api/v3/account",
-        BinanceAccountType.MARGIN: "/sapi/v1/margin/account",
-        BinanceAccountType.ISOLATED_MARGIN: "/sapi/v1/margin/isolated/account",
-        BinanceAccountType.USD_M_FUTURE: "/fapi/v2/account",
-        BinanceAccountType.COIN_M_FUTURE: "/dapi/v1/account",
-        BinanceAccountType.PORTFOLIO_MARGIN: "/papi/v1/account",
-        BinanceAccountType.SPOT_TESTNET: "/api/v3/account",
-        BinanceAccountType.USD_M_FUTURE_TESTNET: "/fapi/v2/account",
-        BinanceAccountType.COIN_M_FUTURE_TESTNET: "/dapi/v1/account",
+    BinanceEndpointsType.TRADING: {
+        BinanceAccountType.SPOT: "/api/v3",
+        BinanceAccountType.MARGIN: "/sapi/v1",
+        BinanceAccountType.ISOLATED_MARGIN: "/sapi/v1",
+        BinanceAccountType.USD_M_FUTURE: "/fapi/v1",
+        BinanceAccountType.COIN_M_FUTURE: "/dapi/v1",
+        BinanceAccountType.PORTFOLIO_MARGIN: "/papi/v1",
+        BinanceAccountType.SPOT_TESTNET: "/api/v3",
+        BinanceAccountType.USD_M_FUTURE_TESTNET: "/fapi/v1",
+        BinanceAccountType.COIN_M_FUTURE_TESTNET: "/dapi/v1",
     }
 }

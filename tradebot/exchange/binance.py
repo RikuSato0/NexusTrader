@@ -60,14 +60,14 @@ class BinanceRestApi(RestApi):
         return headers
     
     def _generate_signature(self, query: str) -> str:
-        signature = hmac.new(self._secret.encode(), query.encode(), hashlib.sha256).hexdigest()
+        signature = hmac.new(self._secret.encode('utf-8'), query.encode('utf-8'), hashlib.sha256).hexdigest()
         return signature
 
     async def _fetch(self, method: str, endpoint: str, params: Dict[str, Any] = {}, data: Dict[str, Any] = {}) -> Any:
         url = urljoin(self._base_url, endpoint)
         
-        params["timestamp"] = time.time_ns() // 1_000_000
-        query = "&".join([f"{k}={v}" for k, v in params.items()])
+        data["timestamp"] = time.time_ns() // 1_000_000
+        query = "&".join([f"{k}={v}" for k, v in data.items()])
         
         signature = self._generate_signature(query)
         params["signature"] = signature
@@ -75,15 +75,33 @@ class BinanceRestApi(RestApi):
         return await self._request(method, url, params=params, data=data)
     
     async def start_user_data_stream(self) -> Dict[str, Any]:
-        endpoint = await self._generate_endpoint(BinanceEndpointsType.USER_DATA_STREAM)
+        endpoint = self._generate_endpoint(BinanceEndpointsType.USER_DATA_STREAM)
         return await self._fetch("POST", endpoint)
 
     async def keep_alive_user_data_stream(self, listen_key: str) -> Dict[str, Any]:
-        endpoint = await self._generate_endpoint(BinanceEndpointsType.USER_DATA_STREAM)
+        endpoint = self._generate_endpoint(BinanceEndpointsType.USER_DATA_STREAM)
         return await self._fetch("PUT", endpoint, params={"listenKey": listen_key})
     
-    async def _generate_endpoint(self, endpoint_type: BinanceEndpointsType) -> str:
+    async def new_order(self, symbol: str, side: str, type: str, **kwargs):
+        endpoint = self._generate_endpoint(BinanceEndpointsType.TRADING)
+        
+        endpoint = f"{endpoint}/order"
+        
+        params = {
+            "symbol": symbol,
+            "side": side,
+            "type": type,
+            **kwargs
+        }
+        
+        return await self._fetch("POST", endpoint, data=params)
+    
+    
+    
+    def _generate_endpoint(self, endpoint_type: BinanceEndpointsType) -> str:
         return BINANCE_ENDPOINTS[endpoint_type][self._account_type]
+    
+    
         
 
 

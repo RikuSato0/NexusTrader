@@ -343,6 +343,8 @@ class BinanceWSManager(WSManager):
         self._secret = exchange.secret
         self._market_id = exchange.market_id
         self._exchange_id = exchange.exchange_id
+        self._account_type = account_type
+        self._rest_api = BinanceRestApi(self._api_key, self._secret, account_type)
 
     def _get_market_type(self, account_type: BinanceAccountType):
         if (
@@ -419,6 +421,33 @@ class BinanceWSManager(WSManager):
             self._send(payload)
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
+    
+    async def subscribe_user_data_stream(self):
+        subscription_id = f"user_data_stream.{self._account_type}"
+        if subscription_id not in self._subscriptions:
+            await self._limiter.wait()
+            listen_key = await self._get_listen_key()
+            id = time.time_ns() // 1_000_000
+            payload = {
+                "method": "SUBSCRIBE",
+                "params": [listen_key],
+                "id": id,
+            }
+            self._subscriptions[subscription_id] = payload
+            self._send(payload)
+        else:
+            self._log.info(f"Already subscribed to {subscription_id}")
+    
+    
+    async def _get_listen_key(self):
+        try:
+            res = await self._rest_api.start_user_data_stream()
+            return res["listenKey"]
+        except Exception as e:
+            self._log.error(f"Failed to get listen key: {str(e)}")
+            return None
+        
+        
 
     def _callback(self, msg):
         # self._log.info(str(msg))

@@ -9,15 +9,15 @@ from typing import Literal, Union
 from enum import Enum
 
 
-
-
-if not os.path.exists('.keys/'):
-    os.makedirs('.keys/')
-if not os.path.exists('.keys/config.cfg'):
-    raise FileNotFoundError("Config file not found, please create a config file at .keys/config.cfg")
+if not os.path.exists(".keys/"):
+    os.makedirs(".keys/")
+if not os.path.exists(".keys/config.cfg"):
+    raise FileNotFoundError(
+        "Config file not found, please create a config file at .keys/config.cfg"
+    )
 
 CONFIG = ConfigParser()
-CONFIG.read('.keys/config.cfg')
+CONFIG.read(".keys/config.cfg")
 
 # API_KEY = CONFIG['binance_2']['API_KEY']
 # API_SECRET = CONFIG['binance_2']['SECRET']
@@ -38,25 +38,25 @@ CONFIG.read('.keys/config.cfg')
 # OKX_PASSPHRASE = CONFIG['okex_demo']['PASSPHRASE']
 # OKX_USER = CONFIG['okex_demo']['USER']
 
+
 class Url:
     class Bybit:
         class Spot:
             MAINNET = "wss://stream.bybit.com/v5/public/spot"
             TESTNET = "wss://stream-testnet.bybit.com/v5/public/spot"
-        
+
         class Linear:
             MAINNET = "wss://stream.bybit.com/v5/public/linear"
             TESTNET = "wss://stream-testnet.bybit.com/v5/public/linear"
-        
+
         class Inverse:
             MAINNET = "wss://stream.bybit.com/v5/public/inverse"
             TESTNET = "wss://stream-testnet.bybit.com/v5/public/inverse"
-        
+
         class Option:
             MAINNET = "wss://stream.bybit.com/v5/public/option"
             TESTNET = "wss://stream-testnet.bybit.com/v5/public/option"
-    
-    
+
     class Binance:
         class Spot:
             BASE_URL = "https://api.binance.com/api/v3/userDataStream"
@@ -81,24 +81,24 @@ class Url:
         class PortfolioMargin:
             BASE_URL = "https://papi.binance.com/papi/v1/listenKey"
             STREAM_URL = "wss://fstream.binance.com/pm/ws"
-        
+
         class SpotTestnet:
             BASE_URL = "https://testnet.binance.vision/api/v3/userDataStream"
             STREAM_URL = "wss://testnet.binance.vision/ws"
-        
+
         class UsdMFutureTestnet:
             BASE_URL = "https://testnet.binancefuture.com/fapi/v1/listenKey"
             STREAM_URL = "wss://stream.binancefuture.com/ws"
-        
+
         class CoinMFutureTestnet:
             BASE_URL = "https://testnet.binancefuture.com/dapi/v1/listenKey"
             STREAM_URL = "wss://dstream.binancefuture.com/ws"
-            
+
     class Okx:
         LIVE = "wss://ws.okx.com:8443/ws"
         AWS = "wss://wsaws.okx.com:8443/ws"
         DEMO = "wss://wspap.okx.com:8443/ws"
-        
+
         # class Live:
         #     PUBLIC = "wss://ws.okx.com:8443/ws/v5/public"
         #     PRIVATE = "wss://ws.okx.com:8443/ws/v5/private"
@@ -115,7 +115,24 @@ class Url:
         #     BUSINESS = "wss://wspap.okx.com:8443/ws/v5/business"
 
 
-IntervalType = Literal["1s", "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"]
+IntervalType = Literal[
+    "1s",
+    "1m",
+    "3m",
+    "5m",
+    "15m",
+    "30m",
+    "1h",
+    "2h",
+    "4h",
+    "6h",
+    "8h",
+    "12h",
+    "1d",
+    "3d",
+    "1w",
+    "1M",
+]
 
 
 UrlType = Union[
@@ -136,7 +153,6 @@ UrlType = Union[
 ]
 
 
-
 class EventType(Enum):
     BOOKL1 = 0
     TRADE = 1
@@ -145,26 +161,23 @@ class EventType(Enum):
     FUNDING_RATE = 4
     INDEX_PRICE = 5
 
+
 class ExchangeType(Enum):
     BINANCE = 0
     OKX = 1
     BYBIT = 2
 
 
-
-
-
-
 class BinanceAccountType(Enum):
-    SPOT = 0
-    MARGIN = 1
-    ISOLATED_MARGIN = 2
-    USD_M_FUTURE = 3
-    COIN_M_FUTURE = 4
-    PORTFOLIO_MARGIN = 5
-    SPOT_TESTNET = 6
-    USD_M_FUTURE_TESTNET = 7
-    COIN_M_FUTURE_TESTNET = 8
+    SPOT = "SPOT"
+    MARGIN = "MARGIN"
+    ISOLATED_MARGIN = "ISOLATED_MARGIN"
+    USD_M_FUTURE = "USD_M_FUTURE"
+    COIN_M_FUTURE = "COIN_M_FUTURE"
+    PORTFOLIO_MARGIN = "PORTFOLIO_MARGIN"
+    SPOT_TESTNET = "SPOT_TESTNET"
+    USD_M_FUTURE_TESTNET = "USD_M_FUTURE_TESTNET"
+    COIN_M_FUTURE_TESTNET = "COIN_M_FUTURE_TESTNET"
 
 
 class OkxAccountType(Enum):
@@ -194,11 +207,9 @@ STREAM_URLS = {
     BinanceAccountType.SPOT_TESTNET: "wss://testnet.binance.vision/ws",
     BinanceAccountType.USD_M_FUTURE_TESTNET: "wss://stream.binancefuture.com/ws",
     BinanceAccountType.COIN_M_FUTURE_TESTNET: "wss://dstream.binancefuture.com/ws",
-    
     OkxAccountType.LIVE: "wss://ws.okx.com:8443/ws",
     OkxAccountType.AWS: "wss://wsaws.okx.com:8443/ws",
     OkxAccountType.DEMO: "wss://wspap.okx.com:8443/ws",
-    
     BybitAccountType.SPOT: "wss://stream.bybit.com/v5/public/spot",
     BybitAccountType.LINEAR: "wss://stream.bybit.com/v5/public/linear",
     BybitAccountType.INVERSE: "wss://stream.bybit.com/v5/public/inverse",
@@ -254,7 +265,6 @@ BINANCE_ENDPOINTS = {
         BinanceAccountType.USD_M_FUTURE_TESTNET: "/fapi/v1/listenKey",
         BinanceAccountType.COIN_M_FUTURE_TESTNET: "/dapi/v1/listenKey",
     },
-    
     BinanceEndpointsType.TRADING: {
         BinanceAccountType.SPOT: "/api/v3",
         BinanceAccountType.MARGIN: "/sapi/v1",
@@ -265,5 +275,5 @@ BINANCE_ENDPOINTS = {
         BinanceAccountType.SPOT_TESTNET: "/api/v3",
         BinanceAccountType.USD_M_FUTURE_TESTNET: "/fapi/v1",
         BinanceAccountType.COIN_M_FUTURE_TESTNET: "/dapi/v1",
-    }
+    },
 }

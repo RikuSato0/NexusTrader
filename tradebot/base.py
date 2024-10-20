@@ -624,7 +624,7 @@ class RestApi:
             data = await self._parse_response(response)
             response.raise_for_status()
 
-            self._log.info(
+            self._log.debug(
                 f"Request {method} {url} succeeded with status {response.status}, response: {data}"
             )
             return data
@@ -641,7 +641,7 @@ class RestApi:
             self._log.error(f"Request timed out for URL: {url}, response: {data}")
             raise
         except Exception as e:
-            self._log.exception(f"Unexpected error during request to {url}: {str(e)}")
+            self._log.error(f"Unexpected error during request to {url}: {str(e)}")
             raise
 
     async def get(self, url: str, **kwargs) -> Any:

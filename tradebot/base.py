@@ -21,7 +21,7 @@ from aiohttp.client_exceptions import ClientResponseError, ClientError
 
 
 from tradebot.log import SpdLog
-from tradebot.exceptions import OrderError
+from tradebot.exceptions import OrderError, ExchangeResponseError
 from picows import (
     ws_connect,
     WSFrame,
@@ -617,31 +617,26 @@ class RestApi:
             await self.init_session()
 
         try:
-            self._log.info(
-                f"Requesting method: {method}, url: {url} with kwargs: {kwargs}"
-            )
             response = await self._session.request(method, url, **kwargs)
             data = await self._parse_response(response)
             response.raise_for_status()
 
             self._log.debug(
-                f"Request {method} {url} succeeded with status {response.status}, response: {data}"
+                f"Request {method} {url} succeeded with status {response.status}, kwargs: {kwargs}"
             )
             return data
 
         except ClientResponseError as e:
-            self._log.error(
-                f"HTTP Error {e.status}: {e.message} for URL: {url}, response: {data}"
-            )
-            raise
+            self._log.error(f"ClientResponseError: {str(e)} for URL: {url}, kwargs: {kwargs}")
+            raise ExchangeResponseError(e.message, data, method, url)
         except ClientError as e:
-            self._log.error(f"Client Error: {str(e)} for URL: {url}, response: {data}")
+            self._log.error(f"ClientError: {str(e)} for URL: {url}, kwargs: {kwargs}")
             raise
         except asyncio.TimeoutError:
-            self._log.error(f"Request timed out for URL: {url}, response: {data}")
+            self._log.error(f"RequestTimeout for URL: {url}, kwargs: {kwargs}")
             raise
         except Exception as e:
-            self._log.error(f"Unexpected error during request to {url}: {str(e)}")
+            self._log.error(f"Exception: {str(e)} for URL: {url}, kwargs: {kwargs}")
             raise
 
     async def get(self, url: str, **kwargs) -> Any:

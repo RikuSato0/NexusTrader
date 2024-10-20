@@ -11,3 +11,19 @@ class OrderError(Exception):
 
     def __repr__(self):
         return self.__str__()
+
+class ExchangeResponseError(Exception):
+    def __init__(self, message, data, method, url):
+        self.data = data
+        self.method = method
+        self.url = url
+        
+        super().__init__(message)
+    
+    def __str__(self):
+        return f"Exchange {self.method} {self.url}: {self.data}"
+    
+    def __repr__(self):
+        return self.__str__()
+
+    

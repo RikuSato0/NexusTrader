@@ -603,7 +603,7 @@ class RestApi:
         else:
             return await response.text()
 
-    async def _request(self, method: str, url: str, **kwargs) -> Any:
+    async def request(self, method: str, url: str, **kwargs) -> Any:
         """
         Perform an HTTP request without using async context managers.
 
@@ -652,7 +652,7 @@ class RestApi:
         :param kwargs: Additional arguments for the request.
         :return: The response data.
         """
-        return await self._request("GET", url, **kwargs)
+        return await self.request("GET", url, **kwargs)
 
     async def post(self, url: str, **kwargs) -> Any:
         """
@@ -662,7 +662,7 @@ class RestApi:
         :param kwargs: Additional arguments for the request.
         :return: The response data.
         """
-        return await self._request("POST", url, **kwargs)
+        return await self.request("POST", url, **kwargs)
 
     async def put(self, url: str, **kwargs) -> Any:
         """
@@ -672,7 +672,7 @@ class RestApi:
         :param kwargs: Additional arguments for the request.
         :return: The response data.
         """
-        return await self._request("PUT", url, **kwargs)
+        return await self.request("PUT", url, **kwargs)
 
     async def delete(self, url: str, **kwargs) -> Any:
         """
@@ -682,4 +682,4 @@ class RestApi:
         :param kwargs: Additional arguments for the request.
         :return: The response data.
         """
-        return await self._request("DELETE", url, **kwargs)
+        return await self.request("DELETE", url, **kwargs)

@@ -43,7 +43,7 @@ from tradebot.base import (
 
 
 class BinanceRestApi(RestApi):
-    def __init__(self, api_key: str, secret: str, account_type: BinanceAccountType, **kwargs):
+    def __init__(self, account_type: BinanceAccountType, api_key: str = None, secret: str = None, **kwargs):
         self._api_key = api_key
         self._secret = secret
         self._account_type = account_type
@@ -62,17 +62,21 @@ class BinanceRestApi(RestApi):
     def _generate_signature(self, query: str) -> str:
         signature = hmac.new(self._secret.encode('utf-8'), query.encode('utf-8'), hashlib.sha256).hexdigest()
         return signature
+    
+    def _generate_endpoint(self, endpoint_type: BinanceEndpointsType) -> str:
+        return BINANCE_ENDPOINTS[endpoint_type][self._account_type]
 
-    async def _fetch(self, method: str, endpoint: str, params: Dict[str, Any] = {}, data: Dict[str, Any] = {}) -> Any:
+    async def _fetch(self, method: str, endpoint: str, params: Dict[str, Any] = {}, data: Dict[str, Any] = {}, signed: bool = False) -> Any:
         url = urljoin(self._base_url, endpoint)
         
         data["timestamp"] = time.time_ns() // 1_000_000
         query = "&".join([f"{k}={v}" for k, v in data.items()])
         
-        signature = self._generate_signature(query)
-        params["signature"] = signature
+        if signed:
+            signature = self._generate_signature(query)
+            params["signature"] = signature
         
-        return await self._request(method, url, params=params, data=data)
+        return await self.request(method, url, params=params, data=data)
     
     async def start_user_data_stream(self) -> Dict[str, Any]:
         endpoint = self._generate_endpoint(BinanceEndpointsType.USER_DATA_STREAM)
@@ -98,8 +102,7 @@ class BinanceRestApi(RestApi):
     
     
     
-    def _generate_endpoint(self, endpoint_type: BinanceEndpointsType) -> str:
-        return BINANCE_ENDPOINTS[endpoint_type][self._account_type]
+
     
     
         

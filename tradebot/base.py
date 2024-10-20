@@ -597,6 +597,12 @@ class RestApi:
         if self._session:
             await self._session.close()
 
+    async def _parse_response(self, response: aiohttp.ClientResponse) -> Any:
+        if "application/json" in response.headers.get("Content-Type", ""):
+            return await response.json()
+        else:
+            return await response.text()
+
     async def _request(self, method: str, url: str, **kwargs) -> Any:
         """
         Perform an HTTP request without using async context managers.
@@ -611,28 +617,28 @@ class RestApi:
             await self.init_session()
 
         try:
+            self._log.info(
+                f"Requesting method: {method}, url: {url} with kwargs: {kwargs}"
+            )
             response = await self._session.request(method, url, **kwargs)
+            data = await self._parse_response(response)
             response.raise_for_status()
 
-            content_type = response.headers.get("Content-Type", "")
-            if "application/json" in content_type:
-                data = await response.json()
-            else:
-                data = await response.text()
-
             self._log.info(
-                f"Request {method} {url} succeeded with status {response.status}."
+                f"Request {method} {url} succeeded with status {response.status}, response: {data}"
             )
             return data
 
         except ClientResponseError as e:
-            self._log.error(f"HTTP Error {e.status}: {e.message} for URL: {url}")
+            self._log.error(
+                f"HTTP Error {e.status}: {e.message} for URL: {url}, response: {data}"
+            )
             raise
         except ClientError as e:
-            self._log.error(f"Client Error: {str(e)} for URL: {url}")
+            self._log.error(f"Client Error: {str(e)} for URL: {url}, response: {data}")
             raise
         except asyncio.TimeoutError:
-            self._log.error(f"Request timed out for URL: {url}")
+            self._log.error(f"Request timed out for URL: {url}, response: {data}")
             raise
         except Exception as e:
             self._log.exception(f"Unexpected error during request to {url}: {str(e)}")

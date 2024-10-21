@@ -1,6 +1,6 @@
 import asyncio
 import orjson
-
+import time
 
 import aiohttp
 import aiosonic
@@ -691,3 +691,58 @@ class RestApi:
         :return: The response data.
         """
         return await self.request("DELETE", url, **kwargs)
+
+
+
+class Clock:
+
+    def __init__(self, tick_size: float = 1.0):
+        """
+        :param tick_size_s: Time interval of each tick in seconds (supports sub-second precision).
+        """
+        self._tick_size = tick_size  # Tick size in seconds
+        self._current_tick = (time.time() // self._tick_size) * self._tick_size
+        self._tick_callbacks: List[Callable[[float], None]] = []
+        self._started = False
+        self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
+
+    @property
+    def tick_size(self) -> float:
+        return self._tick_size
+
+    @property
+    def current_timestamp(self) -> float:
+        return self._current_tick  # Timestamp in seconds as float
+
+    def add_tick_callback(self, callback: Callable[[float], None]):
+        """
+        Register a callback to be called on each tick.
+        :param callback: Function to be called with current_tick as argument.
+        """
+        self._tick_callbacks.append(callback)
+
+    async def run(self):
+        if self._started:
+            raise RuntimeError("Clock is already running.")
+        self._started = True
+        try:
+            while True:
+                now = time.time()
+                next_tick_time = self._current_tick + self._tick_size
+                sleep_duration = next_tick_time - now
+                if sleep_duration > 0:
+                    await asyncio.sleep(sleep_duration)
+                else:
+                    # If we're behind schedule, skip to the next tick to prevent drift
+                    next_tick_time = now
+                self._current_tick = next_tick_time
+                for callback in self._tick_callbacks:
+                    try:
+                        callback(self.current_timestamp)  # Pass seconds as float
+                    except Exception:
+                        self._log.error("Error in tick callback.")
+        except asyncio.CancelledError:
+            self._log.info("Clock run cancelled.")
+        finally:
+            self._started = False
+

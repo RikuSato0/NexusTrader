@@ -1,6 +1,6 @@
 import asyncio
 import orjson
-
+import time
 
 import aiohttp
 import aiosonic
@@ -448,6 +448,19 @@ class WSManager(ABC):
     def disconnect(self):
         if self.connected:
             self._transport.disconnect()
+            
+    @abstractmethod
+    async def subscribe_book_l1(self, symbol: str):
+        pass
+    
+    @abstractmethod
+    async def subscribe_trade(self, symbol: str):
+        pass
+
+    @abstractmethod
+    async def subscribe_kline(self, symbol: str, interval: str):
+        pass
+    
 
     @abstractmethod
     def _callback(self, msg):
@@ -603,7 +616,7 @@ class RestApi:
         else:
             return await response.text()
 
-    async def _request(self, method: str, url: str, **kwargs) -> Any:
+    async def request(self, method: str, url: str, **kwargs) -> Any:
         """
         Perform an HTTP request without using async context managers.
 
@@ -647,7 +660,7 @@ class RestApi:
         :param kwargs: Additional arguments for the request.
         :return: The response data.
         """
-        return await self._request("GET", url, **kwargs)
+        return await self.request("GET", url, **kwargs)
 
     async def post(self, url: str, **kwargs) -> Any:
         """
@@ -657,7 +670,7 @@ class RestApi:
         :param kwargs: Additional arguments for the request.
         :return: The response data.
         """
-        return await self._request("POST", url, **kwargs)
+        return await self.request("POST", url, **kwargs)
 
     async def put(self, url: str, **kwargs) -> Any:
         """
@@ -667,7 +680,7 @@ class RestApi:
         :param kwargs: Additional arguments for the request.
         :return: The response data.
         """
-        return await self._request("PUT", url, **kwargs)
+        return await self.request("PUT", url, **kwargs)
 
     async def delete(self, url: str, **kwargs) -> Any:
         """
@@ -677,4 +690,54 @@ class RestApi:
         :param kwargs: Additional arguments for the request.
         :return: The response data.
         """
-        return await self._request("DELETE", url, **kwargs)
+        return await self.request("DELETE", url, **kwargs)
+
+
+
+class Clock:
+
+    def __init__(self, tick_size: float = 1.0):
+        """
+        :param tick_size_s: Time interval of each tick in seconds (supports sub-second precision).
+        """
+        self._tick_size = tick_size  # Tick size in seconds
+        self._current_tick = (time.time() // self._tick_size) * self._tick_size
+        self._tick_callbacks: List[Callable[[float], None]] = []
+        self._started = False
+        self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
+
+    @property
+    def tick_size(self) -> float:
+        return self._tick_size
+
+    @property
+    def current_timestamp(self) -> float:
+        return self._current_tick  # Timestamp in seconds as float
+
+    def add_tick_callback(self, callback: Callable[[float], None]):
+        """
+        Register a callback to be called on each tick.
+        :param callback: Function to be called with current_tick as argument.
+        """
+        self._tick_callbacks.append(callback)
+
+    async def run(self):
+        if self._started:
+            raise RuntimeError("Clock is already running.")
+        self._started = True
+        while True:
+            now = time.time()
+            next_tick_time = self._current_tick + self._tick_size
+            sleep_duration = next_tick_time - now
+            if sleep_duration > 0:
+                await asyncio.sleep(sleep_duration)
+            else:
+                # If we're behind schedule, skip to the next tick to prevent drift
+                next_tick_time = now
+            self._current_tick = next_tick_time
+            for callback in self._tick_callbacks:
+                try:
+                    callback(self.current_timestamp)  # Pass seconds as float
+                except Exception:
+                    self._log.error("Error in tick callback.")
+

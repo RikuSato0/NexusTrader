@@ -48,6 +48,8 @@ async def main():
             await asyncio.sleep(1)
     except asyncio.CancelledError:
         await exchange.close()
+        ws_usdm.disconnect()
+        ws_spot.disconnect()
 
 if __name__ == "__main__":
     asyncio.run(main())

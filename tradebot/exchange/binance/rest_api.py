@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 
 from tradebot.base import RestApi
 from tradebot.exchange.binance.constants import BASE_URLS, ENDPOINTS
-from tradebot.exchange.binance.constants import AccountType, EndpointsType
+from tradebot.exchange.binance.constants import BinanceAccountType, EndpointsType
 
 
 class BinanceRestApi(RestApi):
@@ -23,7 +23,7 @@ class BinanceRestApi(RestApi):
 
     def __init__(
         self,
-        account_type: AccountType,
+        account_type: BinanceAccountType,
         api_key: str = None,
         secret: str = None,
         **kwargs,
@@ -32,8 +32,8 @@ class BinanceRestApi(RestApi):
         self._secret = secret
         self._account_type = account_type
         self._base_url = BASE_URLS[account_type]
-        self._market = self._load_markets(account_type)
-        self._market_id = self._load_market_id()
+        # self._market = self._load_markets(account_type)
+        # self._market_id = self._load_market_id()
         super().__init__(**kwargs)
 
     def _get_headers(self) -> Dict[str, str]:
@@ -94,50 +94,50 @@ class BinanceRestApi(RestApi):
     def _generate_endpoint(self, endpoint_type: EndpointsType) -> str:
         return ENDPOINTS[endpoint_type][self._account_type]
 
-    def _load_markets(self, account_type: AccountType):
-        spot_markets = {}
-        usdm_markets = {}
-        coinm_markets = {}
-        market = ccxt.binance().load_markets()
-        for symbol, data in market.items():
-            if data["spot"]:
-                spot_markets[symbol] = data
-            elif data["linear"]:
-                usdm_markets[symbol] = data
-            elif data["inverse"]:
-                coinm_markets[symbol] = data
+    # def _load_markets(self, account_type: AccountType):
+    #     spot_markets = {}
+    #     usdm_markets = {}
+    #     coinm_markets = {}
+    #     market = ccxt.binance().load_markets()
+    #     for symbol, data in market.items():
+    #         if data["spot"]:
+    #             spot_markets[symbol] = data
+    #         elif data["linear"]:
+    #             usdm_markets[symbol] = data
+    #         elif data["inverse"]:
+    #             coinm_markets[symbol] = data
 
-        if (
-            account_type == AccountType.SPOT
-            or account_type == AccountType.SPOT_TESTNET
-            or account_type == AccountType.MARGIN
-            or account_type == AccountType.ISOLATED_MARGIN
-        ):
-            return spot_markets
-        elif (
-            account_type == AccountType.USD_M_FUTURE
-            or account_type == AccountType.USD_M_FUTURE_TESTNET
-        ):
-            return usdm_markets
-        elif (
-            account_type == AccountType.COIN_M_FUTURE
-            or account_type == AccountType.COIN_M_FUTURE_TESTNET
-        ):
-            return coinm_markets
-        elif account_type == AccountType.PORTFOLIO_MARGIN:
-            return market
+    #     if (
+    #         account_type == AccountType.SPOT
+    #         or account_type == AccountType.SPOT_TESTNET
+    #         or account_type == AccountType.MARGIN
+    #         or account_type == AccountType.ISOLATED_MARGIN
+    #     ):
+    #         return spot_markets
+    #     elif (
+    #         account_type == AccountType.USD_M_FUTURE
+    #         or account_type == AccountType.USD_M_FUTURE_TESTNET
+    #     ):
+    #         return usdm_markets
+    #     elif (
+    #         account_type == AccountType.COIN_M_FUTURE
+    #         or account_type == AccountType.COIN_M_FUTURE_TESTNET
+    #     ):
+    #         return coinm_markets
+    #     elif account_type == AccountType.PORTFOLIO_MARGIN:
+    #         return market
 
-    def _load_market_id(self):
-        market_id = {}
-        if not self.market:
-            raise ValueError(
-                "Market data not loaded, please call `load_markets()` first"
-            )
-        for _, v in self.market.items():
-            if v["subType"] == "linear":
-                market_id[f"{v['id']}_swap"] = v
-            elif v["type"] == "spot":
-                market_id[f"{v['id']}_spot"] = v
-            else:
-                market_id[v["id"]] = v
-        return market_id
+    # def _load_market_id(self):
+    #     market_id = {}
+    #     if not self.market:
+    #         raise ValueError(
+    #             "Market data not loaded, please call `load_markets()` first"
+    #         )
+    #     for _, v in self.market.items():
+    #         if v["subType"] == "linear":
+    #             market_id[f"{v['id']}_swap"] = v
+    #         elif v["type"] == "spot":
+    #             market_id[f"{v['id']}_spot"] = v
+    #         else:
+    #             market_id[v["id"]] = v
+    #     return market_id

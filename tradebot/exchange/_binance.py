@@ -43,13 +43,19 @@ from tradebot.base import (
 
 
 class BinanceRestApi(RestApi):
-    def __init__(self, account_type: BinanceAccountType, api_key: str = None, secret: str = None, **kwargs):
+    def __init__(
+        self,
+        account_type: BinanceAccountType,
+        api_key: str = None,
+        secret: str = None,
+        **kwargs,
+    ):
         self._api_key = api_key
         self._secret = secret
         self._account_type = account_type
         self._base_url = BASE_URLS[account_type]
         super().__init__(headers=self._get_headers(), **kwargs)
-        
+
     def _get_headers(self) -> Dict[str, str]:
         headers = {
             "Accept": "application/json",
@@ -58,26 +64,35 @@ class BinanceRestApi(RestApi):
         if self._api_key:
             headers["X-MBX-APIKEY"] = self._api_key
         return headers
-    
+
     def _generate_signature(self, query: str) -> str:
-        signature = hmac.new(self._secret.encode('utf-8'), query.encode('utf-8'), hashlib.sha256).hexdigest()
+        signature = hmac.new(
+            self._secret.encode("utf-8"), query.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
         return signature
-    
+
     def _generate_endpoint(self, endpoint_type: BinanceEndpointsType) -> str:
         return BINANCE_ENDPOINTS[endpoint_type][self._account_type]
 
-    async def _fetch(self, method: str, endpoint: str, params: Dict[str, Any] = {}, data: Dict[str, Any] = {}, signed: bool = False) -> Any:
+    async def _fetch(
+        self,
+        method: str,
+        endpoint: str,
+        params: Dict[str, Any] = {},
+        data: Dict[str, Any] = {},
+        signed: bool = False,
+    ) -> Any:
         url = urljoin(self._base_url, endpoint)
-        
+
         data["timestamp"] = time.time_ns() // 1_000_000
         query = "&".join([f"{k}={v}" for k, v in data.items()])
-        
+
         if signed:
             signature = self._generate_signature(query)
             params["signature"] = signature
-        
+
         return await self.request(method, url, params=params, data=data)
-    
+
     async def start_user_data_stream(self) -> Dict[str, Any]:
         endpoint = self._generate_endpoint(BinanceEndpointsType.USER_DATA_STREAM)
         return await self._fetch("POST", endpoint)
@@ -85,27 +100,15 @@ class BinanceRestApi(RestApi):
     async def keep_alive_user_data_stream(self, listen_key: str) -> Dict[str, Any]:
         endpoint = self._generate_endpoint(BinanceEndpointsType.USER_DATA_STREAM)
         return await self._fetch("PUT", endpoint, params={"listenKey": listen_key})
-    
+
     async def new_order(self, symbol: str, side: str, type: str, **kwargs):
         endpoint = self._generate_endpoint(BinanceEndpointsType.TRADING)
-        
-        endpoint = f"{endpoint}/order"
-        
-        params = {
-            "symbol": symbol,
-            "side": side,
-            "type": type,
-            **kwargs
-        }
-        
-        return await self._fetch("POST", endpoint, data=params)
-    
-    
-    
 
-    
-    
-        
+        endpoint = f"{endpoint}/order"
+
+        params = {"symbol": symbol, "side": side, "type": type, **kwargs}
+
+        return await self._fetch("POST", endpoint, data=params)
 
 
 class BinanceExchangeManager(ExchangeManager):
@@ -124,12 +127,12 @@ class BinanceExchangeManager(ExchangeManager):
                 "Market data not loaded, please call `load_markets()` first"
             )
         for _, v in self.market.items():
-            if v["subType"] == "linear":
-                self.market_id[f"{v['id']}_swap"] = v
-            elif v["type"] == "spot":
+            if v["type"] == "spot":
                 self.market_id[f"{v['id']}_spot"] = v
-            else:
-                self.market_id[v["id"]] = v
+            elif v["linear"]:
+                self.market_id[f"{v['id']}_linear"] = v
+            elif v["inverse"]:
+                self.market_id[f"{v['id']}_inverse"] = v
 
 
 class BinanceOrderManager(OrderManager):
@@ -367,6 +370,7 @@ class BinanceWSManager(WSManager):
         subscription_id = f"kline.{symbol}.{interval}"
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
+            await self.connect()
             id = time.time_ns() // 1_000_000
             payload = {
                 "method": "SUBSCRIBE",
@@ -382,6 +386,7 @@ class BinanceWSManager(WSManager):
         subscription_id = f"book_ticker.{symbol}"
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
+            await self.connect()
             id = time.time_ns() // 1_000_000
             payload = {
                 "method": "SUBSCRIBE",
@@ -397,6 +402,7 @@ class BinanceWSManager(WSManager):
         subscription_id = f"trade.{symbol}"
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
+            await self.connect()
             id = time.time_ns() // 1_000_000
             payload = {
                 "method": "SUBSCRIBE",
@@ -414,6 +420,7 @@ class BinanceWSManager(WSManager):
         subscription_id = f"mark_price.{symbol}"
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
+            await self.connect()
             id = time.time_ns() // 1_000_000
             payload = {
                 "method": "SUBSCRIBE",
@@ -424,11 +431,12 @@ class BinanceWSManager(WSManager):
             self._send(payload)
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
-    
+
     async def subscribe_user_data_stream(self):
         subscription_id = f"user_data_stream.{self._account_type}"
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
+            await self.connect()
             listen_key = await self._get_listen_key()
             id = time.time_ns() // 1_000_000
             payload = {
@@ -440,8 +448,7 @@ class BinanceWSManager(WSManager):
             self._send(payload)
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
-    
-    
+
     async def _get_listen_key(self):
         try:
             res = await self._rest_api.start_user_data_stream()
@@ -449,8 +456,6 @@ class BinanceWSManager(WSManager):
         except Exception as e:
             self._log.error(f"Failed to get listen key: {str(e)}")
             return None
-        
-        
 
     def _callback(self, msg):
         # self._log.info(str(msg))

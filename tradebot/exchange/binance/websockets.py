@@ -1,43 +1,70 @@
 import time
-
+import asyncio
 
 from typing import Literal
 from typing import Any, Dict
-
+from decimal import Decimal
 
 from asynciolimiter import Limiter
 
 
-from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
+from tradebot.types import (
+    BookL1,
+    Trade,
+    Kline,
+    MarkPrice,
+    FundingRate,
+    IndexPrice,
+    Order,
+)
 from tradebot.entity import EventSystem
 from tradebot.base import WSManager
+from tradebot.constants import EventType
 
 
 from tradebot.exchange.binance.rest_api import BinanceRestApi
 from tradebot.exchange.binance.constants import STREAM_URLS
-from tradebot.exchange.binance.constants import AccountType, EventType
+from tradebot.exchange.binance.constants import BinanceAccountType
 
 
 class BinanceWSManager(WSManager):
-    def __init__(self, account_type: AccountType, api_key: str = None, secret: str = None):
+    def __init__(
+        self,
+        account_type: BinanceAccountType,
+        market: Dict[str, Any],
+        market_id: Dict[str, Any],
+        api_key: str = None,
+        secret: str = None,
+    ):
         url = STREAM_URLS[account_type]
         super().__init__(url, limiter=Limiter(3 / 1))
         self._get_market_type(account_type)
         self._account_type = account_type
-        self._rest_api = BinanceRestApi(account_type=account_type, api_key=api_key, secret=secret)
+        self._rest_api = BinanceRestApi(
+            account_type=account_type, api_key=api_key, secret=secret
+        )
         self._exchange_id = "binance"
-        self._market_id = self._rest_api.market_id
+        self._market_id = market_id
+        self._market = market
 
-    def _get_market_type(self, account_type: AccountType):
-        if account_type == AccountType.SPOT or account_type == AccountType.SPOT_TESTNET:
+    def _get_market_type(self, account_type: BinanceAccountType):
+        if (
+            account_type == BinanceAccountType.SPOT
+            or account_type == BinanceAccountType.SPOT_TESTNET
+            or account_type == BinanceAccountType.MARGIN
+            or account_type == BinanceAccountType.ISOLATED_MARGIN
+        ):
             self._market_type = "_spot"
         elif (
-            account_type == AccountType.USD_M_FUTURE
-            or account_type == AccountType.USD_M_FUTURE_TESTNET
+            account_type == BinanceAccountType.USD_M_FUTURE
+            or account_type == BinanceAccountType.USD_M_FUTURE_TESTNET
         ):
-            self._market_type = "_swap"
-        else:
-            self._market_type = ""
+            self._market_type = "_linear"
+        elif (
+            account_type == BinanceAccountType.COIN_M_FUTURE
+            or account_type == BinanceAccountType.COIN_M_FUTURE_TESTNET
+        ):
+            self._market_type = "_inverse"
 
     async def subscribe_kline(
         self,
@@ -61,6 +88,8 @@ class BinanceWSManager(WSManager):
             "1M",
         ],
     ):
+        market = self._market.get(symbol, None)
+        symbol = market["id"] if market else symbol
         subscription_id = f"kline.{symbol}.{interval}"
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
@@ -75,7 +104,9 @@ class BinanceWSManager(WSManager):
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
 
-    async def subscribe_book_ticker(self, symbol):
+    async def subscribe_book_l1(self, symbol):
+        market = self._market.get(symbol, None)
+        symbol = market["id"] if market else symbol
         subscription_id = f"book_ticker.{symbol}"
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
@@ -91,6 +122,8 @@ class BinanceWSManager(WSManager):
             self._log.info(f"Already subscribed to {subscription_id}")
 
     async def subscribe_trade(self, symbol):
+        market = self._market.get(symbol, None)
+        symbol = market["id"] if market else symbol
         subscription_id = f"trade.{symbol}"
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
@@ -106,6 +139,8 @@ class BinanceWSManager(WSManager):
             self._log.info(f"Already subscribed to {subscription_id}")
 
     async def subscribe_mark_price(self, symbol, interval: Literal["1s", "3s"] = "1s"):
+        market = self._market.get(symbol, None)
+        symbol = market["id"] if market else symbol
         if self._market_type == "_spot":
             raise ValueError("Spot market doesn't have mark price")
         subscription_id = f"mark_price.{symbol}"
@@ -127,6 +162,7 @@ class BinanceWSManager(WSManager):
         if subscription_id not in self._subscriptions:
             await self._limiter.wait()
             listen_key = await self._get_listen_key()
+            asyncio.create_task(self._keep_alive_user_data_stream(listen_key))
             id = time.time_ns() // 1_000_000
             payload = {
                 "method": "SUBSCRIBE",
@@ -146,8 +182,35 @@ class BinanceWSManager(WSManager):
             self._log.error(f"Failed to get listen key: {str(e)}")
             return None
 
+    async def _keep_alive_user_data_stream(
+        self, listen_key: str, interval: int = 20, max_retry: int = 3
+    ):
+        retry_count = 0
+        while retry_count < max_retry:
+            await asyncio.sleep(60 * interval)
+            try:
+                await self._rest_api.keep_alive_user_data_stream(listen_key)
+                retry_count = 0  # Reset retry count on successful keep-alive
+            except Exception as e:
+                self._log.error(f"Failed to keep alive listen key: {str(e)}")
+                retry_count += 1
+                if retry_count < max_retry:
+                    await asyncio.sleep(5)
+                else:
+                    self._log.error(
+                        f"Max retries ({max_retry}) reached. Stopping keep-alive attempts."
+                    )
+                    break
+
     def _callback(self, msg):
-        # self._log.info(str(msg))
+        # if self._is_user_data_stream:
+        #     match msg["e"]:
+        #         case "ORDER_TRADE_UPDATE":
+        #             self._parse_order_trade_update(msg)
+        #         case "executionReport":
+        #             self._parse_execution_report(msg)
+        #     return
+
         if "e" in msg:
             match msg["e"]:
                 case "trade":
@@ -158,11 +221,199 @@ class BinanceWSManager(WSManager):
                     self._parse_kline(msg)
                 case "markPriceUpdate":
                     self._parse_mark_price(msg)
+                case "ORDER_TRADE_UPDATE":
+                    self._parse_order_trade_update(msg)
+                case "executionReport":
+                    self._parse_execution_report(msg)
 
         elif "u" in msg:
-            self._parse_book_ticker(
-                msg
-            )  # spot book ticker doesn't have "e" key. FUCK BINANCE
+            # spot book ticker doesn't have "e" key. FUCK BINANCE
+            self._parse_book_ticker(msg)
+
+    def _parse_order_trade_update(self, res: Dict[str, Any]) -> Order:
+        """
+        {
+            "e": "ORDER_TRADE_UPDATE", // Event type
+            "T": 1727352962757,  // Transaction time
+            "E": 1727352962762, // Event time
+            "fs": "UM", // Event business unit. 'UM' for USDS-M futures and 'CM' for COIN-M futures
+            "o": {
+                "s": "NOTUSDT", // Symbol
+                "c": "c-11WLU7VP1727352880uzcu2rj4ss0i", // Client order ID
+                "S": "SELL", // Side
+                "o": "LIMIT", // Order type
+                "f": "GTC", // Time in force
+                "q": "5488", // Original quantity
+                "p": "0.0084830", // Original price
+                "ap": "0", // Average price
+                "sp": "0", // Ignore
+                "x": "NEW", // Execution type
+                "X": "NEW", // Order status
+                "i": 4968510801, // Order ID
+                "l": "0", // Order last filled quantity
+                "z": "0", // Order filled accumulated quantity
+                "L": "0", // Last filled price
+                "n": "0", // Commission, will not be returned if no commission
+                "N": "USDT", // Commission asset, will not be returned if no commission
+                "T": 1727352962757, // Order trade time
+                "t": 0, // Trade ID
+                "b": "0", // Bids Notional
+                "a": "46.6067521", // Ask Notional
+                "m": false, // Is this trade the maker side?
+                "R": false, // Is this reduce only
+                "ps": "BOTH", // Position side
+                "rp": "0", // Realized profit of the trade
+                "V": "EXPIRE_NONE", // STP mode
+                "pm": "PM_NONE",
+                "gtd": 0
+            }
+        }
+        """
+        event_data = res["o"]
+        event_unit = res.get("fs", "")
+
+        # Only portfolio margin has "UM" and "CM" event business unit
+        if event_unit == "UM":
+            id = event_data["s"] + "_linear"
+            market = self._market_id[id]
+        elif event_unit == "CM":
+            id = event_data["s"] + "_inverse"
+            market = self._market_id[id]
+        else:
+            id = event_data["s"] + self._market_type
+            market = self._market_id[id]
+
+        # we use the last filled quantity to calculate the cost, instead of the accumulated filled quantity
+        if (type := event_data["o"].lower()) == "market":
+            cost = float(event_data.get("l", "0")) * float(event_data.get("ap", "0"))
+        elif type == "limit":
+            price = float(event_data.get("ap", "0")) or float(
+                event_data.get("p", "0")
+            )  # if average price is 0 or empty, use price
+            cost = float(event_data.get("l", "0")) * price
+
+        order = Order(
+            raw=event_data,
+            success=True,
+            exchange="binance",
+            id=event_data.get("i", None),
+            client_order_id=event_data.get("c", None),
+            timestamp=event_data.get("T", None),
+            symbol=market["symbol"],
+            type=type,
+            side=event_data.get("S", "").lower(),
+            status=event_data.get("X", "").lower(),
+            price=event_data.get("p", None),
+            average=event_data.get("ap", None),
+            last_filled_price=event_data.get("L", None),
+            amount=event_data.get("q", None),
+            filled=event_data.get("z", None),
+            last_filled=event_data.get("l", None),
+            remaining=Decimal(event_data["q"]) - Decimal(event_data["z"]),
+            fee=event_data.get("n", None),
+            fee_currency=event_data.get("N", None),
+            cost=cost,
+            last_trade_timestamp=event_data.get("T", None),
+            reduce_only=event_data.get("R", None),
+            position_side=event_data.get("ps", "").lower(),
+            time_in_force=event_data.get("f", None),
+        )
+        # order status can be "new", "partially_filled", "filled", "canceled", "expired", "failed"
+        EventSystem.emit(order.status, order)
+
+    def _parse_execution_report(self, event_data: Dict[str, Any]) -> Order:
+        """
+        {
+            "e": "executionReport", // Event type
+            "E": 1727353057267, // Event time
+            "s": "ORDIUSDT", // Symbol
+            "c": "c-11WLU7VP2rj4ss0i", // Client order ID
+            "S": "BUY", // Side
+            "o": "MARKET", // Order type
+            "f": "GTC", // Time in force
+            "q": "0.50000000", // Order quantity
+            "p": "0.00000000", // Order price
+            "P": "0.00000000", // Stop price
+            "g": -1, // Order list id
+            "x": "TRADE", // Execution type
+            "X": "PARTIALLY_FILLED", // Order status
+            "i": 2233880350, // Order ID
+            "l": "0.17000000", // last executed quantity
+            "z": "0.17000000", // Cumulative filled quantity
+            "L": "36.88000000", // Last executed price
+            "n": "0.00000216", // Commission amount
+            "N": "BNB", // Commission asset
+            "T": 1727353057266, // Transaction time
+            "t": 105069149, // Trade ID
+            "w": false, // Is the order on the book?
+            "m": false, // Is this trade the maker side?
+            "O": 1727353057266, // Order creation time
+            "Z": "6.26960000", // Cumulative quote asset transacted quantity
+            "Y": "6.26960000", // Last quote asset transacted quantity (i.e. lastPrice * lastQty)
+            "V": "EXPIRE_MAKER", // Self trade prevention Mode
+            "I": 1495839281094 // Ignore
+        }
+
+        # Example of an execution report event for a partially filled market buy order
+        {
+            "e": "executionReport", // Event type
+            "E": 1727353057267, // Event time
+            "s": "ORDIUSDT", // Symbol
+            "c": "c-11WLU7VP2rj4ss0i", // Client order ID
+            "S": "BUY", // Side
+            "o": "MARKET", // Order type
+            "f": "GTC", // Time in force
+            "q": "0.50000000", // Order quantity
+            "p": "0.00000000", // Order price
+            "P": "0.00000000", // Stop price
+            "g": -1, // Order list id
+            "x": "TRADE", // Execution type
+            "X": "PARTIALLY_FILLED", // Order status
+            "i": 2233880350, // Order ID
+            "l": "0.17000000", // last executed quantity
+            "z": "0.34000000", // Cumulative filled quantity
+            "L": "36.88000000", // Last executed price
+            "n": "0.00000216", // Commission amount
+            "N": "BNB", // Commission asset
+            "T": 1727353057266, // Transaction time
+            "t": 105069150, // Trade ID
+            "w": false, // Is the order on the book?
+            "m": false, // Is this trade the maker side?
+            "O": 1727353057266, // Order creation time
+            "Z": "12.53920000", // Cumulative quote asset transacted quantity
+            "Y": "6.26960000", // Last quote asset transacted quantity (i.e. lastPrice * lastQty)
+            "V": "EXPIRE_MAKER", // Self trade prevention Mode
+            "I": 1495839281094 // Ignore
+        }
+        """
+        id = event_data["s"] + self._market_type
+        market = self._market_id[id]
+        order = Order(
+            raw=event_data,
+            success=True,
+            exchange="binance",
+            id=event_data.get("i", None),
+            client_order_id=event_data.get("c", None),
+            timestamp=event_data.get("T", None),
+            symbol=market["symbol"],
+            type=event_data.get("o", "").lower(),
+            side=event_data.get("S", "").lower(),
+            status=event_data.get("X", "").lower(),
+            price=event_data.get("p", None),
+            average=event_data.get("ap", None),
+            last_filled_price=event_data.get("L", None),
+            amount=event_data.get("q", None),
+            filled=event_data.get("z", None),
+            last_filled=event_data.get("l", None),
+            remaining=Decimal(event_data.get("q", "0"))
+            - Decimal(event_data.get("z", "0")),
+            fee=event_data.get("n", None),
+            fee_currency=event_data.get("N", None),
+            cost=event_data.get("Y", None),
+            last_trade_timestamp=event_data.get("T", None),
+            time_in_force=event_data.get("f", None),
+        )
+        EventSystem.emit(order.status, order)
 
     def _parse_kline(self, res: Dict[str, Any]) -> Kline:
         """

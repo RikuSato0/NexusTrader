@@ -1,5 +1,5 @@
 import asyncio
-from tradebot.types import BookL1
+from tradebot.types import BookL1, Trade
 from tradebot.constants import WSType
 from tradebot.strategy import Strategy
 from tradebot.exchange.binance import BinanceWSManager, BinanceAccountType, BinanceExchangeManager
@@ -11,18 +11,21 @@ class Demo(Strategy):
         super().__init__()
         self.market = {}
     
-    def on_book_l1(self, book_l1: BookL1):
-        self.market[book_l1.symbol] = book_l1
+    # def on_book_l1(self, book_l1: BookL1):
+    #     self.market[book_l1.symbol] = book_l1
     
-    # def on_trade(self, trade):
-    #     print(trade)
+    def on_trade(self, trade: Trade):
+        self.market[trade.symbol] = trade
     
     # def on_kline(self, kline):
     #     print(kline)
     
     def on_tick(self, tick):
-        print(self.market.get("BTC/USDT", None))
-        print(self.market.get("BTC/USDT:USDT", None))
+        spot = self.market.get("BTC/USDT", None)
+        linear = self.market.get("BTC/USDT:USDT", None)
+        if spot and linear:
+            ratio = linear.price / spot.price - 1
+            print(f"ratio: {ratio}")
 
 
 async def main():
@@ -49,11 +52,11 @@ async def main():
         demo.add_ws_manager(WSType.BINANCE_SPOT, ws_spot)
         demo.add_ws_manager(WSType.BINANCE_USD_M_FUTURE, ws_usdm)
         
-        await demo.subscribe_book_l1(WSType.BINANCE_SPOT, "BTC/USDT")
-        # await demo.subscribe_trade(WSType.BINANCE_SPOT, "BTC/USDT")
+        # await demo.subscribe_book_l1(WSType.BINANCE_SPOT, "BTC/USDT")
+        await demo.subscribe_trade(WSType.BINANCE_SPOT, "BTC/USDT")
         # await demo.subscribe_kline(WSType.BINANCE_SPOT, "BTC/USDT", "1m")
-        await demo.subscribe_book_l1(WSType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT")
-        # await demo.subscribe_trade(WSType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT")
+        # await demo.subscribe_book_l1(WSType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT")
+        await demo.subscribe_trade(WSType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT")
         # await demo.subscribe_kline(WSType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT", "1m")
         
         await demo._clock.run()

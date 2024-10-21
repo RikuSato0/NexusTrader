@@ -725,24 +725,19 @@ class Clock:
         if self._started:
             raise RuntimeError("Clock is already running.")
         self._started = True
-        try:
-            while True:
-                now = time.time()
-                next_tick_time = self._current_tick + self._tick_size
-                sleep_duration = next_tick_time - now
-                if sleep_duration > 0:
-                    await asyncio.sleep(sleep_duration)
-                else:
-                    # If we're behind schedule, skip to the next tick to prevent drift
-                    next_tick_time = now
-                self._current_tick = next_tick_time
-                for callback in self._tick_callbacks:
-                    try:
-                        callback(self.current_timestamp)  # Pass seconds as float
-                    except Exception:
-                        self._log.error("Error in tick callback.")
-        except asyncio.CancelledError:
-            self._log.info("Clock run cancelled.")
-        finally:
-            self._started = False
+        while True:
+            now = time.time()
+            next_tick_time = self._current_tick + self._tick_size
+            sleep_duration = next_tick_time - now
+            if sleep_duration > 0:
+                await asyncio.sleep(sleep_duration)
+            else:
+                # If we're behind schedule, skip to the next tick to prevent drift
+                next_tick_time = now
+            self._current_tick = next_tick_time
+            for callback in self._tick_callbacks:
+                try:
+                    callback(self.current_timestamp)  # Pass seconds as float
+                except Exception:
+                    self._log.error("Error in tick callback.")
 

@@ -108,7 +108,7 @@ class BinanceRestApi(RestApi):
 
         params = {"symbol": symbol, "side": side, "type": type, **kwargs}
 
-        return await self._fetch("POST", endpoint, data=params)
+        return await self._fetch("POST", endpoint, data=params, signed=True)
 
 
 class BinanceExchangeManager(ExchangeManager):

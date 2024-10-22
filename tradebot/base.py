@@ -641,7 +641,7 @@ class RestApi:
 
         except ClientResponseError as e:
             self._log.error(f"ClientResponseError: {str(e)} for URL: {url}, kwargs: {kwargs}")
-            raise ExchangeResponseError(e.message, data, method, url)
+            raise ExchangeResponseError(e.message, data, method, url) from None
         except ClientError as e:
             self._log.error(f"ClientError: {str(e)} for URL: {url}, kwargs: {kwargs}")
             raise

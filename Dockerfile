@@ -15,9 +15,8 @@ WORKDIR /app
 
 RUN git clone git@github.com:RiverTrading/tradebot-pro.git
 
-WORKDIR /app/tradebot
+WORKDIR /app/tradebot-pro
 
-RUN mkdir .keys && \
-    touch .keys/config.cfg 
-
+RUN touch .keys/config.cfg 
+    
 RUN pip install --no-cache-dir -r requirements.txt

@@ -93,5 +93,15 @@ class OkxWSManager(WSManager):
         pass
     
     def _callback(self, msg):
-        print(msg)
+        if 'event' in msg:
+            if msg['event'] == 'error':
+                self._log.error(str(msg))
+            elif msg['event'] == 'subscribe':
+                pass
+            elif msg['event'] == 'login':
+                self._log.info(f"Login successful: {msg}")
+        elif 'arg' in msg:
+            pass
+            
+            
             

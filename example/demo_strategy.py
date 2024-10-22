@@ -59,7 +59,7 @@ async def main():
         await demo.subscribe_trade(WSType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT")
         # await demo.subscribe_kline(WSType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT", "1m")
         
-        await demo._clock.run()
+        await demo.run()
         
     except asyncio.CancelledError:
         await exchange.close()

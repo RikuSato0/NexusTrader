@@ -27,6 +27,9 @@ class Strategy:
     async def subscribe_kline(self, ws_type: WSType, symbol: str, interval: str):
         await self._ws_manager[ws_type].subscribe_kline(symbol, interval)
     
+    async def run(self):
+        await self._clock.run()
+    
     def _on_trade(self, trade: Trade):
         if hasattr(self, "on_trade"):
             self.on_trade(trade)
@@ -42,3 +45,5 @@ class Strategy:
     def _on_tick(self, tick):
         if hasattr(self, "on_tick"):
             self.on_tick(tick)
+    
+    

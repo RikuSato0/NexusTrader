@@ -1,7 +1,7 @@
 import asyncio
-import orjson
 import time
 
+import orjson
 import aiohttp
 import aiosonic
 import ccxt.pro as ccxtpro
@@ -433,10 +433,7 @@ class WSManager(ABC):
     def _send(self, payload: dict):
         self._transport.send(WSMsgType.TEXT, orjson.dumps(payload))
 
-    async def _resubscribe(self):
-        for _, payload in self._subscriptions.items():
-            await self._limiter.wait()
-            self._send(payload)
+
 
     async def _msg_handler(self, queue: asyncio.Queue):
         while True:
@@ -461,7 +458,10 @@ class WSManager(ABC):
     async def subscribe_kline(self, symbol: str, interval: str):
         pass
     
-
+    @abstractmethod
+    async def _resubscribe(self):
+        pass
+    
     @abstractmethod
     def _callback(self, msg):
         pass
@@ -695,7 +695,6 @@ class RestApi:
 
 
 class Clock:
-
     def __init__(self, tick_size: float = 1.0):
         """
         :param tick_size_s: Time interval of each tick in seconds (supports sub-second precision).
@@ -712,7 +711,7 @@ class Clock:
 
     @property
     def current_timestamp(self) -> float:
-        return self._current_tick  # Timestamp in seconds as float
+        return int(self._current_tick)  # Timestamp in seconds 
 
     def add_tick_callback(self, callback: Callable[[float], None]):
         """
@@ -737,7 +736,7 @@ class Clock:
             self._current_tick = next_tick_time
             for callback in self._tick_callbacks:
                 try:
-                    callback(self.current_timestamp)  # Pass seconds as float
+                    callback(self.current_timestamp)  
                 except Exception:
                     self._log.error("Error in tick callback.")
 

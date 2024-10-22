@@ -4,7 +4,7 @@ import uvloop
 from pyinstrument import Profiler
 
 
-from tradebot.exchange import OkxWebsocketManager
+from tradebot.exchange._okx import OkxWebsocketManager
 from tradebot.constants import Url
 
 
@@ -32,7 +32,7 @@ async def main():
         # Base url: "wss://wspap.okx.com:8443/ws"
         
         okx = OkxWebsocketManager(url=Url.Okx.LIVE)
-        await okx.subscribe_order_book("BTC-USDT-SWAP", channel="bbo-tbt", callback=cb)
+        await okx.subscribe_order_book("BTC-USDT", channel="bbo-tbt", callback=cb)
         while True:
             await asyncio.sleep(1)
     except asyncio.CancelledError:

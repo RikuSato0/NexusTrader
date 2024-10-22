@@ -201,7 +201,12 @@ class BinanceWSManager(WSManager):
                         f"Max retries ({max_retry}) reached. Stopping keep-alive attempts."
                     )
                     break
-
+    
+    async def _resubscribe(self):
+        for _, payload in self._subscriptions.items():
+            await self._limiter.wait()
+            self._send(payload)
+    
     def _callback(self, msg):
         # if self._is_user_data_stream:
         #     match msg["e"]:

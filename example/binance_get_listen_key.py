@@ -1,7 +1,7 @@
 import asyncio
 
 from tradebot.constants import CONFIG
-from tradebot.exchange.binance import BinanceRestApi
+from tradebot.exchange._binance import BinanceRestApi
 from tradebot.constants import BinanceAccountType
 
 

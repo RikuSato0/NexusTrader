@@ -140,7 +140,7 @@ class BinanceWSManager(WSManager):
 
     async def subscribe_mark_price(self, symbol, interval: Literal["1s", "3s"] = "1s"):
         market = self._market.get(symbol, None)
-        symbol = market["id"] if market else symbol
+        symbol = market["id"] if market else symbol # map ccxt symbol to binance symbol 
         if self._market_type == "_spot":
             raise ValueError("Spot market doesn't have mark price")
         subscription_id = f"mark_price.{symbol}"
@@ -487,7 +487,7 @@ class BinanceWSManager(WSManager):
         }
         """
         id = res["s"] + self._market_type
-        market = self._market_id[id]
+        market = self._market_id[id] # map exchange id to ccxt symbol
 
         trade = Trade(
             exchange=self._exchange_id,

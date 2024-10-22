@@ -17,7 +17,7 @@ async def main():
         
         await ws_manager.connect()
         
-        await ws_manager.subscribe_book_l1(symbol="BTC/USDT")
+        await ws_manager.subscribe_trade(symbol="BTC/USDT:USDT")
         
         while True:
             await asyncio.sleep(1)

@@ -377,7 +377,7 @@ class WSClient(WSListener):
 
 
 class WSManager(ABC):
-    def __init__(self, url: str, limiter: Limiter):
+    def __init__(self, url: str, limiter: Limiter, handler: Callable[..., Any]):
         self._url = url
         self._reconnect_interval = 0.2  # Reconnection interval in seconds
         self._ping_idle_timeout = 2
@@ -389,6 +389,7 @@ class WSManager(ABC):
         self._msg_handler_task = None
         self._connection_handler_task = None
         self._encoder = msgspec.json.Encoder()
+        self._callback = handler
         self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
 
     @property
@@ -450,24 +451,20 @@ class WSManager(ABC):
         if self.connected:
             self._transport.disconnect()
             
-    @abstractmethod
-    async def subscribe_book_l1(self, symbol: str):
-        pass
+    # @abstractmethod
+    # async def subscribe_book_l1(self, symbol: str):
+    #     pass
     
-    @abstractmethod
-    async def subscribe_trade(self, symbol: str):
-        pass
+    # @abstractmethod
+    # async def subscribe_trade(self, symbol: str):
+    #     pass
 
-    @abstractmethod
-    async def subscribe_kline(self, symbol: str, interval: str):
-        pass
+    # @abstractmethod
+    # async def subscribe_kline(self, symbol: str, interval: str):
+    #     pass
     
     @abstractmethod
     async def _resubscribe(self):
-        pass
-    
-    @abstractmethod
-    def _callback(self, msg):
         pass
 
 

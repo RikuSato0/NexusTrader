@@ -1,7 +1,6 @@
 import json
 import time
 from statistics import mean, stdev
-import pickle
 import orjson
 import msgspec
 
@@ -19,21 +18,9 @@ class User(msgspec.Struct):
 
 
 def generate_test_data():
-    # return [
-    #     json.dumps(
-    #         {
-    #             "id": i,
-    #             "name": f"User{i}",
-    #             "email": f"user{i}@example.com",
-    #             "age": 20 + (i % 50),
-    #             "is_active": i % 2 == 0,
-    #             "score": round(i / 10, 2),
-    #         }
-    #     )
-    #     for i in range(n)
-    # ]
-    with open("benchmark/test_data/data.pickle", "rb") as f:
-        data = pickle.load(f)
+    with open("benchmark/test_data/data.json", "rb") as f:
+        data = orjson.loads(f.read())
+
     return data
 
 
@@ -98,7 +85,7 @@ def test1():
 
 
 if __name__ == "__main__":
-    N_ITERATIONS = 200
+    N_ITERATIONS = 20
 
     print(
         f"LOAD_WITH_FORMAT: {LOAD_WITH_FORMAT}, Benchmarking with {N_ITERATIONS} iterations:"

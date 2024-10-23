@@ -4,6 +4,7 @@ import asyncio
 from typing import Literal
 from typing import Any, Dict
 from decimal import Decimal
+from typing import Callable
 
 from asynciolimiter import Limiter
 
@@ -24,6 +25,46 @@ from tradebot.constants import EventType
 
 from tradebot.exchange.okx.constants import STREAM_URLS
 from tradebot.exchange.okx.constants import OkxAccountType
+
+
+class OkxWsClient(WSManager):
+    def __init__(self, account_type: OkxAccountType, handler: Callable[..., Any]):
+        url = f"{STREAM_URLS[account_type]}/v5/public"
+        super().__init__(url, limiter=Limiter(2 / 1), handler=handler)
+
+    async def _subscribe(self, params: dict, subscription_id: str):
+        # into connector
+        # market = self._market.get(symbol, None)
+        # symbol = market["id"] if market else symbol
+        # subscription_id = f"{channel}.{symbol}"
+
+        if subscription_id not in self._subscriptions:
+            await self.connect()
+            await self._limiter.wait()
+            payload = {
+                "op": "subscribe",
+                "args": [params],
+            }
+            self._subscriptions[subscription_id] = payload
+            self._send(payload)
+        else:
+            print(f"Already subscribed to {subscription_id}")
+
+    async def subscribe_book_l1(self, symbol: str):
+        params = {"channel": "bbo-tbt", "instId": symbol}
+        subscription_id = f"book_l1.{symbol}"
+        await self._subscribe(params, subscription_id)
+
+    async def subscribe_trade(self, symbol: str):
+        params = {"channel": "trades", "instId": symbol}
+        subscription_id = f"trade.{symbol}"
+        await self._subscribe(params, subscription_id)
+
+    async def subscribe_kline(self, symbol: str, interval: str):
+        pass
+
+    async def _resubscribe(self):
+        pass
 
 
 class OkxWSManager(WSManager):

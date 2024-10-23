@@ -1,6 +1,6 @@
 import asyncio
 from tradebot.types import Trade
-from tradebot.constants import WSType
+from tradebot.constants import PublicConnectorType
 from tradebot.strategy import Strategy
 from tradebot.exchange.okx import OkxAccountType, OkxExchangeManager
 from tradebot.exchange.okx.connector import OkxPublicConnector
@@ -28,16 +28,16 @@ async def main():
         await exchange.load_markets()  # get `market` and `market_id` data
 
         okx_conn = OkxPublicConnector(
-            OkxAccountType.DEMO,
+            OkxAccountType.LIVE,
             exchange.market,
             exchange.market_id,
         )
 
         demo = Demo()
-        demo.add_ws_manager(WSType.OKX_DEMO, okx_conn)
+        demo.add_public_connector(PublicConnectorType.OKX_LIVE, okx_conn)
 
-        await demo.subscribe_trade(WSType.OKX_DEMO, "BTC/USDT")
-        await demo.subscribe_trade(WSType.OKX_DEMO, "BTC/USDT:USDT")
+        await demo.subscribe_trade(PublicConnectorType.OKX_LIVE, "BTC/USDT")
+        await demo.subscribe_trade(PublicConnectorType.OKX_LIVE, "BTC/USDT:USDT")
 
         await demo.run()
 

@@ -1,7 +1,7 @@
 import json
 import time
 from statistics import mean, stdev
-
+import pickle
 import orjson
 import msgspec
 
@@ -18,20 +18,23 @@ class User(msgspec.Struct):
     score: float
 
 
-def generate_test_data(n):
-    return [
-        json.dumps(
-            {
-                "id": i,
-                "name": f"User{i}",
-                "email": f"user{i}@example.com",
-                "age": 20 + (i % 50),
-                "is_active": i % 2 == 0,
-                "score": round(i / 10, 2),
-            }
-        )
-        for i in range(n)
-    ]
+def generate_test_data():
+    # return [
+    #     json.dumps(
+    #         {
+    #             "id": i,
+    #             "name": f"User{i}",
+    #             "email": f"user{i}@example.com",
+    #             "age": 20 + (i % 50),
+    #             "is_active": i % 2 == 0,
+    #             "score": round(i / 10, 2),
+    #         }
+    #     )
+    #     for i in range(n)
+    # ]
+    with open("benchmark/test_data/data.pickle", "rb") as f:
+        data = pickle.load(f)
+    return data
 
 
 def test_orjson(data):
@@ -50,8 +53,8 @@ def test_msgspec(data):
     return [decoder.decode(item) for item in data]
 
 
-def run_benchmark(n_messages, n_iterations):
-    test_data = generate_test_data(n_messages)
+def run_benchmark(n_iterations):
+    test_data = generate_test_data()
 
     # JIT Warm-up ?
     # 在正式计时前运行一些迭代，以确保 JIT 优化已经应用
@@ -95,10 +98,9 @@ def test1():
 
 
 if __name__ == "__main__":
-    N_MESSAGES = 500
-    N_ITERATIONS = 100000
+    N_ITERATIONS = 200
 
     print(
-        f"LOAD_WITH_FORMAT: {LOAD_WITH_FORMAT}, Benchmarking with {N_MESSAGES} messages, {N_ITERATIONS} iterations:"
+        f"LOAD_WITH_FORMAT: {LOAD_WITH_FORMAT}, Benchmarking with {N_ITERATIONS} iterations:"
     )
-    run_benchmark(N_MESSAGES, N_ITERATIONS)
+    run_benchmark(N_ITERATIONS)

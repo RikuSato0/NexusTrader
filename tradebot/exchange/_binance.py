@@ -647,7 +647,7 @@ class BinanceWebsocketManager(WebsocketManager):
                 payload = json.dumps(payload)
                 await websocket.send(payload)
                 async for msg in websocket:
-                    msg = orjson.loads(msg)
+                    # msg = orjson.loads(msg)
                     await self._subscripions[subscription_id].put(msg)
             except websockets.ConnectionClosed:
                 self._log.error("Connection closed, reconnecting...")
@@ -758,7 +758,7 @@ class BinanceWebsocketManager(WebsocketManager):
                 )
             )
             self._tasks.append(
-                asyncio.create_task(self._picows_subscribe(payload, subscription_id))
+                asyncio.create_task(self._subscribe(payload, subscription_id))
             )
         else:
             self._log.info(f"Already subscribed to {subscription_id}")

@@ -1,6 +1,7 @@
 import asyncio
 import ccxt
-
+import pickle
+import os
 from tradebot.exchange._binance import BinanceWebsocketManager
 from tradebot.constants import Url
 
@@ -15,17 +16,18 @@ for _, v in market.items():
     else:
         market_id[v["id"]] = v
 
+event_data = []
 
 def cb_cm_future(msg):
-    print(msg)
+    event_data.append(msg)
 
 
 def cb_um_future(msg):
-    print(msg)
+    event_data.append(msg)
 
 
 def cb_spot(msg):
-    print(msg)
+    event_data.append(msg)
 
 
 async def main():
@@ -39,6 +41,14 @@ async def main():
         await ws_um_client.subscribe_kline(
             "BTCUSDT", interval="1m", callback=cb_um_future
         )
+        await ws_um_client.subscribe_agg_trade(
+            "BTCUSDT", callback=cb_um_future
+        )
+        
+        await ws_um_client.subscribe_book_ticker(
+            "BTCUSDT", callback=cb_um_future
+        )
+        
         await ws_spot_client.subscribe_kline("BTCUSDT", interval="1s", callback=cb_spot)
         await ws_spot_client.subscribe_klines(
             ["ETHUSDT", "SOLOUSDT"], interval="1s", callback=cb_spot
@@ -50,6 +60,18 @@ async def main():
     except asyncio.CancelledError:
         await ws_spot_client.close()
         await ws_um_client.close()
+        
+        folder = "benchmark/data"
+        
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        
+        path_file = os.path.join(folder, "data.pickle")
+        
+        
+        with open(path_file, "wb") as f:
+            pickle.dump(event_data, f)
+        
         print("Websocket closed")
 
 

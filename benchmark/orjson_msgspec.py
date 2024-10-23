@@ -71,20 +71,24 @@ class BncKlineMsg(msgspec.Struct):
 
 def msg_ws_handler(msg, event_decoder, trade_decoder, book_ticker_decoder, kline_decoder):
     try:
-        event = event_decoder.decode(msg, type=BncEventMsg)
-    except:
+        event = event_decoder.decode(msg)
+    except Exception as e:
         return
     
     if event.is_event:
         if event.e == "trade":
-            trade = trade_decoder.decode(msg, type=BncTradeMsg)
+            trade = trade_decoder.decode(msg)
             trade = trade.parse_to_trade()
+            
         elif event.e == "bookTicker":
-            book_ticker = book_ticker_decoder.decode(msg, type=BncBookTickerMsg)
+            book_ticker = book_ticker_decoder.decode(msg)
             book_ticker = book_ticker.parse_to_book_ticker()
+            
         elif event.e == "kline":
-            kline = kline_decoder.decode(msg, type=BncKlineMsg)
+            kline = kline_decoder.decode(msg)
             kline = kline.parse_to_kline()
+            
+
 
 
 
@@ -275,7 +279,7 @@ def test1():
 
 
 if __name__ == "__main__":
-    N_ITERATIONS = 20
+    N_ITERATIONS = 200
 
     print(
         f"Benchmarking with {N_ITERATIONS} iterations:"

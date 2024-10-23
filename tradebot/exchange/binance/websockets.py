@@ -27,7 +27,7 @@ from tradebot.exchange.binance.constants import STREAM_URLS
 from tradebot.exchange.binance.constants import BinanceAccountType
 
 
-class BinanceWsClient(WSManager):
+class BinanceWSClient(WSManager):
     def __init__(self, account_type: BinanceAccountType, handler: Callable[..., Any]):
         self._account_type = account_type
         url = STREAM_URLS[account_type]

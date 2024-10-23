@@ -8,7 +8,7 @@ from tradebot.constants import EventType
 from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
 
 from tradebot.exchange.binance.constants import BinanceAccountType
-from tradebot.exchange.binance.websockets import BinanceWsClient
+from tradebot.exchange.binance.websockets import BinanceWSClient
 
 
 class BinancePublicConnector(PublicConnector):
@@ -25,7 +25,7 @@ class BinancePublicConnector(PublicConnector):
             exchange_id="binance",
         )
 
-        self._ws_client = BinanceWsClient(
+        self._ws_client = BinanceWSClient(
             account_type=accout_type, handler=self._ws_msg_handler
         )
 

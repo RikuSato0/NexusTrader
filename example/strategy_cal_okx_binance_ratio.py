@@ -1,14 +1,14 @@
 import asyncio
 from collections import defaultdict
 from tradebot.types import Trade
-from tradebot.constants import WSType
+from tradebot.constants import PublicConnectorType
 from tradebot.strategy import Strategy
 from tradebot.exchange.binance import (
-    BinanceWSManager,
     BinanceAccountType,
     BinanceExchangeManager,
+    BinancePublicConnector,
 )
-from tradebot.exchange.okx import OkxWSManager, OkxAccountType, OkxExchangeManager
+from tradebot.exchange.okx import OkxAccountType, OkxExchangeManager, OkxPublicConnector
 
 
 class Demo(Strategy):
@@ -26,46 +26,45 @@ class Demo(Strategy):
             print(
                 f"binance: {btc_binance.price}, okx: {btc_okx.price}, ratio: {btc_binance.price / btc_okx.price - 1}"
             )
-        
 
 
 async def main():
     try:
         binance = BinanceExchangeManager({"exchange_id": "binance"})
         await binance.load_markets()  # get `market` and `market_id` data
-        
+
         okx = OkxExchangeManager({"exchange_id": "okx"})
         await okx.load_markets()  # get `market` and `market_id` data
 
-        ws_okx = OkxWSManager(
+        conn_okx = OkxPublicConnector(
             OkxAccountType.LIVE,
             okx.market,
             okx.market_id,
         )
 
-        ws_usdm = BinanceWSManager(
+        conn_bnc = BinancePublicConnector(
             BinanceAccountType.USD_M_FUTURE,
             binance.market,
             binance.market_id,
         )
-        await ws_okx.connect()
-        await ws_usdm.connect()
 
         demo = Demo()
 
-        demo.add_ws_manager(WSType.OKX_LIVE, ws_okx)
-        demo.add_ws_manager(WSType.BINANCE_USD_M_FUTURE, ws_usdm)
+        demo.add_public_connector(PublicConnectorType.OKX_LIVE, conn_okx)
+        demo.add_public_connector(PublicConnectorType.BINANCE_USD_M_FUTURE, conn_bnc)
 
-        await demo.subscribe_trade(WSType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT")
-        await demo.subscribe_trade(WSType.OKX_LIVE, "BTC/USDT:USDT")
+        await demo.subscribe_trade(PublicConnectorType.OKX_LIVE, "BTC/USDT:USDT")
+        await demo.subscribe_trade(
+            PublicConnectorType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT"
+        )
 
         await demo.run()
 
     except asyncio.CancelledError:
         await binance.close()
         await okx.close()
-        ws_usdm.disconnect()
-        ws_okx.disconnect()
+        conn_okx.disconnect()
+        conn_bnc.disconnect()
 
 
 if __name__ == "__main__":

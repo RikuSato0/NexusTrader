@@ -12,7 +12,7 @@ class Strategy:
         self._clock = Clock(tick_size=tick_size)
         self._clock.add_tick_callback(self._on_tick)
         EventSystem.on(EventType.TRADE, self._on_trade)
-        EventSystem.on(EventType.BOOKL1, self._on_book_l1)
+        EventSystem.on(EventType.BOOKL1, self._on_bookl1)
         EventSystem.on(EventType.KLINE, self._on_kline)
         
     def add_public_connector(self, type: PublicConnectorType, connector: PublicConnector):
@@ -38,7 +38,7 @@ class Strategy:
         if hasattr(self, "on_trade"):
             self.on_trade(trade)
     
-    def _on_book_l1(self, bookl1: BookL1):
+    def _on_bookl1(self, bookl1: BookL1):
         if hasattr(self, "on_bookl1"):
             self.on_bookl1(bookl1)
     

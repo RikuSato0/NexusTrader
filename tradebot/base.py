@@ -738,6 +738,9 @@ class PublicConnector(ABC):
         market_id: Dict[str, Any],
         exchange_id: str,
     ):
+        self._log = SpdLog.get_logger(
+            name=type(self).__name__, level="INFO", flush=True
+        )
         self._account_type = account_type
         self._market = market
         self._market_id = market_id

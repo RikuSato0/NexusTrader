@@ -312,6 +312,7 @@ class OrderManager(ABC):
             return OrderError(e, {"id": id, **params})
 
 
+# archive
 class WebsocketManager(ABC):
     def __init__(
         self,
@@ -438,8 +439,6 @@ class WSManager(ABC):
     def _send(self, payload: dict):
         self._transport.send(WSMsgType.TEXT, self._encoder.encode(payload))
 
-
-
     async def _msg_handler(self, queue: asyncio.Queue):
         while True:
             msg = await queue.get()
@@ -450,19 +449,7 @@ class WSManager(ABC):
     def disconnect(self):
         if self.connected:
             self._transport.disconnect()
-            
-    # @abstractmethod
-    # async def subscribe_book_l1(self, symbol: str):
-    #     pass
-    
-    # @abstractmethod
-    # async def subscribe_trade(self, symbol: str):
-    #     pass
 
-    # @abstractmethod
-    # async def subscribe_kline(self, symbol: str, interval: str):
-    #     pass
-    
     @abstractmethod
     async def _resubscribe(self):
         pass
@@ -641,7 +628,9 @@ class RestApi:
             return data
 
         except ClientResponseError as e:
-            self._log.error(f"ClientResponseError: {str(e)} for URL: {url}, kwargs: {kwargs}")
+            self._log.error(
+                f"ClientResponseError: {str(e)} for URL: {url}, kwargs: {kwargs}"
+            )
             raise ExchangeResponseError(e.message, data, method, url) from None
         except ClientError as e:
             self._log.error(f"ClientError: {str(e)} for URL: {url}, kwargs: {kwargs}")
@@ -694,7 +683,6 @@ class RestApi:
         return await self.request("DELETE", url, **kwargs)
 
 
-
 class Clock:
     def __init__(self, tick_size: float = 1.0):
         """
@@ -712,7 +700,7 @@ class Clock:
 
     @property
     def current_timestamp(self) -> float:
-        return int(self._current_tick)  # Timestamp in seconds 
+        return int(self._current_tick)  # Timestamp in seconds
 
     def add_tick_callback(self, callback: Callable[[float], None]):
         """
@@ -737,7 +725,7 @@ class Clock:
             self._current_tick = next_tick_time
             for callback in self._tick_callbacks:
                 try:
-                    callback(self.current_timestamp)  
+                    callback(self.current_timestamp)
                 except Exception:
                     self._log.error("Error in tick callback.")
 

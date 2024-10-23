@@ -27,7 +27,7 @@ from tradebot.exchange.okx.constants import STREAM_URLS
 from tradebot.exchange.okx.constants import OkxAccountType
 
 
-class OkxWsClient(WSManager):
+class OkxWSClient(WSManager):
     def __init__(self, account_type: OkxAccountType, handler: Callable[..., Any]):
         url = f"{STREAM_URLS[account_type]}/v5/public"
         super().__init__(url, limiter=Limiter(2 / 1), handler=handler)
@@ -64,7 +64,9 @@ class OkxWsClient(WSManager):
         pass
 
     async def _resubscribe(self):
-        pass
+        for _, payload in self._subscriptions.items():
+            await self._limiter.wait()
+            self._send(payload)
 
 
 class OkxWSManager(WSManager):

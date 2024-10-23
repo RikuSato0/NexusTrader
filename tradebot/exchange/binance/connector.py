@@ -203,6 +203,9 @@ class BinancePublicConnector:
         EventSystem.emit(EventType.MARK_PRICE, mark_price)
         EventSystem.emit(EventType.FUNDING_RATE, funding_rate)
         EventSystem.emit(EventType.INDEX_PRICE, index_price)
+    
+    def disconnect(self):
+        self._ws_client.disconnect()
 
 
 class BinancePrivateConnector:

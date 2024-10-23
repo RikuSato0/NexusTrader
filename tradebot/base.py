@@ -451,17 +451,17 @@ class WSManager(ABC):
         if self.connected:
             self._transport.disconnect()
             
-    @abstractmethod
-    async def subscribe_book_l1(self, symbol: str):
-        pass
+    # @abstractmethod
+    # async def subscribe_book_l1(self, symbol: str):
+    #     pass
     
-    @abstractmethod
-    async def subscribe_trade(self, symbol: str):
-        pass
+    # @abstractmethod
+    # async def subscribe_trade(self, symbol: str):
+    #     pass
 
-    @abstractmethod
-    async def subscribe_kline(self, symbol: str, interval: str):
-        pass
+    # @abstractmethod
+    # async def subscribe_kline(self, symbol: str, interval: str):
+    #     pass
     
     @abstractmethod
     async def _resubscribe(self):

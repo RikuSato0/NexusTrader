@@ -3,9 +3,9 @@ from tradebot.types import Trade
 from tradebot.constants import WSType
 from tradebot.strategy import Strategy
 from tradebot.exchange.binance import (
-    BinanceWSManager,
     BinanceAccountType,
     BinanceExchangeManager,
+    BinancePublicConnector
 )
 
 
@@ -30,24 +30,22 @@ async def main():
         exchange = BinanceExchangeManager({"exchange_id": "binance"})
         await exchange.load_markets()  # get `market` and `market_id` data
 
-        ws_spot = BinanceWSManager(
+        conn_spot = BinancePublicConnector(
             BinanceAccountType.SPOT,
             exchange.market,
             exchange.market_id,
         )
 
-        ws_usdm = BinanceWSManager(
+        conn_usdm = BinancePublicConnector(
             BinanceAccountType.USD_M_FUTURE,
             exchange.market,
             exchange.market_id,
         )
-        await ws_spot.connect()
-        await ws_usdm.connect()
 
         demo = Demo()
 
-        demo.add_ws_manager(WSType.BINANCE_SPOT, ws_spot)
-        demo.add_ws_manager(WSType.BINANCE_USD_M_FUTURE, ws_usdm)
+        demo.add_ws_manager(WSType.BINANCE_SPOT, conn_spot)
+        demo.add_ws_manager(WSType.BINANCE_USD_M_FUTURE, conn_usdm)
 
         await demo.subscribe_trade(WSType.BINANCE_SPOT, "BTC/USDT")
         await demo.subscribe_trade(WSType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT")
@@ -56,8 +54,8 @@ async def main():
 
     except asyncio.CancelledError:
         await exchange.close()
-        ws_usdm.disconnect()
-        ws_spot.disconnect()
+        conn_spot.disconnect()
+        conn_usdm.disconnect()
 
 
 if __name__ == "__main__":

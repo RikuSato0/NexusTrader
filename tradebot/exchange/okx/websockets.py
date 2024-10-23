@@ -41,7 +41,7 @@ class OkxWSManager(WSManager):
         else:
             url = f"{STREAM_URLS[account_type]}/v5/public"
 
-        super().__init__(url, limiter=Limiter(2 / 1))
+        super().__init__(url, limiter=Limiter(2 / 1), handler=self._callback)
         self._exchange_id = "okx"
         self._market = market
         self._market_id = market_id

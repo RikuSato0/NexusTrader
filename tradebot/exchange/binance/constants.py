@@ -19,6 +19,35 @@ class BinanceAccountType(Enum):
     SPOT_TESTNET = "SPOT_TESTNET"
     USD_M_FUTURE_TESTNET = "USD_M_FUTURE_TESTNET"
     COIN_M_FUTURE_TESTNET = "COIN_M_FUTURE_TESTNET"
+    
+    @property
+    def is_spot(self):
+        return self in (self.SPOT, self.SPOT_TESTNET)
+    
+    @property
+    def is_margin(self):
+        return self in (self.MARGIN, self.ISOLATED_MARGIN)
+    
+    @property
+    def is_spot_or_margin(self):
+        return self in (self.SPOT, self.MARGIN, self.ISOLATED_MARGIN, self.SPOT_TESTNET)
+    
+    @property
+    def is_future(self):
+        return self in (self.USD_M_FUTURE, self.COIN_M_FUTURE, self.USD_M_FUTURE_TESTNET, self.COIN_M_FUTURE_TESTNET)
+    
+    @property
+    def is_linear(self):
+        return self in (self.USD_M_FUTURE, self.USD_M_FUTURE_TESTNET)
+    
+    @property
+    def is_inverse(self):
+        return self in (self.COIN_M_FUTURE, self.COIN_M_FUTURE_TESTNET)
+
+    @property
+    def is_portfolio_margin(self):
+        return self in (self.PORTFOLIO_MARGIN,)
+    
 
 class EndpointsType(Enum):
     USER_DATA_STREAM = "USER_DATA_STREAM"

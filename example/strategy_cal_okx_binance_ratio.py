@@ -13,7 +13,7 @@ from tradebot.exchange.okx import OkxWSManager, OkxAccountType, OkxExchangeManag
 
 class Demo(Strategy):
     def __init__(self):
-        super().__init__()
+        super().__init__(tick_size=0.01)
         self.market = defaultdict(dict)
 
     def on_trade(self, trade: Trade):

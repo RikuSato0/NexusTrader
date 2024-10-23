@@ -292,3 +292,14 @@ class WSType(Enum):
     OKX_LIVE = 8
     OKX_AWS = 9
     OKX_DEMO = 10
+
+class PublicConnectorType(Enum):
+    BINANCE_SPOT = 0
+    BINANCE_USD_M_FUTURE = 1
+    BINANCE_COIN_M_FUTURE = 2
+    BINANCE_SPOT_TESTNET = 3
+    BINANCE_USD_M_FUTURE_TESTNET = 4
+    BINANCE_COIN_M_FUTURE_TESTNET = 5
+    OKX_LIVE = 6
+    OKX_AWS = 7
+    OKX_DEMO = 8

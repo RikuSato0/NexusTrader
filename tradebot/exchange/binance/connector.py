@@ -2,6 +2,7 @@ import time
 
 from typing import Dict, Any
 
+from tradebot.base import PublicConnector
 from tradebot.entity import EventSystem
 from tradebot.constants import EventType
 from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
@@ -10,17 +11,20 @@ from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWsClient
 
 
-class BinancePublicConnector:
+class BinancePublicConnector(PublicConnector):
     def __init__(
         self,
         accout_type: BinanceAccountType,
         market: Dict[str, Any],
         market_id: Dict[str, Any],
     ):
-        self._account_type = accout_type
-        self._market = market
-        self._market_id = market_id
-        self._exchange_id = "binance"
+        super().__init__(
+            account_type=accout_type,
+            market=market,
+            market_id=market_id,
+            exchange_id="binance",
+        )
+
         self._ws_client = BinanceWsClient(
             account_type=accout_type, handler=self._ws_msg_handler
         )
@@ -43,7 +47,12 @@ class BinancePublicConnector:
         market = self._market.get(symbol, None)
         symbol = market["id"] if market else symbol
         await self._ws_client.subscribe_book_ticker(symbol)
-
+    
+    async def subscribe_kline(self, symbol: str, interval: str):
+        market = self._market.get(symbol, None)
+        symbol = market["id"] if market else symbol
+        await self._ws_client.subscribe_kline(symbol, interval)
+    
     def _ws_msg_handler(self, msg):
         if "e" in msg:
             match msg["e"]:
@@ -203,7 +212,7 @@ class BinancePublicConnector:
         EventSystem.emit(EventType.MARK_PRICE, mark_price)
         EventSystem.emit(EventType.FUNDING_RATE, funding_rate)
         EventSystem.emit(EventType.INDEX_PRICE, index_price)
-    
+
     def disconnect(self):
         self._ws_client.disconnect()
 

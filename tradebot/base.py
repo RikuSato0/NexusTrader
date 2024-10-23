@@ -741,3 +741,28 @@ class Clock:
                 except Exception:
                     self._log.error("Error in tick callback.")
 
+
+class PublicConnector(ABC):
+    def __init__(
+        self,
+        account_type,
+        market: Dict[str, Any],
+        market_id: Dict[str, Any],
+        exchange_id: str,
+    ):
+        self._account_type = account_type
+        self._market = market
+        self._market_id = market_id
+        self._exchange_id = exchange_id
+    
+    @abstractmethod
+    async def subscribe_trade(self, symbol: str):
+        pass
+    
+    @abstractmethod
+    async def subscribe_bookl1(self, symbol: str):
+        pass
+    
+    @abstractmethod
+    async def subscribe_kline(self, symbol: str, interval: str):
+        pass

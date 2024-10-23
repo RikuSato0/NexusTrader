@@ -1,6 +1,6 @@
 import asyncio
 from tradebot.types import Trade
-from tradebot.constants import WSType
+from tradebot.constants import PublicConnectorType
 from tradebot.strategy import Strategy
 from tradebot.exchange.binance import (
     BinanceAccountType,
@@ -11,7 +11,7 @@ from tradebot.exchange.binance import (
 
 class Demo(Strategy):
     def __init__(self):
-        super().__init__()
+        super().__init__(tick_size=0.01)
         self.market = {}
 
     def on_trade(self, trade: Trade):
@@ -43,12 +43,11 @@ async def main():
         )
 
         demo = Demo()
+        demo.add_public_connector(PublicConnectorType.BINANCE_SPOT, conn_spot)
+        demo.add_public_connector(PublicConnectorType.BINANCE_USD_M_FUTURE, conn_usdm)
 
-        demo.add_ws_manager(WSType.BINANCE_SPOT, conn_spot)
-        demo.add_ws_manager(WSType.BINANCE_USD_M_FUTURE, conn_usdm)
-
-        await demo.subscribe_trade(WSType.BINANCE_SPOT, "BTC/USDT")
-        await demo.subscribe_trade(WSType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT")
+        await demo.subscribe_trade(PublicConnectorType.BINANCE_SPOT, "BTC/USDT")
+        await demo.subscribe_trade(PublicConnectorType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT")
 
         await demo.run()
 

@@ -11,6 +11,13 @@ TradeBotPro is a flexible and powerful trading bot framework designed to interac
 - Account management
 - Extensible architecture for easy addition of new exchanges
 
+## Build
+To use `tradebot.ctypes`, need to build first:
+```
+python setup.py build_ext --inplace
+```
+
+
 ## Installation
 
 To install TradeBotPro, use pip:

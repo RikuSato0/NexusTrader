@@ -91,15 +91,15 @@ class Order:
     def __post_init__(self):
         decimal_fields = ["amount", "filled", "last_filled", "remaining"]
 
-        for field in decimal_fields:
-            if getattr(self, field) is not None and not isinstance(
-                getattr(self, field), Decimal
+        for decimal_field in decimal_fields:
+            if getattr(self, decimal_field) is not None and not isinstance(
+                getattr(self, decimal_field), Decimal
             ):
-                setattr(self, field, Decimal(str(getattr(self, field))))
+                setattr(self, decimal_field, Decimal(str(getattr(self, decimal_field))))
 
         float_fields = ["price", "average", "last_filled_price", "fee", "cost"]
-        for field in float_fields:
-            if getattr(self, field) is not None and not isinstance(
-                getattr(self, field), float
+        for float_field in float_fields:
+            if getattr(self, float_field) is not None and not isinstance(
+                getattr(self, float_field), float
             ):
-                setattr(self, field, float(getattr(self, field)))
+                setattr(self, float_field, float(getattr(self, field)))

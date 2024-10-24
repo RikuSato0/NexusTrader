@@ -7,20 +7,23 @@ from tradebot.ctypes import BookL1, Trade, Kline
 from typing import Any, Dict
 
 
+N = 30
+
 
 class BncEventMsg(msgspec.Struct):
     e: str
-    
+
     @property
     def is_event(self):
         return True
+
 
 class BncTradeMsg(msgspec.Struct):
     s: str
     p: str
     q: str
     T: int
-    
+
     def parse_to_trade(self):
         return Trade(
             exchange="binance",
@@ -30,6 +33,7 @@ class BncTradeMsg(msgspec.Struct):
             timestamp=self.T,
         )
 
+
 class BncBookTickerMsg(msgspec.Struct):
     s: str
     b: str
@@ -37,7 +41,7 @@ class BncBookTickerMsg(msgspec.Struct):
     B: str
     A: str
     T: int
-    
+
     def parse_to_book_ticker(self):
         return BookL1(
             exchange="binance",
@@ -49,11 +53,12 @@ class BncBookTickerMsg(msgspec.Struct):
             timestamp=self.T,
         )
 
+
 class BncKlineMsg(msgspec.Struct):
     s: str
     k: Dict[str, Any]
     E: int
-    
+
     def parse_to_kline(self):
         return Kline(
             exchange="binance",
@@ -68,28 +73,26 @@ class BncKlineMsg(msgspec.Struct):
         )
 
 
-
-def msg_ws_handler(msg, event_decoder, trade_decoder, book_ticker_decoder, kline_decoder):
+def msg_ws_handler(
+    msg, event_decoder, trade_decoder, book_ticker_decoder, kline_decoder
+):
     try:
         event = event_decoder.decode(msg)
     except Exception as e:
         return
-    
+
     if event.is_event:
         if event.e == "trade":
             trade = trade_decoder.decode(msg)
             trade = trade.parse_to_trade()
-            
+
         elif event.e == "bookTicker":
             book_ticker = book_ticker_decoder.decode(msg)
             book_ticker = book_ticker.parse_to_book_ticker()
-            
+
         elif event.e == "kline":
             kline = kline_decoder.decode(msg)
             kline = kline.parse_to_kline()
-            
-
-
 
 
 def ws_msg_handler(msg):
@@ -104,7 +107,8 @@ def ws_msg_handler(msg):
     elif "u" in msg:
         # spot book ticker doesn't have "e" key. FUCK BINANCE
         parse_book_ticker(msg)
-        
+
+
 def parse_kline(res: Dict[str, Any]) -> Kline:
     """
     {
@@ -144,8 +148,8 @@ def parse_kline(res: Dict[str, Any]) -> Kline:
         timestamp=res.get("E", time.time_ns() // 1_000_000),
     )
     return ticker
-    
-    
+
+
 def parse_trade(res: Dict[str, Any]) -> Trade:
     """
     {
@@ -176,8 +180,8 @@ def parse_trade(res: Dict[str, Any]) -> Trade:
         timestamp=res.get("T", time.time_ns() // 1_000_000),
     )
     return trade
-    
-    
+
+
 def parse_book_ticker(res: Dict[str, Any]) -> BookL1:
     """
     {
@@ -199,8 +203,6 @@ def parse_book_ticker(res: Dict[str, Any]) -> BookL1:
         timestamp=res.get("T", time.time_ns() // 1_000_000),
     )
     return bookl1
-    
-
 
 
 def generate_test_data():
@@ -209,33 +211,36 @@ def generate_test_data():
 
     return data
 
+
 def orjson_decoder(data):
     return orjson.loads(data)
+
 
 def msgspec_decoder(data, decoder):
     return decoder.decode(data)
 
-def test_orjson(data):
+
+def test_orjson(data: list):
     for event in data:
         msg = orjson_decoder(event)
         ws_msg_handler(msg)
-    
+
 
 def test_msgspec(data):
     event_decoder = msgspec.json.Decoder(BncEventMsg)
     trade_decoder = msgspec.json.Decoder(BncTradeMsg)
     book_ticker_decoder = msgspec.json.Decoder(BncBookTickerMsg)
     kline_decoder = msgspec.json.Decoder(BncKlineMsg)
-    
-    
-    
+
     for event in data:
         # msg = msgspec_decoder(event, decoder)
-        msg_ws_handler(event, event_decoder, trade_decoder, book_ticker_decoder, kline_decoder)
+        msg_ws_handler(
+            event, event_decoder, trade_decoder, book_ticker_decoder, kline_decoder
+        )
 
 
 def run_benchmark(n_iterations):
-    test_data = generate_test_data()
+    test_data = generate_test_data()[:N]
 
     # JIT Warm-up ?
     # 在正式计时前运行一些迭代，以确保 JIT 优化已经应用
@@ -259,29 +264,8 @@ def run_benchmark(n_iterations):
     print(f"msgspec: {mean(msgspec_times):.6f} ± {stdev(msgspec_times):.6f} seconds")
 
 
-def test1():
-    dict_ = json.dumps(
-        {
-            "id": 1,
-            "name": f"User{1}",
-            "email": f"user{1}@example.com",
-            "age": 20 + (1 % 50),
-            "is_active": 1 % 2 == 0,
-            "score": round(1 / 10, 2),
-        }
-    )
-    msgspec_decoder = msgspec.json.Decoder()
-
-    data = msgspec_decoder.decode(dict_)
-    print(type(data))
-    print(data)
-    print(data.age)
-
-
 if __name__ == "__main__":
     N_ITERATIONS = 200
 
-    print(
-        f"Benchmarking with {N_ITERATIONS} iterations:"
-    )
+    print(f"Benchmarking with {N_ITERATIONS} iterations:")
     run_benchmark(N_ITERATIONS)

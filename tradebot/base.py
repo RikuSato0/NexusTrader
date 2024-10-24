@@ -359,7 +359,6 @@ class WebsocketManager(ABC):
 class WSClient(WSListener):
     def __init__(self, logger):
         self._log = logger
-        self._decoder = msgspec.json.Decoder()
         self.msg_queue = asyncio.Queue()
 
     def on_ws_connected(self, transport: WSTransport):
@@ -372,8 +371,8 @@ class WSClient(WSListener):
         if frame.msg_type == WSMsgType.PING:
             transport.send_pong(frame.get_payload_as_bytes())
             return
-        # msg = orjson.loads(frame.get_payload_as_bytes())
-        msg = self._decoder.decode(frame.get_payload_as_bytes())
+        msg = orjson.loads(frame.get_payload_as_bytes())
+        # msg = self._decoder.decode(frame.get_payload_as_bytes())
         self.msg_queue.put_nowait(msg)
 
 
@@ -389,7 +388,7 @@ class WSManager(ABC):
         self._limiter = limiter
         self._msg_handler_task = None
         self._connection_handler_task = None
-        self._encoder = msgspec.json.Encoder()
+        # self._encoder = msgspec.json.Encoder()
         self._callback = handler
         self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
 
@@ -437,7 +436,7 @@ class WSManager(ABC):
                 await asyncio.sleep(self._reconnect_interval)
 
     def _send(self, payload: dict):
-        self._transport.send(WSMsgType.TEXT, self._encoder.encode(payload))
+        self._transport.send(WSMsgType.TEXT, orjson.dumps(payload))
 
     async def _msg_handler(self, queue: asyncio.Queue):
         while True:

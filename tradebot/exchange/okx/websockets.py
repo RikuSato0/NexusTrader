@@ -71,7 +71,7 @@ class OkxWSClient(WSManager):
             "sign": sign.decode("utf-8"),
         }
         payload = {"op": "login", "args": [arg]}
-        return self._encoder.encode(payload)
+        return payload
 
     async def _auth(self):
         if not self._authed:

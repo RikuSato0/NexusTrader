@@ -3,7 +3,7 @@ import time
 from statistics import mean, stdev
 import orjson
 import msgspec
-from tradebot.types import BookL1, Trade, Kline
+from tradebot.ctypes import BookL1, Trade, Kline
 from typing import Any, Dict
 
 

@@ -5,7 +5,7 @@ from typing import Dict, Any
 from tradebot.base import PublicConnector
 from tradebot.entity import EventSystem
 from tradebot.constants import EventType
-from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
+from tradebot.ctypes import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
 
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWSClient

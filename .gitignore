@@ -11,3 +11,5 @@ binance_markets.json
 build/
 venv/
 *.svg
+*.c
+*.so

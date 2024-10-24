@@ -1,12 +1,13 @@
 import time
-
+import asyncio
 from typing import Dict, Any
 
 from tradebot.base import PublicConnector
 from tradebot.entity import EventSystem
+from tradebot.log import SpdLog
 from tradebot.constants import EventType
 from tradebot.ctypes import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
-
+from tradebot.exchange.binance.rest_api import BinanceRestApi
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWSClient
 
@@ -19,8 +20,10 @@ class BinancePublicConnector(PublicConnector):
         market_id: Dict[str, Any],
     ):
         if not (account_type.is_spot or account_type.is_future):
-            raise ValueError(f"BinanceAccountType.{account_type.value} is not supported for Binance Public Connector")
-        
+            raise ValueError(
+                f"BinanceAccountType.{account_type.value} is not supported for Binance Public Connector"
+            )
+
         super().__init__(
             account_type=account_type,
             market=market,
@@ -50,12 +53,12 @@ class BinancePublicConnector(PublicConnector):
         market = self._market.get(symbol, None)
         symbol = market["id"] if market else symbol
         await self._ws_client.subscribe_book_ticker(symbol)
-    
+
     async def subscribe_kline(self, symbol: str, interval: str):
         market = self._market.get(symbol, None)
         symbol = market["id"] if market else symbol
         await self._ws_client.subscribe_kline(symbol, interval)
-    
+
     def _ws_msg_handler(self, msg):
         if "e" in msg:
             match msg["e"]:
@@ -221,4 +224,63 @@ class BinancePublicConnector(PublicConnector):
 
 
 class BinancePrivateConnector:
-    pass
+    def __init__(
+        self,
+        account_type: BinanceAccountType,
+        api_key: str,
+        api_secret: str,
+        market: Dict[str, Any],
+        market_id: Dict[str, Any],
+    ):
+        self._log = SpdLog.get_logger(type(self).__name__, "INFO", flush=True)
+
+        self._api_key = api_key
+        self._api_secret = api_secret
+        
+        self._market = market
+        self._market_id = market_id
+
+        self._rest_api = BinanceRestApi(
+            account_type=account_type, api_key=api_key, api_secret=api_secret
+        )
+
+        self._ws_client = BinanceWSClient(
+            account_type=account_type, handler=self._ws_msg_handler
+        )
+
+    async def _get_listen_key(self):
+        try:
+            res = await self._rest_api.start_user_data_stream()
+            return res["listenKey"]
+        except Exception as e:
+            self._log.error(f"Failed to get listen key: {str(e)}")
+            return None
+
+    async def _ping_listen_keys(
+        self, listen_key: str, interval: int = 20, max_retry: int = 3
+    ):
+        retry_count = 0
+        while retry_count < max_retry:
+            await asyncio.sleep(60 * interval)
+            try:
+                await self._rest_api.keep_alive_user_data_stream(listen_key)
+                retry_count = 0  # Reset retry count on successful keep-alive
+            except Exception as e:
+                self._log.error(f"Failed to keep alive listen key: {str(e)}")
+                retry_count += 1
+                if retry_count < max_retry:
+                    await asyncio.sleep(5)
+                else:
+                    self._log.error(
+                        f"Max retries ({max_retry}) reached. Stopping keep-alive attempts."
+                    )
+                    break
+
+    async def connect(self):
+        listen_key = await self._get_listen_key()
+        if listen_key:
+            asyncio.create_task(self._ping_listen_keys(listen_key))
+            await self._ws_client.subscribe_user_data_stream(listen_key)
+
+    def _ws_msg_handler(self, msg):
+        print(msg)

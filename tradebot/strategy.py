@@ -15,20 +15,20 @@ class Strategy:
         EventSystem.on(EventType.BOOKL1, self._on_bookl1)
         EventSystem.on(EventType.KLINE, self._on_kline)
         
-    def add_public_connector(self, type: PublicConnectorType, connector: PublicConnector):
-        self._pulic_connectors[type] = connector
+    def add_public_connector(self, connector: PublicConnector):
+        self._pulic_connectors[connector.account_type] = connector
         
-    def add_private_connector(self, type, connector):
+    def add_private_connector(self, connector):
         #TODO: implement private connector
         pass
     
-    async def subscribe_bookl1(self, type: PublicConnectorType, symbol: str):
+    async def subscribe_bookl1(self, type, symbol: str):
         await self._pulic_connectors[type].subscribe_bookl1(symbol)
     
-    async def subscribe_trade(self, type: PublicConnectorType, symbol: str):
+    async def subscribe_trade(self, type, symbol: str):
         await self._pulic_connectors[type].subscribe_trade(symbol)
     
-    async def subscribe_kline(self, type: PublicConnectorType, symbol: str, interval: str):
+    async def subscribe_kline(self, type, symbol: str, interval: str):
         await self._pulic_connectors[type].subscribe_kline(symbol, interval)
         
     async def run(self):

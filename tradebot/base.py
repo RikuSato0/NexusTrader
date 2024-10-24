@@ -746,6 +746,10 @@ class PublicConnector(ABC):
         self._market_id = market_id
         self._exchange_id = exchange_id
     
+    @property
+    def account_type(self):
+        return self._account_type
+    
     @abstractmethod
     async def subscribe_trade(self, symbol: str):
         pass

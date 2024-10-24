@@ -1,6 +1,5 @@
 import asyncio
 from tradebot.types import Trade
-from tradebot.constants import PublicConnectorType
 from tradebot.strategy import Strategy
 from tradebot.exchange.binance import (
     BinanceAccountType,
@@ -43,15 +42,17 @@ async def main():
         )
 
         demo = Demo()
-        demo.add_public_connector(PublicConnectorType.BINANCE_SPOT, conn_spot)
-        demo.add_public_connector(PublicConnectorType.BINANCE_USD_M_FUTURE, conn_usdm)
+        demo.add_public_connector(conn_spot)
+        demo.add_public_connector(conn_usdm)
 
-        await demo.subscribe_trade(PublicConnectorType.BINANCE_SPOT, "BTC/USDT")
-        await demo.subscribe_trade(PublicConnectorType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT")
+        await demo.subscribe_trade(BinanceAccountType.SPOT, "BTC/USDT")
+        await demo.subscribe_trade(BinanceAccountType.USD_M_FUTURE, "BTC/USDT:USDT")
 
         await demo.run()
 
     except asyncio.CancelledError:
+        print("Cancelled")
+    finally:
         await exchange.close()
         conn_spot.disconnect()
         conn_usdm.disconnect()

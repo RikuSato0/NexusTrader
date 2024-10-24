@@ -14,19 +14,22 @@ from tradebot.exchange.binance.websockets import BinanceWSClient
 class BinancePublicConnector(PublicConnector):
     def __init__(
         self,
-        accout_type: BinanceAccountType,
+        account_type: BinanceAccountType,
         market: Dict[str, Any],
         market_id: Dict[str, Any],
     ):
+        if not (account_type.is_spot or account_type.is_future):
+            raise ValueError(f"BinanceAccountType.{account_type.value} is not supported for Binance Public Connector")
+        
         super().__init__(
-            account_type=accout_type,
+            account_type=account_type,
             market=market,
             market_id=market_id,
             exchange_id="binance",
         )
 
         self._ws_client = BinanceWSClient(
-            account_type=accout_type, handler=self._ws_msg_handler
+            account_type=account_type, handler=self._ws_msg_handler
         )
 
     @property

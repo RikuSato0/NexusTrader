@@ -50,12 +50,12 @@ async def main():
 
         demo = Demo()
 
-        demo.add_public_connector(PublicConnectorType.OKX_LIVE, conn_okx)
-        demo.add_public_connector(PublicConnectorType.BINANCE_USD_M_FUTURE, conn_bnc)
+        demo.add_public_connector(conn_okx)
+        demo.add_public_connector(conn_bnc)
 
-        await demo.subscribe_trade(PublicConnectorType.OKX_LIVE, "BTC/USDT:USDT")
+        await demo.subscribe_trade(BinanceAccountType.USD_M_FUTURE, "BTC/USDT:USDT")
         await demo.subscribe_trade(
-            PublicConnectorType.BINANCE_USD_M_FUTURE, "BTC/USDT:USDT"
+            OkxAccountType.LIVE, "BTC/USDT:USDT"
         )
 
         await demo.run()

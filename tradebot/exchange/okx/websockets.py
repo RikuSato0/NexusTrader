@@ -36,6 +36,7 @@ class OkxWSClient(WSManager):
         self._api_key = api_key
         self._secret = secret
         self._passphrase = passphrase
+        self._account_type = account_type
         if self.is_private:
             url = f"{STREAM_URLS[account_type]}/v5/private"
             self._authed = False

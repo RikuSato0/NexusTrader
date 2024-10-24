@@ -34,10 +34,10 @@ async def main():
         )
 
         demo = Demo()
-        demo.add_public_connector(PublicConnectorType.OKX_LIVE, okx_conn)
+        demo.add_public_connector(okx_conn)
 
-        await demo.subscribe_trade(PublicConnectorType.OKX_LIVE, "BTC/USDT")
-        await demo.subscribe_trade(PublicConnectorType.OKX_LIVE, "BTC/USDT:USDT")
+        await demo.subscribe_trade(OkxAccountType.LIVE, "BTC/USDT")
+        await demo.subscribe_trade(OkxAccountType.LIVE, "BTC/USDT:USDT")
 
         await demo.run()
 

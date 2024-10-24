@@ -14,9 +14,13 @@ class OkxPublicConnector(PublicConnector):
         market: Dict[str, Any],
         market_id: Dict[str, Any],
     ):
-        self._exchange_id = "okx"
-        self._market = market
-        self._market_id = market_id
+        super().__init__(
+            account_type=account_type,
+            market=market,
+            market_id=market_id,
+            exchange_id="okx",
+        )
+       
         self._ws_client = OkxWSClient(
             account_type=account_type,
             handler=self._ws_msg_handler,

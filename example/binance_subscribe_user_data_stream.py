@@ -1,32 +1,39 @@
 import asyncio
 
 
-from tradebot.exchange._binance import BinanceWebsocketManager
-from tradebot.constants import CONFIG, Url
+from tradebot.exchange.binance import BinancePrivateConnector, BinanceExchangeManager, BinanceAccountType
+from tradebot.constants import CONFIG
 
-BINANCE_API_KEY = CONFIG["binance_uni"]["API_KEY"]
-BINANCE_API_SECRET = CONFIG["binance_uni"]["SECRET"]
+BINANCE_API_KEY = CONFIG["binance_future_testnet"]["API_KEY"]
+BINANCE_API_SECRET = CONFIG["binance_future_testnet"]["SECRET"]
 
-
-def cb(msg):
-    print(msg)
 
 
 async def main():
     try:
-        ws_client = BinanceWebsocketManager(
-            Url.Binance.PortfolioMargin,
-            api_key=BINANCE_API_KEY,
-            secret=BINANCE_API_SECRET,
+    
+        exchange = BinanceExchangeManager({"exchange_id": "binance"})
+        await exchange.load_markets()
+        
+        private_conn = BinancePrivateConnector(
+            BinanceAccountType.USD_M_FUTURE_TESTNET,
+            BINANCE_API_KEY,
+            BINANCE_API_SECRET,
+            exchange.market,
+            exchange.market_id,
         )
-        await ws_client.subscribe_user_data(callback=cb)
-
+        
+        await private_conn.connect()
+        
         while True:
             await asyncio.sleep(1)
+        
 
     except asyncio.CancelledError:
-        await ws_client.close()
         print("Websocket closed")
+    finally:
+        await exchange.close()
+        await private_conn.disconnect()
 
 
 if __name__ == "__main__":

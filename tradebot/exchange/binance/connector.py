@@ -228,20 +228,20 @@ class BinancePrivateConnector:
         self,
         account_type: BinanceAccountType,
         api_key: str,
-        api_secret: str,
+        secret: str,
         market: Dict[str, Any],
         market_id: Dict[str, Any],
     ):
         self._log = SpdLog.get_logger(type(self).__name__, "INFO", flush=True)
 
         self._api_key = api_key
-        self._api_secret = api_secret
+        self._secret = secret
         
         self._market = market
         self._market_id = market_id
 
         self._rest_api = BinanceRestApi(
-            account_type=account_type, api_key=api_key, api_secret=api_secret
+            account_type=account_type, api_key=api_key, secret=secret
         )
 
         self._ws_client = BinanceWSClient(
@@ -284,3 +284,7 @@ class BinancePrivateConnector:
 
     def _ws_msg_handler(self, msg):
         print(msg)
+
+    async def disconnect(self):
+        await self._rest_api.close_session()
+        self._ws_client.disconnect()

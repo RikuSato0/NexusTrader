@@ -7,9 +7,6 @@ from tradebot.ctypes import BookL1, Trade, Kline
 from typing import Any, Dict
 
 
-N = 30
-
-
 class BncEventMsg(msgspec.Struct):
     e: str
 
@@ -71,6 +68,12 @@ class BncKlineMsg(msgspec.Struct):
             volume=float(self.k["v"]),
             timestamp=self.E,
         )
+
+
+event_decoder = msgspec.json.Decoder(BncEventMsg)
+trade_decoder = msgspec.json.Decoder(BncTradeMsg)
+book_ticker_decoder = msgspec.json.Decoder(BncBookTickerMsg)
+kline_decoder = msgspec.json.Decoder(BncKlineMsg)
 
 
 def msg_ws_handler(
@@ -227,11 +230,6 @@ def test_orjson(data: list):
 
 
 def test_msgspec(data):
-    event_decoder = msgspec.json.Decoder(BncEventMsg)
-    trade_decoder = msgspec.json.Decoder(BncTradeMsg)
-    book_ticker_decoder = msgspec.json.Decoder(BncBookTickerMsg)
-    kline_decoder = msgspec.json.Decoder(BncKlineMsg)
-
     for event in data:
         # msg = msgspec_decoder(event, decoder)
         msg_ws_handler(
@@ -240,7 +238,7 @@ def test_msgspec(data):
 
 
 def run_benchmark(n_iterations):
-    test_data = generate_test_data()[:N]
+    test_data = generate_test_data()
 
     # JIT Warm-up ?
     # 在正式计时前运行一些迭代，以确保 JIT 优化已经应用

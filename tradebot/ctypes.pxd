@@ -43,3 +43,30 @@ cdef class IndexPrice:
     cdef readonly str symbol
     cdef readonly double price
     cdef readonly long timestamp
+
+# cdef class Order:
+#     cdef readonly object raw
+#     cdef readonly bool success
+#     cdef readonly str exchange
+#     cdef readonly str id
+#     cdef readonly str client_order_id
+#     cdef readonly long timestamp
+#     cdef readonly str symbol
+#     cdef readonly str type
+#     cdef readonly str side
+#     cdef readonly str status
+#     cdef readonly double price
+#     cdef readonly double average
+#     cdef readonly double last_filled_price
+#     cdef readonly object amount
+#     cdef readonly object filled
+#     cdef readonly object last_filled
+#     cdef readonly object remaining
+#     cdef readonly double fee
+#     cdef readonly str fee_currency
+#     cdef readonly double cost
+#     cdef readonly long last_trade_timestamp
+#     cdef readonly bool reduce_only
+#     cdef readonly str position_side
+#     cdef readonly str time_in_force
+#     cdef readonly int leverage

@@ -4,10 +4,9 @@ from typing import Dict, Any
 from decimal import Decimal
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.entity import EventSystem
-from tradebot.log import SpdLog
 from tradebot.constants import EventType, OrderStatus
 from tradebot.types import Order
-from tradebot.ctypes import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
+from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
 from tradebot.exchange.binance.rest_api import BinanceRestApi
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWSClient

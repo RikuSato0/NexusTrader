@@ -1,7 +1,7 @@
 from typing import Dict, Any
 from tradebot.exchange.okx import OkxAccountType
 from tradebot.exchange.okx.websockets import OkxWSClient
-from tradebot.ctypes import Trade, BookL1, Kline
+from tradebot.types import Trade, BookL1, Kline
 from tradebot.constants import EventType
 from tradebot.entity import EventSystem
 from tradebot.base import PublicConnector

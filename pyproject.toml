@@ -3,6 +3,7 @@ name = "tradebot"
 version = "0.1.0"
 description = "fastest python trading bot"
 authors = ["River-Shi <nachuan.shi.quant@gmail.com>"]
+maintainers = ["Chase <cjx463045792@gmail.com>"]
 license = "MIT LICENSE"
 readme = "README.md"
 

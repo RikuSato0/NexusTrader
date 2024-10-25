@@ -9,9 +9,9 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
-aiohttp = "3.10.5"
+aiohttp = "3.10.10"
 asynciolimiter = "1.0.0"
-ccxt = "4.4.6"
+ccxt = "4.4.23"
 numpy = "2.1.1"
 orjson = "3.10.10"
 pyinstrument = "4.7.3"

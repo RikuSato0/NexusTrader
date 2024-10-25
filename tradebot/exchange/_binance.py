@@ -177,7 +177,7 @@ class BinanceOrderManager(OrderManager):
                 side=side,
                 status="failed",
                 price=price,
-                amount=amount,
+                amount=Decimal(amount),
             )
         return parse_ccxt_order(res, self.exchange_id)
 
@@ -198,7 +198,7 @@ class BinanceOrderManager(OrderManager):
                 type="market",
                 side=side,
                 status="failed",
-                amount=amount,
+                amount=Decimal(amount),
             )
         return parse_ccxt_order(res, self.exchange_id)
 
@@ -262,7 +262,7 @@ class BinanceOrderManager(OrderManager):
                     type="limit",
                     side=params["side"],
                     price=params.get("price", None),
-                    amount=params.get("amount", None),
+                    amount=Decimal(params.get("amount", None)),
                     status="failed",
                 )
 
@@ -292,7 +292,7 @@ class BinanceOrderManager(OrderManager):
                     symbol=params.get("symbol", None),
                     type="market",
                     side=params.get("side", None),
-                    amount=params.get("amount", None),
+                    amount=Decimal(params.get("amount", None)),
                     status="failed",
                 )
 
@@ -323,7 +323,7 @@ class BinanceOrderManager(OrderManager):
                     type=params.get("type", None),
                     side=params.get("side", None),
                     status="failed",
-                    amount=params.get("amount", None),
+                    amount=Decimal(params.get("amount", None)),
                 )
 
             self._log.warn(
@@ -889,9 +889,9 @@ def parse_ccxt_order(res: Dict[str, Any], exchange: str) -> Order:
     side = res.get("side", None)  # buy or sell
     price = res.get("price", None)  # maybe empty for market order
     average = res.get("average", None)  # float everage filling price
-    amount = res.get("amount", None)
-    filled = res.get("filled", None)
-    remaining = res.get("remaining", None)
+    amount = Decimal(res.get("amount", None))
+    filled = Decimal(res.get("filled", None))
+    remaining = Decimal(res.get("remaining", None))
     status = raw.get("status", None).lower()
     cost = res.get("cost", None)
     reduce_only = raw.get("reduceOnly", None)

@@ -13,3 +13,4 @@ venv/
 *.svg
 *.c
 *.so
+result.json

@@ -1,5 +1,5 @@
 from enum import Enum
-
+from tradebot.constants import AccountType
 
 class OrderStatus(Enum):
     NEW = "new"
@@ -9,7 +9,7 @@ class OrderStatus(Enum):
     EXPIRED = "expired"
     FAILED = "failed"
 
-class BinanceAccountType(Enum):
+class BinanceAccountType(AccountType):
     SPOT = "SPOT"
     MARGIN = "MARGIN"
     ISOLATED_MARGIN = "ISOLATED_MARGIN"

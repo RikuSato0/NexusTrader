@@ -760,3 +760,31 @@ class PublicConnector(ABC):
     @abstractmethod
     async def subscribe_kline(self, symbol: str, interval: str):
         pass
+
+class PrivateConnector(ABC):
+    def __init__(
+        self,
+        account_type,
+        market: Dict[str, Any],
+        market_id: Dict[str, Any],
+        exchange_id: str,
+    ):
+        self._log = SpdLog.get_logger(
+            name=type(self).__name__, level="INFO", flush=True
+        )
+        self._account_type = account_type
+        self._market = market
+        self._market_id = market_id
+        self._exchange_id = exchange_id
+    
+    @property
+    def account_type(self):
+        return self._account_type
+    
+    @abstractmethod
+    async def connect(self):
+        pass
+    
+    @abstractmethod
+    async def disconnect(self):
+        pass

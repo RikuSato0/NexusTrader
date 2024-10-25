@@ -161,6 +161,14 @@ class EventType(Enum):
     FUNDING_RATE = 4
     INDEX_PRICE = 5
 
+class OrderStatus(Enum):
+    NEW = "NEW"
+    PARTIALLY_FILLED = "PARTIALLY_FILLED"
+    FILLED = "FILLED"
+    CANCELED = "CANCELED"
+    EXPIRED = "EXPIRED"
+    FAILED = "FAILED"
+
 
 class ExchangeType(Enum):
     BINANCE = 0
@@ -303,3 +311,6 @@ class PublicConnectorType(Enum):
     OKX_LIVE = 6
     OKX_AWS = 7
     OKX_DEMO = 8
+
+class AccountType(Enum):
+    pass

@@ -41,7 +41,7 @@ async def main():
 
         res = await order_manager.place_limit_order(
             symbol="BTC/USDT:USDT",
-            side="buy",
+            side="sell",
             price=62000,
             amount=0.01,
             positionSide="SHORT",
@@ -49,6 +49,28 @@ async def main():
         )
 
         pprint(res)
+        
+        # res = await order_manager.place_limit_order(
+        #     symbol="BTC/USDT:USDT",
+        #     side="buy",
+        #     price=62000,
+        #     amount=0.01,
+        #     positionSide="SHORT",
+        #     # reduceOnly=True,
+        # )
+
+        # pprint(res)
+        
+        # res = await order_manager.place_limit_order(
+        #     symbol="BTC/USDT:USDT",
+        #     side="buy",
+        #     price=62000,
+        #     amount=0.01,
+        #     positionSide="SHORT",
+        #     # reduceOnly=True,
+        # )
+
+        # pprint(res)
 
         # res = await order_manager.cancel_order(
         #     id = res.id,

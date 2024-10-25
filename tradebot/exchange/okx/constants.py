@@ -1,7 +1,7 @@
 from enum import Enum
+from tradebot.constants import AccountType
 
-
-class OkxAccountType(Enum):
+class OkxAccountType(AccountType):
     LIVE = 0
     AWS = 1
     DEMO = 2

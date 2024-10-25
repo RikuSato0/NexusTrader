@@ -78,7 +78,7 @@ class BinanceWSClient(WSManager):
         await self._subscribe(params, subscription_id)
     
     async def subscribe_user_data_stream(self, listen_key: str):
-        subscription_id = f"user_data_stream.{listen_key}"
+        subscription_id = "user_data_stream"
         await self._subscribe(listen_key, subscription_id)
     
 

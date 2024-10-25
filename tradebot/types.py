@@ -102,4 +102,4 @@ class Order:
             if getattr(self, float_field) is not None and not isinstance(
                 getattr(self, float_field), float
             ):
-                setattr(self, float_field, float(getattr(self, field)))
+                setattr(self, float_field, float(getattr(self, float_field)))

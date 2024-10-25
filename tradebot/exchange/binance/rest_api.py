@@ -1,11 +1,11 @@
 import time
 import hmac
 import hashlib
-import ccxt
-
-from typing import Any, Dict
+import asyncio
+from decimal import Decimal
+from typing import Any, Dict, List, Literal, Optional
 from urllib.parse import urljoin
-
+from tradebot.entity import Order
 
 from tradebot.base import RestApi
 from tradebot.exchange.binance.constants import BASE_URLS, ENDPOINTS
@@ -26,14 +26,14 @@ class BinanceRestApi(RestApi):
         account_type: BinanceAccountType,
         api_key: str = None,
         secret: str = None,
+        exchange_id: str = "binance",
         **kwargs,
     ):
         self._api_key = api_key
         self._secret = secret
         self._account_type = account_type
         self._base_url = BASE_URLS[account_type]
-        # self._market = self._load_markets(account_type)
-        # self._market_id = self._load_market_id()
+        self.exchange_id = exchange_id
         super().__init__(**kwargs)
 
     def _get_headers(self) -> Dict[str, str]:
@@ -94,50 +94,284 @@ class BinanceRestApi(RestApi):
     def _generate_endpoint(self, endpoint_type: EndpointsType) -> str:
         return ENDPOINTS[endpoint_type][self._account_type]
 
-    # def _load_markets(self, account_type: AccountType):
-    #     spot_markets = {}
-    #     usdm_markets = {}
-    #     coinm_markets = {}
-    #     market = ccxt.binance().load_markets()
-    #     for symbol, data in market.items():
-    #         if data["spot"]:
-    #             spot_markets[symbol] = data
-    #         elif data["linear"]:
-    #             usdm_markets[symbol] = data
-    #         elif data["inverse"]:
-    #             coinm_markets[symbol] = data
+    # ========= to test =========
+    async def get_order(self, symbol: str, order_id: int) -> Dict[str, Any]:
+        endpoint = self._generate_endpoint(EndpointsType.TRADING)
+        endpoint = f"{endpoint}/order"
+        params = {"symbol": symbol, "orderId": order_id}
+        return await self._fetch("GET", endpoint, params=params, signed=True)
 
-    #     if (
-    #         account_type == AccountType.SPOT
-    #         or account_type == AccountType.SPOT_TESTNET
-    #         or account_type == AccountType.MARGIN
-    #         or account_type == AccountType.ISOLATED_MARGIN
-    #     ):
-    #         return spot_markets
-    #     elif (
-    #         account_type == AccountType.USD_M_FUTURE
-    #         or account_type == AccountType.USD_M_FUTURE_TESTNET
-    #     ):
-    #         return usdm_markets
-    #     elif (
-    #         account_type == AccountType.COIN_M_FUTURE
-    #         or account_type == AccountType.COIN_M_FUTURE_TESTNET
-    #     ):
-    #         return coinm_markets
-    #     elif account_type == AccountType.PORTFOLIO_MARGIN:
-    #         return market
+    async def get_all_orders(self, symbol: str, **kwargs) -> List[Dict[str, Any]]:
+        endpoint = self._generate_endpoint(EndpointsType.TRADING)
+        endpoint = f"{endpoint}/allOrders"
+        params = {"symbol": symbol, **kwargs}
+        return await self._fetch("GET", endpoint, params=params, signed=True)
 
-    # def _load_market_id(self):
-    #     market_id = {}
-    #     if not self.market:
-    #         raise ValueError(
-    #             "Market data not loaded, please call `load_markets()` first"
-    #         )
-    #     for _, v in self.market.items():
-    #         if v["subType"] == "linear":
-    #             market_id[f"{v['id']}_swap"] = v
-    #         elif v["type"] == "spot":
-    #             market_id[f"{v['id']}_spot"] = v
-    #         else:
-    #             market_id[v["id"]] = v
-    #     return market_id
+    async def get_open_orders(self, symbol: str = None) -> List[Dict[str, Any]]:
+        endpoint = self._generate_endpoint(EndpointsType.TRADING)
+        endpoint = f"{endpoint}/openOrders"
+        params = {}
+        if symbol:
+            params["symbol"] = symbol
+        return await self._fetch("GET", endpoint, params=params, signed=True)
+
+    async def _new_order(
+        self,
+        symbol: str,
+        side: Literal["buy", "sell"],
+        order_type: Literal["LIMIT", "MARKET"],
+        amount: Decimal,
+        price: Optional[float] = None,
+        **params,
+    ) -> Order:
+        try:
+            endpoint = self._generate_endpoint(EndpointsType.TRADING)
+            endpoint = f"{endpoint}/order"
+            order_params = {
+                "symbol": symbol,
+                "side": side.upper(),
+                "type": order_type,
+                "quantity": str(amount),
+                **params,
+            }
+            if order_type == "LIMIT":
+                order_params["price"] = str(price)
+                # order_params["timeInForce"] = params.get("timeInForce", "GTC")
+
+            res = await self._fetch("POST", endpoint, data=order_params, signed=True)
+            # return parse_binance_order(res, self.exchange_id)
+            return res
+        except Exception as e:
+            self._log.error(f"Failed to place {order_type.lower()} order: {str(e)}")
+            return Order(
+                raw={},
+                success=False,
+                exchange=self.exchange_id,
+                id=None,
+                client_order_id=None,
+                timestamp=time.time_ns() // 1_000_000,
+                symbol=symbol,
+                type=order_type.lower(),
+                side=side,
+                status="failed",
+                price=price,
+                amount=amount,
+            )
+
+    async def place_limit_order(
+        self,
+        symbol: str,
+        side: Literal["buy", "sell"],
+        amount: Decimal,
+        price: float,
+        **params,
+    ) -> Order:
+        return await self._new_order(symbol, side, "LIMIT", amount, price, **params)
+
+    async def place_market_order(
+        self, symbol: str, side: Literal["buy", "sell"], amount: Decimal, **params
+    ) -> Order:
+        return await self._new_order(symbol, side, "MARKET", amount, **params)
+
+    async def cancel_order(self, id: str, symbol: str, **params) -> Order:
+        try:
+            endpoint = self._generate_endpoint(EndpointsType.TRADING)
+            endpoint = f"{endpoint}/order"
+            cancel_params = {"symbol": symbol, "orderId": id, **params}
+            res = await self._fetch(
+                "DELETE", endpoint, params=cancel_params, signed=True
+            )
+            # return parse_binance_order(res, self.exchange_id)
+            return res
+        except Exception as e:
+            self._log.error(f"Failed to cancel order: {str(e)}")
+            return Order(
+                raw={},
+                success=False,
+                exchange=self.exchange_id,
+                id=id,
+                client_order_id=None,
+                timestamp=time.time_ns() // 1_000_000,
+                symbol=symbol,
+                type=None,
+                side=None,
+                status="failed",
+                amount=None,
+            )
+
+    async def fetch_orders(
+        self, symbol: str, since: int = None, limit: int = None
+    ) -> List[Order]:
+        endpoint = self._generate_endpoint(EndpointsType.TRADING)
+        endpoint = f"{endpoint}/allOrders"
+        params = {"symbol": symbol}
+        if since:
+            params["startTime"] = since
+        if limit:
+            params["limit"] = limit
+        res = await self._fetch("GET", endpoint, params=params, signed=True)
+        # return [parse_binance_order(order, self.exchange_id) for order in res]
+        return res
+
+    async def handle_request_timeout(self, method: str, params: Dict[str, Any]):
+        symbol = params["symbol"]
+        current_time = time.time_ns() // 1_000_000
+        orders = await self.fetch_orders(symbol, since=current_time - 1000 * 5)
+
+        if not self._in_orders(orders, method, params):
+            match method:
+                case "place_limit_order":
+                    return await self.retry_place_limit_order(params)
+                case "place_market_order":
+                    return await self.retry_place_market_order(params)
+                case "cancel_order":
+                    return await self.retry_cancel_order(params)
+
+    async def retry_place_limit_order(
+        self, params: Dict[str, Any], max_retry: int = 3, interval: int = 3
+    ):
+        for i in range(max_retry):
+            res = await self.place_limit_order(**params)
+
+            if res.success:
+                return res
+
+            if i == max_retry - 1:
+                return Order(
+                    raw={},
+                    success=False,
+                    exchange=self.exchange_id,
+                    id=params.get("id", None),
+                    client_order_id="",
+                    timestamp=time.time_ns() // 1_000_000,
+                    symbol=params.get("symbol", None),
+                    type="limit",
+                    side=params["side"],
+                    price=params.get("price", None),
+                    amount=params.get("amount", None),
+                    status="failed",
+                )
+
+            self._log.warn(
+                f"Order placement failed, attempting retry {i+1} of {max_retry}: {str(res)}"
+            )
+            await asyncio.sleep(interval)
+
+    async def retry_place_market_order(
+        self, params: Dict[str, Any], max_retry: int = 3, interval: int = 3
+    ):
+        for i in range(max_retry):
+            res = await self.place_market_order(**params)
+
+            if res.success:
+                return res
+
+            if i == max_retry - 1:
+                return Order(
+                    raw={},
+                    success=False,
+                    exchange=self.exchange_id,
+                    id=params.get("id", None),
+                    client_order_id="",
+                    timestamp=time.time_ns() // 1_000_000,
+                    symbol=params.get("symbol", None),
+                    type="market",
+                    side=params.get("side", None),
+                    amount=params.get("amount", None),
+                    status="failed",
+                )
+
+            self._log.warn(
+                f"Order placement failed, attempting retry {i+1} of {max_retry}: {str(res)}"
+            )
+            await asyncio.sleep(interval)
+
+    async def retry_cancel_order(
+        self, params: Dict[str, Any], max_retry: int = 3, interval: int = 3
+    ):
+        for i in range(max_retry):
+            res = await self.cancel_order(**params)
+
+            if res.success:
+                return res
+
+            if i == max_retry - 1:
+                return Order(
+                    raw={},
+                    success=False,
+                    exchange=self.exchange_id,
+                    id=params.get("id", None),
+                    client_order_id="",
+                    timestamp=time.time_ns() // 1_000_000,
+                    symbol=params.get("symbol", None),
+                    type=None,
+                    side=None,
+                    status="failed",
+                    amount=None,
+                )
+
+            self._log.warn(
+                f"Order cancellation failed, attempting retry {i+1} of {max_retry}: {str(res)}"
+            )
+            await asyncio.sleep(interval)
+
+    def _in_orders(
+        self, orders: List[Order], method: str, params: Dict[str, Any]
+    ) -> bool:
+        # Implement logic to check if the order is in the list of orders
+        # This will depend on the specific details of your Order class and how you want to match orders
+        pass
+
+
+def parse_binance_order(binance_order: Dict[str, Any], exchange_id: str) -> Order:
+    status_map = {
+        "NEW": "new",
+        "PARTIALLY_FILLED": "partially_filled",
+        "FILLED": "filled",
+        "CANCELED": "canceled",
+        "EXPIRED": "expired",
+        "REJECTED": "failed",
+    }
+
+    order_type_map = {
+        "LIMIT": "limit",
+        "MARKET": "market",
+        "STOP_LOSS": "limit",
+        "STOP_LOSS_LIMIT": "limit",
+        "TAKE_PROFIT": "limit",
+        "TAKE_PROFIT_LIMIT": "limit",
+        "LIMIT_MAKER": "limit",
+    }
+
+    return Order(
+        raw=binance_order,
+        success=True,
+        exchange=exchange_id,
+        id=str(binance_order["orderId"]),
+        client_order_id=binance_order["clientOrderId"],
+        timestamp=int(binance_order["time"]),
+        symbol=binance_order["symbol"],
+        type=order_type_map.get(binance_order["type"], "limit"),
+        side=binance_order["side"].lower(),
+        status=status_map.get(binance_order["status"], "failed"),
+        price=float(binance_order["price"]) if binance_order["price"] != "0" else None,
+        average=float(binance_order["price"])
+        if binance_order["status"] == "FILLED"
+        else None,
+        last_filled_price=None,  # Binance doesn't provide this directly
+        amount=Decimal(binance_order["origQty"]),
+        filled=Decimal(binance_order["executedQty"]),
+        last_filled=None,  # Binance doesn't provide this directly
+        remaining=Decimal(binance_order["origQty"])
+        - Decimal(binance_order["executedQty"]),
+        fee=None,  # Binance doesn't provide this in the order response
+        fee_currency=None,  # Binance doesn't provide this in the order response
+        cost=float(binance_order["cummulativeQuoteQty"])
+        if binance_order["cummulativeQuoteQty"] != "0"
+        else None,
+        last_trade_timestamp=int(binance_order["updateTime"]),
+        reduce_only=None,  # This is not applicable for spot orders
+        position_side=None,  # This is not applicable for spot orders
+        time_in_force=binance_order.get("timeInForce"),
+        leverage=None,  # This is not applicable for spot orders
+    )

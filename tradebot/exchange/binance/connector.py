@@ -241,7 +241,7 @@ class BinancePrivateConnector(PrivateConnector):
 
         self._api_key = api_key
         self._secret = secret
-        
+
         self._rest_api = BinanceRestApi(
             account_type=account_type, api_key=api_key, secret=secret
         )
@@ -249,7 +249,7 @@ class BinancePrivateConnector(PrivateConnector):
         self._ws_client = BinanceWSClient(
             account_type=account_type, handler=self._ws_msg_handler
         )
-    
+
     @property
     def market_type(self):
         if self._account_type.is_spot:
@@ -300,7 +300,7 @@ class BinancePrivateConnector(PrivateConnector):
                     self._parse_order_trade_update(msg)
                 case "executionReport":
                     self._parse_execution_report(msg)
-    
+
     def _parse_order_trade_update(self, res: Dict[str, Any]) -> Order:
         """
         {
@@ -485,21 +485,22 @@ class BinancePrivateConnector(PrivateConnector):
             time_in_force=event_data.get("f", None),
         )
         self._emit_order(order)
-    
+
     def _emit_order(self, order: Order):
-        if order.status == "new":
-            EventSystem.emit(OrderStatus.NEW, order)
-        elif order.status == "partially_filled":
-            EventSystem.emit(OrderStatus.PARTIALLY_FILLED, order)
-        elif order.status == "filled":
-            EventSystem.emit(OrderStatus.FILLED, order)
-        elif order.status == "canceled":
-            EventSystem.emit(OrderStatus.CANCELED, order)
-        elif order.status == "expired":
-            EventSystem.emit(OrderStatus.EXPIRED, order)
-        elif order.status == "failed":
-            EventSystem.emit(OrderStatus.FAILED, order)
-    
+        match order.status:
+            case "new":
+                EventSystem.emit(OrderStatus.NEW, order)
+            case "partially_filled":
+                EventSystem.emit(OrderStatus.PARTIALLY_FILLED, order)
+            case "filled":
+                EventSystem.emit(OrderStatus.FILLED, order)
+            case "canceled":
+                EventSystem.emit(OrderStatus.CANCELED, order)
+            case "expired":
+                EventSystem.emit(OrderStatus.EXPIRED, order)
+            case "failed":
+                EventSystem.emit(OrderStatus.FAILED, order)
+
     async def disconnect(self):
         await self._rest_api.close_session()
         self._ws_client.disconnect()

@@ -1,28 +1,10 @@
 import time
-import asyncio
 
 from typing import Literal, Callable
-from typing import Any, Dict
-from decimal import Decimal
-
+from typing import Any
 from asynciolimiter import Limiter
 
-
-from tradebot.types import (
-    BookL1,
-    Trade,
-    Kline,
-    MarkPrice,
-    FundingRate,
-    IndexPrice,
-    Order,
-)
-from tradebot.entity import EventSystem
 from tradebot.base import WSManager
-from tradebot.constants import EventType
-
-
-from tradebot.exchange.binance.rest_api import BinanceRestApi
 from tradebot.exchange.binance.constants import STREAM_URLS
 from tradebot.exchange.binance.constants import BinanceAccountType
 

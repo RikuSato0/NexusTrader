@@ -127,8 +127,8 @@ class BinanceApiClient(RestApi):
         method: str,
         base_url: str,
         endpoint: str,
-        params: Dict[str, Any] = {},
-        data: Dict[str, Any] = {},
+        params: Dict[str, Any] = None,
+        data: Dict[str, Any] = None,
         signed: bool = False,
     ) -> Any:
         url = urljoin(base_url, endpoint)
@@ -139,10 +139,16 @@ class BinanceApiClient(RestApi):
 
         if signed:
             signature = self._generate_signature(query)
-            params["signature"] = signature
+            query += f"&signature={signature}"
+            
+        if method in ["GET", "DELETE"]:
+            params.update(data)
+            data = None
+        else:
+            params = None
 
         return await self.request(
-            method, url, params=params, data=data, headers=headers
+            method, url, params=params, data=query, headers=headers
         )
 
     async def put_dapi_v1_listen_key(self):

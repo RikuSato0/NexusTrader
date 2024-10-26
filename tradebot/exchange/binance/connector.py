@@ -309,6 +309,7 @@ class BinancePrivateConnector(PrivateConnector):
                     break
 
     async def connect(self):
+        self._api_client.init_session()
         listen_key = await self._start_user_data_stream()
         if listen_key:
             asyncio.create_task(self._keep_alive_user_data_stream(listen_key))

@@ -3,7 +3,7 @@ import asyncio
 from pprint import pprint
 from tradebot.constants import CONFIG
 from tradebot.base import ExchangeManager
-# from tradebot.exchange._binance import BinanceOrderManager
+from tradebot.exchange._binance import BinanceOrderManager
 from tradebot.exchange.binance import BinancePrivateConnector, BinanceAccountType, BinanceExchangeManager
 from tradebot.exceptions import OrderError
 
@@ -47,8 +47,21 @@ async def main():
             market_id=exchange.market_id,
         )
         
-        start = int(time.time() * 1000)
+        await private_conn._api_client.init_session()
         
+        order_manager = BinanceOrderManager(exchange)
+        start = int(time.time() * 1000)
+        res = await order_manager.place_limit_order(
+            symbol="BTC/USDT:USDT",
+            side="sell",
+            price=62000,
+            amount=0.01,
+            positionSide="SHORT",
+        )
+        end = int(time.time() * 1000)
+        print(f"Time: {end - start} ms")
+        
+        start = int(time.time() * 1000)   
         res = await private_conn.create_order(
             symbol='BTC/USDT:USDT',
             side='sell',
@@ -57,18 +70,10 @@ async def main():
             amount=0.01,
             positionSide="SHORT",
         )
+        end = int(time.time() * 1000)
         
         pprint(res)
-        print(res["updateTime"] - start)
-
-        # res = await order_manager.place_limit_order(
-        #     symbol="BTC/USDT:USDT",
-        #     side="sell",
-        #     price=62000,
-        #     amount=0.01,
-        #     positionSide="SHORT",
-            # reduceOnly=True,
-        # )
+        print(f"Time: {end - start} ms")
 
         # pprint(res)
         

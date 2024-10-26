@@ -545,8 +545,11 @@ class BinancePrivateConnector(PrivateConnector):
         }
         
         if type == "limit":
-            params["price"] = price
-        
+            params.update({
+                "price": price,
+                "timeInForce": kwargs.get("timeInForce", "GTC")
+            })
+            
         if self.account_type.is_spot:
             if not market["spot"]:
                 raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
@@ -573,7 +576,7 @@ class BinancePrivateConnector(PrivateConnector):
         return res
     
     async def disconnect(self):
-        await self._rest_api.close_session()
+        await self._api_client.close_session()
         self._ws_client.disconnect()
     
     

@@ -23,7 +23,7 @@ async def main():
         res = await rest_api.keep_alive_user_data_stream(listen_key)
         print(res)
         
-        res = await rest_api.new_order("BTCUSDT", "BUY", "MARKET", quantity=0.01)
+        res = await rest_api.new_order("BTCUSDT", "SELL", "MARKET", quantity=0.01, positionSide="SHORT")
         print(res)
         
         

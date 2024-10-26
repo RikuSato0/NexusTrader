@@ -56,6 +56,18 @@ class BinanceAccountType(AccountType):
     def is_portfolio_margin(self):
         return self in (self.PORTFOLIO_MARGIN,)
     
+    @property
+    def is_testnet(self):
+        return self in (self.SPOT_TESTNET, self.USD_M_FUTURE_TESTNET, self.COIN_M_FUTURE_TESTNET)
+    
+    @property
+    def base_url(self):
+        return BASE_URLS[self]
+    
+    @property
+    def ws_url(self):
+        return STREAM_URLS[self]
+        
 
 class EndpointsType(Enum):
     USER_DATA_STREAM = "USER_DATA_STREAM"
@@ -112,3 +124,4 @@ ENDPOINTS = {
         BinanceAccountType.COIN_M_FUTURE_TESTNET: "/dapi/v1",
     },
 }
+

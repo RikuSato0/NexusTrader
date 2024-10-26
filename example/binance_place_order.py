@@ -59,7 +59,7 @@ async def main():
             positionSide="SHORT",
         )
         end = int(time.time() * 1000)
-        print(f"Time: {end - start} ms")
+        print(f"CCXT Time: {end - start} ms")
         
         start = int(time.time() * 1000)   
         res = await private_conn.create_order(
@@ -72,8 +72,7 @@ async def main():
         )
         end = int(time.time() * 1000)
         
-        pprint(res)
-        print(f"Time: {end - start} ms")
+        print(f"Tradebot Time: {end - start} ms")
 
         # pprint(res)
         

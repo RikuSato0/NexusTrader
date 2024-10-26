@@ -4,7 +4,7 @@ import hashlib
 import asyncio
 from decimal import Decimal
 from typing import Any, Dict, List, Literal, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlencode
 from tradebot.entity import Order
 
 from tradebot.base import RestApi
@@ -132,9 +132,9 @@ class BinanceApiClient(RestApi):
         signed: bool = False,
     ) -> Any:
         url = urljoin(base_url, endpoint)
-
+        data = data or {}
         data["timestamp"] = time.time_ns() // 1_000_000
-        query = "&".join([f"{k}={v}" for k, v in data.items()])
+        query = urlencode(data)
         headers = self._get_headers()
 
         if signed:
@@ -142,10 +142,11 @@ class BinanceApiClient(RestApi):
             query += f"&signature={signature}"
             
         if method in ["GET", "DELETE"]:
+            params = params or {}
             params.update(data)
             data = None
         else:
-            params = None
+            data = query
 
         return await self.request(
             method, url, params=params, data=query, headers=headers

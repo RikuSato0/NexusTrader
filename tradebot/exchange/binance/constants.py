@@ -26,6 +26,14 @@ class BinanceAccountType(AccountType):
     
     @property
     def is_margin(self):
+        return self in (self.MARGIN,)
+
+    @property
+    def is_isolated_margin(self):
+        return self in (self.ISOLATED_MARGIN,)
+    
+    @property
+    def is_isolated_margin_or_margin(self):
         return self in (self.MARGIN, self.ISOLATED_MARGIN)
     
     @property

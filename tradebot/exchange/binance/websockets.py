@@ -32,7 +32,7 @@ class BinanceWSClient(WSManager):
             self._log.info(f"Already subscribed to {subscription_id}")
 
     async def subscribe_agg_trade(self, symbol: str):
-        if self._account_type.is_margin or self._account_type.is_portfolio_margin:
+        if self._account_type.is_isolated_margin_or_margin or self._account_type.is_portfolio_margin:
             raise ValueError(
                 "Not Supported for `Margin Account` or `Portfolio Margin Account`"
             )
@@ -41,7 +41,7 @@ class BinanceWSClient(WSManager):
         await self._subscribe(params, subscription_id)
 
     async def subscribe_trade(self, symbol: str):
-        if self._account_type.is_margin or self._account_type.is_portfolio_margin:
+        if self._account_type.is_isolated_margin_or_margin or self._account_type.is_portfolio_margin:
             raise ValueError(
                 "Not Supported for `Margin Account` or `Portfolio Margin Account`"
             )
@@ -50,7 +50,7 @@ class BinanceWSClient(WSManager):
         await self._subscribe(params, subscription_id)
 
     async def subscribe_book_ticker(self, symbol: str):
-        if self._account_type.is_margin or self._account_type.is_portfolio_margin:
+        if self._account_type.is_isolated_margin_or_margin or self._account_type.is_portfolio_margin:
             raise ValueError(
                 "Not Supported for `Margin Account` or `Portfolio Margin Account`"
             )
@@ -93,6 +93,10 @@ class BinanceWSClient(WSManager):
             "1M",
         ],
     ):
+        if self._account_type.is_isolated_margin_or_margin or self._account_type.is_portfolio_margin:
+            raise ValueError(
+                "Not Supported for `Margin Account` or `Portfolio Margin Account`"
+            )
         subscription_id = f"kline.{symbol}.{interval}"
         params = f"{symbol.lower()}@kline_{interval}"
         await self._subscribe(params, subscription_id)

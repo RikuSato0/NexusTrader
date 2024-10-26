@@ -5,7 +5,6 @@ from tradebot.base import ExchangeManager
 class OkxExchangeManager(ExchangeManager):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.market_id = None
 
     async def load_markets(self):
         await super().load_markets()

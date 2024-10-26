@@ -43,6 +43,7 @@ class ExchangeManager(ABC):
             name=type(self).__name__, level="INFO", flush=True
         )
         self.market = None
+        self.market_id = None
 
         if not self.api_key or not self.secret:
             self._log.warn(

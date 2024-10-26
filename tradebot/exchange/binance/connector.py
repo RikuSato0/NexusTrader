@@ -285,17 +285,19 @@ class BinancePrivateConnector(PrivateConnector):
         params = {"listenKey": listen_key}
         try:
             if self._account_type.is_spot:
-                await self._api.public_put_userdatastream(params=params)
+                res = await self._api.public_put_userdatastream(params=params)
             elif self._account_type.is_margin:
-                await self._api.sapi_put_userdatastream(params=params)
+                res = await self._api.sapi_put_userdatastream(params=params)
             elif self._account_type.is_isolated_margin:
-                await self._api.sapi_put_userdatastream_isolated(params=params)
+                res = await self._api.sapi_put_userdatastream_isolated(params=params)
             elif self._account_type.is_linear:
-                await self._api.fapiprivate_put_listenkey(params=params)
+                res = await self._api.fapiprivate_put_listenkey(params=params)
             elif self._account_type.is_inverse:
-                await self._api.dapiprivate_put_listenkey(params=params)
+                res = await self._api.dapiprivate_put_listenkey(params=params)
             elif self._account_type.is_portfolio_margin:
-                await self._api.papi_put_listenkey(params=params)
+                res = await self._api.papi_put_listenkey(params=params)
+            listen_key = res.get("listenKey", listen_key) # spot doesn't return listenKey
+            return listen_key
         except Exception as e:
             self._log.error(f"Failed to put listen key: {str(e)}")
 
@@ -307,7 +309,8 @@ class BinancePrivateConnector(PrivateConnector):
         while retry_count < max_retry:
             await asyncio.sleep(60 * interval)
             try:
-                await self._put_listen_key(listen_key)
+                listen_key = await self._put_listen_key(listen_key)
+                self._log.info(f"Success keep-alive listen key: {listen_key}")
                 retry_count = 0  # Reset retry count on successful keep-alive
             except Exception as e:
                 self._log.error(f"Failed to keep alive listen key: {str(e)}")

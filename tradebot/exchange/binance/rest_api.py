@@ -1,5 +1,6 @@
 import time
 import hmac
+import orjson
 import hashlib
 
 import asyncio
@@ -149,6 +150,7 @@ class BinanceApiClient(RestApi):
             data = None
         else:
             data = query.encode()
+            # data = orjson.dumps(query)
 
         return await self.request(
             method, url, params=params, data=query, headers=headers

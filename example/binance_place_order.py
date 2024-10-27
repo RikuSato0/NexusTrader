@@ -49,10 +49,9 @@ async def test_tradebot(n: int = 20, exchange: ExchangeManager = None):
     lat = []
     private_conn = BinancePrivateConnector(
             account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
-            api_key=BINANCE_API_KEY,
-            secret=BINANCE_API_SECRET,
             market=exchange.market,
             market_id=exchange.market_id,
+            api=exchange.api,
         )
     
     for i in range(n):

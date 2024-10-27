@@ -1,5 +1,6 @@
 import time
 import asyncio
+import ccxt.pro as ccxt
 from typing import Dict, Any
 from typing import Literal
 from decimal import Decimal
@@ -228,10 +229,9 @@ class BinancePrivateConnector(PrivateConnector):
     def __init__(
         self,
         account_type: BinanceAccountType,
-        api_key: str,
-        secret: str,
         market: Dict[str, Any],
         market_id: Dict[str, Any],
+        api: ccxt.binance,
     ):
         super().__init__(
             account_type=account_type,
@@ -240,9 +240,10 @@ class BinancePrivateConnector(PrivateConnector):
             exchange_id="binance",
         )
         
-        self._api_client = BinanceApiClient(
-            api_key=api_key, secret=secret, testnet=account_type.is_testnet
-        )
+        # self._api_client = BinanceApiClient(
+        #     api_key=api_key, secret=secret, testnet=account_type.is_testnet
+        # )
+        self._api_client = api
         
         self._ws_client = BinanceWSClient(
             account_type=account_type, handler=self._ws_msg_handler
@@ -264,28 +265,28 @@ class BinancePrivateConnector(PrivateConnector):
     
     async def _start_user_data_stream(self):
         if self.account_type.is_spot:
-            res = await self._api_client.post_api_v3_user_data_stream()
+            res = await self._api_client.public_post_userdatastream()
         elif self.account_type.is_margin:
-            res = await self._api_client.post_sapi_v1_user_data_stream()
+            res = await self._api_client.sapi_post_userdatastream()
         elif self.account_type.is_linear:
-            res = await self._api_client.post_fapi_v1_listen_key()
+            res = await self._api_client.fapiprivate_post_listenkey()
         elif self.account_type.is_inverse:
-            res = await self._api_client.post_dapi_v1_listen_key()
+            res = await self._api_client.dapiprivate_post_listenkey()
         elif self.account_type.is_portfolio_margin:
-            res = await self._api_client.post_papi_v1_listen_key()
+            res = await self._api_client.papi_post_listenkey()
         return res.get("listenKey", None)
     
     async def _keep_alive_listen_key(self, listen_key: str):
         if self.account_type.is_spot:
-            await self._api_client.put_api_v3_user_data_stream(listen_key)
+            await self._api_client.public_put_userdatastream(params={"listenKey": listen_key})
         elif self.account_type.is_margin:
-            await self._api_client.put_sapi_v1_user_data_stream(listen_key)
+            await self._api_client.sapi_put_userdatastream(params={"listenKey": listen_key})
         elif self.account_type.is_linear:
-            await self._api_client.put_fapi_v1_listen_key()
+            await self._api_client.fapiprivate_put_listenkey()
         elif self.account_type.is_inverse:
-            await self._api_client.put_dapi_v1_listen_key()
+            await self._api_client.dapiprivate_put_listenkey()
         elif self.account_type.is_portfolio_margin:
-            await self._api_client.put_papi_v1_listen_key()
+            await self._api_client.papi_put_listenkey()
         
         
     async def _keep_alive_user_data_stream(
@@ -309,7 +310,6 @@ class BinancePrivateConnector(PrivateConnector):
                     break
 
     async def connect(self):
-        self._api_client.init_session()
         listen_key = await self._start_user_data_stream()
         if listen_key:
             asyncio.create_task(self._keep_alive_user_data_stream(listen_key))
@@ -550,34 +550,33 @@ class BinancePrivateConnector(PrivateConnector):
                 "price": price,
                 "timeInForce": kwargs.get("timeInForce", "GTC")
             })
-            
+
         if self.account_type.is_spot:
             if not market["spot"]:
                 raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
-            res = await self._api_client.post_api_v3_order(**params)
+            res = await self._api_client.private_post_order(params=params)
         elif self.account_type.is_isolated_margin_or_margin:
             if not market["margin"]:
                 raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
-            res = await self._api_client.post_sapi_v1_margin_order(**params)
+            res = await self._api_client.sapi_post_margin_order(params=params)
         elif self.account_type.is_linear:
             if not market["linear"]:
                 raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
-            res = await self._api_client.post_fapi_v1_order(**params)
+            res = await self._api_client.fapiprivate_post_order(params=params)
         elif self.account_type.is_inverse:
             if not market["inverse"]:
                 raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
-            res = await self._api_client.post_dapi_v1_order(**params)
+            res = await self._api_client.dapiprivate_post_order(params=params)
         elif self.account_type.is_portfolio_margin:
             if market["margin"]:
-                res = await self._api_client.post_papi_v1_margin_order(**params)
+                res = await self._api_client.papi_post_margin_order(params=params)
             elif market["linear"]:
-                res = await self._api_client.post_papi_v1_um_order(**params)
+                res = await self._api_client.papi_post_um_order(params=params)
             elif market["inverse"]:
-                res = await self._api_client.post_papi_v1_cm_order(**params)
+                res = await self._api_client.papi_post_cm_order(params=params)
         return res
     
     async def disconnect(self):
-        await self._api_client.close_session()
         self._ws_client.disconnect()
     
     

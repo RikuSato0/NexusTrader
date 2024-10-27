@@ -148,7 +148,7 @@ class BinanceApiClient(RestApi):
             params.update(data)
             data = None
         else:
-            data = query
+            data = query.encode()
 
         return await self.request(
             method, url, params=params, data=query, headers=headers

@@ -15,6 +15,78 @@ BINANCE_API_SECRET = CONFIG["binance_future_testnet"]["SECRET"]
 # BINANCE_API_SECRET = CONFIG['binance_vip']['SECRET']
 
 
+async def test_ccxt(n: int = 20, exchange: ExchangeManager = None):
+    lat = []
+    
+    order_manager = BinanceOrderManager(exchange)
+
+    for i in range(n):
+        start = time.perf_counter()
+        res = await order_manager.place_market_order(
+                symbol="BTC/USDT:USDT",
+                side="sell",
+                amount=0.01,
+                positionSide="SHORT",
+            )
+        end = time.perf_counter()
+        lat.append(end - start)
+        
+        start = time.perf_counter()
+        res = await order_manager.place_market_order(
+                symbol="BTC/USDT:USDT",
+                side="buy",
+                amount=0.01,
+                positionSide="SHORT",
+            )
+        end = time.perf_counter()
+        lat.append(end - start)
+        
+        await asyncio.sleep(0.2)
+    print(f"Ccxt Time: {sum(lat) / len(lat) * 1000} ms")
+        
+        
+async def test_tradebot(n: int = 20, exchange: ExchangeManager = None):
+    lat = []
+    private_conn = BinancePrivateConnector(
+            account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
+            api_key=BINANCE_API_KEY,
+            secret=BINANCE_API_SECRET,
+            market=exchange.market,
+            market_id=exchange.market_id,
+        )
+    
+    for i in range(n):
+        start = int(time.time() * 1000)   
+        res = await private_conn.create_order(
+            symbol='BTC/USDT:USDT',
+            side='sell',
+            type="market",
+            amount=0.01,
+            positionSide="SHORT",
+        )
+        end = int(time.time() * 1000)
+        
+        lat.append(end - start)
+        
+        start = int(time.time() * 1000)   
+        res = await private_conn.create_order(
+            symbol='BTC/USDT:USDT',
+            side='buy',
+            type="market",
+            amount=0.01,
+            positionSide="SHORT",
+        )
+        end = int(time.time() * 1000)
+        
+        lat.append(end - start)
+        await asyncio.sleep(0.2)
+    
+    print(f"Tradebot Time: {sum(lat) / len(lat)} ms")
+    await private_conn.disconnect()
+    
+    
+
+
 async def main():
     try:
         # config = {
@@ -38,54 +110,8 @@ async def main():
 
         exchange = BinanceExchangeManager(config)
         await exchange.load_markets()
-        
-        private_conn = BinancePrivateConnector(
-            account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
-            api_key=BINANCE_API_KEY,
-            secret=BINANCE_API_SECRET,
-            market=exchange.market,
-            market_id=exchange.market_id,
-        )
-        
-        private_conn._api_client.init_session()
-        
-        order_manager = BinanceOrderManager(exchange)
-        start = int(time.time() * 1000)
-        res = await order_manager.place_limit_order(
-            symbol="BTC/USDT:USDT",
-            side="sell",
-            price=62000,
-            amount=0.01,
-            positionSide="SHORT",
-        )
-        end = int(time.time() * 1000)
-        print(f"CCXT Time: {end - start} ms")
-        
-        start = int(time.time() * 1000)   
-        res = await private_conn.create_order(
-            symbol='BTC/USDT:USDT',
-            side='sell',
-            type="limit",
-            price=62000,
-            amount=0.01,
-            positionSide="SHORT",
-        )
-        end = int(time.time() * 1000)
-        
-        print(f"Tradebot Time: {end - start} ms")
-        
-        start = int(time.time() * 1000)   
-        res = await private_conn.create_order(
-            symbol='BTC/USDT:USDT',
-            side='sell',
-            type="limit",
-            price=62000,
-            amount=0.01,
-            positionSide="SHORT",
-        )
-        end = int(time.time() * 1000)
-        
-        print(f"Tradebot Time: {end - start} ms")
+        await test_ccxt(30, exchange)
+        await test_tradebot(30, exchange)
 
         # pprint(res)
         
@@ -160,7 +186,6 @@ async def main():
     except OrderError as e:
         print(e)
     finally:
-        await private_conn.disconnect()
         await exchange.close()
 
 

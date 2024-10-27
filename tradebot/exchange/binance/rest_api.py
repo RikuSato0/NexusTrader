@@ -1,6 +1,7 @@
 import time
 import hmac
 import hashlib
+
 import asyncio
 from decimal import Decimal
 from typing import Any, Dict, List, Literal, Optional
@@ -27,10 +28,11 @@ class BinanceRestApi(RestApi):
         super().__init__(**kwargs)
 
     def _get_headers(self) -> Dict[str, str]:
-        headers = {
-            "Accept": "application/json",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36",
-        }
+        # headers = {
+        #     "Accept": "application/json",
+        #     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36",
+        # }
+        headers = {}
         if self._api_key:
             headers["X-MBX-APIKEY"] = self._api_key
         return headers

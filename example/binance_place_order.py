@@ -47,7 +47,7 @@ async def main():
             market_id=exchange.market_id,
         )
         
-        await private_conn._api_client.init_session()
+        private_conn._api_client.init_session()
         
         order_manager = BinanceOrderManager(exchange)
         start = int(time.time() * 1000)
@@ -60,6 +60,19 @@ async def main():
         )
         end = int(time.time() * 1000)
         print(f"CCXT Time: {end - start} ms")
+        
+        start = int(time.time() * 1000)   
+        res = await private_conn.create_order(
+            symbol='BTC/USDT:USDT',
+            side='sell',
+            type="limit",
+            price=62000,
+            amount=0.01,
+            positionSide="SHORT",
+        )
+        end = int(time.time() * 1000)
+        
+        print(f"Tradebot Time: {end - start} ms")
         
         start = int(time.time() * 1000)   
         res = await private_conn.create_order(

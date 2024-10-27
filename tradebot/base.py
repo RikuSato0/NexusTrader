@@ -1,6 +1,7 @@
 import asyncio
 import time
-
+import ssl
+import certifi
 import orjson
 import msgspec
 import aiohttp
@@ -589,10 +590,14 @@ class RestApi:
             name=type(self).__name__, level="INFO", flush=True
         )
         self._client_kwargs = client_kwargs
+        self._loop = asyncio.get_event_loop()
+        self._ssl_context = ssl.create_default_context(cafile=certifi.where())
+        
 
-    async def init_session(self):
+    def init_session(self):
         if self._session is None:
-            self._session = aiohttp.ClientSession(**self._client_kwargs)
+            tcp_connector = aiohttp.TCPConnector(ssl=self._ssl_context, loop=self._loop, enable_cleanup_closed=True)
+            self._session = aiohttp.ClientSession(loop=self._loop ,connector=tcp_connector, json_serialize=orjson.dumps, **self._client_kwargs)
 
     async def close_session(self):
         if self._session:
@@ -615,7 +620,7 @@ class RestApi:
         :raises: ClientResponseError, ClientError, Exception
         """
         if self._session is None:
-            await self.init_session()
+            self.init_session()
 
         try:
             response = await self._session.request(method, url, **kwargs)

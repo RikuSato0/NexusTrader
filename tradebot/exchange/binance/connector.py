@@ -12,14 +12,14 @@ from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPr
 from tradebot.exchange.binance.rest_api import BinanceRestApi, BinanceApiClient
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWSClient
+from tradebot.exchange.binance.exchange import BinanceExchangeManager
 
 
 class BinancePublicConnector(PublicConnector):
     def __init__(
         self,
         account_type: BinanceAccountType,
-        market: Dict[str, Any],
-        market_id: Dict[str, Any],
+        exchange: BinanceExchangeManager,
     ):
         if not (account_type.is_spot or account_type.is_future):
             raise ValueError(
@@ -28,9 +28,9 @@ class BinancePublicConnector(PublicConnector):
 
         super().__init__(
             account_type=account_type,
-            market=market,
-            market_id=market_id,
-            exchange_id="binance",
+            market=exchange.market,
+            market_id=exchange.market_id,
+            exchange_id=exchange.exchange_id,
         )
 
         self._ws_client = BinanceWSClient(
@@ -229,21 +229,19 @@ class BinancePrivateConnector(PrivateConnector):
     def __init__(
         self,
         account_type: BinanceAccountType,
-        market: Dict[str, Any],
-        market_id: Dict[str, Any],
-        api: ccxt.binance,
+        exchange: BinanceExchangeManager,
     ):
         super().__init__(
             account_type=account_type,
-            market=market,
-            market_id=market_id,
-            exchange_id="binance",
+            market=exchange.market,
+            market_id=exchange.market_id,
+            exchange_id=exchange.exchange_id,
         )
         
         # self._api_client = BinanceApiClient(
         #     api_key=api_key, secret=secret, testnet=account_type.is_testnet
         # )
-        self._api_client = api
+        self._api_client = exchange.api
         
         self._ws_client = BinanceWSClient(
             account_type=account_type, handler=self._ws_msg_handler
@@ -523,58 +521,139 @@ class BinancePrivateConnector(PrivateConnector):
             case "failed":
                 EventSystem.emit(OrderStatus.FAILED, order)
     
-    async def create_order(
+    async def place_market_order(
         self,
         symbol: str,
         side: Literal["buy", "sell"],
-        type: Literal["market", "limit"],
         amount: Decimal,
-        price: float = None,
-        **kwargs
+        **params
     ):
-        market = self._market.get(symbol) or self._market_id.get(symbol + self.market_type)
-        if not market:
-            raise ValueError(f"Symbol {symbol} is not supported")
-        symbol = market["id"]
-        
-        params = {
-            "symbol": symbol,
-            "side": side.upper(),
-            "type": type.upper(),
-            "quantity": amount,
-            **kwargs,
-        }
-        
-        if type == "limit":
-            params.update({
-                "price": price,
-                "timeInForce": kwargs.get("timeInForce", "GTC")
-            })
+        res = await self._api_client.create_order(
+            symbol=symbol,
+            type="market",
+            side=side,
+            amount=amount,
+            params=params,
+        )
+        return self._parse_ccxt_order(res, self._exchange_id)
+    
+    async def place_limit_order(
+        self,
+        symbol: str,
+        side: Literal["buy", "sell"],
+        amount: Decimal,
+        price: Decimal,
+        **params
+    ):
+        res = await self._api_client.create_order(
+            symbol=symbol,
+            type="limit",
+            side=side,
+            amount=amount,
+            price=price,
+            params=params,
+        )
+        return self._parse_ccxt_order(res, self._exchange_id)
+    
+    def _parse_ccxt_order(self, res: Dict[str, Any], exchange: str) -> Order:
+        raw = res.get("info", {})
+        id = res.get("id", None)
+        client_order_id = res.get("clientOrderId", None)
+        timestamp = res.get("timestamp", None)
+        symbol = res.get("symbol", None)
+        type = res.get("type", None)  # market or limit
+        side = res.get("side", None)  # buy or sell
+        price = res.get("price", None)  # maybe empty for market order
+        average = res.get("average", None)  # float everage filling price
+        amount = Decimal(str(res.get("amount", None)))
+        filled = Decimal(str(res.get("filled", None)))
+        remaining = Decimal(str(res.get("remaining", None)))
+        status = raw.get("status", None).lower()
+        cost = res.get("cost", None)
+        reduce_only = raw.get("reduceOnly", None)
+        position_side = raw.get("positionSide", "").lower() or None  # long or short
+        time_in_force = res.get("timeInForce", None)
 
-        if self.account_type.is_spot:
-            if not market["spot"]:
-                raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
-            res = await self._api_client.private_post_order(params=params)
-        elif self.account_type.is_isolated_margin_or_margin:
-            if not market["margin"]:
-                raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
-            res = await self._api_client.sapi_post_margin_order(params=params)
-        elif self.account_type.is_linear:
-            if not market["linear"]:
-                raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
-            res = await self._api_client.fapiprivate_post_order(params=params)
-        elif self.account_type.is_inverse:
-            if not market["inverse"]:
-                raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
-            res = await self._api_client.dapiprivate_post_order(params=params)
-        elif self.account_type.is_portfolio_margin:
-            if market["margin"]:
-                res = await self._api_client.papi_post_margin_order(params=params)
-            elif market["linear"]:
-                res = await self._api_client.papi_post_um_order(params=params)
-            elif market["inverse"]:
-                res = await self._api_client.papi_post_cm_order(params=params)
-        return res
+        return Order(
+            raw=raw,
+            success=True,
+            exchange=exchange,
+            id=id,
+            client_order_id=client_order_id,
+            timestamp=timestamp,
+            symbol=symbol,
+            type=type,
+            side=side,
+            price=price,
+            average=average,
+            amount=amount,
+            filled=filled,
+            remaining=remaining,
+            status=status,
+            cost=cost,
+            reduce_only=reduce_only,
+            position_side=position_side,
+            time_in_force=time_in_force,
+        )
+        
+        
+        
+    
+    
+    
+    
+    # async def create_order(
+    #     self,
+    #     symbol: str,
+    #     side: Literal["buy", "sell"],
+    #     type: Literal["market", "limit"],
+    #     amount: Decimal,
+    #     price: float = None,
+    #     **kwargs
+    # ):
+    #     market = self._market.get(symbol) or self._market_id.get(symbol + self.market_type)
+    #     if not market:
+    #         raise ValueError(f"Symbol {symbol} is not supported")
+    #     symbol = market["id"]
+        
+    #     params = {
+    #         "symbol": symbol,
+    #         "side": side.upper(),
+    #         "type": type.upper(),
+    #         "quantity": amount,
+    #         **kwargs,
+    #     }
+        
+    #     if type == "limit":
+    #         params.update({
+    #             "price": price,
+    #             "timeInForce": kwargs.get("timeInForce", "GTC")
+    #         })
+
+    #     if self.account_type.is_spot:
+    #         if not market["spot"]:
+    #             raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
+    #         res = await self._api_client.private_post_order(params=params)
+    #     elif self.account_type.is_isolated_margin_or_margin:
+    #         if not market["margin"]:
+    #             raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
+    #         res = await self._api_client.sapi_post_margin_order(params=params)
+    #     elif self.account_type.is_linear:
+    #         if not market["linear"]:
+    #             raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
+    #         res = await self._api_client.fapiprivate_post_order(params=params)
+    #     elif self.account_type.is_inverse:
+    #         if not market["inverse"]:
+    #             raise ValueError(f"BinanceAccountType.{self.account_type.value} is not supported for {symbol}")
+    #         res = await self._api_client.dapiprivate_post_order(params=params)
+    #     elif self.account_type.is_portfolio_margin:
+    #         if market["margin"]:
+    #             res = await self._api_client.papi_post_margin_order(params=params)
+    #         elif market["linear"]:
+    #             res = await self._api_client.papi_post_um_order(params=params)
+    #         elif market["inverse"]:
+    #             res = await self._api_client.papi_post_cm_order(params=params)
+    #     return res
     
     async def disconnect(self):
         self._ws_client.disconnect()

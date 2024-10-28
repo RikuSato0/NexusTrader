@@ -1,6 +1,7 @@
 from typing import Dict, Any
 from tradebot.exchange.okx import OkxAccountType
 from tradebot.exchange.okx.websockets import OkxWSClient
+from tradebot.exchange.okx.exchange import OkxExchangeManager
 from tradebot.types import Trade, BookL1, Kline
 from tradebot.constants import EventType
 from tradebot.entity import EventSystem
@@ -11,14 +12,13 @@ class OkxPublicConnector(PublicConnector):
     def __init__(
         self,
         account_type: OkxAccountType,
-        market: Dict[str, Any],
-        market_id: Dict[str, Any],
+        exchange: OkxExchangeManager,
     ):
         super().__init__(
             account_type=account_type,
-            market=market,
-            market_id=market_id,
-            exchange_id="okx",
+            market=exchange.market,
+            market_id=exchange.market_id,
+            exchange_id=exchange.exchange_id,
         )
        
         self._ws_client = OkxWSClient(

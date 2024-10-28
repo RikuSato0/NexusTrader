@@ -29,15 +29,20 @@ class Demo(Strategy):
 
 async def main():
     try:
-        exchange = BinanceExchangeManager({"exchange_id": "binance"})
+        config = {
+            "exchange_id": "binance",
+            "apiKey": BINANCE_API_KEY,
+            "secret": BINANCE_API_SECRET,
+            "sandbox": True,
+            "enableRateLimit": False,
+        }
+        
+        exchange = BinanceExchangeManager(config)
         await exchange.load_markets()
 
         private_conn = BinancePrivateConnector(
             BinanceAccountType.USD_M_FUTURE_TESTNET,
-            BINANCE_API_KEY,
-            BINANCE_API_SECRET,
-            exchange.market,
-            exchange.market_id,
+            exchange,
         )
         
         demo = Demo()

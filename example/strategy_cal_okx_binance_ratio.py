@@ -38,14 +38,12 @@ async def main():
 
         conn_okx = OkxPublicConnector(
             OkxAccountType.LIVE,
-            okx.market,
-            okx.market_id,
+            okx
         )
 
         conn_bnc = BinancePublicConnector(
             BinanceAccountType.USD_M_FUTURE,
-            binance.market,
-            binance.market_id,
+            binance
         )
 
         demo = Demo()

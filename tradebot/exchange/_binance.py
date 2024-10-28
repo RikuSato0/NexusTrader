@@ -26,12 +26,12 @@ from asynciolimiter import Limiter
 from websockets.asyncio import client
 
 
-from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
+from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice, Order
 from tradebot.constants import IntervalType, UrlType
 from tradebot.constants import Url, EventType, BinanceAccountType, BinanceEndpointsType
 from tradebot.constants import STREAM_URLS, BASE_URLS, BINANCE_ENDPOINTS
 from tradebot.exceptions import OrderError
-from tradebot.entity import EventSystem, Order
+from tradebot.entity import EventSystem
 from tradebot.base import (
     ExchangeManager,
     OrderManager,
@@ -889,9 +889,9 @@ def parse_ccxt_order(res: Dict[str, Any], exchange: str) -> Order:
     side = res.get("side", None)  # buy or sell
     price = res.get("price", None)  # maybe empty for market order
     average = res.get("average", None)  # float everage filling price
-    amount = Decimal(res.get("amount", None))
-    filled = Decimal(res.get("filled", None))
-    remaining = Decimal(res.get("remaining", None))
+    amount = Decimal(str(res.get("amount", None)))
+    filled = Decimal(str(res.get("filled", None)))
+    remaining = Decimal(str(res.get("remaining", None)))
     status = raw.get("status", None).lower()
     cost = res.get("cost", None)
     reduce_only = raw.get("reduceOnly", None)

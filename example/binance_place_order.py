@@ -109,8 +109,23 @@ async def main():
 
         exchange = BinanceExchangeManager(config)
         await exchange.load_markets()
-        await test_ccxt(30, exchange)
-        await test_tradebot(30, exchange)
+        
+        private_conn = BinancePrivateConnector(
+            account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
+            exchange=exchange,
+        )
+        
+        res = await private_conn.place_market_order(
+            symbol="BTC/USDT:USDT",
+            side="sell",
+            amount=0.01,
+            positionSide="SHORT",
+        )
+        
+        print(res)
+        
+        # await test_ccxt(30, exchange)
+        # await test_tradebot(30, exchange)
 
         # pprint(res)
         

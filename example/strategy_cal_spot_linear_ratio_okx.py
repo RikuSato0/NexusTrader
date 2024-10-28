@@ -29,8 +29,7 @@ async def main():
 
         okx_conn = OkxPublicConnector(
             OkxAccountType.LIVE,
-            exchange.market,
-            exchange.market_id,
+            exchange
         )
 
         demo = Demo()

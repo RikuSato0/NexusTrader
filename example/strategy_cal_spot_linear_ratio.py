@@ -31,14 +31,12 @@ async def main():
 
         conn_spot = BinancePublicConnector(
             BinanceAccountType.SPOT,
-            exchange.market,
-            exchange.market_id,
+            exchange
         )
 
         conn_usdm = BinancePublicConnector(
             BinanceAccountType.USD_M_FUTURE,
-            exchange.market,
-            exchange.market_id,
+            exchange
         )
 
         demo = Demo()

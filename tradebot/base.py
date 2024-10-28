@@ -3,7 +3,7 @@ import time
 import ssl
 import certifi
 import orjson
-import msgspec
+import warnings
 import aiohttp
 import aiosonic
 import ccxt.pro as ccxtpro
@@ -36,7 +36,7 @@ from picows import (
 class ExchangeManager(ABC):
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.api_key = config.get("api_key", None)
+        self.api_key = config.get("apiKey", None)
         self.secret = config.get("secret", None)
         self.exchange_id = config.get("exchange_id", None)
         self.api = self._init_exchange()
@@ -47,7 +47,7 @@ class ExchangeManager(ABC):
         self.market_id = None
 
         if not self.api_key or not self.secret:
-            self._log.warn(
+            warnings.warn(
                 "API Key and Secret not provided, So some features related to trading will not work"
             )
 

@@ -388,10 +388,9 @@ class WSManager(ABC):
         self._transport = None
         self._subscriptions = {}
         self._limiter = limiter
-        self._msg_handler_task = None
-        self._connection_handler_task = None
         # self._encoder = msgspec.json.Encoder()
         self._callback = handler
+        self._task_manager = TaskManager()
         self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
 
     @property
@@ -411,10 +410,10 @@ class WSManager(ABC):
     async def connect(self):
         if not self.connected:
             await self._connect()
-            self._msg_handler_task = asyncio.create_task(
+            self._task_manager.create_task(
                 self._msg_handler(self._listener.msg_queue)
             )
-            self._connection_handler_task = asyncio.create_task(
+            self._task_manager.create_task(
                 self._connection_handler()
             )
 
@@ -423,7 +422,7 @@ class WSManager(ABC):
             try:
                 if not self.connected:
                     await self._connect()
-                    self._msg_handler_task = asyncio.create_task(
+                    self._task_manager.create_task(
                         self._msg_handler(self._listener.msg_queue)
                     )
                     await self._resubscribe()
@@ -432,8 +431,6 @@ class WSManager(ABC):
                 self._log.error(f"Connection error: {e}")
             finally:
                 self._log.info("Websocket reconnecting...")
-                if self._msg_handler_task:
-                    self._msg_handler_task.cancel()
                 self._transport, self._listener = None, None
                 await asyncio.sleep(self._reconnect_interval)
 
@@ -447,9 +444,10 @@ class WSManager(ABC):
             self._callback(msg)
             queue.task_done()
 
-    def disconnect(self):
+    async def disconnect(self):
         if self.connected:
             self._transport.disconnect()
+            await self._task_manager.cancel()
 
     @abstractmethod
     async def _resubscribe(self):
@@ -782,6 +780,7 @@ class PrivateConnector(ABC):
         self._market = market
         self._market_id = market_id
         self._exchange_id = exchange_id
+        self._task_manager = TaskManager()
         
     
     @abstractmethod
@@ -791,3 +790,33 @@ class PrivateConnector(ABC):
     @abstractmethod
     async def disconnect(self):
         pass
+
+
+class TaskManager:
+    def __init__(self):
+        self._tasks: List[asyncio.Task] = []
+    
+    def create_task(self, coro: asyncio.coroutines) -> asyncio.Task:
+        task = asyncio.create_task(coro)
+        self._tasks.append(task)
+        task.add_done_callback(self._handle_task_done)
+        return task
+    
+    def _handle_task_done(self, task: asyncio.Task):
+        self._tasks.remove(task)
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            raise 
+        # try:
+        #     task.result()
+        # except Exception as e:
+        #     self._log.error(f"Task {task.get_name()} failed: {e}")
+
+    async def cancel(self):
+        for task in self._tasks:
+            task.cancel()
+        await asyncio.gather(*self._tasks, return_exceptions=True)
+        

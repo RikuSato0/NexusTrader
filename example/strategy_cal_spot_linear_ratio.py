@@ -52,8 +52,8 @@ async def main():
         print("Cancelled")
     finally:
         await exchange.close()
-        conn_spot.disconnect()
-        conn_usdm.disconnect()
+        await conn_spot.disconnect()
+        await conn_usdm.disconnect()
 
 
 if __name__ == "__main__":

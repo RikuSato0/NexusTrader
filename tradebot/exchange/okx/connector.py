@@ -161,8 +161,9 @@ class OkxPublicConnector(PublicConnector):
         )
         EventSystem.emit(EventType.BOOKL1, bookl1)
 
-    def disconnect(self):
-        self._ws_client.disconnect()
+    async def disconnect(self):
+        await self._ws_client.disconnect()
+    
 
 
 class OkxPrivateConnector:

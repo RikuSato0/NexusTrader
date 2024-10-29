@@ -23,7 +23,7 @@ async def main():
             await asyncio.sleep(1)
     except asyncio.CancelledError:
         await exchange.close()
-        ws_manager.disconnect()
+        await ws_manager.disconnect()
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -59,8 +59,8 @@ async def main():
     except asyncio.CancelledError:
         await binance.close()
         await okx.close()
-        conn_okx.disconnect()
-        conn_bnc.disconnect()
+        await conn_okx.disconnect()
+        await conn_bnc.disconnect()
 
 
 if __name__ == "__main__":

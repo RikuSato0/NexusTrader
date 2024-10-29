@@ -221,8 +221,8 @@ class BinancePublicConnector(PublicConnector):
         EventSystem.emit(EventType.FUNDING_RATE, funding_rate)
         EventSystem.emit(EventType.INDEX_PRICE, index_price)
 
-    def disconnect(self):
-        self._ws_client.disconnect()
+    async def disconnect(self):
+        await self._ws_client.disconnect()
 
 
 class BinancePrivateConnector(PrivateConnector):
@@ -310,7 +310,7 @@ class BinancePrivateConnector(PrivateConnector):
     async def connect(self):
         listen_key = await self._start_user_data_stream()
         if listen_key:
-            asyncio.create_task(self._keep_alive_user_data_stream(listen_key))
+            self._task_manager.create_task(self._keep_alive_user_data_stream(listen_key))
             await self._ws_client.subscribe_user_data_stream(listen_key)
 
     def _ws_msg_handler(self, msg):
@@ -656,6 +656,6 @@ class BinancePrivateConnector(PrivateConnector):
     #     return res
     
     async def disconnect(self):
-        self._ws_client.disconnect()
+        await self._ws_client.disconnect()
     
     

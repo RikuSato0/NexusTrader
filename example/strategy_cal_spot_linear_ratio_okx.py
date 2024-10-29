@@ -42,7 +42,7 @@ async def main():
 
     except asyncio.CancelledError:
         await exchange.close()
-        okx_conn.disconnect()
+        await okx_conn.disconnect()
 
 
 if __name__ == "__main__":

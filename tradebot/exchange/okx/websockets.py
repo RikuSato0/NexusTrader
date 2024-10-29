@@ -16,7 +16,7 @@ from tradebot.types import (
     Trade,
 )
 from tradebot.entity import EventSystem
-from tradebot.base import WSManager
+from tradebot.base import WSClient
 from tradebot.constants import EventType
 
 
@@ -24,7 +24,7 @@ from tradebot.exchange.okx.constants import STREAM_URLS
 from tradebot.exchange.okx.constants import OkxAccountType
 
 
-class OkxWSClient(WSManager):
+class OkxWSClient(WSClient):
     def __init__(
         self,
         account_type: OkxAccountType,
@@ -179,7 +179,7 @@ class OkxWSClient(WSManager):
             self._send(payload)
 
 
-class OkxWSManager(WSManager):
+class OkxWSManager(WSClient):
     def __init__(
         self,
         account_type: OkxAccountType,

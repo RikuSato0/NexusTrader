@@ -358,7 +358,7 @@ class WebsocketManager(ABC):
         self._log.info("All WebSocket connections closed.")
 
 
-class WSClient(WSListener):
+class Listener(WSListener):
     def __init__(self, logger):
         self._log = logger
         self.msg_queue = asyncio.Queue()
@@ -378,7 +378,7 @@ class WSClient(WSListener):
         self.msg_queue.put_nowait(msg)
 
 
-class WSManager(ABC):
+class WSClient(ABC):
     def __init__(self, url: str, limiter: Limiter, handler: Callable[..., Any]):
         self._url = url
         self._reconnect_interval = 0.2  # Reconnection interval in seconds
@@ -398,9 +398,9 @@ class WSManager(ABC):
         return self._transport and self._listener
 
     async def _connect(self):
-        WSClientFactory = lambda: WSClient(self._log)  # noqa: E731
+        WSListenerFactory = lambda: Listener(self._log)  # noqa: E731
         self._transport, self._listener = await ws_connect(
-            WSClientFactory,
+            WSListenerFactory,
             self._url,
             enable_auto_ping=True,
             auto_ping_idle_timeout=self._ping_idle_timeout,
@@ -740,6 +740,7 @@ class PublicConnector(ABC):
         market: Dict[str, Any],
         market_id: Dict[str, Any],
         exchange_id: str,
+        ws_client: WSClient,
     ):
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="INFO", flush=True
@@ -748,6 +749,7 @@ class PublicConnector(ABC):
         self._market = market
         self._market_id = market_id
         self._exchange_id = exchange_id
+        self._ws_client = ws_client
     
     @property
     def account_type(self):
@@ -764,6 +766,10 @@ class PublicConnector(ABC):
     @abstractmethod
     async def subscribe_kline(self, symbol: str, interval: str):
         pass
+    
+    async def disconnect(self):
+        await self._ws_client.disconnect()
+
 
 class PrivateConnector(ABC):
     def __init__(
@@ -772,6 +778,7 @@ class PrivateConnector(ABC):
         market: Dict[str, Any],
         market_id: Dict[str, Any],
         exchange_id: str,
+        ws_client: WSClient,
     ):
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="INFO", flush=True
@@ -781,15 +788,17 @@ class PrivateConnector(ABC):
         self._market_id = market_id
         self._exchange_id = exchange_id
         self._task_manager = TaskManager()
+        self._ws_client = ws_client
         
     
     @abstractmethod
     async def connect(self):
         pass
     
-    @abstractmethod
+
     async def disconnect(self):
-        pass
+        await self._ws_client.disconnect()
+        await self._task_manager.cancel()
 
 
 class TaskManager:
@@ -810,10 +819,6 @@ class TaskManager:
             pass
         except Exception:
             raise 
-        # try:
-        #     task.result()
-        # except Exception as e:
-        #     self._log.error(f"Task {task.get_name()} failed: {e}")
 
     async def cancel(self):
         for task in self._tasks:

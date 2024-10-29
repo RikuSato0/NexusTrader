@@ -37,7 +37,7 @@ from tradebot.base import (
     OrderManager,
     AccountManager,
     WebsocketManager,
-    WSManager,
+    WSClient,
     RestApi,
 )
 
@@ -336,7 +336,7 @@ class BinanceAccountManager(AccountManager):
     pass
 
 
-class BinanceWSManager(WSManager):
+class BinanceWSManager(WSClient):
     def __init__(
         self,
         account_type: BinanceAccountType,

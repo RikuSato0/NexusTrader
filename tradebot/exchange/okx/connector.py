@@ -1,4 +1,3 @@
-from typing import Dict, Any
 from tradebot.exchange.okx import OkxAccountType
 from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.exchange import OkxExchangeManager
@@ -19,11 +18,10 @@ class OkxPublicConnector(PublicConnector):
             market=exchange.market,
             market_id=exchange.market_id,
             exchange_id=exchange.exchange_id,
-        )
-       
-        self._ws_client = OkxWSClient(
-            account_type=account_type,
-            handler=self._ws_msg_handler,
+            ws_client=OkxWSClient(
+                account_type=account_type,
+                handler=self._ws_msg_handler,
+            ),
         )
 
     async def subscribe_trade(self, symbol: str):
@@ -35,7 +33,7 @@ class OkxPublicConnector(PublicConnector):
         market = self._market.get(symbol, None)
         symbol = market["id"] if market else symbol
         await self._ws_client.subscribe_order_book(symbol, channel="bbo-tbt")
-    
+
     async def subscribe_kline(self, symbol: str, interval: str):
         market = self._market.get(symbol, None)
         symbol = market["id"] if market else symbol
@@ -48,15 +46,14 @@ class OkxPublicConnector(PublicConnector):
             elif msg["event"] == "subscribe":
                 pass
         elif "arg" in msg:
-            channel:str = msg["arg"]["channel"]
-            
+            channel: str = msg["arg"]["channel"]
             if channel == "bbo-tbt":
                 self._parse_bbo_tbt(msg)
             elif channel == "trades":
                 self._parse_trade(msg)
             elif channel.startswith("candle"):
                 self._parse_kline(msg)
-            
+
     def _parse_kline(self, msg):
         """
         {
@@ -82,7 +79,7 @@ class OkxPublicConnector(PublicConnector):
         data = msg["data"][0]
         id = msg["arg"]["instId"]
         market = self._market_id[id]
-        
+
         kline = Kline(
             exchange=self._exchange_id,
             symbol=market["symbol"],
@@ -94,10 +91,8 @@ class OkxPublicConnector(PublicConnector):
             volume=float(data[5]),
             timestamp=int(data[0]),
         )
-        
+
         EventSystem.emit(EventType.KLINE, kline)
-               
-             
 
     def _parse_trade(self, msg):
         """
@@ -160,10 +155,6 @@ class OkxPublicConnector(PublicConnector):
             timestamp=int(data["ts"]),
         )
         EventSystem.emit(EventType.BOOKL1, bookl1)
-
-    async def disconnect(self):
-        await self._ws_client.disconnect()
-    
 
 
 class OkxPrivateConnector:

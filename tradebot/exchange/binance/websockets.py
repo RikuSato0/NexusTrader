@@ -4,12 +4,12 @@ from typing import Literal, Callable
 from typing import Any
 from asynciolimiter import Limiter
 
-from tradebot.base import WSManager
+from tradebot.base import WSClient
 from tradebot.exchange.binance.constants import STREAM_URLS
 from tradebot.exchange.binance.constants import BinanceAccountType
 
 
-class BinanceWSClient(WSManager):
+class BinanceWSClient(WSClient):
     def __init__(self, account_type: BinanceAccountType, handler: Callable[..., Any]):
         self._account_type = account_type
         url = STREAM_URLS[account_type]

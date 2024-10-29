@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Literal
 from decimal import Decimal
 from asynciolimiter import Limiter
-from tradebot.base import AsyncHttpRequests, WSManager
+from tradebot.base import AsyncHttpRequests, WSClient
 from tradebot.entity import Order
 import asyncio
 
@@ -67,7 +67,7 @@ class ExchangeInterface(ABC):
         pass
 
     async def connect_ws(self):
-        self.ws_manager = WSManager(self.ws_url, self.limiter)
+        self.ws_manager = WSClient(self.ws_url, self.limiter)
         await self.ws_manager.connect()
 
     async def disconnect_ws(self):

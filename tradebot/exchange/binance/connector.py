@@ -9,7 +9,8 @@ from tradebot.entity import EventSystem
 from tradebot.constants import EventType, OrderStatus
 from tradebot.types import Order
 from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
-from tradebot.exchange.binance.rest_api import BinanceRestApi, BinanceApiClient
+
+# from tradebot.exchange.binance.rest_api import BinanceRestApi, BinanceApiClient
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWSClient
 from tradebot.exchange.binance.exchange import BinanceExchangeManager
@@ -31,10 +32,9 @@ class BinancePublicConnector(PublicConnector):
             market=exchange.market,
             market_id=exchange.market_id,
             exchange_id=exchange.exchange_id,
-        )
-
-        self._ws_client = BinanceWSClient(
-            account_type=account_type, handler=self._ws_msg_handler
+            ws_client=BinanceWSClient(
+                account_type=account_type, handler=self._ws_msg_handler
+            ),
         )
 
     @property
@@ -221,9 +221,6 @@ class BinancePublicConnector(PublicConnector):
         EventSystem.emit(EventType.FUNDING_RATE, funding_rate)
         EventSystem.emit(EventType.INDEX_PRICE, index_price)
 
-    async def disconnect(self):
-        await self._ws_client.disconnect()
-
 
 class BinancePrivateConnector(PrivateConnector):
     def __init__(
@@ -236,21 +233,17 @@ class BinancePrivateConnector(PrivateConnector):
             market=exchange.market,
             market_id=exchange.market_id,
             exchange_id=exchange.exchange_id,
+            ws_client=BinanceWSClient(
+                account_type=account_type, handler=self._ws_msg_handler
+            ),
         )
-        
-        # self._api_client = BinanceApiClient(
-        #     api_key=api_key, secret=secret, testnet=account_type.is_testnet
-        # )
-        self._api_client = exchange.api
-        
-        self._ws_client = BinanceWSClient(
-            account_type=account_type, handler=self._ws_msg_handler
-        )
-        
+
+        self._api_client: ccxt.binance = exchange.api
+
     @property
     def account_type(self) -> BinanceAccountType:
-        return self._account_type    
-    
+        return self._account_type
+
     @property
     def market_type(self):
         if self.account_type.is_spot:
@@ -260,7 +253,6 @@ class BinancePrivateConnector(PrivateConnector):
         elif self.account_type.is_inverse:
             return "_inverse"
 
-    
     async def _start_user_data_stream(self):
         if self.account_type.is_spot:
             res = await self._api_client.public_post_userdatastream()
@@ -273,20 +265,23 @@ class BinancePrivateConnector(PrivateConnector):
         elif self.account_type.is_portfolio_margin:
             res = await self._api_client.papi_post_listenkey()
         return res.get("listenKey", None)
-    
+
     async def _keep_alive_listen_key(self, listen_key: str):
         if self.account_type.is_spot:
-            await self._api_client.public_put_userdatastream(params={"listenKey": listen_key})
+            await self._api_client.public_put_userdatastream(
+                params={"listenKey": listen_key}
+            )
         elif self.account_type.is_margin:
-            await self._api_client.sapi_put_userdatastream(params={"listenKey": listen_key})
+            await self._api_client.sapi_put_userdatastream(
+                params={"listenKey": listen_key}
+            )
         elif self.account_type.is_linear:
             await self._api_client.fapiprivate_put_listenkey()
         elif self.account_type.is_inverse:
             await self._api_client.dapiprivate_put_listenkey()
         elif self.account_type.is_portfolio_margin:
             await self._api_client.papi_put_listenkey()
-        
-        
+
     async def _keep_alive_user_data_stream(
         self, listen_key: str, interval: int = 20, max_retry: int = 3
     ):
@@ -310,7 +305,9 @@ class BinancePrivateConnector(PrivateConnector):
     async def connect(self):
         listen_key = await self._start_user_data_stream()
         if listen_key:
-            self._task_manager.create_task(self._keep_alive_user_data_stream(listen_key))
+            self._task_manager.create_task(
+                self._keep_alive_user_data_stream(listen_key)
+            )
             await self._ws_client.subscribe_user_data_stream(listen_key)
 
     def _ws_msg_handler(self, msg):
@@ -520,13 +517,9 @@ class BinancePrivateConnector(PrivateConnector):
                 EventSystem.emit(OrderStatus.EXPIRED, order)
             case "failed":
                 EventSystem.emit(OrderStatus.FAILED, order)
-    
+
     async def place_market_order(
-        self,
-        symbol: str,
-        side: Literal["buy", "sell"],
-        amount: Decimal,
-        **params
+        self, symbol: str, side: Literal["buy", "sell"], amount: Decimal, **params
     ):
         res = await self._api_client.create_order(
             symbol=symbol,
@@ -536,14 +529,14 @@ class BinancePrivateConnector(PrivateConnector):
             params=params,
         )
         return self._parse_ccxt_order(res, self._exchange_id)
-    
+
     async def place_limit_order(
         self,
         symbol: str,
         side: Literal["buy", "sell"],
         amount: Decimal,
         price: Decimal,
-        **params
+        **params,
     ):
         res = await self._api_client.create_order(
             symbol=symbol,
@@ -554,7 +547,7 @@ class BinancePrivateConnector(PrivateConnector):
             params=params,
         )
         return self._parse_ccxt_order(res, self._exchange_id)
-    
+
     def _parse_ccxt_order(self, res: Dict[str, Any], exchange: str) -> Order:
         raw = res.get("info", {})
         id = res.get("id", None)
@@ -595,13 +588,7 @@ class BinancePrivateConnector(PrivateConnector):
             position_side=position_side,
             time_in_force=time_in_force,
         )
-        
-        
-        
-    
-    
-    
-    
+
     # async def create_order(
     #     self,
     #     symbol: str,
@@ -615,7 +602,7 @@ class BinancePrivateConnector(PrivateConnector):
     #     if not market:
     #         raise ValueError(f"Symbol {symbol} is not supported")
     #     symbol = market["id"]
-        
+
     #     params = {
     #         "symbol": symbol,
     #         "side": side.upper(),
@@ -623,7 +610,7 @@ class BinancePrivateConnector(PrivateConnector):
     #         "quantity": amount,
     #         **kwargs,
     #     }
-        
+
     #     if type == "limit":
     #         params.update({
     #             "price": price,
@@ -654,8 +641,3 @@ class BinancePrivateConnector(PrivateConnector):
     #         elif market["inverse"]:
     #             res = await self._api_client.papi_post_cm_order(params=params)
     #     return res
-    
-    async def disconnect(self):
-        await self._ws_client.disconnect()
-    
-    

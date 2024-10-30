@@ -729,8 +729,8 @@ class Clock:
             for callback in self._tick_callbacks:
                 try:
                     callback(self.current_timestamp)
-                except Exception:
-                    self._log.error("Error in tick callback.")
+                except Exception as e:
+                    self._log.error(f"Error in tick callback: {str(e)}")
 
 
 class PublicConnector(ABC):

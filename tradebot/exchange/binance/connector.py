@@ -22,7 +22,7 @@ class BinancePublicConnector(PublicConnector):
         account_type: BinanceAccountType,
         exchange: BinanceExchangeManager,
     ):
-        if not (account_type.is_spot or account_type.is_future):
+        if not account_type.is_spot and not account_type.is_future:
             raise ValueError(
                 f"BinanceAccountType.{account_type.value} is not supported for Binance Public Connector"
             )
@@ -45,6 +45,8 @@ class BinancePublicConnector(PublicConnector):
             return "_linear"
         elif self._account_type.is_inverse:
             return "_inverse"
+        else:
+            raise ValueError(f"Unsupported BinanceAccountType.{self._account_type.value}")
 
     async def subscribe_trade(self, symbol: str):
         market = self._market.get(symbol, None)

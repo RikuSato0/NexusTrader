@@ -27,6 +27,7 @@ aiosonic = "0.21.0"
 msgspec = "0.18.6"
 cython = "3.0.11"
 certifi = "^2024.8.30"
+bcrypt = "^4.2.0"
 
 
 [build-system]

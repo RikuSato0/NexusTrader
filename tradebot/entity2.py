@@ -1,5 +1,5 @@
 import socket
-import ccxt
+
 
 from typing import Dict
 from decimal import Decimal
@@ -10,7 +10,7 @@ from tradebot.entity import Order
 
 
 import redis
-import orjson
+
 
 class RedisPool:
     def __init__(self):

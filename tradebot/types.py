@@ -88,8 +88,8 @@ class Order(Struct):
 
 class Asset(Struct):
     asset: str
-    free: Decimal
-    borrowed: Decimal
+    free: Decimal = field(default=Decimal("0.0"))
+    borrowed: Decimal = field(default=Decimal("0.0"))
     locked: Decimal = field(default=Decimal("0.0"))
 
     @property
@@ -118,3 +118,6 @@ class Asset(Struct):
         """
         self.locked += amount
         self.free -= amount
+
+
+    

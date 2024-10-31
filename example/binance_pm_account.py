@@ -1,6 +1,6 @@
 import asyncio
 import ccxt.pro as ccxt
-
+import msgspec
 from decimal import Decimal
 from tradebot.types import Asset
 from tradebot.constants import CONFIG
@@ -37,6 +37,10 @@ async def main():
                 print("Cross Margin Asset")
                 print(a)
                 print("Total: ", a.total)
+                json_format = msgspec.json.encode(a)
+                print(json_format)
+                decode = msgspec.json.decode(json_format, type=Asset)
+                print(decode)
 
                 print("\nUM Asset")
                 a = Asset(

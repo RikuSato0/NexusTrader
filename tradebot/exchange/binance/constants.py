@@ -21,6 +21,10 @@ class BinanceAccountType(AccountType):
     COIN_M_FUTURE_TESTNET = "COIN_M_FUTURE_TESTNET"
     
     @property
+    def exchange_id(self):
+        return "binance"
+    
+    @property
     def is_spot(self):
         return self in (self.SPOT, self.SPOT_TESTNET)
     

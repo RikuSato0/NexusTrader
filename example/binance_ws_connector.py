@@ -2,11 +2,9 @@ import asyncio
 from tradebot.exchange.binance import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWSClient
 
-
 def ws_handler(data):
     if "s" in data:
         _symbol = data['s']
-
 
 async def main():
     try:
@@ -21,7 +19,7 @@ async def main():
         while True:
             await asyncio.sleep(1)
     except asyncio.CancelledError:
-        await ws.disconnect()
+        ws.disconnect
         print("Closed")
 
 if __name__ == "__main__":

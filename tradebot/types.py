@@ -118,6 +118,15 @@ class Asset(Struct):
         """
         self.locked += amount
         self.free -= amount
+    
+    def _set_value(self, free: Decimal, borrowed: Decimal, locked: Decimal):
+        if free is not None:
+            self.free = free
+        if borrowed is not None:
+            self.borrowed = borrowed 
+        if locked is not None:
+            self.locked = locked
+
 
 
     

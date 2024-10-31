@@ -1,18 +1,20 @@
+import pytest
 from decimal import Decimal
-from tradebot.entity2 import Account
-from tradebot.entity import RedisPool
 from tradebot.exchange.binance import BinanceAccountType
 from tradebot.exchange.okx import OkxAccountType
+from tradebot.entity2 import Account, RedisPool
 
 
+@pytest.fixture
+def redis_manager():
+    redis_manager = RedisPool()
+    yield redis_manager
+    db = redis_manager.get_client()
+    db.flushall()
+    db.close()
 
-
-
-
-def main():
-    pool = RedisPool()
-    r = pool.get_client()
-    r.flushall()
+def test_account(redis_manager):
+    r = redis_manager.get_client()
     bnc_spot = Account(
         account_type=BinanceAccountType.SPOT,
         strategy_id="strategy1",
@@ -101,18 +103,3 @@ def main():
     assert okx2["ETH"].free == Decimal("1.0")
     assert okx2["ETH"].total == Decimal("1.0")
     assert okx2["ETH"].locked == Decimal("0.0")
-    
-    
-if __name__ == "__main__":
-    main()
-    
-    
-        
-        
-        
-    
-    
-        
-    
-    
-    

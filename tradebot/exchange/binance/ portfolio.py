@@ -1,12 +1,53 @@
 import redis
 import msgspec
+from msgspec import Struct, field
 from decimal import Decimal
 from typing import Dict
-from tradebot.types import Asset
 from tradebot.constants import AccountType
 from tradebot.entity import RedisPool
 from tradebot.exchange.binance import BinanceAccountType
 from tradebot.exchange.okx import OkxAccountType
+
+
+
+
+
+class Asset(Struct):
+    asset: str
+    free: Decimal = field(default=Decimal("0.0"))
+    borrowed: Decimal = field(default=Decimal("0.0"))
+    locked: Decimal = field(default=Decimal("0.0"))
+
+    @property
+    def total(self) -> Decimal:
+        return self.free + self.locked
+
+    def update_free(self, amount: Decimal):
+        """
+        if amount > 0, then it is a buying action
+        if amount < 0, then it is a selling action
+        """
+        self.free += amount
+
+    def update_borrowed(self, amount: Decimal):
+        """
+        if amount > 0, then it is a borrowing action
+        if amount < 0, then it is a repayment action
+        """
+        self.borrowed += amount
+        self.free += amount
+
+    def update_locked(self, amount: Decimal):
+        """
+        if amount > 0, then it is a new order action
+        if amount < 0, then it is a cancellation/filled/partially filled action
+        """
+        self.locked += amount
+        self.free -= amount
+
+
+
+
 
 
 class Account:

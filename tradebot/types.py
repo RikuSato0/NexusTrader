@@ -96,14 +96,14 @@ class Asset(Struct):
     def total(self) -> Decimal:
         return self.free + self.locked
 
-    def update_free(self, amount: Decimal):
+    def _update_free(self, amount: Decimal):
         """
         if amount > 0, then it is a buying action
         if amount < 0, then it is a selling action
         """
         self.free += amount
 
-    def update_borrowed(self, amount: Decimal):
+    def _update_borrowed(self, amount: Decimal):
         """
         if amount > 0, then it is a borrowing action
         if amount < 0, then it is a repayment action
@@ -111,7 +111,7 @@ class Asset(Struct):
         self.borrowed += amount
         self.free += amount
 
-    def update_locked(self, amount: Decimal):
+    def _update_locked(self, amount: Decimal):
         """
         if amount > 0, then it is a new order action
         if amount < 0, then it is a cancellation/filled/partially filled action

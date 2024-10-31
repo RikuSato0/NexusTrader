@@ -373,8 +373,10 @@ class Listener(WSListener):
         if frame.msg_type == WSMsgType.PING:
             transport.send_pong(frame.get_payload_as_bytes())
             return
-        msg = orjson.loads(frame.get_payload_as_bytes())
-        # msg = self._decoder.decode(frame.get_payload_as_bytes())
+        try:
+            msg = orjson.loads(frame.get_payload_as_bytes())
+        except orjson.JSONDecodeError:
+            self._log.error(f"Error decoding message: {frame.get_payload_as_bytes()}")
         self.msg_queue.put_nowait(msg)
 
 

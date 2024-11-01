@@ -375,9 +375,11 @@ class Listener(WSListener):
             return
         try:
             msg = orjson.loads(frame.get_payload_as_bytes())
+            self.msg_queue.put_nowait(msg)
         except orjson.JSONDecodeError:
             self._log.error(f"Error decoding message: {frame.get_payload_as_bytes()}")
-        self.msg_queue.put_nowait(msg)
+        except Exception as e:
+            self._log.error(f"Error processing message: {str(e)}")
 
 
 class WSClient(ABC):

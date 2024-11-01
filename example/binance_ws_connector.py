@@ -19,7 +19,7 @@ async def main():
         while True:
             await asyncio.sleep(1)
     except asyncio.CancelledError:
-        ws.disconnect
+        await ws.disconnect()
         print("Closed")
 
 if __name__ == "__main__":

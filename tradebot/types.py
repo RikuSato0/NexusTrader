@@ -128,5 +128,8 @@ class Asset(Struct):
             self.locked = locked
 
 
+class Position(Struct):
+    pass
+
 
     

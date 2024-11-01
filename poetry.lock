@@ -251,13 +251,13 @@ typecheck = ["mypy"]
 
 [[package]]
 name = "ccxt"
-version = "4.4.23"
+version = "4.4.25"
 description = "A JavaScript / TypeScript / Python / C# / PHP cryptocurrency trading library with support for 100+ exchanges"
 optional = false
 python-versions = "*"
 files = [
-    {file = "ccxt-4.4.23-py2.py3-none-any.whl", hash = "sha256:cedab0e85ed530734f1003724d02aac28b790f5049283acc25113499ab198330"},
-    {file = "ccxt-4.4.23.tar.gz", hash = "sha256:7ebf24410aae0dba4c5a6e0c36fb989d40accc6bbf50610c9840f4be1538b0a5"},
+    {file = "ccxt-4.4.25-py2.py3-none-any.whl", hash = "sha256:1635993fb76f6ec8493f83f0ff8a1765096d42ff165c3f126741cb679af6ef55"},
+    {file = "ccxt-4.4.25.tar.gz", hash = "sha256:0fcf80f55015e9e7c2690f5b27814249f472657f52b0d3245da8ca99cc2cca75"},
 ]
 
 [package.dependencies]
@@ -1082,60 +1082,60 @@ files = [
 
 [[package]]
 name = "picows"
-version = "1.5.0"
+version = "1.6.0"
 description = "Ultra-fast websocket client and server for asyncio"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "picows-1.5.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:87de30e1a376dbca77469d1a5fa23325a32a1ef052b670d8b11fd031297a0eab"},
-    {file = "picows-1.5.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:834151234ae1d7527131c3758179d09703f64fe3c8cee5ebb6d4bcdea2fd029a"},
-    {file = "picows-1.5.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4e23ea57713a9a5ad292e35c3b040e1a7517032b4ada55c019b1847f7a928460"},
-    {file = "picows-1.5.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4c9c0a5dcea295e7ffe68af4802b1ae5f6115b8d7b9205d1534507d617435ec3"},
-    {file = "picows-1.5.0-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:3c83c7d36cf6da98d673691f4ed406cdc6d6a84dd72d0394b47be579d43b3689"},
-    {file = "picows-1.5.0-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:108f59471971267b9499a78f6bfdc86c9f81e4588a07124eba894a7d71165884"},
-    {file = "picows-1.5.0-cp310-cp310-win32.whl", hash = "sha256:75f5c82eea7d605993de13e3d40fdc71a6344285313acacf6251a1f139328729"},
-    {file = "picows-1.5.0-cp310-cp310-win_amd64.whl", hash = "sha256:e326c890b24fa99006f49dd08a903160e7f78098a47a8774ac56e2e28825174f"},
-    {file = "picows-1.5.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:54bca70c90ba24dd572e6b680ec244a94cea5ef0f3bead555c04f30aa19d0a5a"},
-    {file = "picows-1.5.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:983d18fa857fe094d90637c86fd83b00b5f3783725e52e93b05e335abfa3d9a5"},
-    {file = "picows-1.5.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:98d399e5268549484a7870a2dd75b852b2dff3ec6d00804873d5941ae8e0ca1b"},
-    {file = "picows-1.5.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:87d45a11397017cbdb875f4f05cb11b2b87469ac460cd21485d3a5096a27e3ec"},
-    {file = "picows-1.5.0-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:5ba0f0cdb82ee3ab213411d22cec09756c211590e5310a516a2a63ef1187ba41"},
-    {file = "picows-1.5.0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:4e174d359696af0bf4a90828a700648c2d50b64cc16e9ed0c478efcf6107c888"},
-    {file = "picows-1.5.0-cp311-cp311-win32.whl", hash = "sha256:806fa4d0ff75e969ef48a6003d2794a2677448575c9fc381c66bc39f0f3d384d"},
-    {file = "picows-1.5.0-cp311-cp311-win_amd64.whl", hash = "sha256:fdfd568d2d4d2adbee72c58480c6252e1f6937966b099df78d54b961efff0e4a"},
-    {file = "picows-1.5.0-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:49b0ce1c4d12a8ac9133e114947946a356c06815e3b537653a03747b4bbd03de"},
-    {file = "picows-1.5.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:db4cf9243cdb84d82fe87edb83ec27a088598167bd01ab8eec29381c51b06bde"},
-    {file = "picows-1.5.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:5f004dab1649723660669937b6721773e017df66780c4d645b2f9a7fb6b955c6"},
-    {file = "picows-1.5.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:90c7f6b13a260e14024ebf8e2b57c0ce7361812540bd1d6da3fb0cde46fec8cb"},
-    {file = "picows-1.5.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:3e9c6cf6d3a81df74cf5e42a32e96aa5dd05a47b9ed7ce052bb517d81f15add8"},
-    {file = "picows-1.5.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:ba598d6bef27b13a5a1cfbfab25538108c2286ef5ede5f94fc4b45ea51bd636b"},
-    {file = "picows-1.5.0-cp312-cp312-win32.whl", hash = "sha256:f92a4bfee9f3424128e65a39b81f85a10c7dbc5f7a44461342822befb5e7a02f"},
-    {file = "picows-1.5.0-cp312-cp312-win_amd64.whl", hash = "sha256:e812c2996c7ab0c242ba95ad47921a2e79cbd94a4ebd75c036eb7566da5c5103"},
-    {file = "picows-1.5.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:d7cf61622708666ea239eb7f5926a2f3de471adf6b4d837a153042b37337661c"},
-    {file = "picows-1.5.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:32f024efbf3ddea0ecba988d09cbee70c28d678e48c13ed05d742948ed9f68e8"},
-    {file = "picows-1.5.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:05300e1def4bb4324b7edf147c680ddec7637120a9a36d369c20c2a2d0828bbf"},
-    {file = "picows-1.5.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bce23a5e8434497c2a761031854f0df29717d23c2bf10f645405968af4e57e86"},
-    {file = "picows-1.5.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:84881f1651615078b1c065f96106e370bda360850347b11a6aaf972a6d655b99"},
-    {file = "picows-1.5.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:333c4bab7de777e22ce0c50e1325167822b0cdcd67c7755e91359673ff268bad"},
-    {file = "picows-1.5.0-cp313-cp313-win32.whl", hash = "sha256:fcad0bfecf312ab1db1ea53603efa5a4bb5826fa28e33efae8fe3a9ebe8f0179"},
-    {file = "picows-1.5.0-cp313-cp313-win_amd64.whl", hash = "sha256:cf7524c916354842e1843c6c4cd6b2ae6f48cbec7c17be506dd679707f35bfcb"},
-    {file = "picows-1.5.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:1ea9eb54df0c2534dbfabc2822c27fa431f2cbf8e7830155ae664679ed7d516b"},
-    {file = "picows-1.5.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:2e560afea71e3bd9ef64b3ec247de8af30f0cc4976cd528842b652bbba1230ff"},
-    {file = "picows-1.5.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:fe3b3522fbc0fb56d5c7a4ac6c8a5b798e1fb0a8f204194fc8f75bb9de33b5ca"},
-    {file = "picows-1.5.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b6ceb60d2b3535c151ce3f27d7d4892ce19ff355eaa814147d11dfddfa291066"},
-    {file = "picows-1.5.0-cp38-cp38-musllinux_1_2_aarch64.whl", hash = "sha256:b5f815f91a8326ddeb98cc84dc512ad2b92298de95e4ac0aaaa94c24ce1406f8"},
-    {file = "picows-1.5.0-cp38-cp38-musllinux_1_2_x86_64.whl", hash = "sha256:7c8413933beefec150b90dedd1800cc3de24b7668ddf38f3875e41a14dcdcb89"},
-    {file = "picows-1.5.0-cp38-cp38-win32.whl", hash = "sha256:662d86f71c99e4c7614b6cee2457652104b22bc83363f5e4c7eadff2246e0539"},
-    {file = "picows-1.5.0-cp38-cp38-win_amd64.whl", hash = "sha256:243b024b8893604c4ec80af693d6020c145ffa5a8ff199f1fc08267ddcd30c41"},
-    {file = "picows-1.5.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:1cff4b9966c2d8510dc7bbd94717385fa47da97ee8997783d77734d2e3f33934"},
-    {file = "picows-1.5.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:1fc8e99b43397c2c2ad1cf3894d2738c8fcce91f3142d2d7cf460385d25f5757"},
-    {file = "picows-1.5.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c7b4dbdf448b340e82e5e71b1b1eb5a9e340a0af970d49714c310a348dc1ed82"},
-    {file = "picows-1.5.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:53b3f8145a86db90ca56c383dbe7bed3a5123d692c9f4e00d30c6b7bfae52e43"},
-    {file = "picows-1.5.0-cp39-cp39-musllinux_1_2_aarch64.whl", hash = "sha256:8f41efe041555d8334a9109a59d43a27adc9b68722443b339f6228ab9e3ac2b5"},
-    {file = "picows-1.5.0-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:b5cdb35ef728f45d574245e6c6833653482064527c98eeb5a6c264a7fafe5b5d"},
-    {file = "picows-1.5.0-cp39-cp39-win32.whl", hash = "sha256:5da3655445d767fc0532efd35fd0e77eea782d9623156cd3284533fc2fb5fdb8"},
-    {file = "picows-1.5.0-cp39-cp39-win_amd64.whl", hash = "sha256:312d0bc61584b916a5625fa96e23e826eae823713f365425d9e119e944409544"},
-    {file = "picows-1.5.0.tar.gz", hash = "sha256:5371d112886d7eed536519ee70053e6ab3887f2e40e13f91d8a7dda2f6d9606c"},
+    {file = "picows-1.6.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:cb756cbdb0b9f561ac652d783cdcf16895ef18546de599a4af24c898d4c07a9f"},
+    {file = "picows-1.6.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:e69339bc6fb357b597ef0cebd4fe5fe604b440f6b99a90d24e7e2ca4cd8eb549"},
+    {file = "picows-1.6.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:14ebd76c3055ee7f303e743eebfa4215c187c4c092a4a5d44ecfbb93b24afe04"},
+    {file = "picows-1.6.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:efb39218b4c053a523cb1ca0b7faa7d36eb44d2195e8f1c4b131d7e444b7031f"},
+    {file = "picows-1.6.0-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:9080dcfff06e4d8bd20351b8eef56317003e1b8be8ca9596bb79ef645d9dface"},
+    {file = "picows-1.6.0-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:8b4b5247479035672e4a42a691dde041e9245fe65e3a74511fbead1857713f19"},
+    {file = "picows-1.6.0-cp310-cp310-win32.whl", hash = "sha256:39efb9e982120bf68cc4119c3e0dab3e4a664aad265b4990bb8e1f27a85768f8"},
+    {file = "picows-1.6.0-cp310-cp310-win_amd64.whl", hash = "sha256:3e4f2b92a2213d4a87c6daaf47065dc368392cfb285f759a474dc8b224f5d052"},
+    {file = "picows-1.6.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:da063cad496aa873fdec2af4e724d46167af381ae3b4ed7ee2d72d6c7dea7879"},
+    {file = "picows-1.6.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:77fd728dbbb08a4a7f943bc657a2f3ff9a64d34f1dfd2a8e4b456d961e21472d"},
+    {file = "picows-1.6.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:724b639057ffa9e98065e081d3ede7d4ceb92752dafc026746314e812b9a21db"},
+    {file = "picows-1.6.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6affdaa721cd02a4c130cc4b198781a768034389b3d667f7183439eedb12c457"},
+    {file = "picows-1.6.0-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:f3f0226305971a1d790b6841256aeaf05990810c096861b2d94a53daad0da8ab"},
+    {file = "picows-1.6.0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:2cc3e9187d60d634f8b4b5448da92d774555ff623fd1592a10e1dbe7b72f5d7d"},
+    {file = "picows-1.6.0-cp311-cp311-win32.whl", hash = "sha256:43f6f96f847264b387d67296e487abf351cf4e32de8baf4cc432ec304513a2a8"},
+    {file = "picows-1.6.0-cp311-cp311-win_amd64.whl", hash = "sha256:9a8734db80f011e5b4a90247dc8cfb8906257ce824316b1c3a64476ee85fe2cd"},
+    {file = "picows-1.6.0-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:e0db9d311b18425e60a180086905eff37895186eb7cf1fec14d19c5e40206d5d"},
+    {file = "picows-1.6.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:90512c641ff3a0ce981fe06f31b6a50c7eb9260e2691bb24e94638f2c13624c1"},
+    {file = "picows-1.6.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b6bfafe77001acebaa8e12bc8c4189bc5d5b47dd497890b399dd8b4f707f2929"},
+    {file = "picows-1.6.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:97e04d25e01ba6bfad6ecb2945cd25c632fbf125b35cd4c6c7a707105172e314"},
+    {file = "picows-1.6.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:85de074cf92f8d864f0a91ac8a2fa283c727f7e986b639bd820edc73e6c55cf8"},
+    {file = "picows-1.6.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:97600bb019ed24b35b5645397e7793fe28d03963945a167e932bed756e3a386a"},
+    {file = "picows-1.6.0-cp312-cp312-win32.whl", hash = "sha256:6e65d5c624a6d8c852f0131b7403ec1cfd0168e8f9c750debb1eeb6396459edb"},
+    {file = "picows-1.6.0-cp312-cp312-win_amd64.whl", hash = "sha256:97b68c47a8d1b875c3d704942a9399b05adb9c714ebe61684bdb5b4fecbcee0a"},
+    {file = "picows-1.6.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:b8e57948b1a6bac5d32832edf3ca2a8ec1987be3cbc7b7ee6c6e82f9474bc073"},
+    {file = "picows-1.6.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:bb806275d072493de35dee893498e1967fcbfc9406839fa1429dd1c9f55797fe"},
+    {file = "picows-1.6.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ad2e98d82513093116cd9dacb2a7a098eca712353f1470021c7172ff76a3a7e2"},
+    {file = "picows-1.6.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:50bd9e23a4860b147a7352d2c08a129704bb261a7b72dfc567b881c7a1983c54"},
+    {file = "picows-1.6.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:c85a09a13988396ef0de4568be86165de893b06ef55c9a73024c96862732e1ad"},
+    {file = "picows-1.6.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:35d678c10a8a936048895979371ad54ad539209f91f1673c9a9a4b99e5fe2379"},
+    {file = "picows-1.6.0-cp313-cp313-win32.whl", hash = "sha256:92af88d57d253914d454512dc887ed1852c15b2b32ee5830088fd6654c9f3023"},
+    {file = "picows-1.6.0-cp313-cp313-win_amd64.whl", hash = "sha256:65b2c4ef5e20efac9eaefb8f6b3d4320fbcd39aee9a5f7dece9aa51246d02ffa"},
+    {file = "picows-1.6.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:a47a20b1407948336f3b35cef9b102cdd811972c4cb435058e1a5bc2a5117170"},
+    {file = "picows-1.6.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:fd7c58c4e093ea629a6dab192d0a938d92a5dd3b6f4b60b2ebf0a16f9c2b9218"},
+    {file = "picows-1.6.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:faafbfd3d4bdabcf3bdffd8a234f7791dedd7afc8a323b3822fe8deee2d6dce2"},
+    {file = "picows-1.6.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9d6a57afff53e9b318f32cce3d83305fb8e3a036e00494a5c1f1ede769d3bace"},
+    {file = "picows-1.6.0-cp38-cp38-musllinux_1_2_aarch64.whl", hash = "sha256:f4e0d2620c2a877dc7c3d64ed0e08e0cb85e9a5c7bb9b27c7c8e929a9ffb4a9a"},
+    {file = "picows-1.6.0-cp38-cp38-musllinux_1_2_x86_64.whl", hash = "sha256:577de62955c4a552837f5723d9221969bfd9b4a4a4c7f0d27e075c6c683d7d14"},
+    {file = "picows-1.6.0-cp38-cp38-win32.whl", hash = "sha256:e64d71764ecb7c9fdbf5c25590e507750ac230e3d66996bb77cc17d4a1920494"},
+    {file = "picows-1.6.0-cp38-cp38-win_amd64.whl", hash = "sha256:9514310851d4645af2c8fc7ca75bbfe9c196852c96905ad5c9fbd007dfc2886e"},
+    {file = "picows-1.6.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:06e20fb0ea0817a128868d2d595c70a6ef24f2badf374096fbad9639f4df44f7"},
+    {file = "picows-1.6.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:be2eac1793357c31c1ce9e068b367d300f51f997e7042147c26ba7576574b1fb"},
+    {file = "picows-1.6.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:43f4f84aaec7e42401ba98b36e5e1d00030e1b59590d5a99404d8a481fc63ebf"},
+    {file = "picows-1.6.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a8314ad4477c507019ade9061b0e48c57651eb2ec42af7a6f6a77428c02c388d"},
+    {file = "picows-1.6.0-cp39-cp39-musllinux_1_2_aarch64.whl", hash = "sha256:094d5688e64fcda352fee742d8780e833de03d8b709e54ec3fef9ffbfeb731e5"},
+    {file = "picows-1.6.0-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:351c0f50f8495a1cc25ce30fe31ebb658f1a9aa7e24e9e57bc611dcdd41803c4"},
+    {file = "picows-1.6.0-cp39-cp39-win32.whl", hash = "sha256:e98753e4058dd65f0d22b6cfadbd169f83adeaa9dd045b1b16fd071f4ab0907d"},
+    {file = "picows-1.6.0-cp39-cp39-win_amd64.whl", hash = "sha256:d7c22805fbdfe687a5deb74395a1f4b9cfc0b532375602e26ac5de387b67abec"},
+    {file = "picows-1.6.0.tar.gz", hash = "sha256:ca8973f34269b9d8e2be02e6afb093d8c3bbd3a6800d75afc0958765cabc9c9e"},
 ]
 
 [package.dependencies]
@@ -1861,4 +1861,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.13"
-content-hash = "122f1a89e7fa39bdad55c2ebd2cad51607c806f567bfcbd9b7cfa31c90c7bc25"
+content-hash = "42368c4ecce45b967e46163188228071c5f491adb73869a477bc99cdcecb6937"

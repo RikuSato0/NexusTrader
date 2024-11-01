@@ -251,9 +251,9 @@ class OkxWSManager(WSClient):
             if msg["event"] == "error":
                 self._log.error(str(msg))
             elif msg["event"] == "subscribe":
-                pass
+                self._log.info(f"Subscribed to: {str(msg)}")
             elif msg["event"] == "login":
-                self._log.info(f"Login successful: {msg}")
+                self._log.info(f"Login successful: {str(msg)}")
             elif msg["event"] == "channel-conn-count":
                 self._log.info(f"Channel connection count: {msg['connCount']}")
         elif "arg" in msg:

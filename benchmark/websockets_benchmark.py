@@ -32,11 +32,17 @@ class WebsocketClient:
 
     async def listen(self):
         while True:
-            msg = await self.recv()
-            msg = orjson.loads(msg)
-            if "e" in msg:
-                local = int(time.time() * 1000)
-                LATENCY[msg["s"]].append(local - msg["E"])
+            try:
+                msg = await self.recv()
+                msg = orjson.loads(msg)
+                if "e" in msg:
+                    local = int(time.time() * 1000)
+                    LATENCY[msg["s"]].append(local - msg["E"])
+            except websockets.exceptions.ConnectionClosedOK:
+                print("Connection closed")
+                break
+            except Exception as e:
+                print(e)
 
     async def subscribe_trade(self, symbol: str):
         await self.limiter.wait()
@@ -144,7 +150,9 @@ async def main():
 if __name__ == "__main__":
     try:
         asyncio.run(main())
-    except KeyboardInterrupt:
+    except Exception as e:
+        print(e)
+    finally:
         for symbol, latencies in LATENCY.items():
             avg_latency = np.mean(latencies)
             print(

@@ -129,7 +129,27 @@ class Asset(Struct):
 
 
 class Position(Struct):
-    pass
+    """
+    one-way mode:
+    > order (side: buy) -> side: buy | pos_side: net/both | reduce_only: False [open long position]
+    > order (side: sell) -> side: sell | pos_side: net/both | reduce_only: False [open short position]
+    > order (side: buy, reduce_only=True) -> side: buy | pos_side: net/both | reduce_only: True [close short position]
+    > order (side: sell, reduce_only=True) -> side: sell | pos_side: net/both | reduce_only: True [close long position]
+    
+    hedge mode:
+    > order (side: buy, pos_side: long) -> side: buy | pos_side: long | reduce_only: False [open long position]
+    > order (side: sell, pos_side: short) -> side: sell | pos_side: short | reduce_only: False [open short position]
+    > order (side: sell, pos_side: long) -> side: sell | pos_side: long | reduce_only: True [close long position]
+    > order (side: buy, pos_side: short) -> side: buy | pos_side: short | reduce_only: True [close short position]
+    """
+    symbol: str
+    exchange: str
+    pos_side: Literal["long", "short"]
+    amount: Decimal # order amount, the unit could be base amount or contract amount
+    size: Decimal # must be the determined unit
+    avg_open_price: Decimal
+    avg_close_price: Decimal
+    
 
 
     

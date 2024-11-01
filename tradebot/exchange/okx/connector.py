@@ -4,7 +4,7 @@ from tradebot.exchange.okx.exchange import OkxExchangeManager
 from tradebot.types import Trade, BookL1, Kline
 from tradebot.constants import EventType
 from tradebot.entity import EventSystem
-from tradebot.base import PublicConnector
+from tradebot.base import PublicConnector, PrivateConnector
 
 
 class OkxPublicConnector(PublicConnector):
@@ -44,7 +44,7 @@ class OkxPublicConnector(PublicConnector):
             if msg["event"] == "error":
                 self._log.error(str(msg))
             elif msg["event"] == "subscribe":
-                pass
+                self._log.info(f"Subscribed to {str(msg)}")
         elif "arg" in msg:
             channel: str = msg["arg"]["channel"]
             if channel == "bbo-tbt":
@@ -157,5 +157,24 @@ class OkxPublicConnector(PublicConnector):
         EventSystem.emit(EventType.BOOKL1, bookl1)
 
 
-class OkxPrivateConnector:
-    pass
+class OkxPrivateConnector(PrivateConnector):
+    def __init__(
+        self,
+        account_type: OkxAccountType,
+        exchange: OkxExchangeManager,
+    ):
+        super().__init__(
+            account_type=account_type,
+            market=exchange.market,
+            market_id=exchange.market_id,
+            exchange_id=exchange.exchange_id,
+            ws_client=OkxWSClient(
+                account_type=account_type,
+                handler=self._ws_msg_handler,
+                api_key=exchange.api_key,
+                secret=exchange.secret,
+                passphrase=exchange.passphrase,
+            )
+        )
+        
+        

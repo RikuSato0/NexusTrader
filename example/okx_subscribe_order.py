@@ -5,7 +5,7 @@ import uvloop
 from pprint import pprint
 
 
-from tradebot.exchange import OkxWebsocketManager
+from tradebot.exchange._okx import OkxWebsocketManager
 from tradebot.constants import CONFIG, Url
 
 OKX_API_KEY = CONFIG['okex_demo']['API_KEY']

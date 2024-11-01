@@ -370,10 +370,10 @@ class Listener(WSListener):
         self._log.info("Disconnected from Websocket.")
 
     def on_ws_frame(self, transport: WSTransport, frame: WSFrame):
-        if frame.msg_type == WSMsgType.PING:
-            transport.send_pong(frame.get_payload_as_bytes())
-            return
         try:
+            if frame.msg_type == WSMsgType.PING:
+                transport.send_pong(frame.get_payload_as_bytes())
+                return
             msg = orjson.loads(frame.get_payload_as_bytes())
             self.msg_queue.put_nowait(msg)
         except orjson.JSONDecodeError:

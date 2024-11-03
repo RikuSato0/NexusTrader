@@ -26,7 +26,6 @@ class BinanceWSClient(WSClient):
     async def _subscribe(self, params: str, subscription_id: str):
         if subscription_id not in self._subscriptions:
             await self.connect()
-            await self._limiter.wait()
             id = time.time_ns() // 1_000_000
             payload = {
                 "method": "SUBSCRIBE",
@@ -34,7 +33,7 @@ class BinanceWSClient(WSClient):
                 "id": id,
             }
             self._subscriptions[subscription_id] = payload
-            self._send(payload)
+            await self._send(payload)
             self._log.info(f"Subscribing to {subscription_id}...")
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
@@ -123,8 +122,7 @@ class BinanceWSClient(WSClient):
 
     async def _resubscribe(self):
         for _, payload in self._subscriptions.items():
-            await self._limiter.wait()
-            self._send(payload)
+            await self._send(payload)
 
 
 ####################################################################################################

@@ -438,7 +438,8 @@ class WSClient(ABC):
                 self._transport, self._listener = None, None
                 await asyncio.sleep(self._reconnect_interval)
 
-    def _send(self, payload: dict):
+    async def _send(self, payload: dict):
+        await self._limiter.wait()
         self._transport.send(WSMsgType.TEXT, orjson.dumps(payload))
 
     async def _msg_handler(self, queue: asyncio.Queue):

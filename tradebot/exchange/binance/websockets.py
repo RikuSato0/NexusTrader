@@ -1,12 +1,20 @@
 import time
+import asyncio
+import orjson
 
 from typing import Literal, Callable
-from typing import Any
+from typing import Any, List
 from asynciolimiter import Limiter
 
+from tradebot.log import SpdLog
 from tradebot.base import WSClient
 from tradebot.exchange.binance.constants import STREAM_URLS
 from tradebot.exchange.binance.constants import BinanceAccountType
+
+from nautilus_trader.common.component import LiveClock
+from nautilus_trader.core.nautilus_pyo3 import WebSocketClient
+from nautilus_trader.core.nautilus_pyo3 import WebSocketClientError
+from nautilus_trader.core.nautilus_pyo3 import WebSocketConfig
 
 
 class BinanceWSClient(WSClient):
@@ -105,3 +113,137 @@ class BinanceWSClient(WSClient):
         for _, payload in self._subscriptions.items():
             await self._limiter.wait()
             self._send(payload)
+
+
+
+
+
+
+####################################################################################################
+############################### CODE USING THE NAUTILUS_PY03 LIBRARY ###############################
+
+class BinanceWebSocketClient:
+    def __init__(
+        self,
+        account_type: BinanceAccountType,
+        handler: Callable[[bytes], None],
+        clock: LiveClock,
+        loop: asyncio.AbstractEventLoop,
+    ):
+        self._url = account_type.ws_url
+        self._loop = loop
+        self._clock = clock
+        self._client: WebSocketClient = None
+        self._handler: Callable[[bytes], None] = handler
+        self._subscriptions: List[str] = []
+        self._is_connected = False
+        self._limiter = Limiter(3 / 1)
+        self._log = SpdLog.get_logger(name = type(self).__name__, level = "INFO", flush=True)
+    
+    def _ping_handler(self, raw: bytes) -> None:
+        self._loop.create_task(self._send_pong(raw))
+    
+    async def _send_pong(self, raw: bytes) -> None:
+        if self._client is None:
+            return
+
+        try:
+            await self._client.send_pong(raw)
+        except WebSocketClientError as e:
+            self._log.error(str(e))
+    
+    async def connect(self) -> None:
+        if self._client is not None or self._is_connected:
+            return
+        
+        config = WebSocketConfig(
+            url = self._url,
+            handler=self._handler,
+            heartbeat=60,
+            headers=[],
+            ping_handler=self._ping_handler,
+        )
+    
+        self._client = await WebSocketClient.connect(
+            config=config,
+            post_reconnection = self._reconnect,
+        )
+        
+        self._is_connected = True
+    
+    async def disconnect(self) -> None:
+        if self._client is None or not self._is_connected:
+            return
+
+        self._log.info("Disconnecting...")
+        try:
+            await self._client.disconnect()
+        except WebSocketClientError as e:
+            self._log.error(str(e))
+
+        self._is_connected = False
+        self._client = None  
+    
+    async def _subscribe(self, params: str) -> None:
+        if params in self._subscriptions:
+            self._log.info(f"Cannot subscribe to {params}: Already subscribed")
+            return
+
+        self._subscriptions.append(params)
+        
+        if self._client is None or not self._is_connected:
+            raise RuntimeError("WebSocket client is not connected. Call `connect()` first.")
+
+        
+        payload = {
+            "method": "SUBSCRIBE",
+            "params": [params],
+            "id": self._clock.timestamp_ms(),
+        }
+        
+        await self._send(payload)
+        self._log.info(f"Subscribed to {params}")
+    
+    async def _reconnect(self) -> None:
+        if not self._subscriptions:
+            self._log.info("No subscriptions to resubscribe")
+            return
+        
+        self._loop.create_task(self._subscribe_all())
+        
+        
+    async def _subscribe_all(self) -> None:
+        if self._client is None or not self._is_connected:
+            raise RuntimeError("WebSocket client is not connected. Call `connect()` first.")
+        
+        for params in self._subscriptions:
+            payload = {
+                "method": "SUBSCRIBE",
+                "params": [params],
+                "id": self._clock.timestamp_ms(),
+            }
+            await self._send(payload)
+        
+
+    async def _send(self, msg: dict[str, Any]) -> None:
+        if self._client is None or not self._is_connected:
+            raise RuntimeError("WebSocket client is not connected. Call `connect()` first.")
+
+        try:
+            await self._limiter.wait()
+            await self._client.send_text(orjson.dumps(msg))
+        except WebSocketClientError as e:
+            self._log.error(str(e))
+    
+        
+
+        
+        
+        
+        
+        
+    
+    
+    
+        
+    

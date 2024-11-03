@@ -26,10 +26,7 @@ async def main():
         exchange = OkxExchangeManager({"exchange_id": "okx"})
         await exchange.load_markets()  # get `market` and `market_id` data
 
-        okx_conn = OkxPublicConnector(
-            OkxAccountType.LIVE,
-            exchange
-        )
+        okx_conn = OkxPublicConnector(OkxAccountType.LIVE, exchange)
 
         demo = Demo()
         demo.add_public_connector(okx_conn)

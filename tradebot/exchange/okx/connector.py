@@ -1,10 +1,13 @@
+from typing import cast
 from tradebot.exchange.okx import OkxAccountType
 from tradebot.exchange.okx.websockets import OkxWSClient
+from tradebot.exchange.okx.websockets_v2 import OkxWSClient as OkxWSClientV2
 from tradebot.exchange.okx.exchange import OkxExchangeManager
 from tradebot.types import Trade, BookL1, Kline
 from tradebot.constants import EventType
 from tradebot.entity import EventSystem
 from tradebot.base import PublicConnector, PrivateConnector
+import orjson
 
 
 class OkxPublicConnector(PublicConnector):
@@ -18,14 +21,15 @@ class OkxPublicConnector(PublicConnector):
             market=exchange.market,
             market_id=exchange.market_id,
             exchange_id=exchange.exchange_id,
-            ws_client=OkxWSClient(
+            ws_client=OkxWSClientV2(
                 account_type=account_type,
                 handler=self._ws_msg_handler,
             ),
         )
+        self._ws_client = cast(OkxWSClientV2, self._ws_client)
 
     async def subscribe_trade(self, symbol: str):
-        market = self._market.get(symbol, None)
+        market = self._market.get(symbol, None) 
         symbol = market["id"] if market else symbol
         await self._ws_client.subscribe_trade(symbol)
 
@@ -40,6 +44,8 @@ class OkxPublicConnector(PublicConnector):
         await self._ws_client.subscribe_candlesticks(symbol, interval)
 
     def _ws_msg_handler(self, msg):
+        if isinstance(msg, bytes):
+            msg = orjson.loads(msg)
         if "event" in msg:
             if msg["event"] == "error":
                 self._log.error(str(msg))
@@ -168,13 +174,13 @@ class OkxPrivateConnector(PrivateConnector):
             market=exchange.market,
             market_id=exchange.market_id,
             exchange_id=exchange.exchange_id,
-            ws_client=OkxWSClient(
+            ws_client=OkxWSClientV2(
                 account_type=account_type,
                 handler=self._ws_msg_handler,
                 api_key=exchange.api_key,
                 secret=exchange.secret,
                 passphrase=exchange.passphrase,
-            )
+            ),
         )
-        
-        
+
+    def _ws_msg_handler(self): ...

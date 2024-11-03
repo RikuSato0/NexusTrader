@@ -220,7 +220,7 @@ class BinanceWebSocketClient:
         if not self._subscriptions:
             self._log.info("No subscriptions to resubscribe")
             return
-
+        self._log.info("Reconnecting...")
         self._loop.create_task(self._subscribe_all())
 
     async def _subscribe_all(self) -> None:
@@ -236,6 +236,7 @@ class BinanceWebSocketClient:
                 "id": self._clock.timestamp_ms(),
             }
             await self._send(payload)
+            self._log.info(f"Subscribed to {params}")
 
     async def _send(self, msg: dict[str, Any]) -> None:
         if self._client is None or not self._is_connected:

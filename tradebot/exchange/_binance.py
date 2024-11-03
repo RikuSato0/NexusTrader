@@ -378,7 +378,7 @@ class BinanceWSManager(WSClient):
                 "id": id,
             }
             self._subscriptions[subscription_id] = payload
-            self._send(payload)
+            await self._send(payload)
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
 
@@ -394,7 +394,7 @@ class BinanceWSManager(WSClient):
                 "id": id,
             }
             self._subscriptions[subscription_id] = payload
-            self._send(payload)
+            await self._send(payload)
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
 
@@ -410,7 +410,7 @@ class BinanceWSManager(WSClient):
                 "id": id,
             }
             self._subscriptions[subscription_id] = payload
-            self._send(payload)
+            await self._send(payload)
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
 
@@ -428,7 +428,7 @@ class BinanceWSManager(WSClient):
                 "id": id,
             }
             self._subscriptions[subscription_id] = payload
-            self._send(payload)
+            await self._send(payload)
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
 
@@ -445,7 +445,7 @@ class BinanceWSManager(WSClient):
                 "id": id,
             }
             self._subscriptions[subscription_id] = payload
-            self._send(payload)
+            await self._send(payload)
         else:
             self._log.info(f"Already subscribed to {subscription_id}")
 

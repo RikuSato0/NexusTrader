@@ -385,7 +385,7 @@ class BinancePrivateConnector(PrivateConnector):
         order = Order(
             raw=event_data,
             success=True,
-            exchange="binance",
+            exchange=self._exchange_id,
             id=event_data.get("i", None),
             client_order_id=event_data.get("c", None),
             timestamp=event_data.get("T", None),
@@ -481,7 +481,7 @@ class BinancePrivateConnector(PrivateConnector):
         order = Order(
             raw=event_data,
             success=True,
-            exchange="binance",
+            exchange=self._exchange_id,
             id=event_data.get("i", None),
             client_order_id=event_data.get("c", None),
             timestamp=event_data.get("T", None),

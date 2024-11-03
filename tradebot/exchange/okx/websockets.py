@@ -75,7 +75,7 @@ class OkxWSClient(WSClient):
 
     async def _auth(self):
         if not self._authed:
-            self._send(self._get_auth_payload())
+            await self._send(self._get_auth_payload())
             self._authed = True
             await asyncio.sleep(5)
 
@@ -92,7 +92,7 @@ class OkxWSClient(WSClient):
                 "args": [params],
             }
             self._subscriptions[subscription_id] = payload
-            self._send(payload)
+            await self._send(payload)
         else:
             print(f"Already subscribed to {subscription_id}")
 
@@ -176,4 +176,4 @@ class OkxWSClient(WSClient):
             await self._auth()
         for _, payload in self._subscriptions.items():
             await self._limiter.wait()
-            self._send(payload)
+            await self._send(payload)

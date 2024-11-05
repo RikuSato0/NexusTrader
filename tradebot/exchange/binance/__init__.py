@@ -5,11 +5,12 @@ from tradebot.exchange.binance.connector import (
     BinancePrivateConnector,
 )
 from tradebot.exchange.binance.rest_api_v2 import BinanceHttpClient
-
+from tradebot.exchange.binance.rest_api import BinanceApiClient
 __all__ = [
     "BinanceAccountType",
     "BinanceExchangeManager",
     "BinancePublicConnector",
     "BinancePrivateConnector",
     "BinanceHttpClient",
+    "BinanceApiClient",
 ]

@@ -28,7 +28,7 @@ class BinanceHttpClient:
         self._secret = secret
         self._testnet = testnet
         self._clock = LiveClock()
-        self._log = SpdLog.get_logger(type(self).__name__, level="DEBUG", flush=True)
+        self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
 
         self._headers = {
             "Content-Type": "application/json",

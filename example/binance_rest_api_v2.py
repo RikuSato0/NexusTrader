@@ -26,6 +26,13 @@ async def main():
         quantity=0.01,
         positionSide='LONG',
     )
+    # res = await http_client.post_fapi_v1_order(
+    #     symbol='BTCUSDT',
+    #     type=OrderType.MARKET,
+    #     side=OrderSide.SELL,
+    #     quantity=0.01,
+    #     positionSide='LONG',
+    # )
     
     print(f'{res["updateTime"] - start} ms')
 

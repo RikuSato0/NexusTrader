@@ -119,6 +119,7 @@ class BinancePublicConnector(PublicConnector):
             volume=float(res["k"]["v"]),
             timestamp=res.get("E", time.time_ns() // 1_000_000),
         )
+        self._log.debug(f"{ticker}")
         EventSystem.emit(EventType.KLINE, ticker)
 
     def _parse_trade(self, res: Dict[str, Any]) -> Trade:
@@ -154,6 +155,7 @@ class BinancePublicConnector(PublicConnector):
             size=float(res["q"]),
             timestamp=res.get("T", time.time_ns() // 1_000_000),
         )
+        self._log.debug(f"{trade}")
         EventSystem.emit(EventType.TRADE, trade)
 
     def _parse_book_ticker(self, res: Dict[str, Any]) -> BookL1:
@@ -179,6 +181,7 @@ class BinancePublicConnector(PublicConnector):
             ask_size=float(res["A"]),
             timestamp=res.get("T", time.time_ns() // 1_000_000),
         )
+        self._log.debug(f"{bookl1}")
         EventSystem.emit(EventType.BOOKL1, bookl1)
 
     def _parse_mark_price(self, res: Dict[str, Any]):
@@ -218,7 +221,9 @@ class BinancePublicConnector(PublicConnector):
             price=float(res["i"]),
             timestamp=res.get("E", time.time_ns() // 1_000_000),
         )
-
+        self._log.debug(f"{mark_price}")
+        self._log.debug(f"{funding_rate}")
+        self._log.debug(f"{index_price}")
         EventSystem.emit(EventType.MARK_PRICE, mark_price)
         EventSystem.emit(EventType.FUNDING_RATE, funding_rate)
         EventSystem.emit(EventType.INDEX_PRICE, index_price)

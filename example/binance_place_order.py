@@ -115,11 +115,12 @@ async def main():
             exchange=exchange,
         )
         
-        res = await private_conn.place_market_order(
+        res = await private_conn.place_limit_order(
             symbol="BTC/USDT:USDT",
-            side="sell",
+            side="buy",
             amount=0.01,
-            positionSide="SHORT",
+            price=68300.6,
+            positionSide="LONG",
         )
         
         print(res)

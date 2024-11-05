@@ -1,13 +1,7 @@
 from enum import Enum
-from tradebot.constants import AccountType
+from tradebot.constants import AccountType, OrderStatus
 
-class OrderStatus(Enum):
-    NEW = "new"
-    PARTIALLY_FILLED = "partially_filled"
-    FILLED = "filled"
-    CANCELED = "canceled"
-    EXPIRED = "expired"
-    FAILED = "failed"
+
 
 class BinanceAccountType(AccountType):
     SPOT = "SPOT"
@@ -129,3 +123,23 @@ ENDPOINTS = {
     },
 }
 
+
+
+class BinanceOrderStatus(Enum):
+    NEW = "NEW"
+    PARTIALLY_FILLED = "PARTIALLY_FILLED"
+    FILLED = "FILLED"
+    CANCELED = "CANCELED"
+    EXPIRED = "EXPIRED"
+    
+
+
+class BinanceEnumParser:
+    def __init__(self) -> None:
+        self._status_map = {
+            BinanceOrderStatus.NEW: OrderStatus.ACCEPTED,
+            BinanceOrderStatus.PARTIALLY_FILLED: OrderStatus.PARTIALLY_FILLED,
+            BinanceOrderStatus.FILLED: OrderStatus.FILLED,
+            BinanceOrderStatus.CANCELED: OrderStatus.CANCELED,
+            BinanceOrderStatus.EXPIRED: OrderStatus.EXPIRED,
+        }

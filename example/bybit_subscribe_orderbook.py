@@ -1,7 +1,7 @@
 import asyncio
 
 
-from tradebot.exchange.bybit import BybitWebsocketManager
+from tradebot.exchange._bybit import BybitWebsocketManager
 from tradebot.constants import Url
 
 def cb(msg):

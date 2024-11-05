@@ -162,12 +162,23 @@ class EventType(Enum):
     INDEX_PRICE = 5
 
 class OrderStatus(Enum):
-    NEW = "NEW"
+    # LOCAL
+    INITIALIZED = "INITIALIZED"
+    FAILED = "FAILED"
+    
+    # IN-FLOW
+    PENDING = "PENDING"
+    CANCELING = "CANCELING"
+    
+    # OPEN
+    ACCEPTED = "ACCEPTED"
     PARTIALLY_FILLED = "PARTIALLY_FILLED"
+    
+    # CLOSED
     FILLED = "FILLED"
     CANCELED = "CANCELED"
     EXPIRED = "EXPIRED"
-    FAILED = "FAILED"
+    
 
 
 class ExchangeType(Enum):

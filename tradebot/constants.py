@@ -325,3 +325,20 @@ class PublicConnectorType(Enum):
 
 class AccountType(Enum):
     pass
+
+class OrderType(Enum):
+    MARKET = "MARKET"
+    LIMIT = "LIMIT"
+
+class OrderSide(Enum):
+    BUY = "BUY"
+    SELL = "SELL"
+
+class OrderTimeInForce(Enum):
+    GTC = "GTC"
+    IOC = "IOC"
+    FOK = "FOK"
+
+class OrderPositionSide(Enum):
+    LONG = "LONG"
+    SHORT = "SHORT"

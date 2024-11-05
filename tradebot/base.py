@@ -666,13 +666,15 @@ class PrivateConnector(ABC):
         self._exchange_id = exchange_id
         self._task_manager = TaskManager()
         self._ws_client = ws_client
-        
+    
+    @property
+    def account_type(self):
+        return self._account_type  
     
     @abstractmethod
     async def connect(self):
         pass
     
-
     async def disconnect(self):
         await self._ws_client.disconnect()
         await self._task_manager.cancel()

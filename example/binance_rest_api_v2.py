@@ -25,6 +25,25 @@ async def main():
         testnet=True,
     )
         
+    start = int(time.time() * 1000)
+    res = await rest_api.post_fapi_v1_order(
+        symbol='BTCUSDT',
+        type="MARKET",
+        
+        side="BUY",
+        quantity=0.01,
+    )
+    print(f'{res["updateTime"] - start} ms')
+    
+    start = int(time.time() * 1000)
+    res = await rest_api.post_fapi_v1_order(
+        symbol='BTCUSDT',
+        type="MARKET",
+        side="SELL",
+        quantity=0.01,
+        reduceOnly=True,
+    )
+    print(f'{res["updateTime"] - start} ms')
     
     start = int(time.time() * 1000) 
     res = await http_client.post_fapi_v1_order(
@@ -43,25 +62,6 @@ async def main():
         quantity=0.01,
         reduceOnly=True,
     )    
-    print(f'{res["updateTime"] - start} ms')
-    
-    start = int(time.time() * 1000)
-    res = await rest_api.post_fapi_v1_order(
-        symbol='BTCUSDT',
-        type="MARKET",
-        side="BUY",
-        quantity=0.01,
-    )
-    print(f'{res["updateTime"] - start} ms')
-    
-    start = int(time.time() * 1000)
-    res = await rest_api.post_fapi_v1_order(
-        symbol='BTCUSDT',
-        type="MARKET",
-        side="SELL",
-        quantity=0.01,
-        reduceOnly=True,
-    )
     print(f'{res["updateTime"] - start} ms')
     
     await rest_api.close_session()

@@ -1,4 +1,5 @@
 import msgspec
+from tradebot.types import Order
 from tradebot.constants import OrderSide, OrderTimeInForce
 from tradebot.exchange.binance.constants import BinanceOrderStatus, BinanceOrderType, BinancePositionSide
 
@@ -85,3 +86,13 @@ class BinanceOrder(msgspec.Struct, frozen=True):
     cumQuote: str | None = None  # USD-M FUTURES only
     cumBase: str | None = None  # COIN-M FUTURES only
     pair: str | None = None  # COIN-M FUTURES only
+    
+    def parse_order(self) -> Order:
+        return Order(
+            exchange="binance",
+            id=self.orderId,
+            client_order_id=self.clientOrderId,
+            timestamp=self.updateTime,
+            symbol=self.symbol,
+            
+        )

@@ -2,6 +2,7 @@ from decimal import Decimal
 from typing import Any, Dict
 from typing import Literal, Optional
 from msgspec import Struct, field
+from constants import OrderSide, OrderType, OrderTimeInForce, OrderStatus
 
 
 class BookL1(Struct, gc=False):
@@ -55,20 +56,16 @@ class IndexPrice(Struct, gc=False):
     price: float
     timestamp: int
 
-
 class Order(Struct):
-    raw: Dict[str, Any]
-    success: bool
     exchange: str
-    id: str
+    id: int
     client_order_id: str
     timestamp: int
     symbol: str
-    type: Literal["limit", "market"]
-    side: Literal["buy", "sell"]
-    status: Literal[
-        "new", "partially_filled", "filled", "canceled", "expired", "failed"
-    ]
+    type: OrderType
+    side: OrderSide
+    status: OrderStatus
+    time_in_force: Optional[OrderTimeInForce] = None
     price: Optional[float] = None
     average: Optional[float] = None
     last_filled_price: Optional[float] = None

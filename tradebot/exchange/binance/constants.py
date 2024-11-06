@@ -1,5 +1,5 @@
 from enum import Enum
-from tradebot.constants import AccountType, OrderStatus
+from tradebot.constants import AccountType, OrderStatus, OrderType
 
 class BinanceOrderType(Enum):
     LIMIT = "LIMIT"
@@ -153,12 +153,23 @@ ENDPOINTS = {
 
 class BinanceEnumParser:
     def __init__(self) -> None:
-        self._status_map = {
+        self._order_status_map = {
             BinanceOrderStatus.NEW: OrderStatus.ACCEPTED,
             BinanceOrderStatus.PARTIALLY_FILLED: OrderStatus.PARTIALLY_FILLED,
             BinanceOrderStatus.FILLED: OrderStatus.FILLED,
             BinanceOrderStatus.CANCELED: OrderStatus.CANCELED,
             BinanceOrderStatus.EXPIRED: OrderStatus.EXPIRED,
+        }
+        
+        #TODO: Add the rest of the order status, Currently only supported LIMIT and MARKET
+        self._order_type_map = {
+            BinanceOrderType.LIMIT: OrderType.LIMIT,
+            BinanceOrderType.MARKET: OrderType.MARKET,
+            BinanceOrderType.STOP_LOSS: None,
+            BinanceOrderType.STOP_LOSS_LIMIT: None,
+            BinanceOrderType.TAKE_PROFIT: None,
+            BinanceOrderType.TAKE_PROFIT_LIMIT: None,
+            BinanceOrderType.LIMIT_MAKER: None,
         }
 
 class BinanceErrorCode(Enum):

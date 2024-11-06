@@ -13,11 +13,11 @@ BINANCE_API_SECRET = CONFIG["binance_future_testnet"]["SECRET"]
 
 async def main():
     
-    http_client = BinanceHttpClient(
-        api_key=BINANCE_API_KEY,
-        secret=BINANCE_API_SECRET,
-        testnet=True,
-    )
+    # http_client = BinanceHttpClient(
+    #     api_key=BINANCE_API_KEY,
+    #     secret=BINANCE_API_SECRET,
+    #     testnet=True,
+    # )
     
     rest_api = BinanceApiClient(
         api_key=BINANCE_API_KEY,
@@ -33,7 +33,8 @@ async def main():
         side="BUY",
         quantity=0.01,
     )
-    print(f'{res["updateTime"] - start} ms')
+    print(res)
+    # print(f'{res["updateTime"] - start} ms')
     
     start = int(time.time() * 1000)
     res = await rest_api.post_fapi_v1_order(
@@ -43,26 +44,27 @@ async def main():
         quantity=0.01,
         reduceOnly=True,
     )
-    print(f'{res["updateTime"] - start} ms')
+    print(res)
+    # print(f'{res["updateTime"] - start} ms')
     
-    start = int(time.time() * 1000) 
-    res = await http_client.post_fapi_v1_order(
-        symbol='BTCUSDT',
-        type=OrderType.MARKET,
-        side=OrderSide.BUY,
-        quantity=0.01,
-    )    
-    print(f'{res["updateTime"] - start} ms')
+    # start = int(time.time() * 1000) 
+    # res = await http_client.post_fapi_v1_order(
+    #     symbol='BTCUSDT',
+    #     type=OrderType.MARKET,
+    #     side=OrderSide.BUY,
+    #     quantity=0.01,
+    # )    
+    # print(f'{res["updateTime"] - start} ms')
     
-    start = int(time.time() * 1000) 
-    res = await http_client.post_fapi_v1_order(
-        symbol='BTCUSDT',
-        type=OrderType.MARKET,
-        side=OrderSide.SELL,
-        quantity=0.01,
-        reduceOnly=True,
-    )    
-    print(f'{res["updateTime"] - start} ms')
+    # start = int(time.time() * 1000) 
+    # res = await http_client.post_fapi_v1_order(
+    #     symbol='BTCUSDT',
+    #     type=OrderType.MARKET,
+    #     side=OrderSide.SELL,
+    #     quantity=0.01,
+    #     reduceOnly=True,
+    # )    
+    # print(f'{res["updateTime"] - start} ms')
     
     await rest_api.close_session()
 

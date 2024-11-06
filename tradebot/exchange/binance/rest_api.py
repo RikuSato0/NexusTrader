@@ -346,7 +346,7 @@ class BinanceApiClient:
         side: str,
         type: str,
         **kwargs,
-    ):
+    ) -> BinanceOrder:
         """
         https://developers.binance.com/docs/margin_trading/trade/Margin-Account-New-Order
         """
@@ -367,7 +367,7 @@ class BinanceApiClient:
         side: str,
         type: str,
         **kwargs,
-    ):
+    ) -> BinanceOrder:
         """
         https://developers.binance.com/docs/binance-spot-api-docs/rest-api/public-api-endpoints#new-order-trade
         """
@@ -388,7 +388,7 @@ class BinanceApiClient:
         side: str,
         type: str,
         **kwargs,
-    ):
+    ) -> BinanceOrder:
         """
         https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api
         """
@@ -409,7 +409,7 @@ class BinanceApiClient:
         side: str,
         type: str,
         **kwargs,
-    ):
+    ) -> BinanceOrder:
         """
         https://developers.binance.com/docs/derivatives/coin-margined-futures/trade
         """
@@ -430,7 +430,7 @@ class BinanceApiClient:
         side: str,
         type: str,
         **kwargs,
-    ):
+    ) -> BinanceOrder:
         """
         https://developers.binance.com/docs/derivatives/portfolio-margin/trade
         """
@@ -452,7 +452,7 @@ class BinanceApiClient:
         side: str,
         type: str,
         **kwargs,
-    ):
+    ) -> BinanceOrder:
         """
         https://developers.binance.com/docs/derivatives/portfolio-margin/trade/New-CM-Order
         """
@@ -474,7 +474,7 @@ class BinanceApiClient:
         side: str,
         type: str,
         **kwargs,
-    ):
+    ) -> BinanceOrder:
         """
         https://developers.binance.com/docs/derivatives/portfolio-margin/trade/New-Margin-Order
         """

@@ -1,7 +1,35 @@
 from enum import Enum
 from tradebot.constants import AccountType, OrderStatus
 
+class BinanceOrderType(Enum):
+    LIMIT = "LIMIT"
+    MARKET = "MARKET"
+    STOP_LOSS = "STOP_LOSS"
+    STOP_LOSS_LIMIT = "STOP_LOSS_LIMIT"
+    TAKE_PROFIT = "TAKE_PROFIT"
+    TAKE_PROFIT_LIMIT = "TAKE_PROFIT_LIMIT"
+    LIMIT_MAKER = "LIMIT_MAKER"
 
+class BinanceExecutionType(Enum):
+    NEW = "NEW"
+    CANCELED = "CANCELED"
+    REJECTED = "REJECTED"
+    TRADE = "TRADE"
+    EXPIRED = "EXPIRED"
+    CALCULATED = "CALCULATED"
+    TRADE_PREVENTION = "TRADE_PREVENTION"
+    
+class BinanceOrderStatus(Enum):
+    NEW = "NEW"
+    PARTIALLY_FILLED = "PARTIALLY_FILLED"
+    FILLED = "FILLED"
+    CANCELED = "CANCELED"
+    EXPIRED = "EXPIRED"
+
+class BinancePositionSide(Enum):
+    BOTH = "BOTH"
+    LONG = "LONG"
+    SHORT = "SHORT"
 
 class BinanceAccountType(AccountType):
     SPOT = "SPOT"
@@ -123,17 +151,6 @@ ENDPOINTS = {
     },
 }
 
-
-
-class BinanceOrderStatus(Enum):
-    NEW = "NEW"
-    PARTIALLY_FILLED = "PARTIALLY_FILLED"
-    FILLED = "FILLED"
-    CANCELED = "CANCELED"
-    EXPIRED = "EXPIRED"
-    
-
-
 class BinanceEnumParser:
     def __init__(self) -> None:
         self._status_map = {
@@ -143,8 +160,6 @@ class BinanceEnumParser:
             BinanceOrderStatus.CANCELED: OrderStatus.CANCELED,
             BinanceOrderStatus.EXPIRED: OrderStatus.EXPIRED,
         }
-
-
 
 class BinanceErrorCode(Enum):
     """

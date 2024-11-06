@@ -3,6 +3,7 @@ import hmac
 import orjson
 import hashlib
 import certifi
+import msgspec
 import asyncio
 import ssl
 import aiohttp
@@ -14,6 +15,7 @@ from tradebot.entity import Order
 
 from tradebot.base import RestApi
 from tradebot.log import SpdLog
+from tradebot.exchange.binance.types import BinanceOrder
 from tradebot.exchange.binance.constants import BASE_URLS, ENDPOINTS
 from tradebot.exchange.binance.constants import BinanceAccountType, EndpointsType
 from tradebot.exchange.binance.error import BinanceClientError, BinanceServerError
@@ -126,6 +128,7 @@ class BinanceApiClient:
         self._session = None
         self._clock = LiveClock()
         self._init_session()
+        self._order_decoder = msgspec.json.Decoder(BinanceOrder)
 
     def _init_session(self):
         if self._session is None:
@@ -174,20 +177,20 @@ class BinanceApiClient:
                 url=url,
                 headers=self._headers,
             )
-            message = await response.json()
+            raw = await response.read()
             if 400 <= response.status < 500:
                 raise BinanceClientError(
                     status=response.status,
-                    message=message,
+                    message=orjson.loads(raw) if raw else None,
                     headers=response.headers,
                 )
             elif response.status >= 500:
                 raise BinanceServerError(
                     status=response.status,
-                    message=message,
+                    message=orjson.loads(raw) if raw else None,
                     headers=response.headers,
                 )
-            return message
+            return raw
         except aiohttp.ClientError as e:
             self._log.error(f"Client Error {method} Url: {url} {e}")
             raise
@@ -197,149 +200,157 @@ class BinanceApiClient:
         except Exception as e:
             self._log.error(f"Error {method} Url: {url} {e}")
             raise
-
+        
+    def _get_base_url(self, account_type: BinanceAccountType) -> str:
+        if account_type == BinanceAccountType.SPOT:
+            if self._testnet:
+                return BinanceAccountType.SPOT_TESTNET.base_url
+            return BinanceAccountType.SPOT.base_url
+        elif account_type == BinanceAccountType.MARGIN:
+            return BinanceAccountType.MARGIN.base_url
+        elif account_type == BinanceAccountType.ISOLATED_MARGIN:
+            return BinanceAccountType.ISOLATED_MARGIN.base_url
+        elif account_type == BinanceAccountType.USD_M_FUTURE:
+            if self._testnet:
+                return BinanceAccountType.USD_M_FUTURE_TESTNET.base_url
+            return BinanceAccountType.USD_M_FUTURE.base_url
+        elif account_type == BinanceAccountType.COIN_M_FUTURE:
+            if self._testnet:
+                return BinanceAccountType.COIN_M_FUTURE_TESTNET.base_url
+            return BinanceAccountType.COIN_M_FUTURE.base_url
+        elif account_type == BinanceAccountType.PORTFOLIO_MARGIN:
+            return BinanceAccountType.PORTFOLIO_MARGIN.base_url
+    
     async def put_dapi_v1_listen_key(self):
         """
         https://developers.binance.com/docs/derivatives/coin-margined-futures/user-data-streams/Keepalive-User-Data-Stream
         """
-        base_url = (
-            BinanceAccountType.COIN_M_FUTURE.base_url
-            if not self._testnet
-            else BinanceAccountType.COIN_M_FUTURE_TESTNET.base_url
-        )
+        base_url = self._get_base_url(BinanceAccountType.COIN_M_FUTURE)
         end_point = "/dapi/v1/listenKey"
-        return await self._fetch("PUT", base_url, end_point)
+        raw = await self._fetch("PUT", base_url, end_point)
+        return orjson.loads(raw)
 
     async def post_dapi_v1_listen_key(self):
         """
         https://developers.binance.com/docs/derivatives/coin-margined-futures/user-data-streams/Start-User-Data-Stream
         """
-        base_url = (
-            BinanceAccountType.COIN_M_FUTURE.base_url
-            if not self._testnet
-            else BinanceAccountType.COIN_M_FUTURE_TESTNET.base_url
-        )
+        base_url = self._get_base_url(BinanceAccountType.COIN_M_FUTURE)
         end_point = "/dapi/v1/listenKey"
-        return await self._fetch("POST", base_url, end_point)
+        raw = await self._fetch("POST", base_url, end_point)
+        return orjson.loads(raw)
 
     async def post_api_v3_user_data_stream(self):
         """
         https://developers.binance.com/docs/binance-spot-api-docs/user-data-stream#create-a-listenkey-user_stream
         """
-        base_url = (
-            BinanceAccountType.SPOT.base_url
-            if not self._testnet
-            else BinanceAccountType.SPOT_TESTNET.base_url
-        )
+        base_url = self._get_base_url(BinanceAccountType.SPOT)
         end_point = "/api/v3/userDataStream"
-        return await self._fetch("POST", base_url, end_point)
+        raw = await self._fetch("POST", base_url, end_point)
+        return orjson.loads(raw)
 
     async def put_api_v3_user_data_stream(self, listen_key: str):
         """
         https://developers.binance.com/docs/binance-spot-api-docs/user-data-stream
         """
-        base_url = (
-            BinanceAccountType.SPOT.base_url
-            if not self._testnet
-            else BinanceAccountType.SPOT_TESTNET.base_url
-        )
+        base_url = self._get_base_url(BinanceAccountType.SPOT)
         end_point = "/api/v3/userDataStream"
-        return await self._fetch(
+        raw = await self._fetch(
             "PUT", base_url, end_point, payload={"listenKey": listen_key}
         )
+        return orjson.loads(raw)
 
     async def post_sapi_v1_user_data_stream(self):
         """
         https://developers.binance.com/docs/margin_trading/trade-data-stream/Start-Margin-User-Data-Stream
         """
-        base_url = BinanceAccountType.MARGIN.base_url
+        base_url = self._get_base_url(BinanceAccountType.MARGIN)
         end_point = "/sapi/v1/userDataStream"
-        return await self._fetch("POST", base_url, end_point)
+        raw = await self._fetch("POST", base_url, end_point)
+        return orjson.loads(raw)
 
     async def put_sapi_v1_user_data_stream(self, listen_key: str):
         """
         https://developers.binance.com/docs/margin_trading/trade-data-stream/Keepalive-Margin-User-Data-Stream
         """
-        base_url = BinanceAccountType.MARGIN.base_url
+        base_url = self._get_base_url(BinanceAccountType.MARGIN)
         end_point = "/sapi/v1/userDataStream"
-        return await self._fetch(
+        raw = await self._fetch(
             "PUT", base_url, end_point, payload={"listenKey": listen_key}
         )
+        return orjson.loads(raw)
 
     async def post_sapi_v1_user_data_stream_isolated(self, symbol: str):
         """
         https://developers.binance.com/docs/margin_trading/trade-data-stream/Start-Isolated-Margin-User-Data-Stream
         """
-        base_url = BinanceAccountType.ISOLATED_MARGIN.base_url
+        base_url = self._get_base_url(BinanceAccountType.ISOLATED_MARGIN)
         end_point = "/sapi/v1/userDataStream/isolated"
-        return await self._fetch(
+        raw = await self._fetch(
             "POST", base_url, end_point, payload={"symbol": symbol}
         )
+        return orjson.loads(raw)
 
     async def put_sapi_v1_user_data_stream_isolated(self, symbol: str, listen_key: str):
         """
         https://developers.binance.com/docs/margin_trading/trade-data-stream/Keepalive-Isolated-Margin-User-Data-Stream
         """
-        base_url = BinanceAccountType.ISOLATED_MARGIN.base_url
+        base_url = self._get_base_url(BinanceAccountType.ISOLATED_MARGIN)
         end_point = "/sapi/v1/userDataStream/isolated"
-        return await self._fetch(
+        raw = await self._fetch(
             "PUT",
             base_url,
             end_point,
             payload={"symbol": symbol, "listenKey": listen_key},
         )
+        return orjson.loads(raw)
 
     async def post_fapi_v1_listen_key(self):
         """
         https://developers.binance.com/docs/derivatives/usds-margined-futures/user-data-streams/Start-User-Data-Stream
         """
-        base_url = (
-            BinanceAccountType.USD_M_FUTURE.base_url
-            if not self._testnet
-            else BinanceAccountType.USD_M_FUTURE_TESTNET.base_url
-        )
+        base_url = self._get_base_url(BinanceAccountType.USD_M_FUTURE)
         end_point = "/fapi/v1/listenKey"
-        return await self._fetch("POST", base_url, end_point)
+        raw = await self._fetch("POST", base_url, end_point)
+        return orjson.loads(raw)
 
     async def put_fapi_v1_listen_key(self):
         """
         https://developers.binance.com/docs/derivatives/usds-margined-futures/user-data-streams/Keepalive-User-Data-Stream
         """
-        base_url = (
-            BinanceAccountType.USD_M_FUTURE.base_url
-            if not self._testnet
-            else BinanceAccountType.USD_M_FUTURE_TESTNET.base_url
-        )
+        base_url = self._get_base_url(BinanceAccountType.USD_M_FUTURE)
         end_point = "/fapi/v1/listenKey"
-        return await self._fetch("PUT", base_url, end_point)
+        raw = await self._fetch("PUT", base_url, end_point)
+        return orjson.loads(raw)
 
     async def post_papi_v1_listen_key(self):
         """
         https://developers.binance.com/docs/derivatives/portfolio-margin/user-data-streams/Start-User-Data-Stream
         """
-        base_url = BinanceAccountType.PORTFOLIO_MARGIN.base_url
+        base_url = self._get_base_url(BinanceAccountType.PORTFOLIO_MARGIN)
         end_point = "/papi/v1/listenKey"
-        return await self._fetch("POST", base_url, end_point)
+        raw = await self._fetch("POST", base_url, end_point)
+        return orjson.loads(raw)
 
     async def put_papi_v1_listen_key(self):
         """
         https://developers.binance.com/docs/derivatives/portfolio-margin/user-data-streams/Keepalive-User-Data-Stream
         """
-        base_url = BinanceAccountType.PORTFOLIO_MARGIN.base_url
+        base_url = self._get_base_url(BinanceAccountType.PORTFOLIO_MARGIN)
         end_point = "/papi/v1/listenKey"
-        return await self._fetch("PUT", base_url, end_point)
+        raw = await self._fetch("PUT", base_url, end_point)
+        return orjson.loads(raw)
 
     async def post_sapi_v1_margin_order(
         self,
         symbol: str,
-        side: Literal["BUY", "SELL"],
-        type: Literal["LIMIT", "MARKET"],
+        side: str,
+        type: str,
         **kwargs,
     ):
         """
         https://developers.binance.com/docs/margin_trading/trade/Margin-Account-New-Order
         """
-        base_url = BinanceAccountType.MARGIN.base_url
+        base_url = self._get_base_url(BinanceAccountType.MARGIN)
         end_point = "/sapi/v1/margin/order"
         data = {
             "symbol": symbol,
@@ -347,23 +358,20 @@ class BinanceApiClient:
             "type": type,
             **kwargs,
         }
-        return await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        raw = await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
 
     async def post_api_v3_order(
         self,
         symbol: str,
-        side: Literal["BUY", "SELL"],
-        type: Literal["LIMIT", "MARKET"],
+        side: str,
+        type: str,
         **kwargs,
     ):
         """
         https://developers.binance.com/docs/binance-spot-api-docs/rest-api/public-api-endpoints#new-order-trade
         """
-        base_url = (
-            BinanceAccountType.SPOT.base_url
-            if not self._testnet
-            else BinanceAccountType.SPOT_TESTNET.base_url
-        )
+        base_url = self._get_base_url(BinanceAccountType.SPOT)
         end_point = "/api/v3/order"
         data = {
             "symbol": symbol,
@@ -371,23 +379,20 @@ class BinanceApiClient:
             "type": type,
             **kwargs,
         }
-        return await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        raw = await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
 
     async def post_fapi_v1_order(
         self,
         symbol: str,
-        side: Literal["BUY", "SELL"],
-        type: Literal["LIMIT", "MARKET"],
+        side: str,
+        type: str,
         **kwargs,
     ):
         """
         https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api
         """
-        base_url = (
-            BinanceAccountType.USD_M_FUTURE.base_url
-            if not self._testnet
-            else BinanceAccountType.USD_M_FUTURE_TESTNET.base_url
-        )
+        base_url = self._get_base_url(BinanceAccountType.USD_M_FUTURE)
         end_point = "/fapi/v1/order"
         data = {
             "symbol": symbol,
@@ -395,23 +400,20 @@ class BinanceApiClient:
             "type": type,
             **kwargs,
         }
-        return await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        raw = await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
 
     async def post_dapi_v1_order(
         self,
         symbol: str,
-        side: Literal["BUY", "SELL"],
-        type: Literal["LIMIT", "MARKET"],
+        side: str,
+        type: str,
         **kwargs,
     ):
         """
         https://developers.binance.com/docs/derivatives/coin-margined-futures/trade
         """
-        base_url = (
-            BinanceAccountType.COIN_M_FUTURE.base_url
-            if not self._testnet
-            else BinanceAccountType.COIN_M_FUTURE_TESTNET.base_url
-        )
+        base_url = self._get_base_url(BinanceAccountType.COIN_M_FUTURE)
         end_point = "/dapi/v1/order"
         data = {
             "symbol": symbol,
@@ -419,19 +421,20 @@ class BinanceApiClient:
             "type": type,
             **kwargs,
         }
-        return await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        raw = await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
 
     async def post_papi_v1_um_order(
         self,
         symbol: str,
-        side: Literal["BUY", "SELL"],
-        type: Literal["LIMIT", "MARKET"],
+        side: str,
+        type: str,
         **kwargs,
     ):
         """
         https://developers.binance.com/docs/derivatives/portfolio-margin/trade
         """
-        base_url = BinanceAccountType.PORTFOLIO_MARGIN.base_url
+        base_url = self._get_base_url(BinanceAccountType.PORTFOLIO_MARGIN)
         end_point = "/papi/v1/um/order"
 
         data = {
@@ -440,19 +443,20 @@ class BinanceApiClient:
             "type": type,
             **kwargs,
         }
-        return await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        raw = await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
 
     async def post_papi_v1_cm_order(
         self,
         symbol: str,
-        side: Literal["BUY", "SELL"],
-        type: Literal["LIMIT", "MARKET"],
+        side: str,
+        type: str,
         **kwargs,
     ):
         """
         https://developers.binance.com/docs/derivatives/portfolio-margin/trade/New-CM-Order
         """
-        base_url = BinanceAccountType.PORTFOLIO_MARGIN.base_url
+        base_url = self._get_base_url(BinanceAccountType.PORTFOLIO_MARGIN)
         end_point = "/papi/v1/cm/order"
 
         data = {
@@ -461,19 +465,20 @@ class BinanceApiClient:
             "type": type,
             **kwargs,
         }
-        return await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        raw = await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
 
     async def post_papi_v1_margin_order(
         self,
         symbol: str,
-        side: Literal["BUY", "SELL"],
-        type: Literal["LIMIT", "MARKET"],
+        side: str,
+        type: str,
         **kwargs,
     ):
         """
         https://developers.binance.com/docs/derivatives/portfolio-margin/trade/New-Margin-Order
         """
-        base_url = BinanceAccountType.PORTFOLIO_MARGIN.base_url
+        base_url = self._get_base_url(BinanceAccountType.PORTFOLIO_MARGIN)
         end_point = "/papi/v1/margin/order"
 
         data = {
@@ -482,4 +487,5 @@ class BinanceApiClient:
             "type": type,
             **kwargs,
         }
-        return await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        raw = await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)

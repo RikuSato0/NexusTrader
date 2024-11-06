@@ -60,8 +60,8 @@ class BinanceFuturesOrderUpdateMsg(msgspec.Struct):
     e: str
     T: int
     E: int
-    fs: str
-    o: BinanceFuturesOrderData
+    fs: str = None
+    o: BinanceFuturesOrderData = None
 
     
 
@@ -75,5 +75,5 @@ data = orjson.loads(raw)
 
 data:BinanceFuturesOrderUpdateMsg = msgspec.json.decode(raw, type=BinanceFuturesOrderUpdateMsg)
 
-
+print(data)
 assert data.o.X == BinanceOrderStatus.FILLED

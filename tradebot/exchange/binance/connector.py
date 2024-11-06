@@ -10,7 +10,7 @@ from tradebot.constants import EventType, OrderStatus
 from tradebot.types import Order
 from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
 
-# from tradebot.exchange.binance.rest_api import BinanceRestApi, BinanceApiClient
+from tradebot.exchange.binance.rest_api import BinanceApiClient
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWSClient
 from tradebot.exchange.binance.exchange import BinanceExchangeManager
@@ -245,7 +245,11 @@ class BinancePrivateConnector(PrivateConnector):
             ),
         )
 
-        self._api_client: ccxt.binance = exchange.api
+        self._api_client = BinanceApiClient(
+            api_key=exchange.api_key,
+            secret=exchange.secret,
+            testnet=exchange.is_testnet,
+        )
 
     @property
     def account_type(self) -> BinanceAccountType:
@@ -262,32 +266,28 @@ class BinancePrivateConnector(PrivateConnector):
 
     async def _start_user_data_stream(self):
         if self.account_type.is_spot:
-            res = await self._api_client.public_post_userdatastream()
+            res = await self._api_client.post_api_v3_user_data_stream()
         elif self.account_type.is_margin:
-            res = await self._api_client.sapi_post_userdatastream()
+            res = await self._api_client.post_sapi_v1_user_data_stream()
         elif self.account_type.is_linear:
-            res = await self._api_client.fapiprivate_post_listenkey()
+            res = await self._api_client.post_fapi_v1_listen_key()
         elif self.account_type.is_inverse:
-            res = await self._api_client.dapiprivate_post_listenkey()
+            res = await self._api_client.post_dapi_v1_listen_key()
         elif self.account_type.is_portfolio_margin:
-            res = await self._api_client.papi_post_listenkey()
+            res = await self._api_client.post_papi_v1_listen_key()
         return res.get("listenKey", None)
 
     async def _keep_alive_listen_key(self, listen_key: str):
         if self.account_type.is_spot:
-            await self._api_client.public_put_userdatastream(
-                params={"listenKey": listen_key}
-            )
+            await self._api_client.put_api_v3_user_data_stream(listen_key=listen_key)
         elif self.account_type.is_margin:
-            await self._api_client.sapi_put_userdatastream(
-                params={"listenKey": listen_key}
-            )
+            await self._api_client.put_sapi_v1_user_data_stream(listen_key=listen_key)
         elif self.account_type.is_linear:
-            await self._api_client.fapiprivate_put_listenkey()
+            await self._api_client.put_fapi_v1_listen_key()
         elif self.account_type.is_inverse:
-            await self._api_client.dapiprivate_put_listenkey()
+            await self._api_client.put_dapi_v1_listen_key()
         elif self.account_type.is_portfolio_margin:
-            await self._api_client.papi_put_listenkey()
+            await self._api_client.put_papi_v1_listen_key()
 
     async def _keep_alive_user_data_stream(
         self, listen_key: str, interval: int = 20, max_retry: int = 3
@@ -525,76 +525,76 @@ class BinancePrivateConnector(PrivateConnector):
             case "failed":
                 EventSystem.emit(OrderStatus.FAILED, order)
 
-    async def place_market_order(
-        self, symbol: str, side: Literal["buy", "sell"], amount: Decimal, **params
-    ):
-        res = await self._api_client.create_order(
-            symbol=symbol,
-            type="market",
-            side=side,
-            amount=amount,
-            params=params,
-        )
-        return self._parse_ccxt_order(res, self._exchange_id)
+    # async def place_market_order(
+    #     self, symbol: str, side: Literal["buy", "sell"], amount: Decimal, **params
+    # ):
+    #     res = await self._api_client.create_order(
+    #         symbol=symbol,
+    #         type="market",
+    #         side=side,
+    #         amount=amount,
+    #         params=params,
+    #     )
+    #     return self._parse_ccxt_order(res, self._exchange_id)
 
-    async def place_limit_order(
-        self,
-        symbol: str,
-        side: Literal["buy", "sell"],
-        amount: Decimal,
-        price: Decimal,
-        **params,
-    ):
-        res = await self._api_client.create_order(
-            symbol=symbol,
-            type="limit",
-            side=side,
-            amount=amount,
-            price=price,
-            params=params,
-        )
-        return self._parse_ccxt_order(res, self._exchange_id)
+    # async def place_limit_order(
+    #     self,
+    #     symbol: str,
+    #     side: Literal["buy", "sell"],
+    #     amount: Decimal,
+    #     price: Decimal,
+    #     **params,
+    # ):
+    #     res = await self._api_client.create_order(
+    #         symbol=symbol,
+    #         type="limit",
+    #         side=side,
+    #         amount=amount,
+    #         price=price,
+    #         params=params,
+    #     )
+    #     return self._parse_ccxt_order(res, self._exchange_id)
 
-    def _parse_ccxt_order(self, res: Dict[str, Any], exchange: str) -> Order:
-        raw = res.get("info", {})
-        id = res.get("id", None)
-        client_order_id = res.get("clientOrderId", None)
-        timestamp = res.get("timestamp", None)
-        symbol = res.get("symbol", None)
-        type = res.get("type", None)  # market or limit
-        side = res.get("side", None)  # buy or sell
-        price = res.get("price", None)  # maybe empty for market order
-        average = res.get("average", None)  # float everage filling price
-        amount = Decimal(str(res.get("amount", None)))
-        filled = Decimal(str(res.get("filled", None)))
-        remaining = Decimal(str(res.get("remaining", None)))
-        status = raw.get("status", None).lower()
-        cost = res.get("cost", None)
-        reduce_only = raw.get("reduceOnly", None)
-        position_side = raw.get("positionSide", "").lower() or None  # long or short
-        time_in_force = res.get("timeInForce", None)
+    # def _parse_ccxt_order(self, res: Dict[str, Any], exchange: str) -> Order:
+    #     raw = res.get("info", {})
+    #     id = res.get("id", None)
+    #     client_order_id = res.get("clientOrderId", None)
+    #     timestamp = res.get("timestamp", None)
+    #     symbol = res.get("symbol", None)
+    #     type = res.get("type", None)  # market or limit
+    #     side = res.get("side", None)  # buy or sell
+    #     price = res.get("price", None)  # maybe empty for market order
+    #     average = res.get("average", None)  # float everage filling price
+    #     amount = Decimal(str(res.get("amount", None)))
+    #     filled = Decimal(str(res.get("filled", None)))
+    #     remaining = Decimal(str(res.get("remaining", None)))
+    #     status = raw.get("status", None).lower()
+    #     cost = res.get("cost", None)
+    #     reduce_only = raw.get("reduceOnly", None)
+    #     position_side = raw.get("positionSide", "").lower() or None  # long or short
+    #     time_in_force = res.get("timeInForce", None)
 
-        return Order(
-            raw=raw,
-            success=True,
-            exchange=exchange,
-            id=id,
-            client_order_id=client_order_id,
-            timestamp=timestamp,
-            symbol=symbol,
-            type=type,
-            side=side,
-            price=price,
-            average=average,
-            amount=amount,
-            filled=filled,
-            remaining=remaining,
-            status=status,
-            cost=cost,
-            reduce_only=reduce_only,
-            position_side=position_side,
-            time_in_force=time_in_force,
-        )
+    #     return Order(
+    #         raw=raw,
+    #         success=True,
+    #         exchange=exchange,
+    #         id=id,
+    #         client_order_id=client_order_id,
+    #         timestamp=timestamp,
+    #         symbol=symbol,
+    #         type=type,
+    #         side=side,
+    #         price=price,
+    #         average=average,
+    #         amount=amount,
+    #         filled=filled,
+    #         remaining=remaining,
+    #         status=status,
+    #         cost=cost,
+    #         reduce_only=reduce_only,
+    #         position_side=position_side,
+    #         time_in_force=time_in_force,
+    #     )
 
     # async def create_order(
     #     self,

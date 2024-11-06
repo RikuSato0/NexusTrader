@@ -43,6 +43,7 @@ class ExchangeManager(ABC):
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="INFO", flush=True
         )
+        self.is_testnet = config.get("sandbox", False)
         self.market = None
         self.market_id = None
 

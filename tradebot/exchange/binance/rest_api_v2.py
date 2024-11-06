@@ -108,3 +108,24 @@ class BinanceHttpClient:
         return await self._fetch(
             HttpMethod.POST, base_url, end_point, payload, signed=True
         )
+
+    async def post_papi_v1_um_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        **kwargs,
+    ):
+        base_url = "https://papi.binance.com"
+        end_point = "/papi/v1/um/order"
+
+        payload = {
+            "symbol": symbol,
+            "side": side.value,
+            "type": type.value,
+            **kwargs,
+        }
+
+        return await self._fetch(
+            HttpMethod.POST, base_url, end_point, payload, signed=True
+        )

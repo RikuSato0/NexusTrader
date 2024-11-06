@@ -2,17 +2,23 @@ import time
 import hmac
 import orjson
 import hashlib
-
+import certifi
 import asyncio
+import ssl
+import aiohttp
+
 from decimal import Decimal
 from typing import Any, Dict, List, Literal, Optional
 from urllib.parse import urljoin, urlencode
 from tradebot.entity import Order
 
 from tradebot.base import RestApi
+from tradebot.log import SpdLog
 from tradebot.exchange.binance.constants import BASE_URLS, ENDPOINTS
 from tradebot.exchange.binance.constants import BinanceAccountType, EndpointsType
+from tradebot.exchange.binance.error import BinanceClientError, BinanceServerError
 
+from nautilus_trader.common.component import LiveClock
 
 class BinanceRestApi(RestApi):
     def __init__(
@@ -97,28 +103,40 @@ class BinanceRestApi(RestApi):
         return ENDPOINTS[endpoint_type][self._account_type]
 
 
-class BinanceApiClient(RestApi):
+class BinanceApiClient:
     def __init__(
         self,
         api_key: str = None,
         secret: str = None,
         testnet: bool = False,
-        **kwargs,
+        timeout: int = 10,
     ):
         self._api_key = api_key
         self._secret = secret
         self._testnet = testnet
-        super().__init__(**kwargs)
-
-    def _get_headers(self) -> Dict[str, str]:
-        headers = {
-            "Accept": "application/json",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36",
+        self._headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "TradingBot/1.0",
+            "X-MBX-APIKEY": api_key,
         }
-        if self._api_key:
-            headers["X-MBX-APIKEY"] = self._api_key
-        return headers
+        self._timeout = timeout
+        self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
+        self._ssl_context = ssl.create_default_context(cafile=certifi.where())
+        self._session = None
+        self._clock = LiveClock()
+        self._init_session()
+    
+    def _init_session(self):
+        if self._session is None:
+            timeout = aiohttp.ClientTimeout(total=self._timeout)
+            tcp_connector = aiohttp.TCPConnector(ssl=self._ssl_context, enable_cleanup_closed=True)
+            self._session = aiohttp.ClientSession(connector=tcp_connector, json_serialize=orjson.dumps, timeout=timeout)
 
+    async def close_session(self):
+        if self._session:
+            await self._session.close()
+            self._session = None
+    
     def _generate_signature(self, query: str) -> str:
         signature = hmac.new(
             self._secret.encode("utf-8"), query.encode("utf-8"), hashlib.sha256
@@ -130,32 +148,51 @@ class BinanceApiClient(RestApi):
         method: str,
         base_url: str,
         endpoint: str,
-        params: Dict[str, Any] = None,
-        data: Dict[str, Any] = None,
+        payload: Dict[str, Any] = None,
         signed: bool = False,
     ) -> Any:
         url = urljoin(base_url, endpoint)
-        data = data or {}
-        data["timestamp"] = time.time_ns() // 1_000_000
-        query = urlencode(data)
-        headers = self._get_headers()
+        payload = payload or {}
+        payload["timestamp"] = self._clock.timestamp_ms()
+        payload = urlencode(payload)
 
         if signed:
-            signature = self._generate_signature(query)
-            query += f"&signature={signature}"
-            
-        if method in ["GET", "DELETE"]:
-            params = params or {}
-            params.update(data)
-            data = None
-        else:
-            data = query.encode()
-            # data = orjson.dumps(query)
-
-        return await self.request(
-            method, url, params=params, data=query, headers=headers
-        )
-
+            signature = self._generate_signature(payload)
+            payload += f"&signature={signature}"
+        
+        url += f"?{payload}"
+        self._log.debug(f"Request: {url}")
+        
+        try:
+            response = await self._session.request(
+                method=method,
+                url=url,
+                headers=self._headers,
+            )
+            message = await response.json()
+            if 400 <= response.status < 500:
+                raise BinanceClientError(
+                    status=response.status,
+                    message=message,
+                    headers=response.headers,
+                )
+            elif response.status >= 500:
+                raise BinanceServerError(
+                    status=response.status,
+                    message=message,
+                    headers=response.headers,
+                )
+            return message
+        except aiohttp.ClientError as e:
+            self._log.error(f"Client Error {method} Url: {url} {e}")
+            raise
+        except asyncio.TimeoutError:
+            self._log.error(f"Timeout {method} Url: {url} {e}")
+            raise
+        except Exception as e:
+            self._log.error(f"Error {method} Url: {url} {e}")
+            raise
+        
     async def put_dapi_v1_listen_key(self):
         """
         https://developers.binance.com/docs/derivatives/coin-margined-futures/user-data-streams/Keepalive-User-Data-Stream
@@ -344,7 +381,7 @@ class BinanceApiClient(RestApi):
             "type": type,
             **kwargs,
         }
-        return await self._fetch("POST", base_url, end_point, data=data, signed=True)
+        return await self._fetch("POST", base_url, end_point, payload=data, signed=True)
     
     async def post_dapi_v1_order(
         self,
@@ -428,5 +465,7 @@ class BinanceApiClient(RestApi):
             **kwargs,
         }
         return await self._fetch("POST", base_url, end_point, data=data, signed=True)
+    
+    
     
     

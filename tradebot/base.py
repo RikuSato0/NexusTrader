@@ -639,7 +639,10 @@ class Clock:
             self._current_tick = next_tick_time
             for callback in self._tick_callbacks:
                 try:
-                    callback(self.current_timestamp)
+                    if asyncio.iscoroutinefunction(callback):
+                        await callback(self.current_timestamp)
+                    else:
+                        callback(self.current_timestamp)
                 except Exception as e:
                     self._log.error(f"Error in tick callback: {str(e)}")
 

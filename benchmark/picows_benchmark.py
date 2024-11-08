@@ -1,6 +1,7 @@
 from picows import WSListener, WSTransport, WSFrame, WSMsgType, ws_connect
 import asyncio
 import orjson
+import numpy as np
 import time
 from asynciolimiter import Limiter
 from tradebot.log import SpdLog
@@ -12,10 +13,10 @@ LATENCY = defaultdict(list)
 
 
 class WSClient(WSListener):
-    def __init__(self, logger = None):
+    def __init__(self, logger=None):
         self.msg_queue = asyncio.Queue()
         self._log = logger
-        
+
     def on_ws_connected(self, transport: WSTransport):
         self._log.info("Connected to Websocket.")
 
@@ -29,13 +30,7 @@ class WSClient(WSListener):
 
         msg = orjson.loads(frame.get_payload_as_bytes())
         self.msg_queue.put_nowait(msg)
-        
 
-
-class BinanceMsgDispatcher:
-    def _fund(): ...
-
-    def _trade(): ...
 
 class WsManager(ABC):
     def __init__(self, url: str, limiter: Limiter):
@@ -97,18 +92,19 @@ class WsManager(ABC):
             # TODO: handle different event types of messages
             self.callback(msg)
             self._listener.msg_queue.task_done()
-    
+
     def disconnect(self):
         if self.connected:
             self._transport.disconnect()
-    
+
     @abstractmethod
     def callback(self, msg):
         pass
 
+
 class BinanceWsManager(WsManager):
     def __init__(self, url: str, api_key: str = None, secret: str = None):
-        super().__init__(url, limiter=Limiter(3/1))
+        super().__init__(url, limiter=Limiter(3 / 1))
         self._api_key = api_key
         self._secret = secret
 
@@ -144,11 +140,11 @@ class BinanceWsManager(WsManager):
 
     def callback(self, msg):
         self._log.info(str(msg))
-        # if "E" in msg:
-        #     # print(msg)
-        #     local = int(time.time() * 1000)
-        #     latency = local - msg["E"]
-        #     LATENCY[msg["s"]].append(latency)
+        if "E" in msg:
+            # print(msg)
+            local = int(time.time() * 1000)
+            latency = local - msg["E"]
+            LATENCY[msg["s"]].append(latency)
 
 
 async def main():
@@ -233,9 +229,8 @@ async def main():
         ]
 
         for symbol in symbols:
-            # await ws_manager.subscribe_book_ticker(symbol)
-            # print(symbol)
             await ws_manager.subscribe_trade(symbol)
+            print(symbol)
 
         while True:
             await asyncio.sleep(1)
@@ -244,12 +239,12 @@ async def main():
         ws_manager.disconnect()
         print("Websocket closed.")
 
-    # finally:
-    #     for symbol, latencies in LATENCY.items():
-    #         avg_latency = np.mean(latencies)
-    #         print(
-    #             f"Symbol: {symbol}, Avg: {avg_latency:.2f} ms, Median: {np.median(latencies):.2f} ms, Std: {np.std(latencies):.2f} ms 95%: {np.percentile(latencies, 95):.2f} ms, 99%: {np.percentile(latencies, 99):.2f} ms min: {np.min(latencies):.2f} ms max: {np.max(latencies):.2f} ms"
-    #         )
+    finally:
+        for symbol, latencies in LATENCY.items():
+            avg_latency = np.mean(latencies)
+            print(
+                f"Symbol: {symbol}, Avg: {avg_latency:.2f} ms, Median: {np.median(latencies):.2f} ms, Std: {np.std(latencies):.2f} ms 95%: {np.percentile(latencies, 95):.2f} ms, 99%: {np.percentile(latencies, 99):.2f} ms min: {np.min(latencies):.2f} ms max: {np.max(latencies):.2f} ms"
+            )
 
 
 if __name__ == "__main__":

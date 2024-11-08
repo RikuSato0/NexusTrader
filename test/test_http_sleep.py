@@ -9,7 +9,8 @@ async def slow_external_request():
     async with aiohttp.ClientSession() as session:
         try:
             # 模拟一个需要300ms的请求
-            await asyncio.sleep(3)
+            time.sleep(3)
+            # await asyncio.sleep(3)
             return {"data": "some data"}
         except Exception as e:
             print(f"Request error: {e}")
@@ -20,7 +21,8 @@ async def strategy_callback(timestamp):
     print(f"[{time.strftime('%H:%M:%S.%f')[:-3]}] 开始执行策略回调")
 
     # 执行耗时的外部请求
-    result = await slow_external_request()
+    result =  asyncio.create_task(slow_external_request())
+    # result =  slow_external_request()
 
     print(f"[{time.strftime('%H:%M:%S.%f')[:-3]}] 策略回调执行完成")
 

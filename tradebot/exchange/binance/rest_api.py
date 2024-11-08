@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Literal, Optional
 from urllib.parse import urljoin, urlencode
 from tradebot.entity import Order
 
-from tradebot.base import RestApi
+from tradebot.base import RestApi, ApiClient
 from tradebot.log import SpdLog
 from tradebot.exchange.binance.types import BinanceOrder
 from tradebot.exchange.binance.constants import BASE_URLS, ENDPOINTS
@@ -106,7 +106,7 @@ class BinanceRestApi(RestApi):
         return ENDPOINTS[endpoint_type][self._account_type]
 
 
-class BinanceApiClient:
+class BinanceApiClient(ApiClient):
     def __init__(
         self,
         api_key: str = None,
@@ -114,36 +114,19 @@ class BinanceApiClient:
         testnet: bool = False,
         timeout: int = 10,
     ):
-        self._api_key = api_key
-        self._secret = secret
-        self._testnet = testnet
+        super().__init__(
+            api_key=api_key,
+            secret=secret,
+            testnet=testnet,
+            timeout=timeout,
+        )
         self._headers = {
             "Content-Type": "application/json",
             "User-Agent": "TradingBot/1.0",
             "X-MBX-APIKEY": api_key,
         }
-        self._timeout = timeout
-        self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
-        self._ssl_context = ssl.create_default_context(cafile=certifi.where())
-        self._session = None
-        self._clock = LiveClock()
-        self._init_session()
+        self._testnet = testnet
         self._order_decoder = msgspec.json.Decoder(BinanceOrder)
-
-    def _init_session(self):
-        if self._session is None:
-            timeout = aiohttp.ClientTimeout(total=self._timeout)
-            tcp_connector = aiohttp.TCPConnector(
-                ssl=self._ssl_context, enable_cleanup_closed=True
-            )
-            self._session = aiohttp.ClientSession(
-                connector=tcp_connector, json_serialize=orjson.dumps, timeout=timeout
-            )
-
-    async def close_session(self):
-        if self._session:
-            await self._session.close()
-            self._session = None
 
     def _generate_signature(self, query: str) -> str:
         signature = hmac.new(

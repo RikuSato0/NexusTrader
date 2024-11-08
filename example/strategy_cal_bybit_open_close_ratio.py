@@ -14,13 +14,18 @@ class Demo(Strategy):
         self.market = {}
 
     def _on_bookl1(self, bookl1: BookL1):
+        # print(f"BookL1: {bookl1}")
         self.market[bookl1.symbol] = bookl1
     
     def on_tick(self, tick):
         linear_bid = self.market["BTC/USDT:USDT"].bid
         spot_ask = self.market["BTC/USDT"].ask
-        ratio = linear_bid / spot_ask - 1
-        print(f"Ratio: {ratio}")
+        linear_ask = self.market["BTC/USDT:USDT"].ask
+        spot_bid = self.market["BTC/USDT"].bid
+        
+        open_ratio = linear_bid / spot_ask - 1
+        close_ratio = linear_ask / spot_bid - 1
+        print(f"Open Ratio: {open_ratio} Close Ratio: {close_ratio}")
         
 
 

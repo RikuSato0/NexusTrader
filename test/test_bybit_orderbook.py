@@ -28,7 +28,9 @@ def handle_orderbook(raw: bytes, topic: str):
         
     orderbook = orderbooks[id]
     res = orderbook.parse_orderbook_depth(msg, levels=level)
-    
+    assert res is not None
+    assert len(res['bids']) == level 
+    assert len(res['asks']) == level 
 
 
 def stream_generator(file_path: str):
@@ -40,6 +42,7 @@ def stream_generator(file_path: str):
         yield orjson.dumps(data)
 
 
-for raw in stream_generator(file_path):
-    ws_msg_handler(raw)
+if __name__ == '__main__':
+    for raw in stream_generator(file_path):
+        ws_msg_handler(raw)
     

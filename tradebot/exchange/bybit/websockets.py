@@ -72,7 +72,7 @@ class BybitWSClient(WSClient):
                 await self._auth()
             self._subscriptions[topic] = payload
             await self._send(payload)
-            self._log.debug(f"Subscribing to {topic}...")
+            self._log.debug(f"Subscribing to {topic}.{self._account_type.value}...")
         else:
             self._log.debug(f"Already subscribed to {topic}")
 

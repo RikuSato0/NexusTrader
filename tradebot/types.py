@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 from typing import Literal, Optional
 from msgspec import Struct, field
 from tradebot.constants import OrderSide, OrderType, OrderTimeInForce, OrderStatus
@@ -12,6 +12,13 @@ class BookL1(Struct, gc=False):
     ask: float
     bid_size: float
     ask_size: float
+    timestamp: int
+
+class BookL2(Struct):
+    exchange: str
+    symbol: str
+    bids: List[Tuple[float, float]]
+    asks: List[Tuple[float, float]]
     timestamp: int
 
 

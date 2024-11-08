@@ -28,6 +28,18 @@ class BybitAccountType(AccountType):
         if self.is_testnet:
             return "wss://stream-testnet.bybit.com/v5/private"
         return "wss://stream.bybit.com/v5/private"
+    
+    @property
+    def is_spot(self):
+        return self in {self.SPOT, self.SPOT_TESTNET}
+    
+    @property
+    def is_linear(self):
+        return self in {self.LINEAR, self.LINEAR_TESTNET}
+    
+    @property
+    def is_inverse(self):
+        return self in {self.INVERSE, self.INVERSE_TESTNET}
         
     
 WS_PUBLIC_URL = {

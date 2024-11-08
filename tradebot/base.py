@@ -657,7 +657,7 @@ class PublicConnector(ABC):
         ws_client: WSClient,
     ):
         self._log = SpdLog.get_logger(
-            name=type(self).__name__, level="INFO", flush=True
+            name=type(self).__name__, level="DEBUG", flush=True
         )
         self._account_type = account_type
         self._market = market

@@ -44,8 +44,7 @@ class OkxPublicConnector(PublicConnector):
         await self._ws_client.subscribe_candlesticks(symbol, interval)
 
     def _ws_msg_handler(self, msg):
-        if isinstance(msg, bytes):
-            msg = orjson.loads(msg)
+        msg = orjson.loads(msg)
         if "event" in msg:
             if msg["event"] == "error":
                 self._log.error(str(msg))
@@ -185,7 +184,7 @@ class OkxPrivateConnector(PrivateConnector):
         # self._ws_client: OkxWSClient = self._ws_client
     
     def _ws_msg_handler(self, msg):
-        
+        msg = orjson.loads(msg)
         if "event" in msg:
             if msg["event"] == "error":
                 self._log.error(msg.get("msg", "Unknown error"))

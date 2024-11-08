@@ -8,6 +8,7 @@ classified_events/
 license.py
 okx_markets.json
 binance_markets.json
+bybit_markets.json
 build/
 venv/
 *.svg

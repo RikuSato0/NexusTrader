@@ -195,7 +195,7 @@ class BinanceApiClient:
             self._log.error(f"Client Error {method} Url: {url} {e}")
             raise
         except asyncio.TimeoutError:
-            self._log.error(f"Timeout {method} Url: {url} {e}")
+            self._log.error(f"Timeout {method} Url: {url}")
             raise
         except Exception as e:
             self._log.error(f"Error {method} Url: {url} {e}")

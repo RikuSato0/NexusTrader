@@ -1,22 +1,29 @@
 import asyncio
+import orjson
+from tradebot.exchange.bybit import BybitAccountType, BybitWSClient
+from tradebot.log import SpdLog
 
+log = SpdLog.get_logger(__name__, level="INFO", flush=False)
 
-from tradebot.exchange._bybit import BybitWebsocketManager
-from tradebot.constants import Url
-
-def cb(msg):
-    print(msg)
+def handler(msg):
+    try:
+        msg = orjson.loads(msg)
+        # print(msg)
+        log.info(str(msg))
+    except orjson.JSONDecodeError:
+        pass
+        # print(msg)
     
 
 async def main():
     try:
-        bybit_ws_manager = BybitWebsocketManager(url=Url.Bybit.Spot, testnet=False)
-        await bybit_ws_manager.subscribe_orderbook(symbol="BTCUSDT", depth=1, callback=cb)
         
+        bybit_ws = BybitWSClient(BybitAccountType.LINEAR, handler)
+        await bybit_ws.subscribe_order_book("BTCUSDT", 1)
         while True:
             await asyncio.sleep(1)
     except asyncio.CancelledError:
-        await bybit_ws_manager.close()
+        await bybit_ws.disconnect()
         print("Websocket closed.")
 
 if __name__ == "__main__":

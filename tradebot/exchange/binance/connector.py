@@ -1,8 +1,9 @@
 import time
 import asyncio
+import orjson
 import ccxt.pro as ccxt
+
 from typing import Dict, Any
-from typing import Literal
 from decimal import Decimal
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.entity import EventSystem
@@ -64,6 +65,7 @@ class BinancePublicConnector(PublicConnector):
         await self._ws_client.subscribe_kline(symbol, interval)
 
     def _ws_msg_handler(self, msg):
+        msg = orjson.loads(msg)
         if "e" in msg:
             match msg["e"]:
                 case "trade":
@@ -318,6 +320,7 @@ class BinancePrivateConnector(PrivateConnector):
             await self._ws_client.subscribe_user_data_stream(listen_key)
 
     def _ws_msg_handler(self, msg):
+        msg = orjson.loads(msg)
         if "e" in msg:
             match msg["e"]:
                 case "ORDER_TRADE_UPDATE":

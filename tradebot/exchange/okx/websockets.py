@@ -37,9 +37,9 @@ class OkxWSClient(WSClient):
         self._secret = secret
         self._passphrase = passphrase
         self._account_type = account_type
+        self._authed = False
         if self.is_private:
             url = f"{STREAM_URLS[account_type]}/v5/private"
-            self._authed = False
         else:
             url = f"{STREAM_URLS[account_type]}/v5/public"
         super().__init__(url, limiter=Limiter(2 / 1), handler=handler)

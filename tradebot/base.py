@@ -30,6 +30,7 @@ from picows import (
     WSTransport,
     WSListener,
     WSMsgType,
+    WSAutoPingStrategy,
 )
 
 
@@ -360,9 +361,16 @@ class WebsocketManager(ABC):
 
 
 class Listener(WSListener):
-    def __init__(self, logger):
+    def __init__(self, logger, specific_ping_msg = None):
         self._log = logger
         self.msg_queue = asyncio.Queue()
+        self._specific_ping_msg = specific_ping_msg
+        
+    def send_user_specific_ping(self, transport: WSTransport):
+        if self._specific_ping_msg:
+            transport.send(WSMsgType.TEXT, self._specific_ping_msg)
+        else:
+            transport.send_ping()
 
     def on_ws_connected(self, transport: WSTransport):
         self._log.info("Connected to Websocket...")
@@ -373,54 +381,72 @@ class Listener(WSListener):
     def on_ws_frame(self, transport: WSTransport, frame: WSFrame):
         try:
             if frame.msg_type == WSMsgType.PING:
-                transport.send_pong(frame.get_payload_as_bytes())
+                transport.send_pong(
+                    frame.get_payload_as_bytes()
+                )  # if enabled auto pong, we don't need to send pong manually
                 return
-            msg = orjson.loads(frame.get_payload_as_bytes())
-            self.msg_queue.put_nowait(msg)
-        except orjson.JSONDecodeError:
-            self._log.error(f"Error decoding message: {frame.get_payload_as_bytes()}")
+            # msg = orjson.loads(frame.get_payload_as_bytes())
+            self.msg_queue.put_nowait(
+                frame.get_payload_as_bytes()
+            )  # I think we should decode the frame in the handler
         except Exception as e:
             self._log.error(f"Error processing message: {str(e)}")
 
 
 class WSClient(ABC):
-    def __init__(self, url: str, limiter: Limiter, handler: Callable[..., Any]):
+    def __init__(
+        self,
+        url: str,
+        limiter: Limiter,
+        handler: Callable[..., Any],
+        specific_ping_msg: bytes = None,
+        reconnect_interval: int = 0.2,
+        ping_idle_timeout: int = 2,
+        ping_reply_timeout: int = 1,
+        auto_ping_strategy: Literal["ping_when_idle", "ping_periodically"] = "ping_when_idle",
+        enable_auto_ping: bool = True,
+        enable_auto_pong: bool = False,
+    ):
         self._url = url
-        self._reconnect_interval = 0.2  # Reconnection interval in seconds
-        self._ping_idle_timeout = 2
-        self._ping_reply_timeout = 1
+        self._specific_ping_msg = specific_ping_msg
+        self._reconnect_interval = reconnect_interval
+        self._ping_idle_timeout = ping_idle_timeout
+        self._ping_reply_timeout = ping_reply_timeout
+        self._enable_auto_pong = enable_auto_pong
+        self._enable_auto_ping = enable_auto_ping
         self._listener = None
         self._transport = None
         self._subscriptions = {}
         self._limiter = limiter
-        # self._encoder = msgspec.json.Encoder()
         self._callback = handler
+        if auto_ping_strategy == "ping_when_idle":
+            self._auto_ping_strategy = WSAutoPingStrategy.PING_WHEN_IDLE
+        elif auto_ping_strategy == "ping_periodically":
+            self._auto_ping_strategy = WSAutoPingStrategy.PING_PERIODICALLY
         self._task_manager = TaskManager()
-        self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
+        self._log = SpdLog.get_logger(type(self).__name__, level="DEBUG", flush=True)
 
     @property
     def connected(self):
         return self._transport and self._listener
 
     async def _connect(self):
-        WSListenerFactory = lambda: Listener(self._log)  # noqa: E731
+        WSListenerFactory = lambda: Listener(self._log, self._specific_ping_msg)  # noqa: E731
         self._transport, self._listener = await ws_connect(
             WSListenerFactory,
             self._url,
-            enable_auto_ping=True,
+            enable_auto_ping=self._enable_auto_ping,
             auto_ping_idle_timeout=self._ping_idle_timeout,
             auto_ping_reply_timeout=self._ping_reply_timeout,
+            auto_ping_strategy=self._auto_ping_strategy,
+            enable_auto_pong=self._enable_auto_pong,
         )
 
     async def connect(self):
         if not self.connected:
             await self._connect()
-            self._task_manager.create_task(
-                self._msg_handler(self._listener.msg_queue)
-            )
-            self._task_manager.create_task(
-                self._connection_handler()
-            )
+            self._task_manager.create_task(self._msg_handler(self._listener.msg_queue))
+            self._task_manager.create_task(self._connection_handler())
 
     async def _connection_handler(self):
         while True:
@@ -459,6 +485,7 @@ class WSClient(ABC):
     async def _resubscribe(self):
         pass
 
+
 class RestApi:
     def __init__(self, **client_kwargs):
         self._session = None
@@ -468,12 +495,18 @@ class RestApi:
         self._client_kwargs = client_kwargs
         self._loop = asyncio.get_event_loop()
         self._ssl_context = ssl.create_default_context(cafile=certifi.where())
-        
 
     def init_session(self):
         if self._session is None:
-            tcp_connector = aiohttp.TCPConnector(ssl=self._ssl_context, loop=self._loop, enable_cleanup_closed=True)
-            self._session = aiohttp.ClientSession(loop=self._loop ,connector=tcp_connector, json_serialize=orjson.dumps, **self._client_kwargs)
+            tcp_connector = aiohttp.TCPConnector(
+                ssl=self._ssl_context, loop=self._loop, enable_cleanup_closed=True
+            )
+            self._session = aiohttp.ClientSession(
+                loop=self._loop,
+                connector=tcp_connector,
+                json_serialize=orjson.dumps,
+                **self._client_kwargs,
+            )
 
     async def close_session(self):
         if self._session:
@@ -628,23 +661,23 @@ class PublicConnector(ABC):
         self._market_id = market_id
         self._exchange_id = exchange_id
         self._ws_client = ws_client
-    
+
     @property
     def account_type(self):
         return self._account_type
-    
+
     @abstractmethod
     async def subscribe_trade(self, symbol: str):
         pass
-    
+
     @abstractmethod
     async def subscribe_bookl1(self, symbol: str):
         pass
-    
+
     @abstractmethod
     async def subscribe_kline(self, symbol: str, interval: str):
         pass
-    
+
     async def disconnect(self):
         await self._ws_client.disconnect()
 
@@ -667,15 +700,15 @@ class PrivateConnector(ABC):
         self._exchange_id = exchange_id
         self._task_manager = TaskManager()
         self._ws_client = ws_client
-    
+
     @property
     def account_type(self):
-        return self._account_type  
-    
+        return self._account_type
+
     @abstractmethod
     async def connect(self):
         pass
-    
+
     async def disconnect(self):
         await self._ws_client.disconnect()
         await self._task_manager.cancel()
@@ -684,13 +717,13 @@ class PrivateConnector(ABC):
 class TaskManager:
     def __init__(self):
         self._tasks: List[asyncio.Task] = []
-    
+
     def create_task(self, coro: asyncio.coroutines) -> asyncio.Task:
         task = asyncio.create_task(coro)
         self._tasks.append(task)
         task.add_done_callback(self._handle_task_done)
         return task
-    
+
     def _handle_task_done(self, task: asyncio.Task):
         self._tasks.remove(task)
         try:
@@ -698,10 +731,9 @@ class TaskManager:
         except asyncio.CancelledError:
             pass
         except Exception:
-            raise 
+            raise
 
     async def cancel(self):
         for task in self._tasks:
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
-        

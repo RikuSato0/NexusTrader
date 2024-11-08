@@ -71,7 +71,7 @@ class BinanceFuturesOrderUpdateMsg(msgspec.Struct):
 raw = b'{"e": "ORDER_TRADE_UPDATE", "T": 1727353874116, "E": 1727353874124, "fs": "UM", "o": {"s": "AVAXUSDT", "c": "c-11WLU7VP2rj4ss0i", "S": "SELL", "o": "LIMIT", "f": "GTC", "q": "3", "p": "28.4960", "ap": "28.4960", "sp": "0", "x": "TRADE", "X": "FILLED", "i": 23560120539, "l": "3", "z": "3", "L": "28.4960", "n": "0", "N": "USDT", "T": 1727353874116, "t": 879287954, "b": "0", "a": "0", "m": true, "R": false, "ps": "BOTH", "rp": "0", "V": "EXPIRE_NONE", "pm": "PM_NONE", "gtd": 0}}'
 
 data = orjson.loads(raw)
-
+print(data)
 
 data:BinanceFuturesOrderUpdateMsg = msgspec.json.decode(raw, type=BinanceFuturesOrderUpdateMsg)
 

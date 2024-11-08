@@ -13,7 +13,7 @@ from tradebot.exchange.binance.constants import BinanceAccountType
 class BinanceWSClient(WSClient):
     def __init__(self, account_type: BinanceAccountType, handler: Callable[..., Any]):
         self._account_type = account_type
-        url = STREAM_URLS[account_type]
+        url = account_type.ws_url
         super().__init__(url, limiter=Limiter(3 / 1), handler=handler)
 
     async def _subscribe(self, params: str, subscription_id: str):

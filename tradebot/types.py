@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import Any, Dict
 from typing import Literal, Optional
 from msgspec import Struct, field
-from constants import OrderSide, OrderType, OrderTimeInForce, OrderStatus
+from tradebot.constants import OrderSide, OrderType, OrderTimeInForce, OrderStatus
 
 
 class BookL1(Struct, gc=False):

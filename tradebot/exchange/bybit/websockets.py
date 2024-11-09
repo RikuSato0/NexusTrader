@@ -119,3 +119,18 @@ class BybitWSClient(WSClient):
             await self._auth()
         for _, payload in self._subscriptions.items():
             await self._send(payload)
+
+    async def subscribe_order(self, topic: str):
+        """
+        ### Topics:
+        
+        #### All in one:
+        - order
+        
+        Categorical topics:
+        - order.spot
+        - order.linear
+        - order.inverse
+        - order.option
+        """
+        await self._subscribe(topic, auth=True)

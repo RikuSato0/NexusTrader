@@ -21,7 +21,7 @@ async def main():
         tdMode='cross',
         side='buy',
         ordType='market',
-        sz='0.1'
+        sz='0.1',
     )
     print(res)
     
@@ -33,6 +33,7 @@ async def main():
         ordType='market',
         sz='0.1',
         reduceOnly=True
+        
     )
     print(res)
     

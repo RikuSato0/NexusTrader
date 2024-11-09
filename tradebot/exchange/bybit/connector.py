@@ -7,6 +7,7 @@ from tradebot.types import BookL1
 from tradebot.constants import EventType
 from tradebot.exchange.bybit.types import (
     BybitWsMessageGeneral,
+    BybitWsOrderMsg,
     BybitWsOrderbookDepthMsg,
     BybitOrderBook,
 )
@@ -16,6 +17,8 @@ from tradebot.exchange.bybit.exchange import BybitExchangeManager
 
 
 class BybitPublicConnector(PublicConnector):
+    _ws_client: BybitWSClient
+
     def __init__(
         self,
         account_type: BybitAccountType,
@@ -89,3 +92,49 @@ class BybitPublicConnector(PublicConnector):
 
     async def subscribe_kline(self, symbol: str, interval: str):
         pass
+
+
+class BybitPrivateConnector(PrivateConnector):
+    _ws_client: BybitWSClient
+
+    def __init__(
+        self,
+        exchange: BybitExchangeManager,
+        testnet: bool = False,
+    ):
+        # all the private endpoints are the same for all account types, so no need to pass account_type
+        # only need to determine if it's testnet or not
+        if testnet:
+            account_type = BybitAccountType.SPOT_TESTNET
+        else:
+            account_type = BybitAccountType.SPOT
+        super().__init__(
+            account_type=account_type,
+            market=exchange.market,
+            market_id=exchange.market_id,
+            exchange_id=exchange.exchange_id,
+            ws_client=BybitWSClient(
+                account_type=account_type,
+                handler=self._ws_msg_handler,
+                api_key=exchange.api_key,
+                secret=exchange.secret,
+            ),
+        )
+        self._ws_msg_general_decoder = msgspec.json.Decoder(BybitWsMessageGeneral)
+        self._ws_msg_order_update_decoder = msgspec.json.Decoder(BybitWsOrderMsg)
+
+    async def connect(self):
+        await self._ws_client.subscribe_order(topic="order")
+
+    def _ws_msg_handler(self, raw: bytes):
+        try:
+            msg = self._ws_msg_general_decoder.decode(raw)
+
+            if "order" in msg.topic:
+                self._parse_order_update(raw)
+
+        except Exception:
+            self._log.error(f"Error decoding message: {str(raw)}")
+    
+    def _parse_order_update(self, raw: bytes):
+        order_msg = self._ws_msg_order_update_decoder.decode(raw)

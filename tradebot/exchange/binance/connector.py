@@ -18,6 +18,8 @@ from tradebot.exchange.binance.exchange import BinanceExchangeManager
 
 
 class BinancePublicConnector(PublicConnector):
+    _ws_client: BinanceWSClient
+
     def __init__(
         self,
         account_type: BinanceAccountType,
@@ -47,7 +49,9 @@ class BinancePublicConnector(PublicConnector):
         elif self._account_type.is_inverse:
             return "_inverse"
         else:
-            raise ValueError(f"Unsupported BinanceAccountType.{self._account_type.value}")
+            raise ValueError(
+                f"Unsupported BinanceAccountType.{self._account_type.value}"
+            )
 
     async def subscribe_trade(self, symbol: str):
         market = self._market.get(symbol, None)
@@ -232,6 +236,8 @@ class BinancePublicConnector(PublicConnector):
 
 
 class BinancePrivateConnector(PrivateConnector):
+    _ws_client: BinanceWSClient
+    
     def __init__(
         self,
         account_type: BinanceAccountType,

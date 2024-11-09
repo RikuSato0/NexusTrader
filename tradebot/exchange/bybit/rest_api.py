@@ -16,10 +16,10 @@ from tradebot.exchange.bybit.types import BybitResponse, BybitOrderResponse
 class BybitApiClient(ApiClient):
     def __init__(
         self,  
-        base_url: BybitBaseUrl = None,
         api_key: str = None,
         secret: str = None,
         timeout: int = 10,
+        testnet: bool = False,
     ):
         """
         ### Testnet:
@@ -44,7 +44,10 @@ class BybitApiClient(ApiClient):
         )
         self._recv_window = 5000
         
-        self._base_url = base_url.value
+        if testnet:
+            self._base_url = BybitBaseUrl.TESTNET.value
+        else:
+            self._base_url = BybitBaseUrl.MAINNET_1.value
         
         self._headers = {
             "Content-Type": "application/json",
@@ -61,7 +64,7 @@ class BybitApiClient(ApiClient):
 
         param = str(timestamp) + self._api_key + str(self._recv_window) + payload
         hash = hmac.new(
-            bytes(self.secret_key, "utf-8"), param.encode("utf-8"), hashlib.sha256
+            bytes(self._secret, "utf-8"), param.encode("utf-8"), hashlib.sha256
         )
         signature = hash.hexdigest()
         return [signature, timestamp]
@@ -79,7 +82,7 @@ class BybitApiClient(ApiClient):
         
         payload_str = (
             urlencode(payload) if method == "GET" 
-            else orjson.dumps(payload).encode("utf-8")
+            else orjson.dumps(payload).decode("utf-8")
         )
 
         headers = self._headers
@@ -137,21 +140,25 @@ class BybitApiClient(ApiClient):
             "category": category,
             "symbol": symbol,
             "side": side,
-            "type": order_type,
+            "orderType": order_type,
             "qty": str(qty),
             **kwargs,
         }
         raw = await self._fetch("POST", self._base_url, endpoint, payload, signed=True)
         return self._order_response_decoder.decode(raw)
         
-    async def post_v5_order_cancel(self, symbol: str, **kwargs):
+    async def post_v5_order_cancel(self, category: str, symbol: str, **kwargs):
         """
         https://bybit-exchange.github.io/docs/v5/order/cancel-order
         """
         endpoint = "/v5/order/cancel"
         payload = {
+            "category": category,
             "symbol": symbol,
             **kwargs,
         }
         raw = await self._fetch("POST", self._base_url, endpoint, payload, signed=True)
         return self._order_response_decoder.decode(raw)
+
+    def raise_error(self, raw: bytes, status: int, headers: Dict[str, Any]):
+        pass

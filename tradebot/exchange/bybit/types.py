@@ -1,4 +1,5 @@
 import msgspec
+from enum import Enum
 from typing import Final
 from typing import Dict, Any
 
@@ -90,3 +91,113 @@ class BybitOrderBook(msgspec.Struct):
             "bids": bids,
             "asks": asks,
         }
+
+class BybitProductType(Enum):
+    SPOT = "spot"
+    LINEAR = "linear"
+    INVERSE = "inverse"
+    OPTION = "option"
+
+class BybitOrderSide(Enum):
+    BUY = "Buy"
+    SELL = "Sell"
+
+class BybitOrderType(Enum):
+    MARKET = "Market"
+    LIMIT = "Limit"
+    UNKNOWN = "UNKNOWN"
+
+class BybitTimeInForce(Enum):
+    GTC = "GTC"
+    IOC = "IOC"
+    FOK = "FOK"
+    POST_ONLY = "PostOnly"
+
+class BybitOrderStatus(Enum):
+    CREATED = "Created"
+    NEW = "New"
+    REJECTED = "Rejected"
+    PARTIALLY_FILLED = "PartiallyFilled"
+    PARTIALLY_FILLED_CANCELED = "PartiallyFilledCanceled"
+    FILLED = "Filled"
+    CANCELED = "Cancelled"
+    UNTRIGGERED = "Untriggered"
+    TRIGGERED = "Triggered"
+    DEACTIVATED = "Deactivated"
+    ACTIVE = "Active"
+
+class BybitTriggerType(Enum):
+    NONE = ""  # Default
+    LAST_PRICE = "LastPrice"
+    INDEX_PRICE = "IndexPrice"
+    MARK_PRICE = "MarkPrice"
+
+class BybitTriggerDirection(Enum):
+    NONE = 0
+    RISES_TO = 1  # Triggered when market price rises to triggerPrice
+    FALLS_TO = 2
+
+class BybitStopOrderType(Enum):
+    NONE = ""  # Default
+    UNKNOWN = "UNKNOWN"  # Classic account value
+    TAKE_PROFIT = "TakeProfit"
+    STOP_LOSS = "StopLoss"
+    TRAILING_STOP = "TrailingStop"
+    STOP = "Stop"
+    PARTIAL_TAKE_PROFIT = "PartialTakeProfit"
+    PARTIAL_STOP_LOSS = "PartialStopLoss"
+    TPSL_ORDER = "tpslOrder"
+    OCO_ORDER = "OcoOrder"  # Spot only
+    MM_RATE_CLOSE = "MmRateClose"
+    BIDIRECTIONAL_TPSL_ORDER = "BidirectionalTpslOrder"
+
+class BybitWsOrder(msgspec.Struct):
+    category: BybitProductType
+    symbol: str
+    orderId: str
+    side: BybitOrderSide
+    orderType: BybitOrderType
+    cancelType: str
+    price: str
+    qty: str
+    orderIv: str
+    timeInForce: BybitTimeInForce
+    orderStatus: BybitOrderStatus
+    orderLinkId: str
+    lastPriceOnCreated: str
+    reduceOnly: bool
+    leavesQty: str
+    leavesValue: str
+    cumExecQty: str
+    cumExecValue: str
+    avgPrice: str
+    blockTradeId: str
+    positionIdx: int
+    cumExecFee: str
+    createdTime: str
+    updatedTime: str
+    rejectReason: str
+    triggerPrice: str
+    takeProfit: str
+    stopLoss: str
+    tpTriggerBy: str
+    slTriggerBy: str
+    tpLimitPrice: str
+    slLimitPrice: str
+    closeOnTrigger: bool
+    placeType: str
+    smpType: str
+    smpGroup: int
+    smpOrderId: str
+    feeCurrency: str
+    triggerBy: BybitTriggerType
+    stopOrderType: BybitStopOrderType
+    triggerDirection: BybitTriggerDirection = BybitTriggerDirection.NONE
+    tpslMode: str | None = None
+    createType: str | None = None
+
+class BybitWsOrderMsg(msgspec.Struct):
+    topic: str
+    id: str
+    creationTime: int
+    data: list[BybitWsOrder]

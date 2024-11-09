@@ -6,27 +6,45 @@ import msgspec
 import orjson
 from typing import Any, Dict, List
 from urllib.parse import urljoin, urlencode
+from decimal import Decimal
 
 from tradebot.base import ApiClient
+from tradebot.exchange.bybit.constants import BybitBaseUrl
 from tradebot.exchange.bybit.error import BybitError
-from tradebot.exchange.bybit.types import BybitResponse
+from tradebot.exchange.bybit.types import BybitResponse, BybitOrderResponse
 
 class BybitApiClient(ApiClient):
     def __init__(
-        self,
+        self,  
+        base_url: BybitBaseUrl = None,
         api_key: str = None,
         secret: str = None,
-        testnet: bool = False,
         timeout: int = 10,
     ):
+        """
+        ### Testnet:
+        `https://api-testnet.bybit.com`
+        
+        ### Mainnet:
+        (both endpoints are available):
+        `https://api.bybit.com`
+        `https://api.bytick.com`
+        
+        ### Important:
+        Netherland users: use `https://api.bybit.nl` for mainnet
+        Hong Kong users: use `https://api.byhkbit.com` for mainnet
+        Turkey users: use `https://api.bybit-tr.com` for mainnet
+        Kazakhstan users: use `https://api.bybit.kz` for mainnet  
+        """
+        
         super().__init__(
             api_key=api_key,
             secret=secret,
-            testnet=testnet,
             timeout=timeout,
         )
         self._recv_window = 5000
-        self._testnet = testnet
+        
+        self._base_url = base_url.value
         
         self._headers = {
             "Content-Type": "application/json",
@@ -35,6 +53,7 @@ class BybitApiClient(ApiClient):
         }
         
         self._response_decoder = msgspec.json.Decoder(BybitResponse)
+        self._order_response_decoder = msgspec.json.Decoder(BybitOrderResponse)
         
 
     def _generate_signature(self, payload: str) -> List[str]:
@@ -108,4 +127,31 @@ class BybitApiClient(ApiClient):
         except Exception as e:
             self._log.error(f"Error {method} Url: {url} {e}")
             raise
-
+    
+    async def post_v5_order_create(self, category: str, symbol: str, side: str, order_type: str, qty: Decimal, **kwargs):
+        """
+        https://bybit-exchange.github.io/docs/v5/order/create-order
+        """
+        endpoint = "/v5/order/create"
+        payload = {
+            "category": category,
+            "symbol": symbol,
+            "side": side,
+            "type": order_type,
+            "qty": str(qty),
+            **kwargs,
+        }
+        raw = await self._fetch("POST", self._base_url, endpoint, payload, signed=True)
+        return self._order_response_decoder.decode(raw)
+        
+    async def post_v5_order_cancel(self, symbol: str, **kwargs):
+        """
+        https://bybit-exchange.github.io/docs/v5/order/cancel-order
+        """
+        endpoint = "/v5/order/cancel"
+        payload = {
+            "symbol": symbol,
+            **kwargs,
+        }
+        raw = await self._fetch("POST", self._base_url, endpoint, payload, signed=True)
+        return self._order_response_decoder.decode(raw)

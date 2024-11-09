@@ -1,4 +1,5 @@
 from tradebot.constants import AccountType
+from enum import Enum
 
 class BybitAccountType(AccountType):
     SPOT = "SPOT"
@@ -52,3 +53,12 @@ WS_PUBLIC_URL = {
     BybitAccountType.INVERSE_TESTNET: "wss://stream-testnet.bybit.com/v5/public/inverse",
     BybitAccountType.OPTION_TESTNET: "wss://stream-testnet.bybit.com/v5/public/option",
 }
+
+class BybitBaseUrl(Enum):
+    MAINNET_1 = "https://api.bybit.com"
+    MAINNET_2 = "https://api.bytick.com"
+    TESTNET = "https://api-testnet.bybit.com"
+    NETHERLAND = "https://api.bybit.nl"
+    HONGKONG = "https://api.byhkbit.com"
+    TURKEY = "https://api.bybit-tr.com"
+    HAZAKHSTAN = "https://api.bybit.kz"

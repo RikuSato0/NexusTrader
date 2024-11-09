@@ -5,6 +5,16 @@ from typing import Dict, Any
 
 BYBIT_PONG: Final[str] = "pong"
 
+class BybitOrderResult(msgspec.Struct):
+    orderId: str
+    orderLinkId: str
+
+class BybitOrderResponse(msgspec.Struct):
+    retCode: int
+    retMsg: str
+    result: BybitOrderResult
+    time: int
+
 class BybitResponse(msgspec.Struct, frozen=True):
     retCode: int
     retMsg: str

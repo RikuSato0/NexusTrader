@@ -117,7 +117,6 @@ class BinanceApiClient(ApiClient):
         super().__init__(
             api_key=api_key,
             secret=secret,
-            testnet=testnet,
             timeout=timeout,
         )
         self._headers = {

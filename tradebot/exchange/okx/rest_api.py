@@ -8,9 +8,11 @@ from tradebot.exchange.okx.types import (
 from typing import Dict, Any
 import orjson
 from tradebot.exchange.okx.error import OKXHttpError
-import time
 import hmac
 import base64
+import asyncio
+import aiohttp
+from datetime import datetime, timezone
 
 
 class OkxApiClient(ApiClient):
@@ -27,11 +29,16 @@ class OkxApiClient(ApiClient):
             secret=secret,
             timeout=timeout,
         )
-        self._base_url = "https://aws.okx.com" if testnet else "https://www.okx.com"
+        self._base_url = "https://aws.okx.com"
         self._passphrase = passphrase
         self._testnet = testnet
         self._place_order_decoder = msgspec.json.Decoder(OKXPlaceOrderResponse)
         self._cancel_order_decoder = msgspec.json.Decoder(OKXCancelOrderResponse)
+
+        self._headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "TradingBot/1.0",
+        }
 
     def raise_error(self, raw: bytes, status: int, headers: Dict[str, Any]):
         if 400 <= status < 500:
@@ -55,9 +62,7 @@ class OkxApiClient(ApiClient):
             "sz": sz,
             **kwargs,
         }
-        raw = await self._fetch(
-            "POST", self._base_url, endpoint, payload=payload, signed=True
-        )
+        raw = await self._fetch("POST", endpoint, payload=payload, signed=True)
         return self._place_order_decoder.decode(raw)
 
     async def cancel_order(
@@ -74,10 +79,51 @@ class OkxApiClient(ApiClient):
         if clOrdId:
             payload["clOrdId"] = clOrdId
 
-        raw = await self._fetch(
-            "POST", self._base_url, endpoint, payload=payload, signed=True
-        )
+        raw = await self._fetch("POST", endpoint, payload=payload, signed=True)
         return self._cancel_order_decoder.decode(raw)
+
+    def _generate_signature(self, message: str) -> str:
+        mac = hmac.new(
+            bytes(self._secret, encoding="utf8"),
+            bytes(message, encoding="utf-8"),
+            digestmod="sha256",
+        )
+        return base64.b64encode(mac.digest()).decode()
+
+    async def get_signature(
+        self, ts: str, method: str, request_path: str, payload: Dict[str, Any] = None
+    ) -> str:
+        body = ""
+        if payload:
+            body = orjson.dumps(payload).decode()
+
+        sign_str = f"{ts}{method}{request_path}{body}"
+        signature = self._generate_signature(sign_str)
+        return signature
+
+    def get_timestamp(self) -> str:
+        return (
+            datetime.now(timezone.utc)
+            .isoformat(timespec="milliseconds")
+            .replace("+00:00", "Z")
+        )
+
+    async def get_headers(
+        self, ts: str, method: str, request_path: str, payload: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        headers = self._headers
+        signature = await self.get_signature(ts, method, request_path, payload)
+        headers.update(
+            {
+                "OK-ACCESS-KEY": self._api_key,
+                "OK-ACCESS-SIGN": signature,
+                "OK-ACCESS-TIMESTAMP": ts,
+                "OK-ACCESS-PASSPHRASE": self._passphrase,
+            }
+        )
+        if self._testnet:
+            headers["x-simulated-trading"] = "1"
+        return headers
 
     async def _fetch(
         self,
@@ -87,59 +133,35 @@ class OkxApiClient(ApiClient):
         payload: Dict[str, Any] = None,
         signed: bool = False,
     ) -> bytes:
-        """
-        发送HTTP请求到OKX API
-        """
         url = f"{self._base_url}{endpoint}"
-        
         request_path = endpoint
+        headers = self._headers
+        timestamp = self.get_timestamp()
+
         if params:
-            query_string = '&'.join([f"{k}={v}" for k, v in sorted(params.items())])
+            query_string = "&".join([f"{k}={v}" for k, v in sorted(params.items())])
             request_path = f"{endpoint}?{query_string}"
             url = f"{url}?{query_string}"
 
-        headers = {
-            "Content-Type": "application/json",
-        }
-
         if signed and self._api_key:
-            timestamp = str(int(time.time() * 1000))
-            # 根据OKX要求构建签名字符串
-            body = ''
-            if payload:
-                body = orjson.dumps(payload).decode()
-            
-            # 签名字符串格式: timestamp + method + requestPath + body
-            sign_str = f"{timestamp}{method}{request_path}{body}"
-            signature = self._generate_signature(sign_str)
+            headers = await self.get_headers(timestamp, method, request_path, payload)
 
-            headers.update({
-                "OK-ACCESS-KEY": self._api_key,
-                "OK-ACCESS-SIGN": signature,
-                "OK-ACCESS-TIMESTAMP": timestamp,
-                "OK-ACCESS-PASSPHRASE": self._passphrase,
-            })
-            
-            # 如果是测试网，需要添加模拟盘的header
-            if self._testnet:
-                headers["x-simulated-trading"] = "1"
-
-        return await self.request(
-            method=method,
-            url=url,
-            headers=headers,
-            data=orjson.dumps(payload) if payload else None
-        )
-
-    def _generate_signature(self, message: str) -> str:
-        """
-        生成OKX API签名
-        使用HMAC SHA256算法，然后进行Base64编码
-        """
-        mac = hmac.new(
-            bytes(self._secret, encoding='utf8'),
-            bytes(message, encoding='utf-8'),
-            digestmod='sha256'
-        )
-        return base64.b64encode(mac.digest()).decode()
-
+        try:
+            response = await self._session.request(
+                method=method,
+                url=url,
+                headers=headers,
+                data=orjson.dumps(payload) if payload else None,
+            )
+            raw = await response.read()
+            self.raise_error(raw, response.status, response.headers)
+            return raw
+        except aiohttp.ClientError as e:
+            self._log.error(f"Client Error {method} Url: {url} {e}")
+            raise
+        except asyncio.TimeoutError:
+            self._log.error(f"Timeout {method} Url: {url}")
+            raise
+        except Exception as e:
+            self._log.error(f"Error {method} Url: {url} {e}")
+            raise

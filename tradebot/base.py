@@ -5,16 +5,13 @@ import certifi
 import orjson
 import warnings
 import aiohttp
-import aiosonic
 import ccxt.pro as ccxtpro
-import aiosonic.exceptions as aiosonic_exceptions
-
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from typing import Callable, Literal
 from collections import defaultdict
 from decimal import Decimal
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlencode
 
 
 from asynciolimiter import Limiter
@@ -362,11 +359,11 @@ class WebsocketManager(ABC):
 
 
 class Listener(WSListener):
-    def __init__(self, logger, specific_ping_msg = None):
+    def __init__(self, logger, specific_ping_msg=None):
         self._log = logger
         self.msg_queue = asyncio.Queue()
         self._specific_ping_msg = specific_ping_msg
-        
+
     def send_user_specific_ping(self, transport: WSTransport):
         if self._specific_ping_msg:
             transport.send(WSMsgType.TEXT, self._specific_ping_msg)
@@ -404,7 +401,9 @@ class WSClient(ABC):
         reconnect_interval: int = 0.2,
         ping_idle_timeout: int = 2,
         ping_reply_timeout: int = 1,
-        auto_ping_strategy: Literal["ping_when_idle", "ping_periodically"] = "ping_when_idle",
+        auto_ping_strategy: Literal[
+            "ping_when_idle", "ping_periodically"
+        ] = "ping_when_idle",
         enable_auto_ping: bool = True,
         enable_auto_pong: bool = False,
     ):
@@ -598,7 +597,7 @@ class RestApi:
         return await self.request("DELETE", url, **kwargs)
 
 
-class ApiClient:
+class ApiClient(ABC):
     def __init__(
         self,
         api_key: str = None,
@@ -610,7 +609,7 @@ class ApiClient:
         self._timeout = timeout
         self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
         self._ssl_context = ssl.create_default_context(cafile=certifi.where())
-        self._session = None
+        self._session: Optional[aiohttp.ClientSession] = None
         self._clock = LiveClock()
         self._init_session()
 
@@ -629,7 +628,9 @@ class ApiClient:
             await self._session.close()
             self._session = None
 
-
+    @abstractmethod
+    def raise_error(self, raw: bytes, status: int, headers: Dict[str, Any]):
+        raise NotImplementedError("Subclasses must implement this method.")
 
 
 class Clock:

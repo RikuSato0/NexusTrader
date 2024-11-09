@@ -160,18 +160,7 @@ class BinanceApiClient(ApiClient):
                 headers=self._headers,
             )
             raw = await response.read()
-            if 400 <= response.status < 500:
-                raise BinanceClientError(
-                    status=response.status,
-                    message=orjson.loads(raw) if raw else None,
-                    headers=response.headers,
-                )
-            elif response.status >= 500:
-                raise BinanceServerError(
-                    status=response.status,
-                    message=orjson.loads(raw) if raw else None,
-                    headers=response.headers,
-                )
+            self.raise_error(raw, response.status, response.headers)
             return raw
         except aiohttp.ClientError as e:
             self._log.error(f"Client Error {method} Url: {url} {e}")
@@ -182,7 +171,13 @@ class BinanceApiClient(ApiClient):
         except Exception as e:
             self._log.error(f"Error {method} Url: {url} {e}")
             raise
-        
+
+    def raise_error(self, raw: bytes, status: int, headers: Dict[str, Any]):
+        if 400 <= status < 500:
+            raise BinanceClientError(status, orjson.loads(raw), headers)
+        elif status >= 500:
+            raise BinanceServerError(status, orjson.loads(raw), headers)
+
     def _get_base_url(self, account_type: BinanceAccountType) -> str:
         if account_type == BinanceAccountType.SPOT:
             if self._testnet:
@@ -202,7 +197,7 @@ class BinanceApiClient(ApiClient):
             return BinanceAccountType.COIN_M_FUTURE.base_url
         elif account_type == BinanceAccountType.PORTFOLIO_MARGIN:
             return BinanceAccountType.PORTFOLIO_MARGIN.base_url
-    
+
     async def put_dapi_v1_listen_key(self):
         """
         https://developers.binance.com/docs/derivatives/coin-margined-futures/user-data-streams/Keepalive-User-Data-Stream
@@ -267,9 +262,7 @@ class BinanceApiClient(ApiClient):
         """
         base_url = self._get_base_url(BinanceAccountType.ISOLATED_MARGIN)
         end_point = "/sapi/v1/userDataStream/isolated"
-        raw = await self._fetch(
-            "POST", base_url, end_point, payload={"symbol": symbol}
-        )
+        raw = await self._fetch("POST", base_url, end_point, payload={"symbol": symbol})
         return orjson.loads(raw)
 
     async def put_sapi_v1_user_data_stream_isolated(self, symbol: str, listen_key: str):

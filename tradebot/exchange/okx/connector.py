@@ -1,4 +1,5 @@
 from typing import cast
+import orjson
 from tradebot.exchange.okx import OkxAccountType
 from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.websockets_v2 import OkxWSClient as OkxWSClientV2
@@ -7,7 +8,8 @@ from tradebot.types import Trade, BookL1, Kline
 from tradebot.constants import EventType
 from tradebot.entity import EventSystem
 from tradebot.base import PublicConnector, PrivateConnector
-import orjson
+from tradebot.exchange.okx.rest_api import OkxApiClient
+
 
 
 class OkxPublicConnector(PublicConnector):
@@ -29,7 +31,7 @@ class OkxPublicConnector(PublicConnector):
         self._ws_client = cast(OkxWSClientV2, self._ws_client)
 
     async def subscribe_trade(self, symbol: str):
-        market = self._market.get(symbol, None) 
+        market = self._market.get(symbol, None)
         symbol = market["id"] if market else symbol
         await self._ws_client.subscribe_trade(symbol)
 
@@ -49,7 +51,9 @@ class OkxPublicConnector(PublicConnector):
             if msg["event"] == "error":
                 self._log.error(str(msg))
             elif msg["event"] == "subscribe":
-                self._log.info(f"Subscribed to {msg['arg']['channel']}.{msg['arg']['instId']}")
+                self._log.info(
+                    f"Subscribed to {msg['arg']['channel']}.{msg['arg']['instId']}"
+                )
         elif "arg" in msg:
             channel: str = msg["arg"]["channel"]
             if channel == "bbo-tbt":
@@ -181,8 +185,14 @@ class OkxPrivateConnector(PrivateConnector):
                 passphrase=exchange.passphrase,
             ),
         )
-        # self._ws_client: OkxWSClient = self._ws_client
-    
+        self._ws_client: OkxWSClient = self._ws_client
+
+        self._api_client = OkxApiClient(
+            api_key=exchange.api_key,
+            secret=exchange.secret,
+            passphrase=exchange.passphrase,
+        )
+
     def _ws_msg_handler(self, msg):
         msg = orjson.loads(msg)
         if "event" in msg:
@@ -193,7 +203,9 @@ class OkxPrivateConnector(PrivateConnector):
             elif msg["event"] == "login":
                 self._log.info("Login success")
             elif msg["event"] == "channel-conn-count":
-                self._log.info(f"Channel {msg['channel']} connection count: {msg['connCount']}")
+                self._log.info(
+                    f"Channel {msg['channel']} connection count: {msg['connCount']}"
+                )
         elif "arg" in msg:
             channel: str = msg["arg"]["channel"]
             if channel == "orders":
@@ -201,8 +213,8 @@ class OkxPrivateConnector(PrivateConnector):
             elif channel == "positions":
                 self._parse_positions(msg)
             elif channel == "account":
-                self._parse_account(msg)               
-    
+                self._parse_account(msg)
+
     def _parse_orders(self, msg):
         """
         {
@@ -210,7 +222,7 @@ class OkxPrivateConnector(PrivateConnector):
                 'channel': 'orders', // Channel name
                 'instType': 'ANY', // Instrument type
                 'uid': '422205842008504732' // User Identifier
-            }, 
+            },
             'data': [
                 {
                     'instType': 'SPOT', // Instrument type
@@ -265,7 +277,7 @@ class OkxPrivateConnector(PrivateConnector):
                 }
             ]
         }
-        
+
         {
             'arg': {
                 'channel': 'orders', // Channel name
@@ -345,17 +357,14 @@ class OkxPrivateConnector(PrivateConnector):
         """
         id = msg["data"][0]["instId"]
         market = self._market_id[id]
-        
-        
-    
+
     def _parse_positions(self, msg):
         pass
-    
+
     def _parse_account(self, msg):
         pass
-    
+
     async def connect(self):
         await self._ws_client.subscribe_orders()
         await self._ws_client.subscribe_positions()
         await self._ws_client.subscribe_account()
-        

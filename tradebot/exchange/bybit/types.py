@@ -1,10 +1,16 @@
 import msgspec
 from typing import Final
-from typing import Dict
+from typing import Dict, Any
 
 
 BYBIT_PONG: Final[str] = "pong"
 
+class BybitResponse(msgspec.Struct, frozen=True):
+    retCode: int
+    retMsg: str
+    result: Dict[str, Any]
+    time: int
+    retExtInfo: Dict[str, Any] | None = None
 
 class BybitWsMessageGeneral(msgspec.Struct):
     op: str | None = None

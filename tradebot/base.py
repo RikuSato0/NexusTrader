@@ -371,10 +371,10 @@ class Listener(WSListener):
             transport.send_ping()
 
     def on_ws_connected(self, transport: WSTransport):
-        self._log.info("Connected to Websocket...")
+        self._log.debug("Connected to Websocket...")
 
     def on_ws_disconnected(self, transport: WSTransport):
-        self._log.info("Disconnected from Websocket.")
+        self._log.debug("Disconnected from Websocket.")
 
     def on_ws_frame(self, transport: WSTransport, frame: WSFrame):
         try:
@@ -388,7 +388,7 @@ class Listener(WSListener):
                     self.msg_queue.put_nowait(frame.get_payload_as_bytes())
                     return
                 case WSMsgType.CLOSE:
-                    self._log.info(f"Received close frame. {str(frame.get_payload_as_bytes())}")
+                    self._log.debug(f"Received close frame. {str(frame.get_payload_as_bytes())}")
                     return       
         except Exception as e:
             self._log.error(f"Error processing message: {str(e)}")

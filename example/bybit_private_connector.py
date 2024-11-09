@@ -13,6 +13,7 @@ async def main():
             "secret": BYBIT_API_SECRET,
         }
         exchange = BybitExchangeManager(config)
+        await exchange.load_markets()
         connector = BybitPrivateConnector(exchange, testnet=True)
         await connector.connect()
         while True:

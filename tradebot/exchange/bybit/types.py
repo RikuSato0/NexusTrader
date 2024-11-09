@@ -24,6 +24,8 @@ class BybitResponse(msgspec.Struct, frozen=True):
     retExtInfo: Dict[str, Any] | None = None
 
 class BybitWsMessageGeneral(msgspec.Struct):
+    success: bool | None = None
+    conn_id: str | None = None
     op: str | None = None
     topic: str | None = None
     success: bool | None = None

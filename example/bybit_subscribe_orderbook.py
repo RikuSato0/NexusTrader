@@ -11,7 +11,7 @@ data_ws = []
 def handler(msg):
     try:
         msg = orjson.loads(msg)
-        data_ws.append(msg)
+        # data_ws.append(msg)
         # print(msg)
         # log.info(str(msg))
     except orjson.JSONDecodeError:
@@ -23,7 +23,7 @@ async def main():
     try:
         
         bybit_ws = BybitWSClient(BybitAccountType.LINEAR, handler)
-        await bybit_ws.subscribe_order_book("BTCUSDT", 1)
+        await bybit_ws.subscribe_kline("BTCUSDT", 1)
         while True:
             await asyncio.sleep(1)
     except asyncio.CancelledError:

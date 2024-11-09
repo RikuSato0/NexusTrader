@@ -378,15 +378,18 @@ class Listener(WSListener):
 
     def on_ws_frame(self, transport: WSTransport, frame: WSFrame):
         try:
-            if frame.msg_type == WSMsgType.PING:
-                transport.send_pong(
-                    frame.get_payload_as_bytes()
-                )  # if enabled auto pong, we don't need to send pong manually
-                return
-            # msg = orjson.loads(frame.get_payload_as_bytes())
-            self.msg_queue.put_nowait(
-                frame.get_payload_as_bytes()
-            )  # I think we should decode the frame in the handler
+            match frame.msg_type:
+                case WSMsgType.PING:
+                    # Only send pong if auto_pong is disabled
+                    transport.send_pong(frame.get_payload_as_bytes())
+                    return
+                case WSMsgType.TEXT:
+                    # Queue raw bytes for handler to decode
+                    self.msg_queue.put_nowait(frame.get_payload_as_bytes())
+                    return
+                case WSMsgType.CLOSE:
+                    self._log.info(f"Received close frame. {str(frame.get_payload_as_bytes())}")
+                    return       
         except Exception as e:
             self._log.error(f"Error processing message: {str(e)}")
 

@@ -52,9 +52,14 @@ class BybitPublicConnector(PublicConnector):
 
     def _ws_msg_handler(self, raw: bytes):
         try:
-            self._log.debug(str(raw))
-
             ws_msg: BybitWsMessageGeneral = self._ws_msg_general_decoder.decode(raw)
+            if ws_msg.ret_msg == "pong":
+                self._ws_client._transport.notify_user_specific_pong_received()
+                self._log.debug("Pong received")
+                return
+            if ws_msg.success is False:
+                self._log.error(f"WebSocket error: {ws_msg}")
+                return
 
             if "orderbook" in ws_msg.topic:
                 self._handle_orderbook(raw, ws_msg.topic)

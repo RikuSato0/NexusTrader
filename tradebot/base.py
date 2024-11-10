@@ -367,8 +367,10 @@ class Listener(WSListener):
     def send_user_specific_ping(self, transport: WSTransport):
         if self._specific_ping_msg:
             transport.send(WSMsgType.TEXT, self._specific_ping_msg)
+            self._log.debug(f"Sent user specific ping {self._specific_ping_msg}")
         else:
             transport.send_ping()
+            self._log.debug("Sent default ping.")
 
     def on_ws_connected(self, transport: WSTransport):
         self._log.debug("Connected to Websocket...")

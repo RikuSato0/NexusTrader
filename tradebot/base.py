@@ -5,7 +5,8 @@ import certifi
 import orjson
 import warnings
 import aiohttp
-import ccxt.pro as ccxtpro
+# import ccxt.pro as ccxtpro
+import ccxt
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Optional
 from typing import Callable, Literal
@@ -43,17 +44,18 @@ class ExchangeManager(ABC):
             name=type(self).__name__, level="INFO", flush=True
         )
         self.is_testnet = config.get("sandbox", False)
-        self.market = None
-        self.market_id = None
+        self.market = {}
+        self.market_id = {}
 
         if not self.api_key or not self.secret:
             warnings.warn(
                 "API Key and Secret not provided, So some features related to trading will not work"
             )
+        self.load_markets()
 
-    def _init_exchange(self) -> ccxtpro.Exchange:
+    def _init_exchange(self) -> ccxt.Exchange:
         try:
-            exchange_class = getattr(ccxtpro, self.config["exchange_id"])
+            exchange_class = getattr(ccxt, self.config["exchange_id"])
         except AttributeError:
             raise AttributeError(
                 f"Exchange {self.config['exchange_id']} is not supported"
@@ -65,12 +67,16 @@ class ExchangeManager(ABC):
         )  # Set sandbox mode if demo trade is enabled
         return api
 
+    @abstractmethod
     async def load_markets(self):
-        self.market = await self.api.load_markets()
-        return self.market
+        pass
 
-    async def close(self):
-        await self.api.close()
+    # async def load_markets(self):
+    #     self.market = await self.api.load_markets()
+    #     return self.market
+
+    # async def close(self):
+    #     await self.api.close()
 
 
 class AccountManager(ABC):

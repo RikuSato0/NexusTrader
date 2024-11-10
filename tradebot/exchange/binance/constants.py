@@ -4,11 +4,15 @@ from tradebot.constants import AccountType, OrderStatus, OrderType
 class BinanceOrderType(Enum):
     LIMIT = "LIMIT"
     MARKET = "MARKET"
+    STOP = "STOP"
     STOP_LOSS = "STOP_LOSS"
     STOP_LOSS_LIMIT = "STOP_LOSS_LIMIT"
     TAKE_PROFIT = "TAKE_PROFIT"
     TAKE_PROFIT_LIMIT = "TAKE_PROFIT_LIMIT"
     LIMIT_MAKER = "LIMIT_MAKER"
+    TRAILING_STOP_MARKET = "TRAILING_STOP_MARKET"
+    TAKE_PROFIT_MARKET = "TAKE_PROFIT_MARKET"
+    STOP_MARKET = "STOP_MARKET"
 
 class BinanceExecutionType(Enum):
     NEW = "NEW"

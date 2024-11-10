@@ -37,7 +37,7 @@ async def main():
         }
 
         exchange = ExchangeManager(config)
-        await exchange.load_markets()
+
         rest_api = BinanceRestApi(
             account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
             api_key=BINANCE_API_KEY,
@@ -126,7 +126,6 @@ async def main():
     except OrderError as e:
         print(e)
     finally:
-        await exchange.close()
         await rest_api.close_session()
 
 

@@ -11,6 +11,7 @@ from tradebot.constants import EventType, OrderStatus
 from tradebot.types import Order
 from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
 
+from tradebot.exchange.binance.types import BinanceMarket
 from tradebot.exchange.binance.rest_api import BinanceApiClient
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWSClient
@@ -19,6 +20,9 @@ from tradebot.exchange.binance.exchange import BinanceExchangeManager
 
 class BinancePublicConnector(PublicConnector):
     _ws_client: BinanceWSClient
+    _account_type: BinanceAccountType
+    _market: Dict[str, BinanceMarket]
+    _market_id: Dict[str, BinanceMarket]
 
     def __init__(
         self,
@@ -55,17 +59,17 @@ class BinancePublicConnector(PublicConnector):
 
     async def subscribe_trade(self, symbol: str):
         market = self._market.get(symbol, None)
-        symbol = market["id"] if market else symbol
+        symbol = market.id if market else symbol
         await self._ws_client.subscribe_trade(symbol)
 
     async def subscribe_bookl1(self, symbol: str):
         market = self._market.get(symbol, None)
-        symbol = market["id"] if market else symbol
+        symbol = market.id if market else symbol
         await self._ws_client.subscribe_book_ticker(symbol)
 
     async def subscribe_kline(self, symbol: str, interval: str):
         market = self._market.get(symbol, None)
-        symbol = market["id"] if market else symbol
+        symbol = market.id if market else symbol
         await self._ws_client.subscribe_kline(symbol, interval)
 
     def _ws_msg_handler(self, msg):
@@ -116,7 +120,7 @@ class BinancePublicConnector(PublicConnector):
 
         ticker = Kline(
             exchange=self._exchange_id,
-            symbol=market["symbol"],
+            symbol=market.symbol,
             interval=res["k"]["i"],
             open=float(res["k"]["o"]),
             high=float(res["k"]["h"]),
@@ -156,7 +160,7 @@ class BinancePublicConnector(PublicConnector):
 
         trade = Trade(
             exchange=self._exchange_id,
-            symbol=market["symbol"],
+            symbol=market.symbol,
             price=float(res["p"]),
             size=float(res["q"]),
             timestamp=res.get("T", time.time_ns() // 1_000_000),
@@ -180,7 +184,7 @@ class BinancePublicConnector(PublicConnector):
 
         bookl1 = BookL1(
             exchange=self._exchange_id,
-            symbol=market["symbol"],
+            symbol=market.symbol,
             bid=float(res["b"]),
             ask=float(res["a"]),
             bid_size=float(res["B"]),
@@ -208,14 +212,14 @@ class BinancePublicConnector(PublicConnector):
 
         mark_price = MarkPrice(
             exchange=self._exchange_id,
-            symbol=market["symbol"],
+            symbol=market.symbol,
             price=float(res["p"]),
             timestamp=res.get("E", time.time_ns() // 1_000_000),
         )
 
         funding_rate = FundingRate(
             exchange=self._exchange_id,
-            symbol=market["symbol"],
+            symbol=market.symbol,
             rate=float(res["r"]),
             timestamp=res.get("E", time.time_ns() // 1_000_000),
             next_funding_time=res.get("T", time.time_ns() // 1_000_000),
@@ -223,7 +227,7 @@ class BinancePublicConnector(PublicConnector):
 
         index_price = IndexPrice(
             exchange=self._exchange_id,
-            symbol=market["symbol"],
+            symbol=market.symbol,
             price=float(res["i"]),
             timestamp=res.get("E", time.time_ns() // 1_000_000),
         )
@@ -237,6 +241,8 @@ class BinancePublicConnector(PublicConnector):
 
 class BinancePrivateConnector(PrivateConnector):
     _ws_client: BinanceWSClient
+    _market: Dict[str, BinanceMarket]
+    _market_id: Dict[str, BinanceMarket]
     
     def __init__(
         self,
@@ -403,7 +409,7 @@ class BinancePrivateConnector(PrivateConnector):
             id=event_data.get("i", None),
             client_order_id=event_data.get("c", None),
             timestamp=event_data.get("T", None),
-            symbol=market["symbol"],
+            symbol=market.symbol,
             type=type,
             side=event_data.get("S", "").lower(),
             status=event_data.get("X", "").lower(),
@@ -499,7 +505,7 @@ class BinancePrivateConnector(PrivateConnector):
             id=event_data.get("i", None),
             client_order_id=event_data.get("c", None),
             timestamp=event_data.get("T", None),
-            symbol=market["symbol"],
+            symbol=market.symbol,
             type=event_data.get("o", "").lower(),
             side=event_data.get("S", "").lower(),
             status=event_data.get("X", "").lower(),

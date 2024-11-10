@@ -173,7 +173,51 @@ class Position(Struct):
     size: Decimal # must be the determined unit
     avg_open_price: Decimal
     avg_close_price: Decimal
-    
 
 
-    
+class Precision(Struct):
+    """
+     "precision": {
+      "amount": 0.0001,
+      "price": 1e-05,
+      "cost": null,
+      "base": 1e-08,
+      "quote": 1e-08
+    },
+    """
+    amount: float
+    price: float
+    cost: float | None
+    base: float
+    quote: float
+
+class LimitMinMax(Struct):
+    """
+    "limits": {
+      "amount": {
+        "min": 0.0001,
+        "max": 1000.0
+      },
+      "price": {
+        "min": 1e-05,
+        "max": 1000000.0
+      },
+      "cost": {
+        "min": 0.01,
+        "max": 1000000.0
+      }
+    },
+    """
+    min: float | None
+    max: float | None
+
+class Limit(Struct):
+    leverage: LimitMinMax = None
+    amount: LimitMinMax = None
+    price: LimitMinMax = None
+    cost: LimitMinMax = None
+    market: LimitMinMax = None
+
+class MarginMode(Struct):
+    isolated: bool
+    cross: bool

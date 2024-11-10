@@ -26,8 +26,7 @@ class Demo(Strategy):
 
 async def main():
     try:
-        exchange = BinanceExchangeManager({"exchange_id": "binance"})
-        await exchange.load_markets()  # get `market` and `market_id` data
+        exchange = BinanceExchangeManager()
 
         conn_spot = BinancePublicConnector(
             BinanceAccountType.SPOT,
@@ -51,7 +50,6 @@ async def main():
     except asyncio.CancelledError:
         print("Cancelled")
     finally:
-        await exchange.close()
         await conn_spot.disconnect()
         await conn_usdm.disconnect()
 

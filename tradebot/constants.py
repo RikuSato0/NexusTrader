@@ -342,3 +342,14 @@ class OrderTimeInForce(Enum):
 class OrderPositionSide(Enum):
     LONG = "LONG"
     SHORT = "SHORT"
+
+class AssetType(Enum):
+    SPOT = "spot"
+    MARGIN = "margin"
+    FUTURE = "future"
+    OPTION = "option"
+    SWAP = "swap"
+    LINEAR = "linear"
+    INVERSE = "inverse"
+    
+    

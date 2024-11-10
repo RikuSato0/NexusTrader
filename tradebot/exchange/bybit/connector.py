@@ -1,5 +1,5 @@
 import msgspec
-
+from typing import Dict
 from collections import defaultdict
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.entity import EventSystem

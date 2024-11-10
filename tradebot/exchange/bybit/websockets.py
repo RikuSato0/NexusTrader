@@ -36,7 +36,7 @@ class BybitWSClient(WSClient):
             handler=handler,
             ping_idle_timeout=2,
             specific_ping_msg=orjson.dumps({"op": "ping"}),
-            auto_ping_strategy="ping_periodically",
+            auto_ping_strategy="ping_when_idle",
         )
 
     @property

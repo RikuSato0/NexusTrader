@@ -1,7 +1,7 @@
 import msgspec
 from typing import Any, Dict, List
 from tradebot.types import Order, Precision, Limit, MarginMode
-from tradebot.constants import OrderSide, OrderTimeInForce, AssetType
+from tradebot.constants import OrderSide, TimeInForce, AssetType
 from tradebot.exchange.binance.constants import BinanceOrderStatus, BinanceOrderType, BinancePositionSide
 
 class BinanceUserTrade(msgspec.Struct, frozen=True):
@@ -55,7 +55,7 @@ class BinanceOrder(msgspec.Struct, frozen=True):
     origQty: str | None = None
     executedQty: str | None = None
     status: BinanceOrderStatus | None = None
-    timeInForce: OrderTimeInForce | None = None
+    timeInForce: TimeInForce | None = None
     goodTillDate: int | None = None
     type: BinanceOrderType | None = None
     side: OrderSide | None = None

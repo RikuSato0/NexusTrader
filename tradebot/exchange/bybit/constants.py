@@ -1,4 +1,4 @@
-from tradebot.constants import AccountType
+from tradebot.constants import AccountType, OrderStatus, PositionSide, OrderSide, TimeInForce, OrderType
 from enum import Enum
 
 class BybitAccountType(AccountType):
@@ -62,3 +62,102 @@ class BybitBaseUrl(Enum):
     HONGKONG = "https://api.byhkbit.com"
     TURKEY = "https://api.bybit-tr.com"
     HAZAKHSTAN = "https://api.bybit.kz"
+
+class BybitOrderSide(Enum):
+    BUY = "Buy"
+    SELL = "Sell"
+
+class BybitOrderStatus(Enum):
+    NEW = "New"
+    REJECTED = "Rejected"
+    PARTIALLY_FILLED = "PartiallyFilled"
+    PARTIALLY_FILLED_CANCELED = "PartiallyFilledCanceled"
+    FILLED = "Filled"
+    CANCELED = "Cancelled"
+    UNTRIGGERED = "Untriggered"
+    TRIGGERED = "Triggered"
+    UNTRIGGERED = "Untriggered"
+    DEACTIVATED = "Deactivated"
+
+class BybitTimeInForce(Enum):
+    GTC = "GTC"
+    IOC = "IOC"
+    FOK = "FOK"
+    POST_ONLY = "PostOnly"
+
+class BybitPositionSide(Enum):
+    FLAT = 0
+    LONG = 1
+    SHORT = 2
+
+class BybitOrderType(Enum):
+    MARKET = "Market"
+    LIMIT = "Limit"
+    UNKNOWN = "Unknown"
+
+class BybitProductType(Enum):
+    SPOT = "spot"
+    LINEAR = "linear"
+    INVERSE = "inverse"
+    OPTION = "option"
+
+class BybitTriggerType(Enum):
+    NONE = ""  # Default
+    LAST_PRICE = "LastPrice"
+    INDEX_PRICE = "IndexPrice"
+    MARK_PRICE = "MarkPrice"
+
+class BybitTriggerDirection(Enum):
+    NONE = 0
+    RISES_TO = 1  # Triggered when market price rises to triggerPrice
+    FALLS_TO = 2
+
+class BybitStopOrderType(Enum):
+    NONE = ""  # Default
+    UNKNOWN = "UNKNOWN"  # Classic account value
+    TAKE_PROFIT = "TakeProfit"
+    STOP_LOSS = "StopLoss"
+    TRAILING_STOP = "TrailingStop"
+    STOP = "Stop"
+    PARTIAL_TAKE_PROFIT = "PartialTakeProfit"
+    PARTIAL_STOP_LOSS = "PartialStopLoss"
+    TPSL_ORDER = "tpslOrder"
+    OCO_ORDER = "OcoOrder"  # Spot only
+    MM_RATE_CLOSE = "MmRateClose"
+    BIDIRECTIONAL_TPSL_ORDER = "BidirectionalTpslOrder"
+
+class BybitEnumParser:
+    
+    _bybit_order_status_map = {
+        BybitOrderStatus.NEW: OrderStatus.ACCEPTED,
+        BybitOrderStatus.PARTIALLY_FILLED: OrderStatus.PARTIALLY_FILLED,
+        BybitOrderStatus.FILLED: OrderStatus.FILLED,
+        BybitOrderStatus.CANCELED: OrderStatus.CANCELED,
+        BybitOrderStatus.TRIGGERED: OrderStatus.ACCEPTED,
+        BybitOrderStatus.UNTRIGGERED: OrderStatus.PENDING,
+        BybitOrderStatus.DEACTIVATED: OrderStatus.EXPIRED,
+        BybitOrderStatus.REJECTED: OrderStatus.FAILED,
+    }
+    
+    _bybit_position_side_map = {
+        BybitPositionSide.FLAT: PositionSide.FLAT,
+        BybitPositionSide.LONG: PositionSide.LONG,
+        BybitPositionSide.SHORT: PositionSide.SHORT,
+    }
+    
+    _bybit_order_side_map = {
+        BybitOrderSide.BUY: OrderSide.BUY,
+        BybitOrderSide.SELL: OrderSide.SELL,
+    }
+    
+    _bybit_order_time_in_force_map = {
+        BybitTimeInForce.IOC: TimeInForce.IOC,
+        BybitTimeInForce.GTC: TimeInForce.GTC,
+        BybitTimeInForce.FOK: TimeInForce.FOK,
+    }
+    
+    _bybit_order_type_map = {
+        BybitOrderType.MARKET: OrderType.MARKET,
+        BybitOrderType.LIMIT: OrderType.LIMIT,
+        BybitOrderType.UNKNOWN: None,
+    }

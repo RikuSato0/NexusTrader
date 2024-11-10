@@ -1,5 +1,4 @@
 import msgspec
-from typing import Dict
 from collections import defaultdict
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.entity import EventSystem
@@ -133,9 +132,15 @@ class BybitPrivateConnector(PrivateConnector):
 
     def _ws_msg_handler(self, raw: bytes):
         try:
-            msg = self._ws_msg_general_decoder.decode(raw)
-
-            if "order" in msg.topic:
+            ws_msg = self._ws_msg_general_decoder.decode(raw)
+            if ws_msg.ret_msg == "pong":
+                self._ws_client._transport.notify_user_specific_pong_received()
+                self._log.debug(f"Pong received {str(ws_msg)}")
+                return
+            if ws_msg.success is False:
+                self._log.error(f"WebSocket error: {ws_msg}")
+                return
+            if "order" in ws_msg.topic:
                 self._parse_order_update(raw)
 
         except Exception:

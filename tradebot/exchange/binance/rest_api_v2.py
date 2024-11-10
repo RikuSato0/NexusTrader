@@ -7,7 +7,7 @@ from urllib.parse import urljoin, urlencode
 
 
 from tradebot.log import SpdLog
-from tradebot.constants import OrderSide, OrderType, OrderTimeInForce
+from tradebot.constants import OrderSide, OrderType, TimeInForce
 from tradebot.exchange.binance.error import BinanceClientError, BinanceServerError
 
 

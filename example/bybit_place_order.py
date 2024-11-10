@@ -2,8 +2,8 @@ import asyncio
 from tradebot.constants import CONFIG
 from tradebot.exchange.bybit import BybitApiClient
 
-BYBIT_API_KEY = CONFIG['bybit_testnet']['API_KEY']
-BYBIT_API_SECRET = CONFIG['bybit_testnet']['SECRET']
+BYBIT_API_KEY = CONFIG['bybit_testnet_2']['API_KEY']
+BYBIT_API_SECRET = CONFIG['bybit_testnet_2']['SECRET']
 
 async def main():
     api_client = BybitApiClient(
@@ -19,6 +19,7 @@ async def main():
             side="Buy",
             order_type="Market",
             qty=0.01,
+            positionIdx=1,
         )
         
         print(res)
@@ -30,6 +31,7 @@ async def main():
             order_type="Market",
             qty=0.01,
             reduceOnly=True,
+            positionIdx=1,
         )
         
         print(res)
@@ -37,11 +39,12 @@ async def main():
         res = await api_client.post_v5_order_create(
             category="linear",
             symbol="BTCUSDT",
-            side="Buy",
+            side="Sell",
             order_type="Limit",
             qty=0.01,
             price="69000",
             timeInForce="GTC",
+            positionIdx=2,
         )
         print(res)
         id = res.result.orderId

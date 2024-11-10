@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Tuple
 from typing import Literal, Optional
 from msgspec import Struct, field
-from tradebot.constants import OrderSide, OrderType, OrderTimeInForce, OrderStatus
+from tradebot.constants import OrderSide, OrderType, TimeInForce, OrderStatus, PositionSide
 
 
 class BookL1(Struct, gc=False):
@@ -72,7 +72,7 @@ class Order(Struct):
     type: OrderType
     side: OrderSide
     status: OrderStatus
-    time_in_force: Optional[OrderTimeInForce] = None
+    time_in_force: Optional[TimeInForce] = None
     price: Optional[float] = None
     average: Optional[float] = None
     last_filled_price: Optional[float] = None
@@ -83,10 +83,8 @@ class Order(Struct):
     fee: Optional[float] = None
     fee_currency: Optional[str] = None
     cost: Optional[float] = None
-    last_trade_timestamp: Optional[int] = None
     reduce_only: Optional[bool] = None
-    position_side: Optional[str] = None
-    time_in_force: Optional[str] = None
+    position_side: Optional[PositionSide] = None
     leverage: Optional[int] = None
 
 
@@ -185,11 +183,11 @@ class Precision(Struct):
       "quote": 1e-08
     },
     """
-    amount: float
-    price: float
-    cost: float | None
-    base: float
-    quote: float
+    amount: float | None = None
+    price: float | None = None
+    cost: float | None = None
+    base: float | None = None
+    quote: float | None = None
 
 class LimitMinMax(Struct):
     """
@@ -219,5 +217,5 @@ class Limit(Struct):
     market: LimitMinMax = None
 
 class MarginMode(Struct):
-    isolated: bool
-    cross: bool
+    isolated: bool | None
+    cross: bool | None

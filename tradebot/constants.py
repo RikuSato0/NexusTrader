@@ -334,14 +334,15 @@ class OrderSide(Enum):
     BUY = "BUY"
     SELL = "SELL"
 
-class OrderTimeInForce(Enum):
+class TimeInForce(Enum):
     GTC = "GTC"
     IOC = "IOC"
     FOK = "FOK"
 
-class OrderPositionSide(Enum):
+class PositionSide(Enum):
     LONG = "LONG"
     SHORT = "SHORT"
+    FLAT = "FLAT"
 
 class AssetType(Enum):
     SPOT = "spot"
@@ -352,4 +353,7 @@ class AssetType(Enum):
     LINEAR = "linear"
     INVERSE = "inverse"
     
-    
+class OptionType(Enum):
+    CALL = "call"
+    PUT = "put"
+

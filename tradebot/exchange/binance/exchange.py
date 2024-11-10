@@ -30,6 +30,7 @@ class BinanceExchangeManager(ExchangeManager):
                     self.market_id[f"{v.id}_linear"] = v
                 elif v.inverse:
                     self.market_id[f"{v.id}_inverse"] = v
+                
             except Exception as e:
                 print(f"Error: {e}, {k}, {v}")
                 continue

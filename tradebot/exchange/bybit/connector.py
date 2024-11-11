@@ -41,6 +41,11 @@ class BybitPublicConnector(PublicConnector):
         account_type: BybitAccountType,
         exchange: BybitExchangeManager,
     ):
+        if account_type in {BybitAccountType.ALL, BybitAccountType.ALL_TESTNET}:
+            raise ValueError(
+                f"Please not using `BybitAccountType.ALL` or `BybitAccountType.ALL_TESTNET` in `PublicConnector`"
+            )
+
         super().__init__(
             account_type=account_type,
             market=exchange.market,
@@ -125,7 +130,7 @@ class BybitPrivateConnector(PrivateConnector):
     def __init__(
         self,
         exchange: BybitExchangeManager,
-        testnet: bool = False,
+        account_type: BybitAccountType,
         strategy_id: str = None,
         user_id: str = None,
     ):
@@ -135,10 +140,11 @@ class BybitPrivateConnector(PrivateConnector):
         if not exchange.api_key or not exchange.secret:
             raise ValueError("API key and secret are required for private endpoints")
 
-        if testnet:
-            account_type = BybitAccountType.SPOT_TESTNET
-        else:
-            account_type = BybitAccountType.SPOT
+        if account_type not in {BybitAccountType.ALL, BybitAccountType.ALL_TESTNET}:
+            raise ValueError(
+                f"Please using `BybitAccountType.ALL` or `BybitAccountType.ALL_TESTNET` in `PrivateConnector`"
+            )
+
         super().__init__(
             account_type=account_type,
             market=exchange.market,
@@ -161,7 +167,7 @@ class BybitPrivateConnector(PrivateConnector):
         self._api_client = BybitApiClient(
             api_key=exchange.api_key,
             secret=exchange.secret,
-            testnet=testnet,
+            testnet=account_type.is_testnet,
         )
 
         self._oms = OrderManagerSystem(

@@ -14,11 +14,10 @@ BYBIT_API_SECRET = CONFIG['bybit_testnet_2']['SECRET']
 
 class Demo(Strategy):
     def __init__(self):
-        super().__init__(tick_size=0.01)
+        super().__init__(tick_size=1)
         self.market = {}
 
     def _on_bookl1(self, bookl1: BookL1):
-        # print(f"BookL1: {bookl1}")
         self.market[bookl1.symbol] = bookl1
     
     def on_tick(self, tick):

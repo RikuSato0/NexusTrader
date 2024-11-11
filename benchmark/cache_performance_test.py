@@ -92,8 +92,7 @@ class CachePerformanceTester:
 
 def main():
     tester = CachePerformanceTester()
-    # 可以通过命令行参数或配置文件设置样本数
-    tester.test_single_operations(num_orders=1000)
+    tester.test_single_operations(num_orders=10000)
 
 if __name__ == "__main__":
     main()

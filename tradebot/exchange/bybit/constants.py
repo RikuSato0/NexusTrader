@@ -18,6 +18,8 @@ class BybitAccountType(AccountType):
     LINEAR_TESTNET = "LINEAR_TESTNET"
     INVERSE_TESTNET = "INVERSE_TESTNET"
     OPTION_TESTNET = "OPTION_TESTNET"
+    ALL = "ALL"
+    ALL_TESTNET = "ALL_TESTNET"
 
     @property
     def is_testnet(self):
@@ -26,6 +28,7 @@ class BybitAccountType(AccountType):
             self.LINEAR_TESTNET,
             self.INVERSE_TESTNET,
             self.OPTION_TESTNET,
+            self.ALL_TESTNET,
         }
 
     @property

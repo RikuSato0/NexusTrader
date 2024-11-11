@@ -5,6 +5,7 @@ import certifi
 import orjson
 import warnings
 import aiohttp
+
 # import ccxt.pro as ccxtpro
 import ccxt
 from abc import ABC, abstractmethod
@@ -25,6 +26,7 @@ from tradebot.constants import AccountType, OrderStatus
 from tradebot.types import Order
 from tradebot.entity import Cache
 from tradebot.exceptions import OrderError, ExchangeResponseError
+from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
 from picows import (
     ws_connect,
     WSFrame,
@@ -399,8 +401,10 @@ class Listener(WSListener):
                     self.msg_queue.put_nowait(frame.get_payload_as_bytes())
                     return
                 case WSMsgType.CLOSE:
-                    self._log.debug(f"Received close frame. {str(frame.get_payload_as_bytes())}")
-                    return       
+                    self._log.debug(
+                        f"Received close frame. {str(frame.get_payload_as_bytes())}"
+                    )
+                    return
         except Exception as e:
             self._log.error(f"Error processing message: {str(e)}")
 
@@ -760,6 +764,24 @@ class PrivateConnector(ABC):
         return self._account_type
 
     @abstractmethod
+    async def create_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        amount: Decimal,
+        price: Decimal,
+        time_in_force: TimeInForce,
+        position_side: PositionSide,
+        **kwargs,
+    ):
+        pass
+    
+    @abstractmethod
+    async def cancel_order(self, symbol: str, order_id: str, **kwargs):
+        pass
+
+    @abstractmethod
     async def connect(self):
         pass
 
@@ -800,14 +822,14 @@ class OrderManagerSystem:
         )
         self._cache = cache
         self._order_msg_queue: asyncio.Queue[Order] = asyncio.Queue()
-    
+
     def add_order_msg(self, order: Order):
         self._order_msg_queue.put_nowait(order)
-    
+
     async def handle_order_event(self):
         while True:
             order = await self._order_msg_queue.get()
-            
+
             match order.status:
                 case OrderStatus.PENDING:
                     self._log.debug(f"ORDER STATUS PENDING: {str(order)}")
@@ -815,12 +837,12 @@ class OrderManagerSystem:
                 case OrderStatus.CANCELING:
                     self._log.debug(f"ORDER STATUS CANCELING: {str(order)}")
                     self._cache.order_status_update(order)
-                case OrderStatus.ACCEPTED: 
+                case OrderStatus.ACCEPTED:
                     self._log.debug(f"ORDER STATUS ACCEPTED: {str(order)}")
                     self._cache.order_status_update(order)
                 case OrderStatus.PARTIALLY_FILLED:
                     self._log.debug(f"ORDER STATUS PARTIALLY FILLED: {str(order)}")
-                    self._cache.order_status_update(order)    
+                    self._cache.order_status_update(order)
                 case OrderStatus.CANCELED:
                     self._log.debug(f"ORDER STATUS CANCELED: {str(order)}")
                     self._cache.order_status_update(order)

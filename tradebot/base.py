@@ -475,7 +475,7 @@ class WSClient(ABC):
             except Exception as e:
                 self._log.error(f"Connection error: {e}")
             finally:
-                self._log.info("Websocket reconnecting...")
+                self._log.debug("Websocket reconnecting...")
                 self._transport, self._listener = None, None
                 await asyncio.sleep(self._reconnect_interval)
 

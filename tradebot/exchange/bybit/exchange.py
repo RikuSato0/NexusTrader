@@ -48,4 +48,3 @@ class BybitExchangeManager(ExchangeManager):
     #             self.market_id[f"{v['id']}_linear"] = v
     #         elif v["inverse"]:
     #             self.market_id[f"{v['id']}_inverse"] = v
-

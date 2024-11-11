@@ -87,7 +87,6 @@ class BybitOrderStatus(Enum):
     CANCELED = "Cancelled"
     UNTRIGGERED = "Untriggered"
     TRIGGERED = "Triggered"
-    UNTRIGGERED = "Untriggered"
     DEACTIVATED = "Deactivated"
 
 

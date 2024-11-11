@@ -173,7 +173,7 @@ class BybitPrivateConnector(PrivateConnector):
     def _ws_msg_handler(self, raw: bytes):
         try:
             ws_msg = self._ws_msg_general_decoder.decode(raw)
-            if ws_msg.ret_msg == "pong":
+            if ws_msg.op == "pong":
                 self._ws_client._transport.notify_user_specific_pong_received()
                 self._log.debug(f"Pong received {str(ws_msg)}")
                 return
@@ -182,9 +182,10 @@ class BybitPrivateConnector(PrivateConnector):
                 return
             if "order" in ws_msg.topic:
                 self._parse_order_update(raw)
-
-        except Exception:
+        except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
+        except Exception as e:
+            self._log.error(e)
 
     async def create_order(
         self,
@@ -212,8 +213,8 @@ class BybitPrivateConnector(PrivateConnector):
         params = {
             "category": category,
             "symbol": symbol,
-            "side": BybitEnumParser.to_bybit_order_type(type).value,
-            "type": BybitEnumParser.to_bybit_order_side(side).value,
+            "order_type": BybitEnumParser.to_bybit_order_type(type).value,
+            "side": BybitEnumParser.to_bybit_order_side(side).value,
             "qty": str(amount),
         }
         
@@ -234,7 +235,7 @@ class BybitPrivateConnector(PrivateConnector):
                 id = res.result.orderId,
                 client_order_id=res.result.orderLinkId,
                 timestamp=res.time,
-                symbol=symbol,
+                symbol=market.symbol,
                 type=type,
                 side=side,
                 amount=amount,
@@ -259,7 +260,6 @@ class BybitPrivateConnector(PrivateConnector):
                 position_side=position_side,
                 status=OrderStatus.FAILED,
             )
-            
             return order
             
     def _parse_order_update(self, raw: bytes):
@@ -277,13 +277,13 @@ class BybitPrivateConnector(PrivateConnector):
             order = Order(
                 exchange=self._exchange_id,
                 symbol=market.symbol,
-                status=BybitEnumParser.to_bybit_order_status(data.orderStatus),
+                status=BybitEnumParser.parse_order_status(data.orderStatus),
                 id = data.orderId,
                 client_order_id=data.orderLinkId,
                 timestamp=data.updatedTime,
-                type=BybitEnumParser.to_bybit_order_type(data.orderType),
-                side=BybitEnumParser.to_bybit_order_side(data.side),
-                time_in_force=BybitEnumParser.to_bybit_time_in_force(data.timeInForce),
+                type=BybitEnumParser.parse_order_type(data.orderType),
+                side=BybitEnumParser.parse_order_side(data.side),
+                time_in_force=BybitEnumParser.parse_time_in_force(data.timeInForce),
                 price=float(data.price),
                 average=float(data.avgPrice) if data.avgPrice else None,
                 amount=Decimal(data.qty),
@@ -293,6 +293,11 @@ class BybitPrivateConnector(PrivateConnector):
                 fee_currency=data.feeCurrency,
                 cum_cost=float(data.cumExecValue),
                 reduce_only=data.reduceOnly,
+                position_side=BybitEnumParser.parse_position_side(data.positionIdx),
             )
             
             self._oms.add_order_msg(order)
+    
+    async def disconnect(self):
+        await super().disconnect()
+        await self._api_client.close_session()

@@ -13,6 +13,7 @@ from tradebot.exchange.bybit.constants import (
     BybitTriggerType,
     BybitStopOrderType,
     BybitTriggerDirection,
+    BybitPositionSide,
 )
 
 
@@ -41,11 +42,11 @@ class BybitResponse(msgspec.Struct, frozen=True):
 
 class BybitWsMessageGeneral(msgspec.Struct):
     success: bool | None = None
-    conn_id: str | None = None
-    op: str | None = None
-    topic: str | None = None
-    success: bool | None = None
-    ret_msg: str | None = None
+    conn_id: str = ""
+    op: str = ""
+    topic: str = ""
+    ret_msg: str = ""
+    args: list[str] = []
 
 
 class BybitWsOrderbookDepth(msgspec.Struct):
@@ -133,7 +134,7 @@ class BybitWsOrder(msgspec.Struct):
     cumExecValue: str
     avgPrice: str
     blockTradeId: str
-    positionIdx: int
+    positionIdx: BybitPositionSide
     cumExecFee: str
     createdTime: str
     updatedTime: str
@@ -306,7 +307,7 @@ class BybitMarketInfo(msgspec.Struct):
     upperFundingRate: str | None = None
     lowerFundingRate: str | None = None
     isPreListing: bool | None = None
-    preListingInfo: str | None = None
+    preListingInfo: dict | None = None
 
 
 class BybitMarket(msgspec.Struct):

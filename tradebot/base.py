@@ -19,11 +19,13 @@ from urllib.parse import urljoin, urlencode
 from asynciolimiter import Limiter
 from ccxt.base.errors import RequestTimeout
 from aiohttp.client_exceptions import ClientResponseError, ClientError
+from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
 
 
 from tradebot.log import SpdLog
+from tradebot.entity import EventSystem
 from tradebot.constants import AccountType, OrderStatus
-from tradebot.types import Order
+from tradebot.types import Order, BaseMarket
 from tradebot.entity import Cache
 from tradebot.exceptions import OrderError, ExchangeResponseError
 from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
@@ -49,8 +51,8 @@ class ExchangeManager(ABC):
             name=type(self).__name__, level="INFO", flush=True
         )
         self.is_testnet = config.get("sandbox", False)
-        self.market = {}
-        self.market_id = {}
+        self.market: Dict[str, BaseMarket] = {}
+        self.market_id: Dict[str, BaseMarket] = {}
 
         if not self.api_key or not self.secret:
             warnings.warn(
@@ -705,8 +707,8 @@ class PublicConnector(ABC):
     def __init__(
         self,
         account_type,
-        market: Dict[str, Any],
-        market_id: Dict[str, Any],
+        market: Dict[str, BaseMarket],
+        market_id: Dict[str, BaseMarket],
         exchange_id: str,
         ws_client: WSClient,
     ):
@@ -743,8 +745,8 @@ class PrivateConnector(ABC):
     def __init__(
         self,
         account_type,
-        market: Dict[str, Any],
-        market_id: Dict[str, Any],
+        market: Dict[str, BaseMarket],
+        market_id: Dict[str, BaseMarket],
         exchange_id: str,
         ws_client: WSClient,
     ):
@@ -788,6 +790,37 @@ class PrivateConnector(ABC):
     async def disconnect(self):
         await self._ws_client.disconnect()
         await self._task_manager.cancel()
+        
+    def amount_to_precision(self, symbol: str, amount: float, mode: Literal["round", "ceil", "floor"] = "round") -> Decimal:
+        market = self._market[symbol]
+        amount: Decimal = Decimal(str(amount))
+        decimal = market.precision.amount
+        decimal = 1 if decimal == 1.0 else decimal
+        precision = Decimal(str(decimal))
+        if mode == 'round':
+            amount = amount.quantize(precision, rounding=ROUND_HALF_UP)
+        elif mode == 'ceil':
+            amount = amount.quantize(precision, rounding=ROUND_CEILING)
+        elif mode == 'floor':
+            amount = amount.quantize(precision, rounding=ROUND_FLOOR)
+        if amount == 0:
+            raise ValueError(f"Amount must be greater than the minimum decimal: {decimal}")
+        return amount
+    
+    def price_to_precision(self, symbol: str, price: float, mode: Literal["round", "ceil", "floor"] = "round") -> Decimal:
+        market = self._market[symbol]
+        price: Decimal = Decimal(str(price))
+        
+        decimal = market.precision.price
+        decimal = 1 if decimal == 1.0 else decimal
+        precision = Decimal(str(decimal))
+        
+        if mode == 'round':
+            return price.quantize(precision, rounding=ROUND_HALF_UP)
+        elif mode == 'ceil':
+            return price.quantize(precision, rounding=ROUND_CEILING)
+        elif mode == 'floor':
+            return price.quantize(precision, rounding=ROUND_FLOOR)
 
 
 class TaskManager:
@@ -840,15 +873,19 @@ class OrderManagerSystem:
                 case OrderStatus.ACCEPTED:
                     self._log.debug(f"ORDER STATUS ACCEPTED: {str(order)}")
                     self._cache.order_status_update(order)
+                    EventSystem.emit(OrderStatus.ACCEPTED, order)
                 case OrderStatus.PARTIALLY_FILLED:
                     self._log.debug(f"ORDER STATUS PARTIALLY FILLED: {str(order)}")
                     self._cache.order_status_update(order)
+                    EventSystem.emit(OrderStatus.PARTIALLY_FILLED, order)
                 case OrderStatus.CANCELED:
                     self._log.debug(f"ORDER STATUS CANCELED: {str(order)}")
                     self._cache.order_status_update(order)
+                    EventSystem.emit(OrderStatus.CANCELED, order)
                 case OrderStatus.FILLED:
                     self._log.debug(f"ORDER STATUS FILLED: {str(order)}")
                     self._cache.order_status_update(order)
+                    EventSystem.emit(OrderStatus.FILLED, order)
                 case OrderStatus.EXPIRED:
                     self._log.debug(f"ORDER STATUS EXPIRED: {str(order)}")
                     self._cache.order_status_update(order)

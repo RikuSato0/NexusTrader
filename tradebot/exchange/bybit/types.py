@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Final
 from typing import Dict, Any
 from tradebot.constants import AssetType
-from tradebot.types import Precision, Limit, MarginMode, Order
+from tradebot.types import Precision, Limit, MarginMode, BaseMarket
 from tradebot.exchange.bybit.constants import (
     BybitProductType,
     BybitOrderSide,
@@ -310,7 +310,7 @@ class BybitMarketInfo(msgspec.Struct):
     preListingInfo: dict | None = None
 
 
-class BybitMarket(msgspec.Struct):
+class BybitMarket(BaseMarket):
     """
     "BTC/USDT": {
         "id": "BTCUSDT",

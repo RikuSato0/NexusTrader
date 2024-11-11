@@ -111,7 +111,7 @@ class BybitPublicConnector(PublicConnector):
 
     async def subscribe_bookl1(self, symbol: str):
         market = self._market.get(symbol, None)
-        symbol = market["id"] if market else symbol
+        symbol = market.id if market else symbol
         await self._ws_client.subscribe_order_book(symbol, depth=1)
 
     async def subscribe_trade(self, symbol: str):

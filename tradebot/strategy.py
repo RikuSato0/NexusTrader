@@ -1,10 +1,12 @@
 from typing import Dict
 from decimal import Decimal
+from typing import Literal
 from tradebot.constants import EventType, AccountType, OrderStatus
 from tradebot.base import Clock, PublicConnector, PrivateConnector
 from tradebot.entity import EventSystem
 from tradebot.types import BookL1, Trade, Kline, Order
 from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
+
 
 class Strategy:
     def __init__(self, tick_size=0.01):
@@ -15,10 +17,10 @@ class Strategy:
         EventSystem.on(EventType.TRADE, self._on_trade)
         EventSystem.on(EventType.BOOKL1, self._on_bookl1)
         EventSystem.on(EventType.KLINE, self._on_kline)
-        # EventSystem.on(OrderStatus.NEW, self._on_new_order)
-        # EventSystem.on(OrderStatus.PARTIALLY_FILLED, self._on_partially_filled_order)
-        # EventSystem.on(OrderStatus.FILLED, self._on_filled_order)
-        # EventSystem.on(OrderStatus.CANCELED, self._on_canceled_order)
+        EventSystem.on(OrderStatus.ACCEPTED, self._on_accepted_order)
+        EventSystem.on(OrderStatus.PARTIALLY_FILLED, self._on_partially_filled_order)
+        EventSystem.on(OrderStatus.FILLED, self._on_filled_order)
+        EventSystem.on(OrderStatus.CANCELED, self._on_canceled_order)
 
     async def create_order(
         self,
@@ -43,16 +45,38 @@ class Strategy:
         }
         params.update(kwargs)
         return await self._private_connectors[account_type].create_order(**params)
-    
-    async def cancel_order(self, account_type: AccountType, symbol: str, order_id: str, **kwargs):
+
+    async def cancel_order(
+        self, account_type: AccountType, symbol: str, order_id: str, **kwargs
+    ):
         params = {
             "symbol": symbol,
             "order_id": order_id,
         }
         params.update(kwargs)
         return await self._private_connectors[account_type].cancel_order(**params)
-        
-        
+
+    def price_to_precision(
+        self,
+        account_type: AccountType,
+        symbol: str,
+        price: float,
+        mode: Literal["round", "ceil", "floor"] = "round",
+    ) -> Decimal:
+        return self._private_connectors[account_type].price_to_precision(
+            symbol, price, mode
+        )
+
+    def amount_to_precision(
+        self,
+        account_type: AccountType,
+        symbol: str,
+        amount: float,
+        mode: Literal["round", "ceil", "floor"] = "round",
+    ) -> Decimal:
+        return self._private_connectors[account_type].amount_to_precision(
+            symbol, amount, mode
+        )
 
     def add_public_connector(self, connector: PublicConnector):
         self._pulic_connectors[connector.account_type] = connector
@@ -72,9 +96,9 @@ class Strategy:
     async def run(self):
         await self._clock.run()
 
-    def _on_new_order(self, order: Order):
-        if hasattr(self, "on_new_order"):
-            self.on_new_order(order)
+    def _on_accepted_order(self, order: Order):
+        if hasattr(self, "on_accepted_order"):
+            self.on_accepted_order(order)
 
     def _on_partially_filled_order(self, order: Order):
         if hasattr(self, "on_partially_filled_order"):
@@ -100,6 +124,6 @@ class Strategy:
         if hasattr(self, "on_kline"):
             self.on_kline(kline)
 
-    def _on_tick(self, tick):
+    async def _on_tick(self, tick):
         if hasattr(self, "on_tick"):
-            self.on_tick(tick)
+            await self.on_tick(tick)

@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Tuple
 from typing import Literal, Optional
 from msgspec import Struct, field
-from tradebot.constants import OrderSide, OrderType, TimeInForce, OrderStatus, PositionSide
+from tradebot.constants import OrderSide, OrderType, TimeInForce, OrderStatus, PositionSide, AssetType
 
 
 class BookL1(Struct, gc=False):
@@ -222,3 +222,41 @@ class Limit(Struct):
 class MarginMode(Struct):
     isolated: bool | None
     cross: bool | None
+
+class BaseMarket(Struct):
+    """Base market structure for all exchanges."""
+    id: str
+    lowercaseId: str | None
+    symbol: str
+    base: str
+    quote: str
+    settle: str | None
+    baseId: str
+    quoteId: str
+    settleId: str | None
+    type: AssetType
+    spot: bool
+    margin: bool | None
+    swap: bool
+    future: bool
+    option: bool
+    index: bool | str | None
+    active: bool
+    contract: bool
+    linear: bool | None
+    inverse: bool | None
+    subType: AssetType | None
+    taker: float
+    maker: float
+    contractSize: float | None
+    expiry: int | None
+    expiryDatetime: str | None
+    strike: float | str | None
+    optionType: str | None
+    precision: Precision
+    limits: Limit
+    marginModes: MarginMode
+    created: int | None
+    tierBased: bool
+    percentage: bool
+    feeSide: str

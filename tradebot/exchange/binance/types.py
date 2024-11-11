@@ -1,6 +1,6 @@
 import msgspec
 from typing import Any, Dict, List
-from tradebot.types import Order, Precision, Limit, MarginMode
+from tradebot.types import Order, Precision, Limit, MarginMode, BaseMarket
 from tradebot.constants import OrderSide, TimeInForce, AssetType
 from tradebot.exchange.binance.constants import BinanceOrderStatus, BinanceOrderType, BinancePositionSide
 
@@ -402,7 +402,7 @@ class BinanceMarketInfo(msgspec.Struct):
     allowedSelfTradePreventionModes: List[str] = None
 
 
-class BinanceMarket(msgspec.Struct):
+class BinanceMarket(BaseMarket):
     """
      {
     "id": "ETHBTC",
@@ -749,7 +749,7 @@ class BinanceMarket(msgspec.Struct):
   },
     """
     id: str
-    lowercaseId: str
+    lowercaseId: str | None
     symbol: str
     base: str
     quote: str

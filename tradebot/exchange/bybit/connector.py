@@ -1,22 +1,35 @@
 import msgspec
+from typing import Dict
+from decimal import Decimal
 from collections import defaultdict
-from tradebot.base import PublicConnector, PrivateConnector
+from tradebot.base import PublicConnector, PrivateConnector, OrderManagerSystem
 from tradebot.entity import EventSystem
-from tradebot.types import BookL1
-from tradebot.constants import EventType
+from tradebot.types import BookL1, Order
+from tradebot.constants import (
+    EventType,
+    OrderSide,
+    OrderStatus,
+    OrderType,
+    TimeInForce,
+    PositionSide,
+)
 from tradebot.exchange.bybit.types import (
     BybitWsMessageGeneral,
     BybitWsOrderMsg,
     BybitWsOrderbookDepthMsg,
     BybitOrderBook,
+    BybitMarket
 )
+from tradebot.entity import Cache
+from tradebot.exchange.bybit.rest_api import BybitApiClient
 from tradebot.exchange.bybit.websockets import BybitWSClient
-from tradebot.exchange.bybit.constants import BybitAccountType
+from tradebot.exchange.bybit.constants import BybitAccountType, BybitEnumParser, BybitOrderType, BybitProductType
 from tradebot.exchange.bybit.exchange import BybitExchangeManager
 
 
 class BybitPublicConnector(PublicConnector):
     _ws_client: BybitWSClient
+    _account_type: BybitAccountType
 
     def __init__(
         self,
@@ -100,14 +113,23 @@ class BybitPublicConnector(PublicConnector):
 
 class BybitPrivateConnector(PrivateConnector):
     _ws_client: BybitWSClient
+    _account_type: BybitAccountType
+    _market: Dict[str, BybitMarket]
+    _market_id: Dict[str, BybitMarket]
 
     def __init__(
         self,
         exchange: BybitExchangeManager,
         testnet: bool = False,
+        strategy_id: str = None,
+        user_id: str = None,
     ):
         # all the private endpoints are the same for all account types, so no need to pass account_type
         # only need to determine if it's testnet or not
+        
+        if not exchange.api_key or not exchange.secret:
+            raise ValueError("API key and secret are required for private endpoints")
+        
         if testnet:
             account_type = BybitAccountType.SPOT_TESTNET
         else:
@@ -124,11 +146,29 @@ class BybitPrivateConnector(PrivateConnector):
                 secret=exchange.secret,
             ),
         )
+
+        self.cache = Cache(
+            account_type="BYBIT",
+            strategy_id=strategy_id,
+            user_id=user_id,
+        )
+        
+        self._api_client = BybitApiClient(
+            api_key=exchange.api_key,
+            secret=exchange.secret,
+            testnet=testnet,
+        )
+        
+        self._oms = OrderManagerSystem(
+            cache=self.cache,
+        )
+        
         self._ws_msg_general_decoder = msgspec.json.Decoder(BybitWsMessageGeneral)
         self._ws_msg_order_update_decoder = msgspec.json.Decoder(BybitWsOrderMsg)
-
+        
     async def connect(self):
         await self._ws_client.subscribe_order(topic="order")
+        self._task_manager.create_task(self._oms.handle_order_event())
 
     def _ws_msg_handler(self, raw: bytes):
         try:
@@ -145,6 +185,114 @@ class BybitPrivateConnector(PrivateConnector):
 
         except Exception:
             self._log.error(f"Error decoding message: {str(raw)}")
-    
+
+    async def create_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        amount: Decimal,
+        price: Decimal = None,
+        time_in_force: TimeInForce = TimeInForce.GTC,
+        position_side: PositionSide = None,
+        **kwargs,
+    ):
+        market = self._market.get(symbol)
+        if not market:
+            raise ValueError(f"Symbol {symbol} is not supported")
+        symbol = market.id
+        
+        if market.spot:
+            category = "spot"
+        elif market.linear:
+            category = "linear"
+        elif market.inverse:
+            category = "inverse"
+        
+        params = {
+            "category": category,
+            "symbol": symbol,
+            "side": BybitEnumParser.to_bybit_order_type(type).value,
+            "type": BybitEnumParser.to_bybit_order_side(side).value,
+            "qty": str(amount),
+        }
+        
+        if type == OrderType.LIMIT:
+            params["price"] = str(price)
+            params["timeInForce"] = BybitEnumParser.to_bybit_time_in_force(time_in_force).value
+        
+        if position_side:
+            params["positionSide"] = BybitEnumParser.to_bybit_position_side(position_side).value
+        
+        params.update(kwargs)
+
+        try:
+            res = await self._api_client.post_v5_order_create(**params)
+        
+            order = Order(
+                exchange=self._exchange_id,
+                id = res.result.orderId,
+                client_order_id=res.result.orderLinkId,
+                timestamp=res.time,
+                symbol=symbol,
+                type=type,
+                side=side,
+                amount=amount,
+                price=price,
+                time_in_force=time_in_force,
+                position_side=position_side,
+                status=OrderStatus.PENDING,
+            )
+            self._oms.add_order_msg(order)
+            return order
+        except Exception as e:
+            self._log.error(f"Error creating order: {e} params: {str(params)}")
+            order = Order(
+                exchange=self._exchange_id,
+                timestamp=self._clock.timestamp_ms(),
+                symbol=symbol,
+                type=type,
+                side=side,
+                amount=amount,
+                price=price,
+                time_in_force=time_in_force,
+                position_side=position_side,
+                status=OrderStatus.FAILED,
+            )
+            
+            return order
+            
     def _parse_order_update(self, raw: bytes):
         order_msg = self._ws_msg_order_update_decoder.decode(raw)
+        for data in order_msg.data:
+            category = data.category
+            if category == BybitProductType.SPOT:
+                id = data.symbol + "_spot"
+            elif category == BybitProductType.LINEAR:
+                id = data.symbol + "_linear"
+            elif category == BybitProductType.INVERSE:
+                id = data.symbol + "_inverse"
+            market = self._market_id[id]
+    
+            order = Order(
+                exchange=self._exchange_id,
+                symbol=market.symbol,
+                status=BybitEnumParser.to_bybit_order_status(data.orderStatus),
+                id = data.orderId,
+                client_order_id=data.orderLinkId,
+                timestamp=data.updatedTime,
+                type=BybitEnumParser.to_bybit_order_type(data.orderType),
+                side=BybitEnumParser.to_bybit_order_side(data.side),
+                time_in_force=BybitEnumParser.to_bybit_time_in_force(data.timeInForce),
+                price=float(data.price),
+                average=float(data.avgPrice) if data.avgPrice else None,
+                amount=Decimal(data.qty),
+                filled=Decimal(data.cumExecQty),
+                remaining=Decimal(data.leavesQty),
+                fee=float(data.cumExecFee),
+                fee_currency=data.feeCurrency,
+                cum_cost=float(data.cumExecValue),
+                reduce_only=data.reduceOnly,
+            )
+            
+            self._oms.add_order_msg(order)

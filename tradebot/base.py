@@ -8,7 +8,7 @@ import aiohttp
 # import ccxt.pro as ccxtpro
 import ccxt
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Set
 from typing import Callable, Literal
 from collections import defaultdict
 from decimal import Decimal
@@ -21,6 +21,9 @@ from aiohttp.client_exceptions import ClientResponseError, ClientError
 
 
 from tradebot.log import SpdLog
+from tradebot.constants import AccountType, OrderStatus
+from tradebot.types import Order
+from tradebot.entity import Cache
 from tradebot.exceptions import OrderError, ExchangeResponseError
 from picows import (
     ws_connect,
@@ -750,6 +753,7 @@ class PrivateConnector(ABC):
         self._exchange_id = exchange_id
         self._task_manager = TaskManager()
         self._ws_client = ws_client
+        self._clock = LiveClock()
 
     @property
     def account_type(self):
@@ -787,3 +791,43 @@ class TaskManager:
         for task in self._tasks:
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
+
+
+class OrderManagerSystem:
+    def __init__(self, cache: Cache):
+        self._log = SpdLog.get_logger(
+            name=type(self).__name__, level="DEBUG", flush=True
+        )
+        self._cache = cache
+        self._order_msg_queue: asyncio.Queue[Order] = asyncio.Queue()
+    
+    def add_order_msg(self, order: Order):
+        self._order_msg_queue.put_nowait(order)
+    
+    async def handle_order_event(self):
+        while True:
+            order = await self._order_msg_queue.get()
+            
+            match order.status:
+                case OrderStatus.PENDING:
+                    self._log.debug(f"ORDER STATUS PENDING: {str(order)}")
+                    self._cache.order_initialized(order)
+                case OrderStatus.CANCELING:
+                    self._log.debug(f"ORDER STATUS CANCELING: {str(order)}")
+                    self._cache.order_status_update(order)
+                case OrderStatus.ACCEPTED: 
+                    self._log.debug(f"ORDER STATUS ACCEPTED: {str(order)}")
+                    self._cache.order_status_update(order)
+                case OrderStatus.PARTIALLY_FILLED:
+                    self._log.debug(f"ORDER STATUS PARTIALLY FILLED: {str(order)}")
+                    self._cache.order_status_update(order)    
+                case OrderStatus.CANCELED:
+                    self._log.debug(f"ORDER STATUS CANCELED: {str(order)}")
+                    self._cache.order_status_update(order)
+                case OrderStatus.FILLED:
+                    self._log.debug(f"ORDER STATUS FILLED: {str(order)}")
+                    self._cache.order_status_update(order)
+                case OrderStatus.EXPIRED:
+                    self._log.debug(f"ORDER STATUS EXPIRED: {str(order)}")
+                    self._cache.order_status_update(order)
+            self._order_msg_queue.task_done()

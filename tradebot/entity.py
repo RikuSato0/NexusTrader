@@ -11,12 +11,18 @@ from pathlib import Path
 from decimal import Decimal
 from collections import defaultdict
 from typing import Literal, Callable, Union, Optional
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Set
 from dataclasses import dataclass, field, asdict
 
 import redis
 import orjson
 import spdlog as spd
+import msgspec
+
+from tradebot.constants import OrderStatus, AccountType
+from tradebot.types import Order
+
+
 
 @dataclass
 class Order:
@@ -499,7 +505,48 @@ class LogRegister:
     def __del__(self):
         self.close_all_loggers()
 
-
+class Cache:
+    def __init__(self, account_type: AccountType, strategy_id: str, user_id: str, redis_client: redis.Redis):
+        self._r = redis_client
+        self._orders = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:orders"
+        self._open_orders = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:open_orders"
+        self._symbol_orders = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:symbol_orders"
+    
+    def _encode_order(self, order: Order) -> bytes:
+        return msgspec.json.encode(order)
+    
+    def _decode_order(self, data: bytes) -> Order:
+        return msgspec.json.decode(data, type=Order)
+    
+    def order_initialized(self, order: Order):
+        self._r.hset(self._orders, order.id, self._encode_order(order))
+        self._r.sadd(self._open_orders, order.id)
+        self._r.sadd(f"{self._symbol_orders}:{order.symbol}", order.id)
+    
+    def order_status_update(self, order: Order):
+        self._r.hset(self._orders, order.id, self._encode_order(order))
+        
+        if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED, OrderStatus.EXPIRED):
+            self._r.srem(self._open_orders, order.id)
+    
+    def get_order(self, order_id: str) -> Order:
+        order_data = self._r.hget(self._orders, order_id)
+        if order_data:
+            return self._decode_order(order_data)
+        raise KeyError(f"Order {order_id} not found in cache.")
+    
+    def get_symbol_orders(self, symbol: str) -> Set[str]:
+        orders = self._r.smembers(f"{self._symbol_orders}:{symbol}")
+        if orders:
+            return {order_id.decode() for order_id in orders}
+        raise KeyError(f"Symbol {symbol} not found in cache.")
+    
+    def get_open_orders(self) -> Set[str]:
+        orders = self._r.smembers(self._open_orders)
+        if orders:
+            return {order_id.decode() for order_id in orders}
+        return set()
+    
 redis_pool = RedisPool()
 # log_register = LogRegister()
 market = MarketDataStore()

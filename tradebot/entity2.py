@@ -1,10 +1,10 @@
 import socket
 import redis
 import msgspec
+from typing import Dict, Set
 from decimal import Decimal
-
 from tradebot.constants import AccountType
-from tradebot.types import Asset
+from tradebot.types import Asset, Order
 
 
 class RedisPool:

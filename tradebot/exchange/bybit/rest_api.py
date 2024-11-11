@@ -131,7 +131,7 @@ class BybitApiClient(ApiClient):
             self._log.error(f"Error {method} Url: {url} {e}")
             raise
     
-    async def post_v5_order_create(self, category: str, symbol: str, side: str, order_type: str, qty: Decimal, **kwargs):
+    async def post_v5_order_create(self, category: str, symbol: str, side: str, order_type: str, qty: Decimal, **kwargs) -> BybitOrderResponse:
         """
         https://bybit-exchange.github.io/docs/v5/order/create-order
         """
@@ -147,7 +147,7 @@ class BybitApiClient(ApiClient):
         raw = await self._fetch("POST", self._base_url, endpoint, payload, signed=True)
         return self._order_response_decoder.decode(raw)
         
-    async def post_v5_order_cancel(self, category: str, symbol: str, **kwargs):
+    async def post_v5_order_cancel(self, category: str, symbol: str, **kwargs) -> BybitOrderResponse:
         """
         https://bybit-exchange.github.io/docs/v5/order/cancel-order
         """

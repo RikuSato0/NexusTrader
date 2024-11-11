@@ -65,13 +65,13 @@ class IndexPrice(Struct, gc=False):
 
 class Order(Struct):
     exchange: str
-    id: int
-    client_order_id: str
-    timestamp: int
     symbol: str
-    type: OrderType
-    side: OrderSide
-    status: OrderStatus
+    status: OrderStatus 
+    id: int = None
+    client_order_id: str = None
+    timestamp: int = None
+    type: OrderType = None
+    side: OrderSide = None
     time_in_force: Optional[TimeInForce] = None
     price: Optional[float] = None
     average: Optional[float] = None
@@ -83,9 +83,9 @@ class Order(Struct):
     fee: Optional[float] = None
     fee_currency: Optional[str] = None
     cost: Optional[float] = None
+    cum_cost: Optional[float] = None
     reduce_only: Optional[bool] = None
     position_side: Optional[PositionSide] = None
-    leverage: Optional[int] = None
 
 
 class Asset(Struct):

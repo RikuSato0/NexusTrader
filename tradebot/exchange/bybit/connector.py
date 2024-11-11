@@ -18,12 +18,17 @@ from tradebot.exchange.bybit.types import (
     BybitWsOrderMsg,
     BybitWsOrderbookDepthMsg,
     BybitOrderBook,
-    BybitMarket
+    BybitMarket,
 )
 from tradebot.entity import Cache
 from tradebot.exchange.bybit.rest_api import BybitApiClient
 from tradebot.exchange.bybit.websockets import BybitWSClient
-from tradebot.exchange.bybit.constants import BybitAccountType, BybitEnumParser, BybitOrderType, BybitProductType
+from tradebot.exchange.bybit.constants import (
+    BybitAccountType,
+    BybitEnumParser,
+    BybitOrderType,
+    BybitProductType,
+)
 from tradebot.exchange.bybit.exchange import BybitExchangeManager
 
 
@@ -126,10 +131,10 @@ class BybitPrivateConnector(PrivateConnector):
     ):
         # all the private endpoints are the same for all account types, so no need to pass account_type
         # only need to determine if it's testnet or not
-        
+
         if not exchange.api_key or not exchange.secret:
             raise ValueError("API key and secret are required for private endpoints")
-        
+
         if testnet:
             account_type = BybitAccountType.SPOT_TESTNET
         else:
@@ -152,20 +157,20 @@ class BybitPrivateConnector(PrivateConnector):
             strategy_id=strategy_id,
             user_id=user_id,
         )
-        
+
         self._api_client = BybitApiClient(
             api_key=exchange.api_key,
             secret=exchange.secret,
             testnet=testnet,
         )
-        
+
         self._oms = OrderManagerSystem(
             cache=self.cache,
         )
-        
+
         self._ws_msg_general_decoder = msgspec.json.Decoder(BybitWsMessageGeneral)
         self._ws_msg_order_update_decoder = msgspec.json.Decoder(BybitWsOrderMsg)
-        
+
     async def connect(self):
         await self._ws_client.subscribe_order(topic="order")
         self._task_manager.create_task(self._oms.handle_order_event())
@@ -187,6 +192,53 @@ class BybitPrivateConnector(PrivateConnector):
         except Exception as e:
             self._log.error(e)
 
+    def _get_category(self, market: BybitMarket):
+        if market.spot:
+            return "spot"
+        elif market.linear:
+            return "linear"
+        elif market.inverse:
+            return "inverse"
+        else:
+            raise ValueError(f"Unsupported market type: {market.type}")
+
+    async def cancel_order(self, symbol: str, order_id: str, **kwargs):
+        try:
+            market = self._market.get(symbol)
+            if not market:
+                raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
+            symbol = market.id
+
+            category = self._get_category(market)
+
+            params = {
+                "category": category,
+                "symbol": symbol,
+                "order_id": order_id,
+                **kwargs,
+            }
+
+            res = await self._api_client.post_v5_order_cancel(**params)
+            order = Order(
+                exchange=self._exchange_id,
+                id=res.result.orderId,
+                client_order_id=res.result.orderLinkId,
+                timestamp=res.time,
+                symbol=market.symbol,
+                status=OrderStatus.CANCELING,
+            )
+            self._oms.add_order_msg(order)
+            return order
+        except Exception as e:
+            self._log.error(f"Error canceling order: {e} params: {str(params)}")
+            order = Order(
+                exchange=self._exchange_id,
+                timestamp=self._clock.timestamp_ms(),
+                symbol=symbol,
+                status=OrderStatus.FAILED,
+            )
+            return order
+
     async def create_order(
         self,
         symbol: str,
@@ -200,16 +252,11 @@ class BybitPrivateConnector(PrivateConnector):
     ):
         market = self._market.get(symbol)
         if not market:
-            raise ValueError(f"Symbol {symbol} is not supported")
+            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
         symbol = market.id
-        
-        if market.spot:
-            category = "spot"
-        elif market.linear:
-            category = "linear"
-        elif market.inverse:
-            category = "inverse"
-        
+
+        category = self._get_category(market)
+
         params = {
             "category": category,
             "symbol": symbol,
@@ -217,22 +264,26 @@ class BybitPrivateConnector(PrivateConnector):
             "side": BybitEnumParser.to_bybit_order_side(side).value,
             "qty": str(amount),
         }
-        
+
         if type == OrderType.LIMIT:
             params["price"] = str(price)
-            params["timeInForce"] = BybitEnumParser.to_bybit_time_in_force(time_in_force).value
-        
+            params["timeInForce"] = BybitEnumParser.to_bybit_time_in_force(
+                time_in_force
+            ).value
+
         if position_side:
-            params["positionSide"] = BybitEnumParser.to_bybit_position_side(position_side).value
-        
+            params["positionSide"] = BybitEnumParser.to_bybit_position_side(
+                position_side
+            ).value
+
         params.update(kwargs)
 
         try:
             res = await self._api_client.post_v5_order_create(**params)
-        
+
             order = Order(
                 exchange=self._exchange_id,
-                id = res.result.orderId,
+                id=res.result.orderId,
                 client_order_id=res.result.orderLinkId,
                 timestamp=res.time,
                 symbol=market.symbol,
@@ -261,7 +312,7 @@ class BybitPrivateConnector(PrivateConnector):
                 status=OrderStatus.FAILED,
             )
             return order
-            
+
     def _parse_order_update(self, raw: bytes):
         order_msg = self._ws_msg_order_update_decoder.decode(raw)
         for data in order_msg.data:
@@ -273,12 +324,12 @@ class BybitPrivateConnector(PrivateConnector):
             elif category == BybitProductType.INVERSE:
                 id = data.symbol + "_inverse"
             market = self._market_id[id]
-    
+
             order = Order(
                 exchange=self._exchange_id,
                 symbol=market.symbol,
                 status=BybitEnumParser.parse_order_status(data.orderStatus),
-                id = data.orderId,
+                id=data.orderId,
                 client_order_id=data.orderLinkId,
                 timestamp=data.updatedTime,
                 type=BybitEnumParser.parse_order_type(data.orderType),
@@ -295,9 +346,9 @@ class BybitPrivateConnector(PrivateConnector):
                 reduce_only=data.reduceOnly,
                 position_side=BybitEnumParser.parse_position_side(data.positionIdx),
             )
-            
+
             self._oms.add_order_msg(order)
-    
+
     async def disconnect(self):
         await super().disconnect()
         await self._api_client.close_session()

@@ -86,7 +86,10 @@ class Order(Struct):
     cum_cost: Optional[float] = None
     reduce_only: Optional[bool] = None
     position_side: Optional[PositionSide] = None
-
+    
+    @property
+    def success(self) -> bool:
+        return self.status != OrderStatus.FAILED
 
 class Asset(Struct):
     """

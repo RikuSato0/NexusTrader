@@ -117,17 +117,18 @@ class SpdLog:
             logger.drop()
 
     @classmethod
-    def initialize(cls, log_dir: str = ".logs", async_mode: bool = True):
+    def initialize(cls, log_dir: str = ".logs", async_mode: bool = True, setup_error_handlers: bool = True):
         """
         Initialize the log registry.
 
-        :param setup_global_handlers: Whether to set up global exception handlers
+        :param setup_error_handlers: Whether to set up global exception handlers
         :param log_dir: Log directory
         :param async_mode: Whether to enable asynchronous mode
         """
         cls.log_dir = Path(log_dir)
         cls.async_mode = async_mode
-        cls.setup_error_handling()
+        if setup_error_handlers:
+            cls.setup_error_handling()
 
     @classmethod
     def __del__(cls):
@@ -135,7 +136,7 @@ class SpdLog:
 
 
 if __name__ == "__main__":
-    SpdLog.initialize()  # You should initialize the logger in the main thread
+    SpdLog.initialize(setup_error_handlers=False)  # You should initialize the logger in the main thread
     logger = SpdLog.get_logger("test", level="DEBUG", flush=True)
     logger.debug("This is a debug message")
     logger.info("This is an info message")

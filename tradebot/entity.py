@@ -123,27 +123,38 @@ class EventSystem:
             await callback(*args, **kwargs)
 
 
-class RedisPool:
-    def __init__(self):
-        if self._is_in_docker():
-            self.pool = redis.ConnectionPool(host="redis", db=0, password="password")
-        else:
-            self.pool = redis.ConnectionPool(
-                host="localhost", port=6379, db=0, password="password"
-            )
-
-    def _is_in_docker(self) -> bool | None:
+class RedisClient:
+    _params = None
+    
+    @classmethod
+    def _is_in_docker(cls) -> bool:
         try:
             socket.gethostbyname("redis")
             return True
         except socket.gaierror:
             return False
-
-    def get_client(self) -> redis.Redis:
-        return redis.Redis(connection_pool=self.pool)
-
-    def close(self):
-        self.pool.close()
+    
+    @classmethod
+    def _get_params(cls) -> dict:
+        if cls._params is None:
+            if cls._is_in_docker():
+                cls._params = {
+                    "host": "redis",
+                    "db": 0,
+                    "password": "password"
+                }
+            else:
+                cls._params = {
+                    "host": "localhost",
+                    "port": 6379,
+                    "db": 0,
+                    "password": "password"
+                }
+        return cls._params
+    
+    @classmethod
+    def get_client(cls) -> redis.Redis:
+        return redis.Redis(**cls._get_params())
 
 
 @dataclass
@@ -504,10 +515,12 @@ class LogRegister:
 
     def __del__(self):
         self.close_all_loggers()
+    
+
 
 class Cache:
-    def __init__(self, account_type: AccountType, strategy_id: str, user_id: str, redis_client: redis.Redis):
-        self._r = redis_client
+    def __init__(self, account_type: AccountType, strategy_id: str, user_id: str):
+        self._r = RedisClient.get_client()  
         self._orders = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:orders"
         self._open_orders = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:open_orders"
         self._symbol_orders = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:symbol_orders"
@@ -533,13 +546,13 @@ class Cache:
         order_data = self._r.hget(self._orders, order_id)
         if order_data:
             return self._decode_order(order_data)
-        raise KeyError(f"Order {order_id} not found in cache.")
+        return None
     
     def get_symbol_orders(self, symbol: str) -> Set[str]:
         orders = self._r.smembers(f"{self._symbol_orders}:{symbol}")
         if orders:
             return {order_id.decode() for order_id in orders}
-        raise KeyError(f"Symbol {symbol} not found in cache.")
+        return set()
     
     def get_open_orders(self) -> Set[str]:
         orders = self._r.smembers(self._open_orders)
@@ -547,6 +560,5 @@ class Cache:
             return {order_id.decode() for order_id in orders}
         return set()
     
-redis_pool = RedisPool()
 # log_register = LogRegister()
-market = MarketDataStore()
+# market = MarketDataStore()

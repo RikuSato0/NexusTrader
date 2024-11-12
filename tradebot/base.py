@@ -694,13 +694,13 @@ class Clock:
                 next_tick_time = now
             self._current_tick = next_tick_time
             for callback in self._tick_callbacks:
-                try:
-                    if asyncio.iscoroutinefunction(callback):
-                        await callback(self.current_timestamp)
-                    else:
-                        callback(self.current_timestamp)
-                except Exception as e:
-                    self._log.error(f"Error in tick callback: {str(e)}")
+                # try:
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(self.current_timestamp)
+                else:
+                    callback(self.current_timestamp)
+                # except Exception as e:
+                #     self._log.error(f"Error in tick callback: {str(e)}")
 
 
 class PublicConnector(ABC):
@@ -749,6 +749,7 @@ class PrivateConnector(ABC):
         market_id: Dict[str, BaseMarket],
         exchange_id: str,
         ws_client: WSClient,
+        cache: Cache,
     ):
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="INFO", flush=True
@@ -760,6 +761,7 @@ class PrivateConnector(ABC):
         self._task_manager = TaskManager()
         self._ws_client = ws_client
         self._clock = LiveClock()
+        self.cache = cache
 
     @property
     def account_type(self):
@@ -776,11 +778,11 @@ class PrivateConnector(ABC):
         time_in_force: TimeInForce,
         position_side: PositionSide,
         **kwargs,
-    ):
+    ) -> Order:
         pass
     
     @abstractmethod
-    async def cancel_order(self, symbol: str, order_id: str, **kwargs):
+    async def cancel_order(self, symbol: str, order_id: str, **kwargs) -> Order:
         pass
 
     @abstractmethod

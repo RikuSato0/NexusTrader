@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict
 from decimal import Decimal
 from typing import Literal
@@ -30,7 +31,7 @@ class Strategy:
         type: OrderType,
         amount: Decimal,
         price: Decimal = None,
-        time_in_force: TimeInForce = None,
+        time_in_force: TimeInForce = TimeInForce.GTC,
         position_side: PositionSide = None,
         **kwargs,
     ):
@@ -94,6 +95,9 @@ class Strategy:
         await self._pulic_connectors[type].subscribe_kline(symbol, interval)
 
     async def run(self):
+        for private_connector in self._private_connectors.values():
+            await private_connector.connect()
+        await asyncio.sleep(5)
         await self._clock.run()
 
     def _on_accepted_order(self, order: Order):

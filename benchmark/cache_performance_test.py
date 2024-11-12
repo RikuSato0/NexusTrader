@@ -3,24 +3,23 @@ import uuid
 import numpy as np
 from decimal import Decimal
 from typing import List, Tuple
-
-from tradebot.entity import Cache, Order
-from tradebot.constants import OrderStatus
+import msgspec
+from tradebot.entity import Cache
+from tradebot.types import Order
+from tradebot.constants import OrderStatus, OrderSide, OrderType
 from tradebot.exchange.binance import BinanceAccountType
 
 def create_sample_order(symbol: str = "BTC/USDT") -> Order:
     """Create a sample order for testing"""
     return Order(
-        raw={},
-        success=True,
         exchange="binance",
-        id=str(uuid.uuid4()),
+        id=int(uuid.uuid4()),
         client_order_id=str(uuid.uuid4()),
         timestamp=int(time.time() * 1000),
         symbol=symbol,
-        type="limit",
-        side="buy",
-        status="new",
+        type=OrderType.LIMIT,
+        side=OrderSide.BUY,
+        status=OrderStatus.ACCEPTED,
         price=50000.0,
         amount=Decimal("0.1"),
         filled=Decimal("0"),
@@ -58,6 +57,10 @@ class CachePerformanceTester:
         # 测试初始化性能
         for _ in range(num_orders):
             order = create_sample_order()
+            raw = msgspec.json.encode(order)
+            order = msgspec.json.decode(raw, type=Order)
+            
+            
             start_time = time.time()
             self.cache.order_initialized(order)
             init_times.append(time.time() - start_time)
@@ -92,7 +95,7 @@ class CachePerformanceTester:
 
 def main():
     tester = CachePerformanceTester()
-    tester.test_single_operations(num_orders=10000)
+    tester.test_single_operations(num_orders=1000)
 
 if __name__ == "__main__":
     main()

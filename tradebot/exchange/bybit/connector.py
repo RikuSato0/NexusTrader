@@ -85,15 +85,16 @@ class BybitPublicConnector(PublicConnector):
 
             if "orderbook" in ws_msg.topic:
                 self._handle_orderbook(raw, ws_msg.topic)
-
-        except Exception:
+        except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
+        except Exception as e:
+            self._log.error(f"{str(e)} {str(raw)}")
 
     def _handle_orderbook(self, raw: bytes, topic: str):
         msg: BybitWsOrderbookDepthMsg = self._ws_msg_orderbook_decoder.decode(raw)
         id = msg.data.s + self.market_type
         market = self._market_id[id]
-        symbol = market["symbol"]
+        symbol = market.symbol
 
         res = self._orderbook[symbol].parse_orderbook_depth(msg, levels=1)
 
@@ -156,12 +157,11 @@ class BybitPrivateConnector(PrivateConnector):
                 api_key=exchange.api_key,
                 secret=exchange.secret,
             ),
-        )
-
-        self.cache = Cache(
-            account_type="BYBIT",
-            strategy_id=strategy_id,
-            user_id=user_id,
+            cache=Cache(
+                account_type="BYBIT",
+                strategy_id=strategy_id,
+                user_id=user_id,
+            ),
         )
 
         self._api_client = BybitApiClient(

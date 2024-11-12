@@ -296,6 +296,8 @@ class BybitPrivateConnector(PrivateConnector):
                 time_in_force=time_in_force,
                 position_side=position_side,
                 status=OrderStatus.PENDING,
+                filled=Decimal(0),
+                remaining=amount,
             )
             self._oms.add_order_msg(order)
             return order
@@ -312,6 +314,8 @@ class BybitPrivateConnector(PrivateConnector):
                 time_in_force=time_in_force,
                 position_side=position_side,
                 status=OrderStatus.FAILED,
+                filled=Decimal(0),
+                remaining=amount,
             )
             return order
 

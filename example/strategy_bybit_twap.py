@@ -19,7 +19,7 @@ class Demo(Strategy):
     def __init__(self):
         super().__init__(tick_size=1)
 
-        self.amount = Decimal(1)
+        self.amount = Decimal(5)
         self.symbol = "ETH/USDT:USDT"
         self.pos = Decimal(0)
         self.order_id = None
@@ -46,13 +46,15 @@ class Demo(Strategy):
                     symbol=self.symbol,
                     order_id=self.order_id,
                 )
-                print(order_cancel)
                 if not order_cancel.success:
                     print(f"Failed to cancel order {self.order_id}")
                     order: Order = self.cache(BybitAccountType.ALL_TESTNET).get_order(
                         self.order_id
                     )
-                    self.pos += order.filled
+                    self.pos += order.amount
+                else:
+                    print(f"Canceled order {self.order_id}")
+                    self.order_id = None
 
         book = self.get_bookl1("bybit", self.symbol)
 
@@ -73,6 +75,10 @@ class Demo(Strategy):
         )
 
         if self.pos < self.amount:
+            open_orders = self.cache(BybitAccountType.ALL_TESTNET).get_open_orders(self.symbol)
+            if self.order_id in open_orders and self.order_id:
+                print(f"Symbol {self.symbol} still have open orders: {self.order_id}")
+                return
             order = await self.create_order(
                 account_type=BybitAccountType.ALL_TESTNET,
                 symbol=self.symbol,

@@ -660,6 +660,7 @@ class Clock:
         """
         self._tick_size = tick_size  # Tick size in seconds
         self._current_tick = (time.time() // self._tick_size) * self._tick_size
+        self._clock = LiveClock()
         self._tick_callbacks: List[Callable[[float], None]] = []
         self._started = False
         self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
@@ -670,7 +671,7 @@ class Clock:
 
     @property
     def current_timestamp(self) -> float:
-        return int(self._current_tick)  # Timestamp in seconds
+        return self._clock.timestamp()
 
     def add_tick_callback(self, callback: Callable[[float], None]):
         """
@@ -694,14 +695,11 @@ class Clock:
                 next_tick_time = now
             self._current_tick = next_tick_time
             for callback in self._tick_callbacks:
-                # try:
                 if asyncio.iscoroutinefunction(callback):
                     await callback(self.current_timestamp)
                 else:
                     callback(self.current_timestamp)
-                # except Exception as e:
-                #     self._log.error(f"Error in tick callback: {str(e)}")
-
+                    
 
 class PublicConnector(ABC):
     def __init__(

@@ -507,11 +507,12 @@ class Cache:
             return {order_id.decode() for order_id in orders}
         return set()
     
-    def get_open_orders(self) -> Set[str]:
-        orders = self._r.smembers(self._open_orders)
-        if orders:
-            return {order_id.decode() for order_id in orders}
-        return set()
+    def get_open_orders(self, symbol: str = None) -> Set[str]:
+        orders = {order_id.decode() for order_id in self._r.smembers(self._open_orders) or []}
+        if symbol:
+            symbol_orders = self.get_symbol_orders(symbol)
+            return orders.intersection(symbol_orders)
+        return orders
     
 # log_register = LogRegister()
 # market = MarketDataStore()

@@ -761,7 +761,7 @@ class PrivateConnector(ABC):
         self._task_manager = TaskManager()
         self._ws_client = ws_client
         self._clock = LiveClock()
-        self.cache = cache
+        self._cache = cache
 
     @property
     def account_type(self):

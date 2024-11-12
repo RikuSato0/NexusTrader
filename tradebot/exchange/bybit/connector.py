@@ -87,8 +87,6 @@ class BybitPublicConnector(PublicConnector):
                 self._handle_orderbook(raw, ws_msg.topic)
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
-        except Exception as e:
-            self._log.error(f"{str(e)} {str(raw)}")
 
     def _handle_orderbook(self, raw: bytes, topic: str):
         msg: BybitWsOrderbookDepthMsg = self._ws_msg_orderbook_decoder.decode(raw)
@@ -171,7 +169,7 @@ class BybitPrivateConnector(PrivateConnector):
         )
 
         self._oms = OrderManagerSystem(
-            cache=self.cache,
+            cache=self._cache,
         )
 
         self._ws_msg_general_decoder = msgspec.json.Decoder(BybitWsMessageGeneral)
@@ -195,8 +193,6 @@ class BybitPrivateConnector(PrivateConnector):
                 self._parse_order_update(raw)
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
-        except Exception as e:
-            self._log.error(e)
 
     def _get_category(self, market: BybitMarket):
         if market.spot:

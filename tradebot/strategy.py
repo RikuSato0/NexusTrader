@@ -5,7 +5,7 @@ from typing import Literal
 from tradebot.constants import EventType, AccountType, OrderStatus
 from tradebot.base import Clock, PublicConnector, PrivateConnector
 from tradebot.entity import EventSystem
-from tradebot.types import BookL1, Trade, Kline, Order
+from tradebot.types import BookL1, Trade, Kline, Order, MarketData
 from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
 
 
@@ -14,6 +14,7 @@ class Strategy:
         self._pulic_connectors: Dict[AccountType, PublicConnector] = {}
         self._private_connectors: Dict[AccountType, PrivateConnector] = {}
         self._clock = Clock(tick_size=tick_size)
+        self._market_data: MarketData = MarketData()
         self._clock.add_tick_callback(self._on_tick)
         EventSystem.on(EventType.TRADE, self._on_trade)
         EventSystem.on(EventType.BOOKL1, self._on_bookl1)
@@ -22,6 +23,13 @@ class Strategy:
         EventSystem.on(OrderStatus.PARTIALLY_FILLED, self._on_partially_filled_order)
         EventSystem.on(OrderStatus.FILLED, self._on_filled_order)
         EventSystem.on(OrderStatus.CANCELED, self._on_canceled_order)
+    
+    
+    def market(self, account_type: AccountType):
+        return self._private_connectors[account_type]._market
+    
+    def cache(self, account_type: AccountType):
+        return self._private_connectors[account_type]._cache
 
     async def create_order(
         self,
@@ -116,15 +124,24 @@ class Strategy:
         if hasattr(self, "on_canceled_order"):
             self.on_canceled_order(order)
 
+    def get_bookl1(self, exchange: str, symbol: str):
+        return self._market_data.bookl1[exchange][symbol]
+    
+    def get_trade(self, exchange: str, symbol: str):
+        return self._market_data.trade[exchange][symbol]
+
     def _on_trade(self, trade: Trade):
+        self._market_data.update_trade(trade)
         if hasattr(self, "on_trade"):
             self.on_trade(trade)
 
     def _on_bookl1(self, bookl1: BookL1):
+        self._market_data.update_bookl1(bookl1)
         if hasattr(self, "on_bookl1"):
             self.on_bookl1(bookl1)
 
     def _on_kline(self, kline: Kline):
+        self._market_data.update_kline(kline)
         if hasattr(self, "on_kline"):
             self.on_kline(kline)
 

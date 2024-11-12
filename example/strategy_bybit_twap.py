@@ -4,6 +4,7 @@ from tradebot.constants import CONFIG
 from tradebot.types import BookL1, Order
 from tradebot.constants import OrderSide, OrderType, OrderStatus
 from tradebot.strategy import Strategy
+from decimal import Decimal
 from tradebot.exchange.bybit import (
     BybitPublicConnector,
     BybitPrivateConnector,
@@ -17,32 +18,39 @@ BYBIT_API_SECRET = CONFIG["bybit_testnet_2"]["SECRET"]
 
 class Demo(Strategy):
     def __init__(self):
-        super().__init__(tick_size=1)
+        super().__init__(tick_size=0.5)
         
-        self.amount = 0.5
+        self.amount = Decimal(0.5)
         self.symbol = "BTC/USDT:USDT"
         self.market: Dict[str, BookL1] = {}
-        self.pos = 0
+        self.pos = Decimal(0)
         self.order_id = None
+        self.finished = False
 
     def _on_bookl1(self, bookl1: BookL1):
         self.market[bookl1.symbol] = bookl1
 
     async def on_tick(self, tick):
+        if self.finished:
+            return
         if self.order_id:
             order: Order = self._private_connectors[BybitAccountType.ALL_TESTNET].cache.get_order(self.order_id)
             print(order)
             if order.status == OrderStatus.FILLED:
-                self.pos += order.filled
-                print(f"Filled {order.filled} of {self.amount}")
+                if self.pos < self.amount:
+                    self.pos += order.filled
+                    print(f"Filled {self.pos} of {self.amount}")
+                else:
+                    print("TWAP completed")
+                    self.finished = True
             else:
-                order = await self.cancel_order(
+                order_cancel = await self.cancel_order(
                     account_type=BybitAccountType.ALL_TESTNET,
                     symbol=self.symbol,
                     order_id=self.order_id,
                 )
-                print(order)
-                if not order.success:
+                print(order_cancel)
+                if not order_cancel.success:
                     print(f"Failed to cancel order {self.order_id}")
                     order: Order = self._private_connectors[BybitAccountType.ALL_TESTNET].cache.get_order(self.order_id)
                     self.pos += order.filled
@@ -68,8 +76,6 @@ class Demo(Strategy):
             symbol=self.symbol,
             price=ask,
         )
-        
-        print(f"Price: {price}, Amount: {amount}")
 
         if self.pos < self.amount:
             order = await self.create_order(

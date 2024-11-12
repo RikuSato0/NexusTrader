@@ -67,7 +67,7 @@ class Order(Struct):
     exchange: str
     symbol: str
     status: OrderStatus 
-    id: int = None
+    id: str = None
     client_order_id: str = None
     timestamp: int = None
     type: OrderType = None

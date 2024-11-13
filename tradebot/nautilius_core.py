@@ -5,6 +5,7 @@ import numpy as np
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.model.identifiers import TraderId
+from nautilus_trader.common.config import MessageBusConfig, DatabaseConfig
 
 latency = []
 
@@ -12,6 +13,7 @@ msgBus = MessageBus(
     trader_id=TraderId("tradebot-001"),
     clock=LiveClock(),
 )
+
 
 clock = LiveClock()
 

@@ -365,6 +365,7 @@ class OkxPrivateConnector(PrivateConnector):
         pass
 
     async def connect(self):
+        await super().connect()
         await self._ws_client.subscribe_orders()
         await self._ws_client.subscribe_positions()
         await self._ws_client.subscribe_account()

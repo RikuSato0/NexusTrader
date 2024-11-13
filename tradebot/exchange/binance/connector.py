@@ -6,7 +6,7 @@ import ccxt.pro as ccxt
 from typing import Dict, Any
 from decimal import Decimal
 from tradebot.base import PublicConnector, PrivateConnector
-from tradebot.entity import EventSystem
+from tradebot.entity import EventSystem, AsyncCache
 from tradebot.constants import EventType, OrderStatus
 from tradebot.types import Order
 from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
@@ -248,6 +248,8 @@ class BinancePrivateConnector(PrivateConnector):
         self,
         account_type: BinanceAccountType,
         exchange: BinanceExchangeManager,
+        strategy_id: str,
+        user_id: str,
     ):
         super().__init__(
             account_type=account_type,
@@ -256,6 +258,11 @@ class BinancePrivateConnector(PrivateConnector):
             exchange_id=exchange.exchange_id,
             ws_client=BinanceWSClient(
                 account_type=account_type, handler=self._ws_msg_handler
+            ),
+            cache=AsyncCache(
+                account_type=account_type,
+                strategy_id=strategy_id,
+                user_id=user_id,
             ),
         )
 
@@ -324,6 +331,7 @@ class BinancePrivateConnector(PrivateConnector):
                     break
 
     async def connect(self):
+        await super().connect()
         listen_key = await self._start_user_data_stream()
         if listen_key:
             self._task_manager.create_task(

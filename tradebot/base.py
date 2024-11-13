@@ -9,11 +9,10 @@ import aiohttp
 # import ccxt.pro as ccxtpro
 import ccxt
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional, Set
+from typing import Dict, List, Any, Optional
 from typing import Callable, Literal
 from collections import defaultdict
 from decimal import Decimal
-from urllib.parse import urljoin, urlencode
 
 
 from asynciolimiter import Limiter
@@ -24,9 +23,9 @@ from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
 
 from tradebot.log import SpdLog
 from tradebot.entity import EventSystem, TaskManager
-from tradebot.constants import AccountType, OrderStatus
+from tradebot.constants import OrderStatus
 from tradebot.types import Order, BaseMarket
-from tradebot.entity import Cache
+from tradebot.entity import Cache, AsyncCache
 from tradebot.exceptions import OrderError, ExchangeResponseError
 from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
 from picows import (
@@ -747,7 +746,7 @@ class PrivateConnector(ABC):
         market_id: Dict[str, BaseMarket],
         exchange_id: str,
         ws_client: WSClient,
-        cache: Cache,
+        cache: AsyncCache,
     ):
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="INFO", flush=True
@@ -783,11 +782,12 @@ class PrivateConnector(ABC):
     async def cancel_order(self, symbol: str, order_id: str, **kwargs) -> Order:
         pass
 
-    @abstractmethod
+
     async def connect(self):
-        pass
+        await self._cache.sync()
 
     async def disconnect(self):
+        await self._cache.close()
         await self._ws_client.disconnect()
         await self._task_manager.cancel()
         
@@ -827,7 +827,7 @@ class PrivateConnector(ABC):
 
 
 class OrderManagerSystem:
-    def __init__(self, cache: Cache):
+    def __init__(self, cache: AsyncCache):
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="DEBUG", flush=True
         )

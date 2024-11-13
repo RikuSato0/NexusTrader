@@ -4,7 +4,7 @@ from decimal import Decimal
 from collections import defaultdict
 from tradebot.base import PublicConnector, PrivateConnector, OrderManagerSystem
 from tradebot.entity import EventSystem
-from tradebot.types import BookL1, Order
+from tradebot.types import BookL1, Order, Trade
 from tradebot.constants import (
     EventType,
     OrderSide,
@@ -19,8 +19,9 @@ from tradebot.exchange.bybit.types import (
     BybitWsOrderbookDepthMsg,
     BybitOrderBook,
     BybitMarket,
+    BybitWsTradeMsg,
 )
-from tradebot.entity import Cache
+from tradebot.entity import AsyncCache
 from tradebot.exchange.bybit.rest_api import BybitApiClient
 from tradebot.exchange.bybit.websockets import BybitWSClient
 from tradebot.exchange.bybit.constants import (
@@ -56,6 +57,7 @@ class BybitPublicConnector(PublicConnector):
             ),
         )
         self._ws_client: BybitWSClient = self._ws_client
+        self._ws_msg_trade_decoder = msgspec.json.Decoder(BybitWsTradeMsg)
         self._ws_msg_orderbook_decoder = msgspec.json.Decoder(BybitWsOrderbookDepthMsg)
         self._ws_msg_general_decoder = msgspec.json.Decoder(BybitWsMessageGeneral)
 
@@ -85,8 +87,27 @@ class BybitPublicConnector(PublicConnector):
 
             if "orderbook" in ws_msg.topic:
                 self._handle_orderbook(raw, ws_msg.topic)
+            elif "publicTrade" in ws_msg.topic:
+                self._handle_trade(raw)
+            
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
+    
+    def _handle_trade(self, raw: bytes):
+        msg: BybitWsTradeMsg = self._ws_msg_trade_decoder.decode(raw)
+        for d in msg.data:
+            id = d.s + self.market_type
+            market = self._market_id[id]
+            symbol = market.symbol
+            trade = Trade(
+                exchange=self._exchange_id,
+                symbol=symbol,
+                price=float(d.p),
+                size=float(d.v),
+                timestamp=msg.ts,
+            )
+            EventSystem.emit(EventType.TRADE, trade)
+            
 
     def _handle_orderbook(self, raw: bytes, topic: str):
         msg: BybitWsOrderbookDepthMsg = self._ws_msg_orderbook_decoder.decode(raw)
@@ -114,7 +135,10 @@ class BybitPublicConnector(PublicConnector):
         await self._ws_client.subscribe_order_book(symbol, depth=1)
 
     async def subscribe_trade(self, symbol: str):
-        pass
+        market = self._market.get(symbol, None)
+        symbol = market.id if market else symbol
+        await self._ws_client.subscribe_trade(symbol)
+        
 
     async def subscribe_kline(self, symbol: str, interval: str):
         pass
@@ -141,7 +165,7 @@ class BybitPrivateConnector(PrivateConnector):
 
         if account_type not in {BybitAccountType.ALL, BybitAccountType.ALL_TESTNET}:
             raise ValueError(
-                f"Please using `BybitAccountType.ALL` or `BybitAccountType.ALL_TESTNET` in `PrivateConnector`"
+                "Please using `BybitAccountType.ALL` or `BybitAccountType.ALL_TESTNET` in `PrivateConnector`"
             )
 
         super().__init__(
@@ -155,7 +179,7 @@ class BybitPrivateConnector(PrivateConnector):
                 api_key=exchange.api_key,
                 secret=exchange.secret,
             ),
-            cache=Cache(
+            cache=AsyncCache(
                 account_type="BYBIT",
                 strategy_id=strategy_id,
                 user_id=user_id,
@@ -176,6 +200,7 @@ class BybitPrivateConnector(PrivateConnector):
         self._ws_msg_order_update_decoder = msgspec.json.Decoder(BybitWsOrderMsg)
 
     async def connect(self):
+        await super().connect()
         await self._ws_client.subscribe_order(topic="order")
         self._task_manager.create_task(self._oms.handle_order_event())
 

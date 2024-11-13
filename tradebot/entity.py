@@ -513,7 +513,9 @@ class Cache:
     def _decode_order(self, data: bytes) -> Order:
         return msgspec.json.decode(data, type=Order)
     
-    def order_initialized(self, order: Order):
+    def order_initialized(self, order: Order):    
+        if self._r.hget(self._orders, order.id):
+            return
         self._r.hset(self._orders, order.id, self._encode_order(order))
         self._r.sadd(self._open_orders, order.id)
         self._r.sadd(f"{self._symbol_orders}:{order.symbol}", order.id)
@@ -549,7 +551,7 @@ class Cache:
 
 
 class AsyncCache:
-    def __init__(self, account_type: AccountType, strategy_id: str, user_id: str):
+    def __init__(self, account_type: AccountType, strategy_id: str, user_id: str, sync_interval: int = 300, expire_time: int = 3600):
         self._clock = LiveClock()
         self._r = RedisClient.get_async_client()
         self._orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:orders"
@@ -557,15 +559,15 @@ class AsyncCache:
         self._symbol_open_orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:symbol_open_orders"
         self._symbol_orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:symbol_orders"
         
-        # 内存存储
+        # in-memory save
         self._mem_orders: Dict[str, Order] = {}  # order_id -> Order
         self._mem_open_orders: Set[str] = set()  # set(order_id)
         self._mem_symbol_open_orders: Dict[str, Set[str]] = defaultdict(set)  # symbol -> set(order_id)
         self._mem_symbol_orders: Dict[str, Set[str]] = defaultdict(set)  # symbol -> set(order_id)
         
-        # 配置参数
-        self._sync_interval = 300  # 同步间隔（秒）
-        self._expire_time = 3600  # 过期时间（秒）
+        # set params
+        self._sync_interval = sync_interval  # sync interval
+        self._expire_time = expire_time  # expire time
         
         self._shutdown_event = asyncio.Event()
         self._task_manager = TaskManager()
@@ -575,6 +577,10 @@ class AsyncCache:
     
     def _decode_order(self, data: bytes) -> Order:
         return msgspec.json.decode(data, type=Order)
+    
+    async def sync(self):
+        self._task_manager.create_task(self._periodic_sync())
+        self._task_manager.create_task(self._periodic_cleanup())
         
     async def _periodic_sync(self):
         while not self._shutdown_event.is_set():
@@ -621,6 +627,8 @@ class AsyncCache:
                 order_set.discard(order_id)
     
     def order_initialized(self, order: Order):
+        if order.id in self._mem_orders: # which means the order is already pushed by websocket
+            return
         self._mem_orders[order.id] = order
         self._mem_open_orders.add(order.id)
         self._mem_symbol_orders[order.symbol].add(order.id)
@@ -658,7 +666,7 @@ class AsyncCache:
             return self._mem_symbol_open_orders.get(symbol, set())
         return self._mem_open_orders
     
-    async def shutdown(self):
+    async def close(self):
         self._shutdown_event.set()
         await self._sync_to_redis()
         await self._r.aclose()

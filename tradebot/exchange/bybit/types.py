@@ -111,7 +111,40 @@ class BybitOrderBook(msgspec.Struct):
             "bids": bids,
             "asks": asks,
         }
+        
+class BybitWsTrade(msgspec.Struct):
+    # The timestamp (ms) that the order is filled
+    T: int
+    # Symbol name
+    s: str
+    # Side of taker. Buy,Sell
+    S: str
+    # Trade size
+    v: str
+    # Trade price
+    p: str
+    # Trade id
+    i: str
+    # Whether is a block trade or not
+    BT: bool
+    # Direction of price change
+    L: str | None = None
+    # Message id unique to options
+    id: str | None = None
+    # Mark price, unique field for option
+    mP: str | None = None
+    # Index price, unique field for option
+    iP: str | None = None
+    # Mark iv, unique field for option
+    mIv: str | None = None
+    # iv, unique field for option
+    iv: str | None = None
 
+class BybitWsTradeMsg(msgspec.Struct):
+    topic: str
+    type: str
+    ts: int
+    data: list[BybitWsTrade]
 
 class BybitWsOrder(msgspec.Struct):
     category: BybitProductType

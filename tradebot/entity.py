@@ -4,7 +4,6 @@ import socket
 import collections
 import traceback
 
-
 from pathlib import Path
 
 
@@ -19,9 +18,35 @@ import orjson
 import spdlog as spd
 import msgspec
 
+
 from tradebot.constants import OrderStatus, AccountType
 from tradebot.types import Order
 
+from nautilus_trader.common.component import LiveClock
+
+class TaskManager:
+    def __init__(self):
+        self._tasks: List[asyncio.Task] = []
+
+    def create_task(self, coro: asyncio.coroutines) -> asyncio.Task:
+        task = asyncio.create_task(coro)
+        self._tasks.append(task)
+        task.add_done_callback(self._handle_task_done)
+        return task
+
+    def _handle_task_done(self, task: asyncio.Task):
+        self._tasks.remove(task)
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            raise
+
+    async def cancel(self):
+        for task in self._tasks:
+            task.cancel()
+        await asyncio.gather(*self._tasks, return_exceptions=True)
 
 class EventSystem:
     _listeners: Dict[str, List[Callable]] = defaultdict(list)
@@ -107,6 +132,10 @@ class RedisClient:
     @classmethod
     def get_client(cls) -> redis.Redis:
         return redis.Redis(**cls._get_params())
+    
+    @classmethod
+    def get_async_client(cls) -> redis.asyncio.Redis:
+        return redis.asyncio.Redis(**cls._get_params())
 
 
 @dataclass
@@ -516,3 +545,123 @@ class Cache:
     
 # log_register = LogRegister()
 # market = MarketDataStore()
+
+
+
+class AsyncCache:
+    def __init__(self, account_type: AccountType, strategy_id: str, user_id: str):
+        self._clock = LiveClock()
+        self._r = RedisClient.get_async_client()
+        self._orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:orders"
+        self._open_orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:open_orders"
+        self._symbol_open_orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:symbol_open_orders"
+        self._symbol_orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:symbol_orders"
+        
+        # 内存存储
+        self._mem_orders: Dict[str, Order] = {}  # order_id -> Order
+        self._mem_open_orders: Set[str] = set()  # set(order_id)
+        self._mem_symbol_open_orders: Dict[str, Set[str]] = defaultdict(set)  # symbol -> set(order_id)
+        self._mem_symbol_orders: Dict[str, Set[str]] = defaultdict(set)  # symbol -> set(order_id)
+        
+        # 配置参数
+        self._sync_interval = 300  # 同步间隔（秒）
+        self._expire_time = 3600  # 过期时间（秒）
+        
+        self._shutdown_event = asyncio.Event()
+        self._task_manager = TaskManager()
+    
+    def _encode_order(self, order: Order) -> bytes:
+        return msgspec.json.encode(order)
+    
+    def _decode_order(self, data: bytes) -> Order:
+        return msgspec.json.decode(data, type=Order)
+        
+    async def _periodic_sync(self):
+        while not self._shutdown_event.is_set():
+            await asyncio.sleep(self._sync_interval)
+            await self._sync_to_redis()
+            
+    async def _periodic_cleanup(self):
+        while not self._shutdown_event.is_set():
+            await asyncio.sleep(self._sync_interval)
+            self._cleanup_expired_data()
+
+    async def _sync_to_redis(self):
+        for order_id, order in self._mem_orders.items():
+            await self._r.hset(self._orders_key, order_id, self._encode_order(order))
+        
+        await self._r.delete(self._open_orders_key)
+        if self._mem_open_orders:
+            await self._r.sadd(self._open_orders_key, *self._mem_open_orders)
+        
+        for symbol, order_ids in self._mem_symbol_orders.items():
+            key = f"{self._symbol_orders_key}:{symbol}"
+            await self._r.delete(key)
+            if order_ids:
+                await self._r.sadd(key, *order_ids)
+                
+        for symbol, order_ids in self._mem_symbol_open_orders.items():
+            key = f"{self._symbol_open_orders_key}:{symbol}"
+            await self._r.delete(key)
+            if order_ids:
+                await self._r.sadd(key, *order_ids)
+
+    def _cleanup_expired_data(self):
+        current_time = self._clock.timestamp()
+        expire_before = current_time - self._expire_time
+        
+        # 清理过期orders
+        expired_orders = [
+            order_id for order_id, order in self._mem_orders.items()
+            if order.timestamp < expire_before
+        ]
+        for order_id in expired_orders:
+            del self._mem_orders[order_id]
+            for order_set in self._mem_symbol_orders.values():
+                order_set.discard(order_id)
+    
+    def order_initialized(self, order: Order):
+        self._mem_orders[order.id] = order
+        self._mem_open_orders.add(order.id)
+        self._mem_symbol_orders[order.symbol].add(order.id)
+        self._mem_symbol_open_orders[order.symbol].add(order.id)
+    
+    def order_status_update(self, order: Order):
+        self._mem_orders[order.id] = order
+        if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED, OrderStatus.EXPIRED):
+            self._mem_open_orders.discard(order.id)
+            self._mem_symbol_open_orders[order.symbol].discard(order.id)
+    
+    async def get_order(self, order_id: str) -> Order:
+        if order_id in self._mem_orders:
+            return self._mem_orders[order_id]
+        
+        raw_order = await self._r.hget(self._orders_key, order_id)
+        if raw_order:
+            order = self._decode_order(raw_order)
+            self._mem_orders[order_id] = order
+            return order
+        return None
+
+    async def get_symbol_orders(self, symbol: str, in_mem: bool = True) -> Set[str]: 
+        """Get all orders for a symbol from memory and Redis"""
+        
+        memory_orders = self._mem_symbol_orders.get(symbol, set())
+        if not in_mem:
+            redis_orders = await self._r.smembers(f"{self._symbol_orders_key}:{symbol}")
+            redis_orders = {order_id.decode() for order_id in redis_orders} if redis_orders else set()
+            return memory_orders.union(redis_orders)
+        return memory_orders
+
+    async def get_open_orders(self, symbol: str = None) -> Set[str]:
+        if symbol:
+            return self._mem_symbol_open_orders.get(symbol, set())
+        return self._mem_open_orders
+    
+    async def shutdown(self):
+        self._shutdown_event.set()
+        await self._sync_to_redis()
+        await self._r.aclose()
+        await self._task_manager.cancel()
+        
+        

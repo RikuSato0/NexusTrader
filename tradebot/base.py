@@ -23,7 +23,7 @@ from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
 
 
 from tradebot.log import SpdLog
-from tradebot.entity import EventSystem
+from tradebot.entity import EventSystem, TaskManager
 from tradebot.constants import AccountType, OrderStatus
 from tradebot.types import Order, BaseMarket
 from tradebot.entity import Cache
@@ -823,29 +823,7 @@ class PrivateConnector(ABC):
             return price.quantize(precision, rounding=ROUND_FLOOR)
 
 
-class TaskManager:
-    def __init__(self):
-        self._tasks: List[asyncio.Task] = []
 
-    def create_task(self, coro: asyncio.coroutines) -> asyncio.Task:
-        task = asyncio.create_task(coro)
-        self._tasks.append(task)
-        task.add_done_callback(self._handle_task_done)
-        return task
-
-    def _handle_task_done(self, task: asyncio.Task):
-        self._tasks.remove(task)
-        try:
-            task.result()
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            raise
-
-    async def cancel(self):
-        for task in self._tasks:
-            task.cancel()
-        await asyncio.gather(*self._tasks, return_exceptions=True)
 
 
 class OrderManagerSystem:

@@ -1,9 +1,6 @@
 import os
-import ccxt
 
 from configparser import ConfigParser
-from collections import defaultdict
-
 from typing import Literal, Union
 
 from enum import Enum

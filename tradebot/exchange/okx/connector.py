@@ -3,6 +3,7 @@ import orjson
 import msgspec
 from decimal import Decimal
 from tradebot.exchange.okx import OkxAccountType
+from tradebot.entity import Cache
 from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.websockets_v2 import OkxWSClient as OkxWSClientV2
 from tradebot.exchange.okx.exchange import OkxExchangeManager
@@ -11,7 +12,7 @@ from tradebot.constants import EventType
 from tradebot.entity import EventSystem
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.exchange.okx.rest_api import OkxApiClient
-from tradebot.types import OrderSide, OrderType
+from tradebot.types import OrderSide, OrderType, Order
 from tradebot.exchange.okx.constants import (
     OKXWsGeneralMsg,
     OKXWsPushDataMsg,
@@ -180,6 +181,8 @@ class OkxPrivateConnector(PrivateConnector):
         self,
         account_type: OkxAccountType,
         exchange: OkxExchangeManager,
+        strategy_id: str = None,
+        user_id: str = None,
     ):
         super().__init__(
             account_type=account_type,
@@ -193,6 +196,11 @@ class OkxPrivateConnector(PrivateConnector):
                 secret=exchange.secret,
                 passphrase=exchange.passphrase,
             ),
+            cache=Cache(
+                account_type="OKX",
+                strategy_id=strategy_id,
+                user_id=user_id,
+            ),
         )
 
         self._api_client = OkxApiClient(
@@ -203,6 +211,12 @@ class OkxPrivateConnector(PrivateConnector):
 
         self._decoder_ws_general_msg = msgspec.json.Decoder(OKXWsGeneralMsg)
         self._decoder_ws_push_data_msg = msgspec.json.Decoder(OKXWsPushDataMsg)
+        self._decoder_ws_orders_msg = msgspec.json.Decoder(OKXWsOrdersPushDataMsg)
+        self._decoder_ws_account_msg = msgspec.json.Decoder(OKXWsAccountPushDataMsg)
+        self._decoder_ws_fills_msg = msgspec.json.Decoder(OKXWsFillsPushDataMsg)
+
+    async def cancel_order(self, symbol: str, order_id: str, **kwargs) -> Order:
+        pass
 
     @property
     def ws_client(self) -> OkxWSClient:
@@ -214,13 +228,13 @@ class OkxPrivateConnector(PrivateConnector):
             push_data = self._decoder_ws_push_data_msg.decode(raw)
             channel = push_data.arg.channel
             if channel == "account":
-                self._handle_account(raw)
+                self._parse_account(raw)
             elif channel == "fills":
-                self._handle_fills(raw)
+                self._parse_fills(raw)
             elif channel == "orders":
-                self._handle_orders(raw)
+                self._parse_orders(raw)
             elif channel == "positions":
-                self._handle_positions(raw)
+                self._parse_positions(raw)
 
         # if "event" in msg:
         #     if msg["event"] == "error":
@@ -235,18 +249,27 @@ class OkxPrivateConnector(PrivateConnector):
         #         )
 
     def _parse_orders(self, raw: bytes):
-        pass
+        orders_push_data: OKXWsOrdersPushDataMsg = self._decoder_ws_orders_msg.decode(
+            raw
+        )
+        # TODO
+        return orders_push_data.data
 
     def _parse_positions(self, raw: bytes):
-        """ Nothing to do because nautilus updates positions from fills. """
+        """Nothing to do because nautilus updates positions from fills."""
         pass
 
     def _parse_account(self, raw: bytes):
-        account_push_data: OKXWsAccountPushDataMsg = self._decoder_ws_account_msg.decode(raw)
+        account_push_data: OKXWsAccountPushDataMsg = (
+            self._decoder_ws_account_msg.decode(raw)
+        )
+        print(account_push_data.data)
         return account_push_data.data
 
     def _parse_fills(self, raw: bytes):
-        pass
+        fills_push_data: OKXWsFillsPushDataMsg = self._decoder_ws_fills_msg.decode(raw)
+        # TODO
+        return fills_push_data.data
 
     async def connect(self):
         await self.ws_client.subscribe_orders()

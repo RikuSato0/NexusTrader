@@ -75,7 +75,7 @@ class ExchangeManager(ABC):
         return api
 
     @abstractmethod
-    async def load_markets(self):
+    def load_markets(self):
         pass
 
     # async def load_markets(self):

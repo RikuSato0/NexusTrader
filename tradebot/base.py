@@ -78,10 +78,7 @@ class ExchangeManager(ABC):
     def load_markets(self):
         pass
 
-    # async def load_markets(self):
-    #     self.market = await self.api.load_markets()
-    #     return self.market
-
+    # __del__ will call .close() method
     # async def close(self):
     #     await self.api.close()
 

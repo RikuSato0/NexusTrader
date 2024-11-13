@@ -1,21 +1,29 @@
 from typing import Any, Dict
 from tradebot.base import ExchangeManager
+import ccxt
+import orjson
+import msgspec
+from tradebot.exchange.okx.types import OkxMarket
 
 
 class OkxExchangeManager(ExchangeManager):
-    def __init__(self, config: Dict[str, Any]):
+    api: ccxt.okx
+    market: Dict[str, OkxMarket]
+    market_id: Dict[str, OkxMarket]
+
+    def __init__(self, config: Dict[str, Any] = None):
+        config = config or {}
+        config["exchange_id"] = config.get("exchange_id", "okx")
         super().__init__(config)
         self.passphrase = config.get("password", None)
 
-    async def load_markets(self):
-        await super().load_markets()
-        self._get_market_id()
+    def load_markets(self):
+        self.market = self.api.load_markets()
+        for k, v in self.market.items():
+            v_json = orjson.dumps(v)
+            v = msgspec.json.decode(v_json, type=OkxMarket)
+            self.market[k] = v
 
-    def _get_market_id(self):
         self.market_id = {}
-        if not self.market:
-            raise ValueError(
-                "Market data not loaded, please call `load_markets()` first"
-            )
         for _, v in self.market.items():
-            self.market_id[v["id"]] = v
+            self.market_id[v.id] = v

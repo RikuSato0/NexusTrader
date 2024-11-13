@@ -1,6 +1,9 @@
 from typing import cast
 import orjson
+import msgspec
+from decimal import Decimal
 from tradebot.exchange.okx import OkxAccountType
+from tradebot.entity import Cache
 from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.websockets_v2 import OkxWSClient as OkxWSClientV2
 from tradebot.exchange.okx.exchange import OkxExchangeManager
@@ -9,7 +12,14 @@ from tradebot.constants import EventType
 from tradebot.entity import EventSystem
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.exchange.okx.rest_api import OkxApiClient
-
+from tradebot.types import OrderSide, OrderType, Order
+from tradebot.exchange.okx.constants import (
+    OKXWsGeneralMsg,
+    OKXWsPushDataMsg,
+    OKXWsAccountPushDataMsg,
+    OKXWsFillsPushDataMsg,
+    OKXWsOrdersPushDataMsg,
+)
 
 
 class OkxPublicConnector(PublicConnector):
@@ -171,21 +181,27 @@ class OkxPrivateConnector(PrivateConnector):
         self,
         account_type: OkxAccountType,
         exchange: OkxExchangeManager,
+        strategy_id: str = None,
+        user_id: str = None,
     ):
         super().__init__(
             account_type=account_type,
             market=exchange.market,
             market_id=exchange.market_id,
             exchange_id=exchange.exchange_id,
-            ws_client=OkxWSClientV2(
+            ws_client=OkxWSClient(
                 account_type=account_type,
                 handler=self._ws_msg_handler,
                 api_key=exchange.api_key,
                 secret=exchange.secret,
                 passphrase=exchange.passphrase,
             ),
+            cache=Cache(
+                account_type="OKX",
+                strategy_id=strategy_id,
+                user_id=user_id,
+            ),
         )
-        self._ws_client: OkxWSClient = self._ws_client
 
         self._api_client = OkxApiClient(
             api_key=exchange.api_key,
@@ -193,179 +209,81 @@ class OkxPrivateConnector(PrivateConnector):
             passphrase=exchange.passphrase,
         )
 
-    def _ws_msg_handler(self, msg):
-        msg = orjson.loads(msg)
-        if "event" in msg:
-            if msg["event"] == "error":
-                self._log.error(msg.get("msg", "Unknown error"))
-            elif msg["event"] == "subscribe":
-                self._log.info(f"Subscribed to {msg['arg']['channel']}")
-            elif msg["event"] == "login":
-                self._log.info("Login success")
-            elif msg["event"] == "channel-conn-count":
-                self._log.info(
-                    f"Channel {msg['channel']} connection count: {msg['connCount']}"
-                )
-        elif "arg" in msg:
-            channel: str = msg["arg"]["channel"]
-            if channel == "orders":
-                self._parse_orders(msg)
+        self._decoder_ws_general_msg = msgspec.json.Decoder(OKXWsGeneralMsg)
+        self._decoder_ws_push_data_msg = msgspec.json.Decoder(OKXWsPushDataMsg)
+        self._decoder_ws_orders_msg = msgspec.json.Decoder(OKXWsOrdersPushDataMsg)
+        self._decoder_ws_account_msg = msgspec.json.Decoder(OKXWsAccountPushDataMsg)
+        self._decoder_ws_fills_msg = msgspec.json.Decoder(OKXWsFillsPushDataMsg)
+
+    async def cancel_order(self, symbol: str, order_id: str, **kwargs) -> Order:
+        pass
+
+    @property
+    def ws_client(self) -> OkxWSClient:
+        return self._ws_client
+
+    def _ws_msg_handler(self, raw: bytes):
+        msg = self._decoder_ws_general_msg.decode(raw)
+        if msg.is_push_data_msg:
+            push_data = self._decoder_ws_push_data_msg.decode(raw)
+            channel = push_data.arg.channel
+            if channel == "account":
+                self._parse_account(raw)
+            elif channel == "fills":
+                self._parse_fills(raw)
+            elif channel == "orders":
+                self._parse_orders(raw)
             elif channel == "positions":
-                self._parse_positions(msg)
-            elif channel == "account":
-                self._parse_account(msg)
+                self._parse_positions(raw)
 
-    def _parse_orders(self, msg):
-        """
-        {
-            'arg': {
-                'channel': 'orders', // Channel name
-                'instType': 'ANY', // Instrument type
-                'uid': '422205842008504732' // User Identifier
-            },
-            'data': [
-                {
-                    'instType': 'SPOT', // Instrument type
-                    'instId': 'BTC-USDT', // Instrument ID
-                    'tgtCcy': '', // Order quantity unit setting for sz. Default is quote_ccy for buy, base_ccy for sell
-                    'ccy': '', // Margin currency, only applicable to cross MARGIN orders in Spot and futures mode
-                    'ordId': '1848670189392691200', // Order ID
-                    'clOrdId': '', // Client Order ID as assigned by the client
-                    'tag': '', // Order tag
-                    'px': '65465.4', // Price
-                    'pxUsd': '', // Options price in USD (only for options)
-                    'pxVol': '', // Implied volatility of the options order (only for options)
-                    'sz': '3.00708129', // Original order quantity
-                    'notionalUsd': '196958.20937210717', // Estimated notional value in USD
-                    'ordType': 'limit', // Order type (market, limit, post_only, fok, ioc, etc.)
-                    'side': 'sell', // Order side, buy or sell
-                    'posSide': '', // Position side, long or short (only for FUTURES/SWAP)
-                    'tdMode': 'cross', // Trade mode: cross, isolated, or cash
-                    'accFillSz': '0', // Accumulated filled quantity
-                    'fillNotionalUsd': '', // Filled notional value in USD of the order
-                    'avgPx': '0', // Average filled price
-                    'state': 'live', // Order state (canceled, live, partially_filled, filled, mmp_canceled)
-                    'lever': '5', // Leverage (only for MARGIN/FUTURES/SWAP)
-                    'attachAlgoClOrdId': '', // Client-supplied Algo ID for TP/SL orders
-                    'tpTriggerPx': '', // Take-profit trigger price
-                    'tpTriggerPxType': '', // Take-profit trigger price type (last, index, mark)
-                    'tpOrdPx': '', // Take-profit order price
-                    'slTriggerPx': '', // Stop-loss trigger price
-                    'slTriggerPxType': '', // Stop-loss trigger price type (last, index, mark)
-                    'slOrdPx': '', // Stop-loss order price
-                    'stpId': '', // Self trade prevention ID (deprecated)
-                    'stpMode': 'cancel_maker', // Self trade prevention mode
-                    'feeCcy': 'USDT', // Fee currency
-                    'fee': '0', // Fee and rebate
-                    'rebateCcy': 'BTC', // Rebate currency
-                    'rebate': '0', // Rebate amount
-                    'pnl': '0', // Profit and loss
-                    'source': '', // Order source
-                    'cancelSource': '', // Source of order cancellation
-                    'category': 'normal', // Order category
-                    'uTime': '1727597064972', // Update time (Unix timestamp in milliseconds)
-                    'cTime': '1727597064972', // Creation time (Unix timestamp in milliseconds)
-                    'reqId': '', // Client Request ID for order amendment
-                    'amendResult': '', // Result of amending the order
-                    'reduceOnly': 'false', // Whether the order can only reduce position size
-                    'quickMgnType': '', // Quick Margin type (only for Quick Margin Mode of isolated margin)
-                    'algoClOrdId': '', // Client-supplied Algo ID for triggered algo orders
-                    'algoId': '', // Algo ID for triggered algo orders
-                    'code': '0', // Error code (0 is default)
-                    'msg': '', // Error message (empty string is default)
-                    // Additional fields omitted for brevity
-                }
-            ]
-        }
+        # if "event" in msg:
+        #     if msg["event"] == "error":
+        #         self._log.error(msg.get("msg", "Unknown error"))
+        #     elif msg["event"] == "subscribe":
+        #         self._log.info(f"Subscribed to {msg['arg']['channel']}")
+        #     elif msg["event"] == "login":
+        #         self._log.info("Login success")
+        #     elif msg["event"] == "channel-conn-count":
+        #         self._log.info(
+        #             f"Channel {msg['channel']} connection count: {msg['connCount']}"
+        #         )
 
-        {
-            'arg': {
-                'channel': 'orders', // Channel name
-                'instType': 'ANY', // Instrument type
-                'uid': '422205842008504732' // User ID
-            },
-            'data': [{
-                'instType': 'SPOT', // Instrument type
-                'instId': 'BTC-USDT', // Instrument ID
-                'tgtCcy': '', // Target currency
-                'ccy': '', // Margin currency
-                'ordId': '1848670189392691200', // Order ID
-                'clOrdId': '', // Client order ID
-                'algoClOrdId': '', // Algo client order ID
-                'algoId': '', // Algo ID
-                'tag': '', // Order tag
-                'px': '65465.4', // Price
-                'sz': '3.00708129', // Order size
-                'notionalUsd': '196964.11516549162', // Notional value in USD
-                'ordType': 'limit', // Order type
-                'side': 'sell', // Order side
-                'posSide': '', // Position side
-                'tdMode': 'cross', // Trade mode
-                'accFillSz': '2.11969899', // Accumulated filled size
-                'fillNotionalUsd': '138840.48873934377', // Filled notional in USD
-                'avgPx': '65465.4', // Average filled price
-                'state': 'partially_filled', // Order state
-                'lever': '5', // Leverage
-                'pnl': '0', // Profit and loss
-                'feeCcy': 'USDT', // Fee currency
-                'fee': '-111.0135538079568', // Fee amount
-                'rebateCcy': 'BTC', // Rebate currency
-                'rebate': '0', // Rebate amount
-                'category': 'normal', // Order category
-                'uTime': '1727597075013', // Update time
-                'cTime': '1727597064972', // Creation time
-                'source': '', // Order source
-                'reduceOnly': 'false', // Reduce only flag
-                'cancelSource': '', // Cancel source
-                'quickMgnType': '', // Quick margin type
-                'stpId': '', // STP ID
-                'stpMode': 'cancel_maker', // STP mode
-                'attachAlgoClOrdId': '', // Attached algo client order ID
-                'lastPx': '65465.4', // Last filled price
-                'isTpLimit': 'false', // Take profit limit flag
-                'slTriggerPx': '', // Stop loss trigger price
-                'slTriggerPxType': '', // Stop loss trigger price type
-                'tpOrdPx': '', // Take profit order price
-                'tpTriggerPx': '', // Take profit trigger price
-                'tpTriggerPxType': '', // Take profit trigger price type
-                'slOrdPx': '', // Stop loss order price
-                'fillPx': '65465.4', // Fill price
-                'tradeId': '797592328', // Trade ID
-                'fillSz': '0.02', // Fill size
-                'fillTime': '1727597075013', // Fill timestamp
-                'fillPnl': '0', // Fill PNL
-                'fillFee': '-1.0474464', // Fill fee
-                'fillFeeCcy': 'USDT', // Fill fee currency
-                'execType': 'M', // Execution type
-                'fillPxVol': '', // Fill price volatility
-                'fillPxUsd': '', // Fill price in USD
-                'fillMarkVol': '', // Fill mark volatility
-                'fillFwdPx': '', // Fill forward price
-                'fillMarkPx': '', // Fill mark price
-                'amendSource': '', // Amendment source
-                'reqId': '', // Request ID
-                'amendResult': '', // Amendment result
-                'code': '0', // Error code
-                'msg': '', // Error message
-                'pxType': '', // Price type
-                'pxUsd': '', // Price in USD
-                'pxVol': '', // Price volatility
-                'linkedAlgoOrd': {'algoId': ''}, // Linked algo order
-                'attachAlgoOrds': [] // Attached algo orders
-            }]
-        }
-        """
-        id = msg["data"][0]["instId"]
-        market = self._market_id[id]
+    def _parse_orders(self, raw: bytes):
+        orders_push_data: OKXWsOrdersPushDataMsg = self._decoder_ws_orders_msg.decode(
+            raw
+        )
+        # TODO
+        return orders_push_data.data
 
-    def _parse_positions(self, msg):
+    def _parse_positions(self, raw: bytes):
+        """Nothing to do because nautilus updates positions from fills."""
         pass
 
-    def _parse_account(self, msg):
-        pass
+    def _parse_account(self, raw: bytes):
+        account_push_data: OKXWsAccountPushDataMsg = (
+            self._decoder_ws_account_msg.decode(raw)
+        )
+        print(account_push_data.data)
+        return account_push_data.data
+
+    def _parse_fills(self, raw: bytes):
+        fills_push_data: OKXWsFillsPushDataMsg = self._decoder_ws_fills_msg.decode(raw)
+        # TODO
+        return fills_push_data.data
 
     async def connect(self):
         await super().connect()
         await self._ws_client.subscribe_orders()
         await self._ws_client.subscribe_positions()
         await self._ws_client.subscribe_account()
+
+    async def create_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        amount: Decimal,
+        price: Decimal = None,
+        **kwargs,
+    ):
+        pass

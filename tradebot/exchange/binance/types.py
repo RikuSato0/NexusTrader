@@ -748,41 +748,8 @@ class BinanceMarket(BaseMarket):
     "feeSide": "get"
   },
     """
-    id: str
-    lowercaseId: str | None
-    symbol: str
-    base: str
-    quote: str
-    settle: str | None
-    baseId: str
-    quoteId: str
-    settleId: str | None
-    type: AssetType
-    spot: bool
-    margin: bool
-    swap: bool
-    future: bool
-    option: bool
-    index: str | None
-    active: bool
-    contract: bool
-    linear: bool | None
-    inverse: bool | None
-    subType: AssetType | None
-    taker: float
-    maker: float
-    contractSize: float | None
-    expiry: int | None
-    expiryDatetime: str | None
-    strike: str | None
-    optionType: str | None
-    precision: Precision
-    limits: Limit
-    marginModes: MarginMode
-    created: int | None
+
     info: BinanceMarketInfo
-    tierBased: bool
-    percentage: bool
     feeSide: str
     
     

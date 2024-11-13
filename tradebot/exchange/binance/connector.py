@@ -1,16 +1,23 @@
 import time
 import asyncio
 import orjson
-import ccxt.pro as ccxt
+
 
 from typing import Dict, Any
 from decimal import Decimal
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.entity import EventSystem, AsyncCache
-from tradebot.constants import EventType, OrderStatus
+from tradebot.constants import (
+    EventType,
+    OrderSide,
+    OrderStatus,
+    OrderType,
+    PositionSide,
+    TimeInForce,
+)
 from tradebot.types import Order
 from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
-
+from tradebot.entity import Cache
 from tradebot.exchange.binance.types import BinanceMarket
 from tradebot.exchange.binance.rest_api import BinanceApiClient
 from tradebot.exchange.binance.constants import BinanceAccountType
@@ -243,13 +250,13 @@ class BinancePrivateConnector(PrivateConnector):
     _ws_client: BinanceWSClient
     _market: Dict[str, BinanceMarket]
     _market_id: Dict[str, BinanceMarket]
-    
+
     def __init__(
         self,
         account_type: BinanceAccountType,
         exchange: BinanceExchangeManager,
-        strategy_id: str,
-        user_id: str,
+        strategy_id: str = None,
+        user_id: str = None,
     ):
         super().__init__(
             account_type=account_type,
@@ -547,6 +554,22 @@ class BinancePrivateConnector(PrivateConnector):
                 EventSystem.emit(OrderStatus.EXPIRED, order)
             case "failed":
                 EventSystem.emit(OrderStatus.FAILED, order)
+
+    def create_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        amount: Decimal,
+        price: Decimal,
+        time_in_force: TimeInForce,
+        position_side: PositionSide,
+        **kwargs,
+    ):
+        pass
+
+    def cancel_order(self, symbol: str, order_id: str, **kwargs):
+        pass
 
     # async def place_market_order(
     #     self, symbol: str, side: Literal["buy", "sell"], amount: Decimal, **params

@@ -258,9 +258,9 @@ class BaseMarket(Struct):
     limits: Limit
     marginModes: MarginMode
     created: int | None
-    tierBased: bool
-    percentage: bool
-    feeSide: str
+    tierBased: bool | None
+    percentage: bool | None
+    # feeSide: str  # not supported by okx exchanges
 
 class MarketData(Struct):
     bookl1: Dict[str, Dict[str, BookL1]] = defaultdict(dict)

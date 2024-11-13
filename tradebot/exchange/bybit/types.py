@@ -254,7 +254,7 @@ class BybitMarketInfo(msgspec.Struct):
                 "limitParameter": "0.02",
                 "marketParameter": "0.02"
             }
-        },
+    },
 
     {
             "symbol": "BTC-26SEP25-300000-C",
@@ -276,7 +276,7 @@ class BybitMarketInfo(msgspec.Struct):
                 "minOrderQty": "0.01",
                 "qtyStep": "0.01"
             }
-        }
+    }
 
     {
             "symbol": "10000000AIDOGEUSDT",
@@ -433,40 +433,6 @@ class BybitMarket(BaseMarket):
     },
     """
 
-    id: str
-    lowercaseId: str | None
-    symbol: str
-    base: str
-    quote: str
-    settle: str | None
-    baseId: str
-    quoteId: str
-    settleId: str | None
-    type: AssetType
-    spot: bool
-    margin: bool | None
-    swap: bool
-    future: bool
-    option: bool
-    index: bool | None
-    active: bool
-    contract: bool
-    linear: bool | None
-    inverse: bool | None
-    subType: AssetType | None
-    taker: float
-    maker: float
-    contractSize: float | None
-    expiry: int | None
-    expiryDatetime: str | None
-    strike: float | None
-    optionType: str | None
-    precision: Precision
-    limits: Limit
-    marginModes: MarginMode
-    created: int | None
     info: BybitMarketInfo
-    tierBased: bool
-    percentage: bool
     feeSide: str
 

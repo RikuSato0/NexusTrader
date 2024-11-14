@@ -13,9 +13,10 @@ from tradebot.exchange.bybit.constants import BybitBaseUrl
 from tradebot.exchange.bybit.error import BybitError
 from tradebot.exchange.bybit.types import BybitResponse, BybitOrderResponse
 
+
 class BybitApiClient(ApiClient):
     def __init__(
-        self,  
+        self,
         api_key: str = None,
         secret: str = None,
         timeout: int = 10,
@@ -24,40 +25,39 @@ class BybitApiClient(ApiClient):
         """
         ### Testnet:
         `https://api-testnet.bybit.com`
-        
+
         ### Mainnet:
         (both endpoints are available):
         `https://api.bybit.com`
         `https://api.bytick.com`
-        
+
         ### Important:
         Netherland users: use `https://api.bybit.nl` for mainnet
         Hong Kong users: use `https://api.byhkbit.com` for mainnet
         Turkey users: use `https://api.bybit-tr.com` for mainnet
-        Kazakhstan users: use `https://api.bybit.kz` for mainnet  
+        Kazakhstan users: use `https://api.bybit.kz` for mainnet
         """
-        
+
         super().__init__(
             api_key=api_key,
             secret=secret,
             timeout=timeout,
         )
         self._recv_window = 5000
-        
+
         if testnet:
             self._base_url = BybitBaseUrl.TESTNET.value
         else:
             self._base_url = BybitBaseUrl.MAINNET_1.value
-        
+
         self._headers = {
             "Content-Type": "application/json",
             "User-Agent": "TradingBot/1.0",
             "X-BAPI-API-KEY": api_key,
         }
-        
+
         self._response_decoder = msgspec.json.Decoder(BybitResponse)
         self._order_response_decoder = msgspec.json.Decoder(BybitOrderResponse)
-        
 
     def _generate_signature(self, payload: str) -> List[str]:
         timestamp = str(self._clock.timestamp_ms())
@@ -68,7 +68,7 @@ class BybitApiClient(ApiClient):
         )
         signature = hash.hexdigest()
         return [signature, timestamp]
-    
+
     async def _fetch(
         self,
         method: str,
@@ -79,9 +79,10 @@ class BybitApiClient(ApiClient):
     ):
         url = urljoin(base_url, endpoint)
         payload = payload or {}
-        
+
         payload_str = (
-            urlencode(payload) if method == "GET" 
+            urlencode(payload)
+            if method == "GET"
             else orjson.dumps(payload).decode("utf-8")
         )
 
@@ -91,14 +92,14 @@ class BybitApiClient(ApiClient):
             headers = {
                 **headers,
                 "X-BAPI-TIMESTAMP": timestamp,
-                "X-BAPI-SIGN": signature, 
+                "X-BAPI-SIGN": signature,
                 "X-BAPI-RECV-WINDOW": str(self._recv_window),
             }
 
         if method == "GET":
             url += f"?{payload_str}"
             payload_str = None
-        
+
         try:
             self._log.debug(f"Request: {url} {payload_str}")
             response = await self._session.request(
@@ -130,8 +131,16 @@ class BybitApiClient(ApiClient):
         except Exception as e:
             self._log.error(f"Error {method} Url: {url} {e}")
             raise
-    
-    async def post_v5_order_create(self, category: str, symbol: str, side: str, order_type: str, qty: Decimal, **kwargs) -> BybitOrderResponse:
+
+    async def post_v5_order_create(
+        self,
+        category: str,
+        symbol: str,
+        side: str,
+        order_type: str,
+        qty: Decimal,
+        **kwargs,
+    ) -> BybitOrderResponse:
         """
         https://bybit-exchange.github.io/docs/v5/order/create-order
         """
@@ -146,8 +155,10 @@ class BybitApiClient(ApiClient):
         }
         raw = await self._fetch("POST", self._base_url, endpoint, payload, signed=True)
         return self._order_response_decoder.decode(raw)
-        
-    async def post_v5_order_cancel(self, category: str, symbol: str, **kwargs) -> BybitOrderResponse:
+
+    async def post_v5_order_cancel(
+        self, category: str, symbol: str, **kwargs
+    ) -> BybitOrderResponse:
         """
         https://bybit-exchange.github.io/docs/v5/order/cancel-order
         """

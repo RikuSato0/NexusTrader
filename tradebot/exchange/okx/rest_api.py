@@ -1,3 +1,4 @@
+from decimal import Decimal
 from tradebot.base import ApiClient
 from tradebot.exchange.okx import OkxAccountType
 import msgspec
@@ -46,8 +47,14 @@ class OkxApiClient(ApiClient):
         elif status >= 500:
             raise OKXHttpError(status, orjson.loads(raw), headers)
 
-    async def place_order(
-        self, instId: str, tdMode: str, side: str, ordType: str, sz: str, **kwargs
+    async def post_v5_order_create(
+        self,
+        instId: str,
+        tdMode: str,
+        side: str,
+        ordType: str,
+        sz: Decimal,
+        **kwargs,
     ) -> OKXPlaceOrderResponse:
         """
         Place a new order
@@ -59,13 +66,13 @@ class OkxApiClient(ApiClient):
             "tdMode": tdMode,
             "side": side,
             "ordType": ordType,
-            "sz": sz,
+            "sz": str(sz),
             **kwargs,
         }
         raw = await self._fetch("POST", endpoint, payload=payload, signed=True)
         return self._place_order_decoder.decode(raw)
 
-    async def cancel_order(
+    async def post_v5_order_cancel(
         self, instId: str, ordId: str = None, clOrdId: str = None
     ) -> OKXCancelOrderResponse:
         """
@@ -90,7 +97,7 @@ class OkxApiClient(ApiClient):
         )
         return base64.b64encode(mac.digest()).decode()
 
-    async def get_signature(
+    async def _get_signature(
         self, ts: str, method: str, request_path: str, payload: Dict[str, Any] = None
     ) -> str:
         body = ""
@@ -101,18 +108,18 @@ class OkxApiClient(ApiClient):
         signature = self._generate_signature(sign_str)
         return signature
 
-    def get_timestamp(self) -> str:
+    def _get_timestamp(self) -> str:
         return (
             datetime.now(timezone.utc)
             .isoformat(timespec="milliseconds")
             .replace("+00:00", "Z")
         )
 
-    async def get_headers(
+    async def _get_headers(
         self, ts: str, method: str, request_path: str, payload: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         headers = self._headers
-        signature = await self.get_signature(ts, method, request_path, payload)
+        signature = await self._get_signature(ts, method, request_path, payload)
         headers.update(
             {
                 "OK-ACCESS-KEY": self._api_key,
@@ -136,7 +143,7 @@ class OkxApiClient(ApiClient):
         url = f"{self._base_url}{endpoint}"
         request_path = endpoint
         headers = self._headers
-        timestamp = self.get_timestamp()
+        timestamp = self._get_timestamp()
 
         if params:
             query_string = "&".join([f"{k}={v}" for k, v in sorted(params.items())])
@@ -144,7 +151,7 @@ class OkxApiClient(ApiClient):
             url = f"{url}?{query_string}"
 
         if signed and self._api_key:
-            headers = await self.get_headers(timestamp, method, request_path, payload)
+            headers = await self._get_headers(timestamp, method, request_path, payload)
 
         try:
             response = await self._session.request(

@@ -8,17 +8,27 @@ from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.websockets_v2 import OkxWSClient as OkxWSClientV2
 from tradebot.exchange.okx.exchange import OkxExchangeManager
 from tradebot.types import Trade, BookL1, Kline
-from tradebot.constants import EventType
+from tradebot.exchange.okx.types import OkxMarket
+from tradebot.constants import (
+    EventType,
+    OrderStatus,
+    OrderType,
+    TimeInForce,
+    PositionSide,
+)
 from tradebot.entity import EventSystem
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.exchange.okx.rest_api import OkxApiClient
-from tradebot.types import OrderSide, OrderType, Order
+from tradebot.types import Order, OrderSide, OrderType
 from tradebot.exchange.okx.constants import (
     OKXWsGeneralMsg,
     OKXWsPushDataMsg,
     OKXWsAccountPushDataMsg,
     OKXWsFillsPushDataMsg,
     OKXWsOrdersPushDataMsg,
+    TdMode,
+    OkxEnumParser,
+    OkxOrderType,
 )
 
 
@@ -38,22 +48,22 @@ class OkxPublicConnector(PublicConnector):
                 handler=self._ws_msg_handler,
             ),
         )
-        self._ws_client = cast(OkxWSClientV2, self._ws_client)
+        self.ws_client = cast(OkxWSClientV2, self.ws_client)
 
     async def subscribe_trade(self, symbol: str):
         market = self._market.get(symbol, None)
         symbol = market["id"] if market else symbol
-        await self._ws_client.subscribe_trade(symbol)
+        await self.ws_client.subscribe_trade(symbol)
 
     async def subscribe_bookl1(self, symbol: str):
         market = self._market.get(symbol, None)
         symbol = market["id"] if market else symbol
-        await self._ws_client.subscribe_order_book(symbol, channel="bbo-tbt")
+        await self.ws_client.subscribe_order_book(symbol, channel="bbo-tbt")
 
     async def subscribe_kline(self, symbol: str, interval: str):
         market = self._market.get(symbol, None)
         symbol = market["id"] if market else symbol
-        await self._ws_client.subscribe_candlesticks(symbol, interval)
+        await self.ws_client.subscribe_candlesticks(symbol, interval)
 
     def _ws_msg_handler(self, msg):
         msg = orjson.loads(msg)
@@ -273,9 +283,14 @@ class OkxPrivateConnector(PrivateConnector):
 
     async def connect(self):
         await super().connect()
-        await self._ws_client.subscribe_orders()
-        await self._ws_client.subscribe_positions()
-        await self._ws_client.subscribe_account()
+        await self.ws_client.subscribe_orders()
+        # await self.ws_client.subscribe_positions()
+        await self.ws_client.subscrbe_fills()
+        await self.ws_client.subscribe_account()
+
+    def _get_td_mode(self, market: OkxMarket):
+        return TdMode.CASH if market.spot else TdMode.CROSS  # ?
+
 
     async def create_order(
         self,
@@ -284,6 +299,71 @@ class OkxPrivateConnector(PrivateConnector):
         type: OrderType,
         amount: Decimal,
         price: Decimal = None,
+        time_in_force: TimeInForce = TimeInForce.GTC,
+        position_side: PositionSide = None,
         **kwargs,
     ):
-        pass
+        market = self._market.get(symbol)
+        if not market:
+            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
+        symbol = market.id
+
+        params = {
+            "instId": symbol,
+            "tdMode": self._get_td_mode(market).value,
+            "side": OkxEnumParser.to_okx_order_side(side).value,
+            "ordType": OkxEnumParser.to_okx_order_type(type, time_in_force).value,
+            "sz": str(amount),
+        }
+
+        if type == OrderType.LIMIT:
+            params["px"] = str(price)
+
+        if position_side:
+            params["posSide"] = OkxEnumParser.to_okx_position_side(position_side).value
+
+        params.update(kwargs)
+
+        try:
+            res = await self._api_client.post_v5_order_create(**params)
+            pass
+            # order = Order(
+            #     exchange=self._exchange_id,
+            #     id=res.result.orderId,
+            #     client_order_id=res.result.orderLinkId,
+            #     timestamp=int(res.time),
+            #     symbol=market.symbol,
+            #     type=type,
+            #     side=side,
+            #     amount=amount,
+            #     price=float(price),
+            #     time_in_force=time_in_force,
+            #     position_side=position_side,
+            #     status=OrderStatus.PENDING,
+            #     filled=Decimal(0),
+            #     remaining=amount,
+            # )
+            # self._oms.add_order_msg(order)
+            # return order
+        except Exception as e:
+            self._log.error(f"Error creating order: {e} params: {str(params)}")
+            order = Order(
+                exchange=self._exchange_id,
+                timestamp=self._clock.timestamp_ms(),
+                symbol=symbol,
+                type=type,
+                side=side,
+                amount=amount,
+                price=float(price),
+                time_in_force=time_in_force,
+                position_side=position_side,
+                status=OrderStatus.FAILED,
+                filled=Decimal(0),
+                remaining=amount,
+            )
+            return order
+
+
+    async def disconnect(self):
+        await super().disconnect()
+        await self._api_client.close_session()

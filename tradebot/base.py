@@ -76,6 +76,31 @@ class ExchangeManager(ABC):
     @abstractmethod
     def load_markets(self):
         pass
+    
+    @property
+    def linear(self):
+        symbols = []
+        for symbol, market in self.market.items():
+            if market.linear and market.active:
+                symbols.append(symbol)
+        return symbols
+    
+    @property
+    def inverse(self):
+        symbols = []
+        for symbol, market in self.market.items():
+            if market.inverse and market.active:
+                symbols.append(symbol)
+        return symbols
+    
+    @property
+    def spot(self):
+        symbols = []
+        for symbol, market in self.market.items():
+            if market.spot and market.active:
+                symbols.append(symbol)
+        return symbols
+        
 
     # __del__ will call .close() method
     # async def close(self):
@@ -744,6 +769,7 @@ class PrivateConnector(ABC):
         exchange_id: str,
         ws_client: WSClient,
         cache: AsyncCache,
+        rate_limit: float = None,
     ):
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="INFO", flush=True
@@ -756,7 +782,11 @@ class PrivateConnector(ABC):
         self._ws_client = ws_client
         self._clock = LiveClock()
         self._cache = cache
-
+        if rate_limit:
+            self._limiter = Limiter(rate_limit)
+        else:
+            self._limiter = None
+        
     @property
     def account_type(self):
         return self._account_type
@@ -791,17 +821,24 @@ class PrivateConnector(ABC):
     def amount_to_precision(self, symbol: str, amount: float, mode: Literal["round", "ceil", "floor"] = "round") -> Decimal:
         market = self._market[symbol]
         amount: Decimal = Decimal(str(amount))
-        decimal = market.precision.amount
-        decimal = 1 if decimal == 1.0 else decimal
-        precision = Decimal(str(decimal))
+        precision = market.precision.amount
+        
+        if precision >= 1:
+            exp = Decimal(int(precision))
+            precision_decimal = Decimal('1')  
+        else:
+            exp = Decimal('1')
+            precision_decimal = Decimal(str(precision))
+        
         if mode == 'round':
-            amount = amount.quantize(precision, rounding=ROUND_HALF_UP)
+            amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_HALF_UP) * exp
         elif mode == 'ceil':
-            amount = amount.quantize(precision, rounding=ROUND_CEILING)
+            amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_CEILING) * exp
         elif mode == 'floor':
-            amount = amount.quantize(precision, rounding=ROUND_FLOOR)
+            amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_FLOOR) * exp
+        
         if amount == 0:
-            raise ValueError(f"Amount must be greater than the minimum decimal: {decimal}")
+            raise ValueError(f"Amount must be greater than zero")
         return amount
     
     def price_to_precision(self, symbol: str, price: float, mode: Literal["round", "ceil", "floor"] = "round") -> Decimal:
@@ -809,17 +846,22 @@ class PrivateConnector(ABC):
         price: Decimal = Decimal(str(price))
         
         decimal = market.precision.price
-        decimal = 1 if decimal == 1.0 else decimal
-        precision = Decimal(str(decimal))
+        
+        if decimal >= 1:
+            exp = Decimal(int(decimal))
+            precision_decimal = Decimal('1')  
+        else:
+            exp = Decimal('1')
+            precision_decimal = Decimal(str(decimal))
         
         if mode == 'round':
-            return price.quantize(precision, rounding=ROUND_HALF_UP)
+            price = (price / exp).quantize(precision_decimal, rounding=ROUND_HALF_UP) * exp
         elif mode == 'ceil':
-            return price.quantize(precision, rounding=ROUND_CEILING)
+            price = (price / exp).quantize(precision_decimal, rounding=ROUND_CEILING) * exp
         elif mode == 'floor':
-            return price.quantize(precision, rounding=ROUND_FLOOR)
+            price = (price / exp).quantize(precision_decimal, rounding=ROUND_FLOOR) * exp
 
-
+        return price
 
 
 

@@ -15,12 +15,12 @@ from dataclasses import dataclass, field, asdict
 
 import redis
 import orjson
-import spdlog as spd
 import msgspec
 
 
 from tradebot.constants import OrderStatus, AccountType
 from tradebot.types import Order
+from tradebot.log import SpdLog
 
 from nautilus_trader.common.component import LiveClock
 
@@ -395,107 +395,6 @@ class MarketDataStore:
 
     def update(self, symbol: str, ask: str, bid: str, ask_vol: str, bid_vol: str):
         self.quote[symbol] = Quote(ask=ask, bid=bid, ask_vol=ask_vol, bid_vol=bid_vol)
-
-
-class LogRegister:
-    """
-    Log registration class responsible for creating and managing loggers.
-
-    Features:
-    - Supports multiple log levels
-    - Structured log output (e.g., JSON format)
-    - Captures and logs both synchronous and asynchronous exceptions
-    - Supports log rotation
-    - Log settings can be managed via configuration files or environment variables
-    """
-
-    def __init__(self, log_dir: str = ".logs", async_mode: bool = True):
-        self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        self.loggers = {}
-        self.async_mode = async_mode
-
-        self.setup_error_handling()
-
-    def setup_error_handling(self):
-        self.error_logger = self.get_logger("ERROR", level="ERROR", flush=True)
-
-        def handle_exception(exc_type, exc_value, exc_traceback):
-            if issubclass(exc_type, KeyboardInterrupt):
-                sys.__excepthook__(exc_type, exc_value, exc_traceback)
-                return
-            tb_str = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
-            self.error_logger.error(tb_str)
-
-        sys.excepthook = handle_exception
-
-        def handle_async_exception(loop, async_context):
-            msg = async_context.get("exception", async_context.get("message", "Unknown async exception"))
-            if "exception" in async_context:
-                exception = async_context["exception"]
-                tb_str = ''.join(traceback.format_exception(type(exception), exception, exception.__traceback__))
-                self.error_logger.error(tb_str)
-            else:
-                self.error_logger.error(f"Caught async exception: {msg}")
-
-        asyncio.get_event_loop().set_exception_handler(handle_async_exception)
-
-    def get_logger(
-        self,
-        name: str,
-        level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
-        flush: bool = False,
-    ) -> spd.Logger:
-        """
-        Get a logger with the specified name. Create a new one if it doesn't exist.
-
-        :param name: Logger name
-        :param level: Log level
-        :param flush: Whether to flush after each log record
-        :return: spdlog.Logger instance
-        """
-        if name not in self.loggers:
-            logger_instance = spd.DailyLogger(
-                name=name,
-                filename=str(self.log_dir / f"{name}.log"),
-                hour=0,
-                minute=0,
-                async_mode=self.async_mode,
-            )
-            logger_instance.set_level(self.parse_level(level))
-            if flush:
-                logger_instance.flush_on(self.parse_level(level))
-            self.loggers[name] = logger_instance
-        return self.loggers[name]
-
-    def parse_level(
-        self, level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-    ) -> spd.LogLevel:
-        """
-        Parse log level string to spdlog.LogLevel.
-
-        :param level: Log level string
-        :return: spdlog.LogLevel
-        """
-        levels = {
-            "DEBUG": spd.LogLevel.DEBUG,
-            "INFO": spd.LogLevel.INFO,
-            "WARNING": spd.LogLevel.WARN,
-            "ERROR": spd.LogLevel.ERR,
-            "CRITICAL": spd.LogLevel.CRITICAL,
-        }
-        return levels[level]
-
-    def close_all_loggers(self):
-        """
-        Close all loggers and release resources.
-        """
-        for logger in self.loggers.values():
-            logger.flush()
-            logger.drop()
-
-    def __del__(self):
-        self.close_all_loggers()
     
 
 
@@ -551,7 +450,8 @@ class Cache:
 
 
 class AsyncCache:
-    def __init__(self, account_type: AccountType, strategy_id: str, user_id: str, sync_interval: int = 300, expire_time: int = 3600):
+    def __init__(self, account_type: AccountType, strategy_id: str, user_id: str, sync_interval: int = 10, expire_time: int = 3600):
+        self._log = SpdLog.get_logger(name=type(self).__name__, level="DEBUG", flush=True)
         self._clock = LiveClock()
         self._r = RedisClient.get_async_client()
         self._orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:orders"
@@ -584,16 +484,17 @@ class AsyncCache:
         
     async def _periodic_sync(self):
         while not self._shutdown_event.is_set():
-            await asyncio.sleep(self._sync_interval)
             await self._sync_to_redis()
+            await asyncio.sleep(self._sync_interval)
             
     async def _periodic_cleanup(self):
         while not self._shutdown_event.is_set():
-            await asyncio.sleep(self._sync_interval)
             self._cleanup_expired_data()
+            await asyncio.sleep(self._sync_interval)
 
     async def _sync_to_redis(self):
         for order_id, order in self._mem_orders.items():
+            self._log.debug(f"syncing order {order_id} to redis")
             await self._r.hset(self._orders_key, order_id, self._encode_order(order))
         
         await self._r.delete(self._open_orders_key)
@@ -623,7 +524,9 @@ class AsyncCache:
         ]
         for order_id in expired_orders:
             del self._mem_orders[order_id]
-            for order_set in self._mem_symbol_orders.values():
+            self._log.debug(f"removing order {order_id} from memory")
+            for symbol, order_set in self._mem_symbol_orders.items():
+                self._log.debug(f"removing order {order_id} from symbol {symbol}")
                 order_set.discard(order_id)
     
     def order_initialized(self, order: Order):

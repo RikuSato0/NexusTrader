@@ -117,16 +117,22 @@ class BybitPublicConnector(PublicConnector):
 
         res = self._orderbook[symbol].parse_orderbook_depth(msg, levels=1)
 
+        bid, bid_size = (
+            (res["bids"][0][0], res["bids"][0][1]) if res["bids"] else (0, 0)
+        )
+        ask, ask_size = (
+            (res["asks"][0][0], res["asks"][0][1]) if res["asks"] else (0, 0)
+        )
+        
         bookl1 = BookL1(
             exchange=self._exchange_id,
             symbol=symbol,
             timestamp=msg.ts,
-            bid=res["bids"][0][0],
-            bid_size=res["bids"][0][1],
-            ask=res["asks"][0][0],
-            ask_size=res["asks"][0][1],
+            bid=bid,
+            bid_size=bid_size,
+            ask=ask,
+            ask_size=ask_size,
         )
-
         EventSystem.emit(EventType.BOOKL1, bookl1)
 
     async def subscribe_bookl1(self, symbol: str):
@@ -156,6 +162,7 @@ class BybitPrivateConnector(PrivateConnector):
         account_type: BybitAccountType,
         strategy_id: str = None,
         user_id: str = None,
+        rate_limit: float = None,
     ):
         # all the private endpoints are the same for all account types, so no need to pass account_type
         # only need to determine if it's testnet or not
@@ -184,6 +191,7 @@ class BybitPrivateConnector(PrivateConnector):
                 strategy_id=strategy_id,
                 user_id=user_id,
             ),
+            rate_limit=rate_limit,
         )
 
         self._api_client = BybitApiClient(
@@ -230,6 +238,8 @@ class BybitPrivateConnector(PrivateConnector):
             raise ValueError(f"Unsupported market type: {market.type}")
 
     async def cancel_order(self, symbol: str, order_id: str, **kwargs):
+        if self._limiter:
+            await self._limiter.wait()
         try:
             market = self._market.get(symbol)
             if not market:
@@ -277,6 +287,8 @@ class BybitPrivateConnector(PrivateConnector):
         position_side: PositionSide = None,
         **kwargs,
     ):
+        if self._limiter:
+            await self._limiter.wait()
         market = self._market.get(symbol)
         if not market:
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")

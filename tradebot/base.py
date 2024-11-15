@@ -809,7 +809,6 @@ class PrivateConnector(ABC):
     async def cancel_order(self, symbol: str, order_id: str, **kwargs) -> Order:
         pass
 
-
     async def connect(self):
         await self._cache.sync()
 

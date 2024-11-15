@@ -209,8 +209,8 @@ class BybitPrivateConnector(PrivateConnector):
 
     async def connect(self):
         await super().connect()
-        await self._ws_client.subscribe_order(topic="order")
         self._task_manager.create_task(self._oms.handle_order_event())
+        await self._ws_client.subscribe_order(topic="order")
 
     def _ws_msg_handler(self, raw: bytes):
         try:

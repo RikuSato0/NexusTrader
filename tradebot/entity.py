@@ -24,6 +24,7 @@ from tradebot.log import SpdLog
 
 from nautilus_trader.common.component import LiveClock
 
+
 class TaskManager:
     def __init__(self):
         self._tasks: List[asyncio.Task] = []
@@ -48,6 +49,7 @@ class TaskManager:
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
 
+
 class EventSystem:
     _listeners: Dict[str, List[Callable]] = defaultdict(list)
 
@@ -65,11 +67,13 @@ class EventSystem:
                 ...
         """
         if callback is None:
+
             def decorator(fn: Callable):
                 if event not in cls._listeners:
                     cls._listeners[event] = []
                 cls._listeners[event].append(fn)
                 return fn
+
             return decorator
 
         cls._listeners[event].append(callback)
@@ -83,7 +87,7 @@ class EventSystem:
         :param event: The event name.
         :param args: Positional arguments to pass to the listeners.
         :param kwargs: Keyword arguments to pass to the listeners.
-        """ 
+        """
         for callback in cls._listeners.get(event, []):
             callback(*args, **kwargs)
 
@@ -102,7 +106,7 @@ class EventSystem:
 
 class RedisClient:
     _params = None
-    
+
     @classmethod
     def _is_in_docker(cls) -> bool:
         try:
@@ -110,29 +114,25 @@ class RedisClient:
             return True
         except socket.gaierror:
             return False
-    
+
     @classmethod
     def _get_params(cls) -> dict:
         if cls._params is None:
             if cls._is_in_docker():
-                cls._params = {
-                    "host": "redis",
-                    "db": 0,
-                    "password": "password"
-                }
+                cls._params = {"host": "redis", "db": 0, "password": "password"}
             else:
                 cls._params = {
                     "host": "localhost",
                     "port": 6379,
                     "db": 0,
-                    "password": "password"
+                    "password": None,
                 }
         return cls._params
-    
+
     @classmethod
     def get_client(cls) -> redis.Redis:
         return redis.Redis(**cls._get_params())
-    
+
     @classmethod
     def get_async_client(cls) -> redis.asyncio.Redis:
         return redis.asyncio.Redis(**cls._get_params())
@@ -395,98 +395,222 @@ class MarketDataStore:
 
     def update(self, symbol: str, ask: str, bid: str, ask_vol: str, bid_vol: str):
         self.quote[symbol] = Quote(ask=ask, bid=bid, ask_vol=ask_vol, bid_vol=bid_vol)
-    
+
+
+class LogRegister:
+    """
+    Log registration class responsible for creating and managing loggers.
+
+    Features:
+    - Supports multiple log levels
+    - Structured log output (e.g., JSON format)
+    - Captures and logs both synchronous and asynchronous exceptions
+    - Supports log rotation
+    - Log settings can be managed via configuration files or environment variables
+    """
+
+    def __init__(self, log_dir: str = ".logs", async_mode: bool = True):
+        self.log_dir = Path(log_dir)
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.loggers = {}
+        self.async_mode = async_mode
+
+        self.setup_error_handling()
+
+    def setup_error_handling(self):
+        self.error_logger = self.get_logger("ERROR", level="ERROR", flush=True)
+
+        def handle_exception(exc_type, exc_value, exc_traceback):
+            if issubclass(exc_type, KeyboardInterrupt):
+                sys.__excepthook__(exc_type, exc_value, exc_traceback)
+                return
+            tb_str = "".join(
+                traceback.format_exception(exc_type, exc_value, exc_traceback)
+            )
+            self.error_logger.error(tb_str)
+
+        sys.excepthook = handle_exception
+
+        def handle_async_exception(loop, async_context):
+            msg = async_context.get(
+                "exception", async_context.get("message", "Unknown async exception")
+            )
+            if "exception" in async_context:
+                exception = async_context["exception"]
+                tb_str = "".join(
+                    traceback.format_exception(
+                        type(exception), exception, exception.__traceback__
+                    )
+                )
+                self.error_logger.error(tb_str)
+            else:
+                self.error_logger.error(f"Caught async exception: {msg}")
+
+        asyncio.get_event_loop().set_exception_handler(handle_async_exception)
+
+    def get_logger(
+        self,
+        name: str,
+        level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
+        flush: bool = False,
+    ) -> spd.Logger:
+        """
+        Get a logger with the specified name. Create a new one if it doesn't exist.
+
+        :param name: Logger name
+        :param level: Log level
+        :param flush: Whether to flush after each log record
+        :return: spdlog.Logger instance
+        """
+        if name not in self.loggers:
+            logger_instance = spd.DailyLogger(
+                name=name,
+                filename=str(self.log_dir / f"{name}.log"),
+                hour=0,
+                minute=0,
+                async_mode=self.async_mode,
+            )
+            logger_instance.set_level(self.parse_level(level))
+            if flush:
+                logger_instance.flush_on(self.parse_level(level))
+            self.loggers[name] = logger_instance
+        return self.loggers[name]
+
+    def parse_level(
+        self, level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    ) -> spd.LogLevel:
+        """
+        Parse log level string to spdlog.LogLevel.
+
+        :param level: Log level string
+        :return: spdlog.LogLevel
+        """
+        levels = {
+            "DEBUG": spd.LogLevel.DEBUG,
+            "INFO": spd.LogLevel.INFO,
+            "WARNING": spd.LogLevel.WARN,
+            "ERROR": spd.LogLevel.ERR,
+            "CRITICAL": spd.LogLevel.CRITICAL,
+        }
+        return levels[level]
+
+    def close_all_loggers(self):
+        """
+        Close all loggers and release resources.
+        """
+        for logger in self.loggers.values():
+            logger.flush()
+            logger.drop()
+
+    def __del__(self):
+        self.close_all_loggers()
 
 
 class Cache:
     def __init__(self, account_type: AccountType, strategy_id: str, user_id: str):
-        self._r = RedisClient.get_client()  
+        self._r = RedisClient.get_client()
         self._orders = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:orders"
         self._open_orders = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:open_orders"
         self._symbol_orders = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:symbol_orders"
-        
-    
+
     def _encode_order(self, order: Order) -> bytes:
         return msgspec.json.encode(order)
-    
+
     def _decode_order(self, data: bytes) -> Order:
         return msgspec.json.decode(data, type=Order)
-    
-    def order_initialized(self, order: Order):    
+
+    def order_initialized(self, order: Order):
         if self._r.hget(self._orders, order.id):
             return
         self._r.hset(self._orders, order.id, self._encode_order(order))
         self._r.sadd(self._open_orders, order.id)
         self._r.sadd(f"{self._symbol_orders}:{order.symbol}", order.id)
-    
+
     def order_status_update(self, order: Order):
         self._r.hset(self._orders, order.id, self._encode_order(order))
-        
-        if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED, OrderStatus.EXPIRED):
+
+        if order.status in (
+            OrderStatus.FILLED,
+            OrderStatus.CANCELED,
+            OrderStatus.EXPIRED,
+        ):
             self._r.srem(self._open_orders, order.id)
-    
+
     def get_order(self, order_id: str) -> Order:
         order_data = self._r.hget(self._orders, order_id)
         if order_data:
             return self._decode_order(order_data)
         return None
-    
+
     def get_symbol_orders(self, symbol: str) -> Set[str]:
         orders = self._r.smembers(f"{self._symbol_orders}:{symbol}")
         if orders:
             return {order_id.decode() for order_id in orders}
         return set()
-    
+
     def get_open_orders(self, symbol: str = None) -> Set[str]:
-        orders = {order_id.decode() for order_id in self._r.smembers(self._open_orders) or []}
+        orders = {
+            order_id.decode() for order_id in self._r.smembers(self._open_orders) or []
+        }
         if symbol:
             symbol_orders = self.get_symbol_orders(symbol)
             return orders.intersection(symbol_orders)
         return orders
-    
+
+
 # log_register = LogRegister()
 # market = MarketDataStore()
 
 
-
 class AsyncCache:
-    def __init__(self, account_type: AccountType, strategy_id: str, user_id: str, sync_interval: int = 10, expire_time: int = 3600):
-        self._log = SpdLog.get_logger(name=type(self).__name__, level="DEBUG", flush=True)
+    def __init__(
+        self,
+        account_type: AccountType,
+        strategy_id: str,
+        user_id: str,
+        sync_interval: int = 300,
+        expire_time: int = 3600,
+    ):
         self._clock = LiveClock()
         self._r = RedisClient.get_async_client()
         self._orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:orders"
         self._open_orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:open_orders"
         self._symbol_open_orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:symbol_open_orders"
         self._symbol_orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:symbol_orders"
-        
+
         # in-memory save
         self._mem_orders: Dict[str, Order] = {}  # order_id -> Order
         self._mem_open_orders: Set[str] = set()  # set(order_id)
-        self._mem_symbol_open_orders: Dict[str, Set[str]] = defaultdict(set)  # symbol -> set(order_id)
-        self._mem_symbol_orders: Dict[str, Set[str]] = defaultdict(set)  # symbol -> set(order_id)
-        
+        self._mem_symbol_open_orders: Dict[str, Set[str]] = defaultdict(
+            set
+        )  # symbol -> set(order_id)
+        self._mem_symbol_orders: Dict[str, Set[str]] = defaultdict(
+            set
+        )  # symbol -> set(order_id)
+
         # set params
         self._sync_interval = sync_interval  # sync interval
         self._expire_time = expire_time  # expire time
-        
+
         self._shutdown_event = asyncio.Event()
         self._task_manager = TaskManager()
-    
+
     def _encode_order(self, order: Order) -> bytes:
         return msgspec.json.encode(order)
-    
+
     def _decode_order(self, data: bytes) -> Order:
         return msgspec.json.decode(data, type=Order)
-    
+
     async def sync(self):
         self._task_manager.create_task(self._periodic_sync())
         self._task_manager.create_task(self._periodic_cleanup())
-        
+
     async def _periodic_sync(self):
         while not self._shutdown_event.is_set():
             await self._sync_to_redis()
             await asyncio.sleep(self._sync_interval)
-            
+            await self._sync_to_redis()
+
     async def _periodic_cleanup(self):
         while not self._shutdown_event.is_set():
             self._cleanup_expired_data()
@@ -496,17 +620,17 @@ class AsyncCache:
         for order_id, order in self._mem_orders.items():
             self._log.debug(f"syncing order {order_id} to redis")
             await self._r.hset(self._orders_key, order_id, self._encode_order(order))
-        
+
         await self._r.delete(self._open_orders_key)
         if self._mem_open_orders:
             await self._r.sadd(self._open_orders_key, *self._mem_open_orders)
-        
+
         for symbol, order_ids in self._mem_symbol_orders.items():
             key = f"{self._symbol_orders_key}:{symbol}"
             await self._r.delete(key)
             if order_ids:
                 await self._r.sadd(key, *order_ids)
-                
+
         for symbol, order_ids in self._mem_symbol_open_orders.items():
             key = f"{self._symbol_open_orders_key}:{symbol}"
             await self._r.delete(key)
@@ -516,10 +640,11 @@ class AsyncCache:
     def _cleanup_expired_data(self):
         current_time = self._clock.timestamp()
         expire_before = current_time - self._expire_time
-        
+
         # 清理过期orders
         expired_orders = [
-            order_id for order_id, order in self._mem_orders.items()
+            order_id
+            for order_id, order in self._mem_orders.items()
             if order.timestamp < expire_before
         ]
         for order_id in expired_orders:
@@ -528,25 +653,31 @@ class AsyncCache:
             for symbol, order_set in self._mem_symbol_orders.items():
                 self._log.debug(f"removing order {order_id} from symbol {symbol}")
                 order_set.discard(order_id)
-    
+
     def order_initialized(self, order: Order):
-        if order.id in self._mem_orders: # which means the order is already pushed by websocket
+        if (
+            order.id in self._mem_orders
+        ):  # which means the order is already pushed by websocket
             return
         self._mem_orders[order.id] = order
         self._mem_open_orders.add(order.id)
         self._mem_symbol_orders[order.symbol].add(order.id)
         self._mem_symbol_open_orders[order.symbol].add(order.id)
-    
+
     def order_status_update(self, order: Order):
         self._mem_orders[order.id] = order
-        if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED, OrderStatus.EXPIRED):
+        if order.status in (
+            OrderStatus.FILLED,
+            OrderStatus.CANCELED,
+            OrderStatus.EXPIRED,
+        ):
             self._mem_open_orders.discard(order.id)
             self._mem_symbol_open_orders[order.symbol].discard(order.id)
-    
+
     async def get_order(self, order_id: str) -> Order:
         if order_id in self._mem_orders:
             return self._mem_orders[order_id]
-        
+
         raw_order = await self._r.hget(self._orders_key, order_id)
         if raw_order:
             order = self._decode_order(raw_order)
@@ -554,13 +685,17 @@ class AsyncCache:
             return order
         return None
 
-    async def get_symbol_orders(self, symbol: str, in_mem: bool = True) -> Set[str]: 
+    async def get_symbol_orders(self, symbol: str, in_mem: bool = True) -> Set[str]:
         """Get all orders for a symbol from memory and Redis"""
-        
+
         memory_orders = self._mem_symbol_orders.get(symbol, set())
         if not in_mem:
             redis_orders = await self._r.smembers(f"{self._symbol_orders_key}:{symbol}")
-            redis_orders = {order_id.decode() for order_id in redis_orders} if redis_orders else set()
+            redis_orders = (
+                {order_id.decode() for order_id in redis_orders}
+                if redis_orders
+                else set()
+            )
             return memory_orders.union(redis_orders)
         return memory_orders
 
@@ -568,11 +703,9 @@ class AsyncCache:
         if symbol:
             return self._mem_symbol_open_orders.get(symbol, set())
         return self._mem_open_orders
-    
+
     async def close(self):
         self._shutdown_event.set()
         await self._sync_to_redis()
         await self._r.aclose()
         await self._task_manager.cancel()
-        
-        

@@ -1,4 +1,5 @@
 from enum import Enum, unique
+import msgspec
 from tradebot.constants import (
     AccountType,
     OrderStatus,
@@ -23,12 +24,27 @@ STREAM_URLS = {
 
 
 from nautilus_trader.adapters.okx.schemas.ws import OKXWsAccountPushDataMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsPositionsPushDataMsg
+# from nautilus_trader.adapters.okx.schemas.ws import OKXWsPositionsPushDataMsg
 from nautilus_trader.adapters.okx.schemas.ws import OKXWsFillsPushDataMsg
 from nautilus_trader.adapters.okx.schemas.ws import OKXWsOrdersPushDataMsg
 from nautilus_trader.adapters.okx.schemas.ws import OKXWsGeneralMsg
 from nautilus_trader.adapters.okx.schemas.ws import OKXWsOrderbookPushDataMsg
 from nautilus_trader.adapters.okx.schemas.ws import OKXWsPushDataMsg
+from nautilus_trader.adapters.okx.schemas.ws import OKXWsPositionsData
+from nautilus_trader.adapters.okx.schemas.ws import OKXWsEventMsg
+
+
+class OKXWsPositionsArg(msgspec.Struct, kw_only=True):
+    channel: str
+    uid: str
+    instType: str
+    instFamily: str | None = None
+    instId: str| None = None
+
+
+class OKXWsPositionsPushDataMsg(msgspec.Struct):
+    arg: OKXWsPositionsArg
+    data: list[OKXWsPositionsData]
 
 
 @unique

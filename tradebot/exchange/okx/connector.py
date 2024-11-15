@@ -3,7 +3,7 @@ import orjson
 import msgspec
 from decimal import Decimal
 from tradebot.exchange.okx import OkxAccountType
-from tradebot.entity import Cache
+from tradebot.entity import AsyncCache
 from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.websockets_v2 import OkxWSClient as OkxWSClientV2
 from tradebot.exchange.okx.exchange import OkxExchangeManager
@@ -17,15 +17,17 @@ from tradebot.constants import (
     PositionSide,
 )
 from tradebot.entity import EventSystem
-from tradebot.base import PublicConnector, PrivateConnector
+from tradebot.base import PublicConnector, PrivateConnector, OrderManagerSystem
 from tradebot.exchange.okx.rest_api import OkxApiClient
 from tradebot.types import Order, OrderSide, OrderType
 from tradebot.exchange.okx.constants import (
     OKXWsGeneralMsg,
+    OKXWsEventMsg,
     OKXWsPushDataMsg,
     OKXWsAccountPushDataMsg,
     OKXWsFillsPushDataMsg,
     OKXWsOrdersPushDataMsg,
+    OKXWsPositionsPushDataMsg,
     TdMode,
     OkxEnumParser,
     OkxOrderType,
@@ -206,7 +208,7 @@ class OkxPrivateConnector(PrivateConnector):
                 secret=exchange.secret,
                 passphrase=exchange.passphrase,
             ),
-            cache=Cache(
+            cache=AsyncCache(
                 account_type="OKX",
                 strategy_id=strategy_id,
                 user_id=user_id,
@@ -218,15 +220,17 @@ class OkxPrivateConnector(PrivateConnector):
             secret=exchange.secret,
             passphrase=exchange.passphrase,
         )
+        self._oms = OrderManagerSystem(
+            cache=self._cache,
+        )
 
         self._decoder_ws_general_msg = msgspec.json.Decoder(OKXWsGeneralMsg)
+        self._decoder_ws_event_msg = msgspec.json.Decoder(OKXWsEventMsg)
         self._decoder_ws_push_data_msg = msgspec.json.Decoder(OKXWsPushDataMsg)
         self._decoder_ws_orders_msg = msgspec.json.Decoder(OKXWsOrdersPushDataMsg)
         self._decoder_ws_account_msg = msgspec.json.Decoder(OKXWsAccountPushDataMsg)
         self._decoder_ws_fills_msg = msgspec.json.Decoder(OKXWsFillsPushDataMsg)
-
-    async def cancel_order(self, symbol: str, order_id: str, **kwargs) -> Order:
-        pass
+        self._decoder_ws_positions_msg = msgspec.json.Decoder(OKXWsPositionsPushDataMsg)
 
     @property
     def ws_client(self) -> OkxWSClient:
@@ -234,7 +238,21 @@ class OkxPrivateConnector(PrivateConnector):
 
     def _ws_msg_handler(self, raw: bytes):
         msg = self._decoder_ws_general_msg.decode(raw)
-        if msg.is_push_data_msg:
+
+        if msg.is_event_msg:
+            msg = self._decoder_ws_event_msg.decode(raw)
+            if msg.event == "error":
+                self._log.error(msg)
+            elif msg.event == "login":
+                self._log.info("Login success")
+            elif msg.event == "subscribe":
+                self._log.info(f"Subscribed to {msg.arg.channel}")
+            elif msg.event == "channel-conn-count":
+                self._log.info(
+                    f"Channel {msg.channel} connection count: {msg.connCount}"
+                )
+
+        elif msg.is_push_data_msg:
             push_data = self._decoder_ws_push_data_msg.decode(raw)
             channel = push_data.arg.channel
             if channel == "account":
@@ -246,34 +264,29 @@ class OkxPrivateConnector(PrivateConnector):
             elif channel == "positions":
                 self._parse_positions(raw)
 
-        # if "event" in msg:
-        #     if msg["event"] == "error":
-        #         self._log.error(msg.get("msg", "Unknown error"))
-        #     elif msg["event"] == "subscribe":
-        #         self._log.info(f"Subscribed to {msg['arg']['channel']}")
-        #     elif msg["event"] == "login":
-        #         self._log.info("Login success")
-        #     elif msg["event"] == "channel-conn-count":
-        #         self._log.info(
-        #             f"Channel {msg['channel']} connection count: {msg['connCount']}"
-        #         )
-
     def _parse_orders(self, raw: bytes):
         orders_push_data: OKXWsOrdersPushDataMsg = self._decoder_ws_orders_msg.decode(
             raw
         )
-        # TODO
+        print(orders_push_data.data)
+        # self._log.info(str(orders_push_data.data))
         return orders_push_data.data
 
     def _parse_positions(self, raw: bytes):
-        """Nothing to do because nautilus updates positions from fills."""
-        pass
+        """nautilus updates positions from fills."""
+        positions_push_data: OKXWsPositionsPushDataMsg = (
+            self._decoder_ws_positions_msg.decode(raw)
+        )
+        print(positions_push_data.data)
+        # self._log.info(str(positions_push_data.data))
+        return positions_push_data.data
 
     def _parse_account(self, raw: bytes):
         account_push_data: OKXWsAccountPushDataMsg = (
             self._decoder_ws_account_msg.decode(raw)
         )
         print(account_push_data.data)
+        # self._log.info(str(account_push_data.data))
         return account_push_data.data
 
     def _parse_fills(self, raw: bytes):
@@ -284,13 +297,12 @@ class OkxPrivateConnector(PrivateConnector):
     async def connect(self):
         await super().connect()
         await self.ws_client.subscribe_orders()
-        # await self.ws_client.subscribe_positions()
-        await self.ws_client.subscrbe_fills()
+        await self.ws_client.subscribe_positions()
+        # await self.ws_client.subscrbe_fills()  # vip5 or above only
         await self.ws_client.subscribe_account()
 
     def _get_td_mode(self, market: OkxMarket):
         return TdMode.CASH if market.spot else TdMode.CROSS  # ?
-
 
     async def create_order(
         self,
@@ -325,26 +337,26 @@ class OkxPrivateConnector(PrivateConnector):
         params.update(kwargs)
 
         try:
-            res = await self._api_client.post_v5_order_create(**params)
-            pass
-            # order = Order(
-            #     exchange=self._exchange_id,
-            #     id=res.result.orderId,
-            #     client_order_id=res.result.orderLinkId,
-            #     timestamp=int(res.time),
-            #     symbol=market.symbol,
-            #     type=type,
-            #     side=side,
-            #     amount=amount,
-            #     price=float(price),
-            #     time_in_force=time_in_force,
-            #     position_side=position_side,
-            #     status=OrderStatus.PENDING,
-            #     filled=Decimal(0),
-            #     remaining=amount,
-            # )
-            # self._oms.add_order_msg(order)
-            # return order
+            _res = await self._api_client.post_v5_order_create(**params)
+            res = _res.data[0]
+            order = Order(
+                exchange=self._exchange_id,
+                id=res.ordId,
+                client_order_id=res.clOrdId,
+                timestamp=int(res.ts),
+                symbol=market.symbol,
+                type=type,
+                side=side,
+                amount=amount,
+                price=float(price),
+                time_in_force=time_in_force,
+                position_side=position_side,
+                status=OrderStatus.PENDING,
+                filled=Decimal(0),
+                remaining=amount,
+            )
+            self._oms.add_order_msg(order)
+            return order
         except Exception as e:
             self._log.error(f"Error creating order: {e} params: {str(params)}")
             order = Order(
@@ -363,6 +375,36 @@ class OkxPrivateConnector(PrivateConnector):
             )
             return order
 
+    async def cancel_order(self, symbol: str, order_id: str, **kwargs):
+        market = self._market.get(symbol)
+        if not market:
+            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
+        exchange_symbol = market.id
+
+        params = {"instId": exchange_symbol, "ordId": order_id, **kwargs}
+
+        try:
+            _res = await self._api_client.post_v5_order_cancel(**params)
+            res = _res.data[0]
+            order = Order(
+                exchange=self._exchange_id,
+                id=res.ordId,
+                client_order_id=res.clOrdId,
+                timestamp=int(res.ts),
+                symbol=symbol,
+                status=OrderStatus.CANCELING,
+            )
+            self._oms.add_order_msg(order)
+            return order
+        except Exception as e:
+            self._log.error(f"Error canceling order: {e} params: {str(params)}")
+            order = Order(
+                exchange=self._exchange_id,
+                timestamp=self._clock.timestamp_ms(),
+                symbol=symbol,
+                status=OrderStatus.FAILED,
+            )
+            return order
 
     async def disconnect(self):
         await super().disconnect()

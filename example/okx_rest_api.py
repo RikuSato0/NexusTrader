@@ -16,7 +16,7 @@ async def main():
     )
     
     start = int(time.time() * 1000)
-    res = await rest_api.place_order(
+    res = await rest_api.post_v5_order_create(
         instId='BTC-USDT-SWAP',
         tdMode='cross',
         side='buy',
@@ -26,7 +26,7 @@ async def main():
     print(res)
     
     start = int(time.time() * 1000)
-    res = await rest_api.place_order(
+    res = await rest_api.post_v5_order_cancel(
         instId='BTC-USDT-SWAP',
         tdMode='cross',
         side='sell',

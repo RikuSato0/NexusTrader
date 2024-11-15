@@ -15,6 +15,10 @@ class OkxAccountType(AccountType):
     AWS = 1
     DEMO = 2
 
+    @property
+    def is_testnet(self):
+        return self == OkxAccountType.DEMO
+
 
 STREAM_URLS = {
     OkxAccountType.LIVE: "wss://ws.okx.com:8443/ws",
@@ -22,6 +26,11 @@ STREAM_URLS = {
     OkxAccountType.DEMO: "wss://wspap.okx.com:8443/ws",
 }
 
+REST_URLS = {
+    OkxAccountType.LIVE: "https://www.okx.com",
+    OkxAccountType.AWS: "https://aws.okx.com",
+    OkxAccountType.DEMO: "https://www.okx.com",
+}
 
 from nautilus_trader.adapters.okx.schemas.ws import OKXWsAccountPushDataMsg
 # from nautilus_trader.adapters.okx.schemas.ws import OKXWsPositionsPushDataMsg
@@ -39,7 +48,7 @@ class OKXWsPositionsArg(msgspec.Struct, kw_only=True):
     uid: str
     instType: str
     instFamily: str | None = None
-    instId: str| None = None
+    instId: str | None = None
 
 
 class OKXWsPositionsPushDataMsg(msgspec.Struct):

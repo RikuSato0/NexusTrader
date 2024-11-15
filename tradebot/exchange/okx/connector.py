@@ -219,6 +219,7 @@ class OkxPrivateConnector(PrivateConnector):
             api_key=exchange.api_key,
             secret=exchange.secret,
             passphrase=exchange.passphrase,
+            account_type=account_type,
         )
         self._oms = OrderManagerSystem(
             cache=self._cache,
@@ -329,6 +330,8 @@ class OkxPrivateConnector(PrivateConnector):
         }
 
         if type == OrderType.LIMIT:
+            if not price:
+                raise ValueError("Price is required for limit order")
             params["px"] = str(price)
 
         if position_side:

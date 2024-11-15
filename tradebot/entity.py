@@ -3,6 +3,7 @@ import asyncio
 import socket
 import collections
 import traceback
+import spdlog as spd
 
 from pathlib import Path
 

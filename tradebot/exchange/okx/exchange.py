@@ -18,12 +18,11 @@ class OkxExchangeManager(ExchangeManager):
         self.passphrase = config.get("password", None)
 
     def load_markets(self):
-        self.market = self.api.load_markets()
-        for k, v in self.market.items():
+        market = self.api.load_markets()
+        for k, v in market.items():
             v_json = orjson.dumps(v)
             v = msgspec.json.decode(v_json, type=OkxMarket)
-            self.market[k] = v
 
-        self.market_id = {}
-        for _, v in self.market.items():
-            self.market_id[v.id] = v
+            self.market[k] = v
+            for _, v in self.market.items():
+                self.market_id[v.id] = v

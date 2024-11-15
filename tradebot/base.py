@@ -720,7 +720,7 @@ class Clock:
                     await callback(self.current_timestamp)
                 else:
                     callback(self.current_timestamp)
-                    
+
 
 class PublicConnector(ABC):
     def __init__(
@@ -804,7 +804,7 @@ class PrivateConnector(ABC):
         **kwargs,
     ) -> Order:
         pass
-    
+
     @abstractmethod
     async def cancel_order(self, symbol: str, order_id: str, **kwargs) -> Order:
         pass
@@ -816,8 +816,13 @@ class PrivateConnector(ABC):
         await self._cache.close()
         await self._ws_client.disconnect()
         await self._task_manager.cancel()
-        
-    def amount_to_precision(self, symbol: str, amount: float, mode: Literal["round", "ceil", "floor"] = "round") -> Decimal:
+
+    def amount_to_precision(
+        self,
+        symbol: str,
+        amount: float,
+        mode: Literal["round", "ceil", "floor"] = "round",
+    ) -> Decimal:
         market = self._market[symbol]
         amount: Decimal = Decimal(str(amount))
         precision = market.precision.amount
@@ -839,11 +844,16 @@ class PrivateConnector(ABC):
         if amount == 0:
             raise ValueError(f"Amount must be greater than zero")
         return amount
-    
-    def price_to_precision(self, symbol: str, price: float, mode: Literal["round", "ceil", "floor"] = "round") -> Decimal:
+
+    def price_to_precision(
+        self,
+        symbol: str,
+        price: float,
+        mode: Literal["round", "ceil", "floor"] = "round",
+    ) -> Decimal:
         market = self._market[symbol]
         price: Decimal = Decimal(str(price))
-        
+
         decimal = market.precision.price
         
         if decimal >= 1:

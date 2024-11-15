@@ -1,84 +1,69 @@
 import asyncio
-from pprint import pprint
+from decimal import Decimal
 from tradebot.constants import CONFIG
-from tradebot.base import ExchangeManager
-from tradebot.exceptions import OrderResponseError
-from tradebot.exchange import OkxOrderManager
+from tradebot.exchange.okx import (
+    OkxAccountType,
+    OkxPrivateConnector,
+    OkxExchangeManager,
+    OkxPublicConnector,
+)
+from tradebot.constants import EventType
+from tradebot.entity import EventSystem
+from tradebot.constants import OrderSide, OrderType, TimeInForce
 
 
-OKX_API_KEY = CONFIG['okex_demo']['API_KEY']
-OKX_SECRET = CONFIG['okex_demo']['SECRET']
-OKX_PASSPHRASE = CONFIG['okex_demo']['PASSPHRASE']
+OKX_API_KEY = CONFIG["okex_demo"]["API_KEY"]
+OKX_SECRET = CONFIG["okex_demo"]["SECRET"]
+OKX_PASSPHRASE = CONFIG["okex_demo"]["PASSPHRASE"]
 
 
 async def main():
     try:
         config = {
-            'exchange_id': 'okx',
-            'sandbox': True,
-            'apiKey': OKX_API_KEY,
-            'secret': OKX_SECRET,
-            'password': OKX_PASSPHRASE,
-            'enableRateLimit': False,
-            # 'options': {
-            #     'portfolioMargin': True,
-            # }
+            "exchange_id": "okx",
+            "sandbox": True,
+            "apiKey": OKX_API_KEY,
+            "secret": OKX_SECRET,
+            "password": OKX_PASSPHRASE,
+            "enableRateLimit": False,
         }
-        
-        exchange = ExchangeManager(config)
-        await exchange.load_markets()
-        order_manager = OkxOrderManager(exchange)
 
-        res = await order_manager.place_limit_order(
-            symbol='BTC/USDT:USDT',
-            side='buy',
-            amount=0.5,
-            price=50000,
-            # reduceOnly=True,
+        exchange = OkxExchangeManager(config)
+        connector = OkxPrivateConnector(
+            account_type=OkxAccountType.DEMO,
+            exchange=exchange,
         )
-        
-        pprint(res)
-        
-        
-        res = await order_manager.cancel_order(
-            id = res.id,
-            symbol='BTC/USDT:USDT',
+
+        await connector.connect()
+        await asyncio.sleep(5)  # wait for the connection to be established
+
+        print("placing order...")
+        order = await connector.create_order(
+            symbol="BTC/USDT:USDT",
+            side=OrderSide.BUY,
+            type=OrderType.LIMIT,
+            amount=Decimal("0.001"),
+            price=Decimal("80000"),
         )
-        
-        pprint(res)
-        # res = await order_manager.place_market_order(
-        #     symbol='USDC/USDT:USDT',
-        #     side='sell',
-        #     amount=10,
-        #     newClientOrderId='test',
-        # )
-        
-        # pprint(res)
-        
-        # res = await order_manager.place_limit_order(
-        #     symbol='USDC/USDT:USDT',
-        #     side='buy',
-        #     amount=10,
-        #     price=0.95,
-        #     newClientOrderId='test',
-        # )
-        
-        # pprint(res)
-        
-        # await asyncio.sleep(1)
-        
-        # res = await order_manager.cancel_order(
-        #     id=res.id,
-        #     symbol='USDC/USDT:USDT',
-        # )
-        
-        # pprint(res)
-        
-    except OrderResponseError as e:
-        print(e)
-    finally:
-        await exchange.close()
+
+        print(order)
+
+        await asyncio.sleep(5)
+        print("canceling order...")
+        order = await connector.cancel_order(
+            symbol="BTC/USDT:USDT",
+            order_id=order.id,
+        )
+
+        print(order)
+
+        while True:
+            await asyncio.sleep(1)
+
+    except asyncio.CancelledError:
+        await connector.disconnect()
+        print("Connection closed.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
-    

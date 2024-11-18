@@ -81,7 +81,7 @@ class ExchangeManager(ABC):
     def linear(self):
         symbols = []
         for symbol, market in self.market.items():
-            if market.linear and market.active:
+            if market.linear and market.active and not market.future:
                 symbols.append(symbol)
         return symbols
     
@@ -89,7 +89,7 @@ class ExchangeManager(ABC):
     def inverse(self):
         symbols = []
         for symbol, market in self.market.items():
-            if market.inverse and market.active:
+            if market.inverse and market.active and not market.future:
                 symbols.append(symbol)
         return symbols
     
@@ -98,6 +98,14 @@ class ExchangeManager(ABC):
         symbols = []
         for symbol, market in self.market.items():
             if market.spot and market.active:
+                symbols.append(symbol)
+        return symbols
+    
+    @property
+    def future(self):
+        symbols = []
+        for symbol, market in self.market.items():
+            if market.future and market.active:
                 symbols.append(symbol)
         return symbols
         

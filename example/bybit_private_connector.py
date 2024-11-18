@@ -1,6 +1,6 @@
 import asyncio
 from tradebot.constants import CONFIG
-from tradebot.exchange.bybit import BybitPrivateConnector, BybitExchangeManager
+from tradebot.exchange.bybit import BybitPrivateConnector, BybitExchangeManager, BybitAccountType
 
 BYBIT_API_KEY = CONFIG['bybit_testnet']['API_KEY']
 BYBIT_API_SECRET = CONFIG['bybit_testnet']['SECRET']
@@ -11,10 +11,10 @@ async def main():
             "exchange_id": "bybit",
             "apiKey": BYBIT_API_KEY,
             "secret": BYBIT_API_SECRET,
+            "sandbox": True,
         }
         exchange = BybitExchangeManager(config)
-        await exchange.load_markets()
-        connector = BybitPrivateConnector(exchange, testnet=True)
+        connector = BybitPrivateConnector(exchange, BybitAccountType.ALL_TESTNET, strategy_id="test", user_id="test")
         await connector.connect()
         while True:
             await asyncio.sleep(1)

@@ -20,7 +20,11 @@ class BybitAccountType(AccountType):
     OPTION_TESTNET = "OPTION_TESTNET"
     ALL = "ALL"
     ALL_TESTNET = "ALL_TESTNET"
-
+    
+    @property
+    def exchange_id(self):
+        return "bybit"
+    
     @property
     def is_testnet(self):
         return self in {

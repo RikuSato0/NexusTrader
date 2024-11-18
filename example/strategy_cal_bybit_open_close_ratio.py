@@ -11,17 +11,12 @@ from tradebot.exchange.bybit import (
 class Demo(Strategy):
     def __init__(self):
         super().__init__(tick_size=0.01)
-        self.market = {}
-
-    def _on_bookl1(self, bookl1: BookL1):
-        # print(f"BookL1: {bookl1}")
-        self.market[bookl1.symbol] = bookl1
     
-    def on_tick(self, tick):
-        linear_bid = self.market["BTC/USDT:USDT"].bid
-        spot_ask = self.market["BTC/USDT"].ask
-        linear_ask = self.market["BTC/USDT:USDT"].ask
-        spot_bid = self.market["BTC/USDT"].bid
+    async def on_tick(self, tick):
+        linear_bid = self.get_bookl1("bybit", "BTC/USDT:USDT").bid
+        spot_ask = self.get_bookl1("bybit", "BTC/USDT").ask
+        linear_ask = self.get_bookl1("bybit", "BTC/USDT:USDT").ask
+        spot_bid = self.get_bookl1("bybit", "BTC/USDT").bid
         
         open_ratio = linear_bid / spot_ask - 1
         close_ratio = linear_ask / spot_bid - 1

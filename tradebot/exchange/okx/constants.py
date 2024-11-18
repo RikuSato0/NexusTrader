@@ -14,6 +14,10 @@ class OkxAccountType(AccountType):
     LIVE = 0
     AWS = 1
     DEMO = 2
+    
+    @property
+    def exchange_id(self):
+        return "okx"
 
 
 STREAM_URLS = {

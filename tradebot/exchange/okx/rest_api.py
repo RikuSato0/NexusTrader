@@ -1,19 +1,21 @@
 from decimal import Decimal
-from tradebot.base import ApiClient
-from tradebot.exchange.okx import OkxAccountType
 import msgspec
-from tradebot.exchange.okx.types import (
-    OKXPlaceOrderResponse,
-    OKXCancelOrderResponse,
-)
 from typing import Dict, Any
 import orjson
-from tradebot.exchange.okx.error import OKXHttpError
 import hmac
 import base64
 import asyncio
 import aiohttp
 from datetime import datetime, timezone
+
+from tradebot.base import ApiClient
+from tradebot.exchange.okx import OkxAccountType
+from tradebot.exchange.okx.constants import REST_URLS
+from tradebot.exchange.okx.error import OKXHttpError
+from tradebot.exchange.okx.types import (
+    OKXPlaceOrderResponse,
+    OKXCancelOrderResponse,
+)
 
 
 class OkxApiClient(ApiClient):
@@ -22,7 +24,7 @@ class OkxApiClient(ApiClient):
         api_key: str = None,
         secret: str = None,
         passphrase: str = None,
-        testnet: bool = False,
+        account_type: OkxAccountType = OkxAccountType.DEMO,
         timeout: int = 10,
     ):
         super().__init__(
@@ -30,9 +32,9 @@ class OkxApiClient(ApiClient):
             secret=secret,
             timeout=timeout,
         )
-        self._base_url = "https://aws.okx.com"
+        self._base_url = REST_URLS[account_type]
         self._passphrase = passphrase
-        self._testnet = testnet
+        self._testnet = account_type.is_testnet
         self._place_order_decoder = msgspec.json.Decoder(OKXPlaceOrderResponse)
         self._cancel_order_decoder = msgspec.json.Decoder(OKXCancelOrderResponse)
 

@@ -5,11 +5,9 @@ from tradebot.exchange.okx import (
     OkxAccountType,
     OkxPrivateConnector,
     OkxExchangeManager,
-    OkxPublicConnector,
 )
-from tradebot.constants import EventType
-from tradebot.entity import EventSystem
-from tradebot.constants import OrderSide, OrderType, TimeInForce
+
+from tradebot.constants import OrderSide, OrderType, PositionSide
 
 
 OKX_API_KEY = CONFIG["okex_demo"]["API_KEY"]

@@ -16,24 +16,15 @@ if not os.path.exists(".keys/config.cfg"):
 CONFIG = ConfigParser()
 CONFIG.read(".keys/config.cfg")
 
-# API_KEY = CONFIG['binance_2']['API_KEY']
-# API_SECRET = CONFIG['binance_2']['SECRET']
 
-# API_KEY_TESTNET = CONFIG['binance_future_testnet']['API_KEY']
-# API_SECRET_TESTNET = CONFIG['binance_future_testnet']['SECRET']
+def get_redis_config():
+    return {
+        "host": CONFIG["redis_config"]["host"],
+        "port": CONFIG["redis_config"]["port"],
+        "db": CONFIG["redis_config"]["db"],
+        "password": CONFIG["redis_config"]["password"],
+    }
 
-
-# API_KEY_UNI = CONFIG['binance_uni']['API_KEY']
-# API_SECRET_UNI = CONFIG['binance_uni']['SECRET']
-
-# BYBIT_API_KEY = config['bybit']['API_KEY']
-# BYBIT_SECRET = config['bybit']['SECRET']
-# VALID_SYMBOLS = CONFIG['symbols']['VALID_SYMBOLS'].split(' ')
-
-# OKX_API_KEY = CONFIG['okex_demo']['API_KEY']
-# OKX_SECRET = CONFIG['okex_demo']['SECRET']
-# OKX_PASSPHRASE = CONFIG['okex_demo']['PASSPHRASE']
-# OKX_USER = CONFIG['okex_demo']['USER']
 
 
 class Url:
@@ -158,24 +149,24 @@ class EventType(Enum):
     FUNDING_RATE = 4
     INDEX_PRICE = 5
 
+
 class OrderStatus(Enum):
     # LOCAL
     # INITIALIZED = "INITIALIZED"
     FAILED = "FAILED"
-    
+
     # IN-FLOW
     PENDING = "PENDING"
     CANCELING = "CANCELING"
-    
+
     # OPEN
     ACCEPTED = "ACCEPTED"
     PARTIALLY_FILLED = "PARTIALLY_FILLED"
-    
+
     # CLOSED
     FILLED = "FILLED"
     CANCELED = "CANCELED"
     EXPIRED = "EXPIRED"
-    
 
 
 class ExchangeType(Enum):
@@ -295,7 +286,6 @@ BINANCE_ENDPOINTS = {
 }
 
 
-
 class WSType(Enum):
     BINANCE_SPOT = 0
     BINANCE_MARGIN = 1
@@ -309,6 +299,7 @@ class WSType(Enum):
     OKX_AWS = 9
     OKX_DEMO = 10
 
+
 class PublicConnectorType(Enum):
     BINANCE_SPOT = 0
     BINANCE_USD_M_FUTURE = 1
@@ -320,26 +311,32 @@ class PublicConnectorType(Enum):
     OKX_AWS = 7
     OKX_DEMO = 8
 
+
 class AccountType(Enum):
     pass
+
 
 class OrderType(Enum):
     MARKET = "MARKET"
     LIMIT = "LIMIT"
 
+
 class OrderSide(Enum):
     BUY = "BUY"
     SELL = "SELL"
+
 
 class TimeInForce(Enum):
     GTC = "GTC"
     IOC = "IOC"
     FOK = "FOK"
 
+
 class PositionSide(Enum):
     LONG = "LONG"
     SHORT = "SHORT"
     FLAT = "FLAT"
+
 
 class AssetType(Enum):
     SPOT = "spot"
@@ -349,8 +346,8 @@ class AssetType(Enum):
     SWAP = "swap"
     LINEAR = "linear"
     INVERSE = "inverse"
-    
+
+
 class OptionType(Enum):
     CALL = "call"
     PUT = "put"
-

@@ -7,13 +7,14 @@ from decimal import Decimal
 from collections import defaultdict
 from typing import Literal, Callable, Union, Optional
 from typing import Dict, List, Any, Set
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass
+
 
 import redis
 import orjson
 import msgspec
 
-
+from tradebot.constants import get_redis_config
 from tradebot.constants import OrderStatus, AccountType
 from tradebot.types import Order
 from tradebot.log import SpdLog
@@ -117,12 +118,7 @@ class RedisClient:
             if cls._is_in_docker():
                 cls._params = {"host": "redis", "db": 0, "password": "password"}
             else:
-                cls._params = {
-                    "host": "localhost",
-                    "port": 6379,
-                    "db": 0,
-                    "password": "password",
-                }
+                cls._params = get_redis_config()
         return cls._params
 
     @classmethod
@@ -458,7 +454,9 @@ class AsyncCache:
         sync_interval: int = 300,
         expire_time: int = 3600,
     ):
-        self._log = SpdLog.get_logger(name=type(self).__name__, level="INFO", flush=True)
+        self._log = SpdLog.get_logger(
+            name=type(self).__name__, level="INFO", flush=True
+        )
         self._clock = LiveClock()
         self._r = RedisClient.get_async_client()
         self._orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:orders"

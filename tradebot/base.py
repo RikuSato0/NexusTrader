@@ -848,9 +848,7 @@ class PrivateConnector(ABC):
             amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_CEILING) * exp
         elif mode == 'floor':
             amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_FLOOR) * exp
-        
-        if amount == 0:
-            raise ValueError(f"Amount must be greater than zero")
+    
         return amount
 
     def price_to_precision(

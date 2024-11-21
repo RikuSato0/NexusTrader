@@ -104,11 +104,24 @@ class BybitTimeInForce(Enum):
     POST_ONLY = "PostOnly"
 
 
-class BybitPositionSide(Enum):
+class BybitPositionIdx(Enum):
     FLAT = 0
     LONG = 1
     SHORT = 2
 
+class BybitPositionSide(Enum):
+    FLAT = ""
+    BUY = "Buy"
+    SELL = "Sell"
+    
+    def parse_to_position_side(self) -> PositionSide:
+        if self == self.FLAT:
+            return PositionSide.FLAT
+        elif self == self.BUY:
+            return PositionSide.LONG
+        elif self == self.SELL:
+            return PositionSide.SHORT
+        raise RuntimeError(f"Invalid position side: {self}")
 
 class BybitOrderType(Enum):
     MARKET = "Market"
@@ -164,9 +177,9 @@ class BybitEnumParser:
     }
 
     _bybit_position_side_map = {
-        BybitPositionSide.FLAT: PositionSide.FLAT,
-        BybitPositionSide.LONG: PositionSide.LONG,
-        BybitPositionSide.SHORT: PositionSide.SHORT,
+        BybitPositionIdx.FLAT: PositionSide.FLAT,
+        BybitPositionIdx.LONG: PositionSide.LONG,
+        BybitPositionIdx.SHORT: PositionSide.SHORT,
     }
 
     _bybit_order_side_map = {
@@ -202,7 +215,7 @@ class BybitEnumParser:
         return cls._bybit_order_status_map[status]
 
     @classmethod
-    def parse_position_side(cls, side: BybitPositionSide) -> PositionSide:
+    def parse_position_side(cls, side: BybitPositionIdx) -> PositionSide:
         return cls._bybit_position_side_map[side]
 
     @classmethod
@@ -222,7 +235,7 @@ class BybitEnumParser:
         return cls._order_status_to_bybit_map[status]
 
     @classmethod
-    def to_bybit_position_side(cls, side: PositionSide) -> BybitPositionSide:
+    def to_bybit_position_side(cls, side: PositionSide) -> BybitPositionIdx:
         return cls._position_side_to_bybit_map[side]
 
     @classmethod

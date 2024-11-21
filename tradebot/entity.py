@@ -458,7 +458,7 @@ class AsyncCache:
         sync_interval: int = 300,
         expire_time: int = 3600,
     ):
-        self._log = SpdLog.get_logger(name=type(self).__name__, level="INFO", flush=True)
+        self._log = SpdLog.get_logger(name=type(self).__name__, level="DEBUG", flush=True)
         self._clock = LiveClock()
         self._r = RedisClient.get_async_client()
         self._orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:orders"
@@ -491,20 +491,15 @@ class AsyncCache:
 
     async def sync(self):
         self._task_manager.create_task(self._periodic_sync())
-        self._task_manager.create_task(self._periodic_cleanup())
 
     async def _periodic_sync(self):
         while not self._shutdown_event.is_set():
             await self._sync_to_redis()
-            await asyncio.sleep(self._sync_interval)
-
-    async def _periodic_cleanup(self):
-        while not self._shutdown_event.is_set():
             self._cleanup_expired_data()
             await asyncio.sleep(self._sync_interval)
 
     async def _sync_to_redis(self):
-        self._log.info("syncing to redis")
+        self._log.debug("syncing to redis")
         for order_id, order in self._mem_orders.items():
             await self._r.hset(self._orders_key, order_id, self._encode_order(order))
 

@@ -1,7 +1,7 @@
 import msgspec
 from enum import Enum
 from typing import Final
-from typing import Dict, Any
+from typing import Dict, Any, List, Generic, TypeVar
 from tradebot.constants import AssetType
 from tradebot.types import Precision, Limit, MarginMode, BaseMarket
 from tradebot.exchange.bybit.constants import (
@@ -13,6 +13,7 @@ from tradebot.exchange.bybit.constants import (
     BybitTriggerType,
     BybitStopOrderType,
     BybitTriggerDirection,
+    BybitPositionIdx,
     BybitPositionSide,
 )
 
@@ -31,6 +32,45 @@ class BybitOrderResponse(msgspec.Struct):
     result: BybitOrderResult
     time: int
 
+class BybitPositionStruct(msgspec.Struct):
+    positionIdx: int
+    riskId: int
+    riskLimitValue: str
+    symbol: str
+    side: BybitPositionSide
+    size: str
+    avgPrice: str
+    positionValue: str
+    tradeMode: int
+    positionStatus: str
+    autoAddMargin: int
+    adlRankIndicator: int
+    leverage: str
+    positionBalance: str
+    markPrice: str
+    liqPrice: str
+    bustPrice: str
+    positionMM: str
+    positionIM: str
+    takeProfit: str
+    stopLoss: str
+    trailingStop: str
+    unrealisedPnl: str
+    cumRealisedPnl: str
+    createdTime: str
+    updatedTime: str
+    tpslMode: str | None = None
+
+T = TypeVar("T")
+
+class BybitListResult(Generic[T], msgspec.Struct):
+    list: list[T]
+    
+class BybitPositionResponse(msgspec.Struct):
+    retCode: int
+    retMsg: str
+    result: BybitListResult[BybitPositionStruct]
+    time: int
 
 class BybitResponse(msgspec.Struct, frozen=True):
     retCode: int
@@ -167,7 +207,7 @@ class BybitWsOrder(msgspec.Struct):
     cumExecValue: str
     avgPrice: str
     blockTradeId: str
-    positionIdx: BybitPositionSide
+    positionIdx: BybitPositionIdx
     cumExecFee: str
     createdTime: str
     updatedTime: str

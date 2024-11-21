@@ -17,7 +17,14 @@ CONFIG = ConfigParser()
 CONFIG.read(".keys/config.cfg")
 
 
-def get_redis_config():
+def get_redis_config(in_docker: bool = False):
+    if in_docker:
+        return {
+            "host": "redis",
+            "db": CONFIG["redis_config"]["db"],
+            "password": CONFIG["redis_config"]["password"],
+        }
+    
     return {
         "host": CONFIG["redis_config"]["host"],
         "port": CONFIG["redis_config"]["port"],

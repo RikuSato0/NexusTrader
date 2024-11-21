@@ -516,8 +516,8 @@ class AsyncCache:
                 await self._r.sadd(key, *order_ids)
 
     def _cleanup_expired_data(self):
-        current_time = self._clock.timestamp()
-        expire_before = current_time - self._expire_time
+        current_time = self._clock.timestamp_ms()
+        expire_before = current_time - self._expire_time * 1000
 
         # 清理过期orders
         expired_orders = [

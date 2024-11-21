@@ -21,7 +21,7 @@ async def test_async_cache():
             symbol="BTC-USDT",
             side=OrderSide.BUY,
             type=OrderType.LIMIT,
-            price=Decimal("30000"),
+            price=30000,
             amount=Decimal("1"),
             status=OrderStatus.ACCEPTED,
             timestamp=int(time.time() * 1000)
@@ -34,7 +34,7 @@ async def test_async_cache():
         strategy_id=strategy_id,
         user_id=user_id,
         sync_interval=1,  # 2 seconds for testing
-        expire_time=60    # 60 seconds for testing
+        expire_time=5    # 60 seconds for testing
     )
     
     try:

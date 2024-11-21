@@ -77,11 +77,11 @@ class Order(Struct):
     exchange: str
     symbol: str
     status: OrderStatus
-    id: str = None
-    client_order_id: str = None
-    timestamp: int = None
-    type: OrderType = None
-    side: OrderSide = None
+    id: Optional[str] = None
+    client_order_id: Optional[str] = None
+    timestamp: Optional[int] = None
+    type: Optional[OrderType] = None
+    side: Optional[OrderSide] = None
     time_in_force: Optional[TimeInForce] = None
     price: Optional[float] = None
     average: Optional[float] = None

@@ -43,11 +43,15 @@ class OkxApiClient(ApiClient):
             "User-Agent": "TradingBot/1.0",
         }
 
-    def raise_error(self, raw: bytes, status: int, headers: Dict[str, Any]):
-        if 400 <= status < 500:
-            raise OKXHttpError(status, orjson.loads(raw), headers)
-        elif status >= 500:
-            raise OKXHttpError(status, orjson.loads(raw), headers)
+    def raise_error(self, raw: bytes, http_status: int, headers: Dict[str, Any]):
+        msg = orjson.loads(raw)
+        msg_status = msg["data"][0]["sCode"]
+        if msg_status != "0":
+            raise OKXHttpError(msg_status, msg, headers)
+        elif 400 <= http_status < 500:
+            raise OKXHttpError(http_status, msg, headers)
+        elif http_status >= 500:
+            raise OKXHttpError(http_status, msg, headers)
 
     async def post_v5_order_create(
         self,
@@ -61,6 +65,8 @@ class OkxApiClient(ApiClient):
         """
         Place a new order
         https://www.okx.com/docs-v5/en/#rest-api-trade-place-order
+
+        {'arg': {'channel': 'orders', 'instType': 'ANY', 'uid': '611800569950521616'}, 'data': [{'instType': 'SWAP', 'instId': 'BTC-USDT-SWAP', 'tgtCcy': '', 'ccy': '', 'ordId': '1993784914940116992', 'clOrdId': '', 'algoClOrdId': '', 'algoId': '', 'tag': '', 'px': '80000', 'sz': '0.1', 'notionalUsd': '80.0128', 'ordType': 'limit', 'side': 'buy', 'posSide': 'long', 'tdMode': 'cross', 'accFillSz': '0', 'fillNotionalUsd': '', 'avgPx': '0', 'state': 'canceled', 'lever': '3', 'pnl': '0', 'feeCcy': 'USDT', 'fee': '0', 'rebateCcy': 'USDT', 'rebate': '0', 'category': 'normal', 'uTime': '1731921825881', 'cTime': '1731921820806', 'source': '', 'reduceOnly': 'false', 'cancelSource': '1', 'quickMgnType': '', 'stpId': '', 'stpMode': 'cancel_maker', 'attachAlgoClOrdId': '', 'lastPx': '91880', 'isTpLimit': 'false', 'slTriggerPx': '', 'slTriggerPxType': '', 'tpOrdPx': '', 'tpTriggerPx': '', 'tpTriggerPxType': '', 'slOrdPx': '', 'fillPx': '', 'tradeId': '', 'fillSz': '0', 'fillTime': '', 'fillPnl': '0', 'fillFee': '0', 'fillFeeCcy': '', 'execType': '', 'fillPxVol': '', 'fillPxUsd': '', 'fillMarkVol': '', 'fillFwdPx': '', 'fillMarkPx': '', 'amendSource': '', 'reqId': '', 'amendResult': '', 'code': '0', 'msg': '', 'pxType': '', 'pxUsd': '', 'pxVol': '', 'linkedAlgoOrd': {'algoId': ''}, 'attachAlgoOrds': []}]}
         """
         endpoint = "/api/v5/trade/order"
         payload = {

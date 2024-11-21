@@ -269,7 +269,8 @@ class OkxPrivateConnector(PrivateConnector):
         orders_push_data: OKXWsOrdersPushDataMsg = self._decoder_ws_orders_msg.decode(
             raw
         )
-        print(orders_push_data.data)
+        print(orjson.loads(raw))
+        # print(orders_push_data.data)
         # self._log.info(str(orders_push_data.data))
         return orders_push_data.data
 
@@ -278,7 +279,8 @@ class OkxPrivateConnector(PrivateConnector):
         positions_push_data: OKXWsPositionsPushDataMsg = (
             self._decoder_ws_positions_msg.decode(raw)
         )
-        print(positions_push_data.data)
+        print(orjson.loads(raw))
+        # print(positions_push_data.data)
         # self._log.info(str(positions_push_data.data))
         return positions_push_data.data
 
@@ -286,7 +288,8 @@ class OkxPrivateConnector(PrivateConnector):
         account_push_data: OKXWsAccountPushDataMsg = (
             self._decoder_ws_account_msg.decode(raw)
         )
-        print(account_push_data.data)
+        print(orjson.loads(raw))
+        # print(account_push_data.data)
         # self._log.info(str(account_push_data.data))
         return account_push_data.data
 

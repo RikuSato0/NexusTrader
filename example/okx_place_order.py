@@ -33,15 +33,16 @@ async def main():
         )
 
         await connector.connect()
-        await asyncio.sleep(5)  # wait for the connection to be established
+        await asyncio.sleep(10)  # wait for the connection to be established
 
         print("placing order...")
         order = await connector.create_order(
             symbol="BTC/USDT:USDT",
             side=OrderSide.BUY,
             type=OrderType.LIMIT,
-            amount=Decimal("0.001"),
+            amount=Decimal("0.1"),
             price=Decimal("80000"),
+            position_side=PositionSide.LONG,
         )
 
         print(order)

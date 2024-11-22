@@ -164,28 +164,7 @@ class Asset(Struct):
             self.locked = locked
 
 
-class Position(Struct):
-    """
-    one-way mode:
-    > order (side: buy) -> side: buy | pos_side: net/both | reduce_only: False [open long position]
-    > order (side: sell) -> side: sell | pos_side: net/both | reduce_only: False [open short position]
-    > order (side: buy, reduce_only=True) -> side: buy | pos_side: net/both | reduce_only: True [close short position]
-    > order (side: sell, reduce_only=True) -> side: sell | pos_side: net/both | reduce_only: True [close long position]
 
-    hedge mode:
-    > order (side: buy, pos_side: long) -> side: buy | pos_side: long | reduce_only: False [open long position]
-    > order (side: sell, pos_side: short) -> side: sell | pos_side: short | reduce_only: False [open short position]
-    > order (side: sell, pos_side: long) -> side: sell | pos_side: long | reduce_only: True [close long position]
-    > order (side: buy, pos_side: short) -> side: buy | pos_side: short | reduce_only: True [close short position]
-    """
-
-    symbol: str
-    exchange: str
-    pos_side: Literal["long", "short"]
-    amount: Decimal  # order amount, the unit could be base amount or contract amount
-    size: Decimal  # must be the determined unit
-    avg_open_price: Decimal
-    avg_close_price: Decimal
 
 
 class Precision(Struct):
@@ -310,3 +289,58 @@ class MarketData(Struct):
 
     def update_index_price(self, index_price: IndexPrice):
         self.index_price[index_price.exchange][index_price.symbol] = index_price
+
+"""
+class Position(Struct):
+
+    one-way mode:
+    > order (side: buy) -> side: buy | pos_side: net/both | reduce_only: False [open long position]
+    > order (side: sell) -> side: sell | pos_side: net/both | reduce_only: False [open short position]
+    > order (side: buy, reduce_only=True) -> side: buy | pos_side: net/both | reduce_only: True [close short position]
+    > order (side: sell, reduce_only=True) -> side: sell | pos_side: net/both | reduce_only: True [close long position]
+
+    hedge mode:
+    > order (side: buy, pos_side: long) -> side: buy | pos_side: long | reduce_only: False [open long position]
+    > order (side: sell, pos_side: short) -> side: sell | pos_side: short | reduce_only: False [open short position]
+    > order (side: sell, pos_side: long) -> side: sell | pos_side: long | reduce_only: True [close long position]
+    > order (side: buy, pos_side: short) -> side: buy | pos_side: short | reduce_only: True [close short position]
+
+    
+"""
+
+class Position(Struct):
+    symbol: str
+    exchange: str
+    strategy_id: str
+    side: PositionSide
+    amount: Decimal
+    entry_price: float
+    unrealized_pnl: float
+    realized_pnl: float
+    
+    @property
+    def is_open(self) -> bool:
+        return self.amount != 0
+    
+    @property
+    def is_long(self) -> bool:
+        return self.side == PositionSide.LONG
+    
+    @property
+    def is_short(self) -> bool:
+        return self.side == PositionSide.SHORT
+    
+    def apply(self, order: Order):
+        if order.position_side == PositionSide.FLAT:
+            if order.reduce_only:
+                self._close(order)
+            else:
+                self._open(order)
+        else:
+            pass
+    
+    def _open(self, order: Order):
+        pass
+    
+    def _close(self, order: Order):
+        pass

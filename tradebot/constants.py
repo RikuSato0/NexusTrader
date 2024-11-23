@@ -23,14 +23,13 @@ def get_redis_config(in_docker: bool = False):
             "db": CONFIG["redis_config"]["db"],
             "password": CONFIG["redis_config"]["password"],
         }
-    
+
     return {
         "host": CONFIG["redis_config"]["host"],
         "port": CONFIG["redis_config"]["port"],
         "db": CONFIG["redis_config"]["db"],
         "password": CONFIG["redis_config"]["password"],
     }
-
 
 
 class Url:
@@ -358,11 +357,28 @@ class OptionType(Enum):
     CALL = "call"
     PUT = "put"
 
+
 STATUS_TRANSITIONS: Dict[OrderStatus, List[OrderStatus]] = {
-    OrderStatus.PENDING: [OrderStatus.CANCELING, OrderStatus.ACCEPTED, OrderStatus.PARTIALLY_FILLED, OrderStatus.FILLED],
+    OrderStatus.PENDING: [
+        OrderStatus.CANCELING,
+        OrderStatus.ACCEPTED,
+        OrderStatus.PARTIALLY_FILLED,
+        OrderStatus.FILLED,
+    ],
     OrderStatus.CANCELING: [OrderStatus.CANCELED],
-    OrderStatus.ACCEPTED: [OrderStatus.PARTIALLY_FILLED, OrderStatus.FILLED, OrderStatus.CANCELING, OrderStatus.EXPIRED],
-    OrderStatus.PARTIALLY_FILLED: [OrderStatus.FILLED, OrderStatus.CANCELING, OrderStatus.EXPIRED],
+    OrderStatus.ACCEPTED: [
+        OrderStatus.PARTIALLY_FILLED,
+        OrderStatus.FILLED,
+        OrderStatus.CANCELING,
+        OrderStatus.CANCELED,
+        OrderStatus.EXPIRED,
+    ],
+    OrderStatus.PARTIALLY_FILLED: [
+        OrderStatus.FILLED,
+        OrderStatus.CANCELING,
+        OrderStatus.CANCELED,
+        OrderStatus.EXPIRED,
+    ],
     OrderStatus.FILLED: [],
     OrderStatus.CANCELED: [],
     OrderStatus.EXPIRED: [],

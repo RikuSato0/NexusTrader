@@ -15,6 +15,7 @@ import orjson
 import msgspec
 
 from tradebot.constants import get_redis_config
+from tradebot.constants import STATUS_TRANSITIONS
 from tradebot.constants import OrderStatus, AccountType
 from tradebot.types import Order
 from tradebot.log import SpdLog
@@ -531,18 +532,31 @@ class AsyncCache:
             for symbol, order_set in self._mem_symbol_orders.items():
                 self._log.debug(f"removing order {order_id} from symbol {symbol}")
                 order_set.discard(order_id)
+    
+    def _check_status_transition(self, order: Order):
+        previous_order = self._mem_orders.get(order.id)
+        if not previous_order:
+            return True
+            
+        if order.status not in STATUS_TRANSITIONS[previous_order.status]:
+            self._log.error(f"Invalid status transition: {previous_order.status} -> {order.status}")
+            return False
+            
+        return True
 
     def order_initialized(self, order: Order):
-        if (
-            order.id in self._mem_orders
-        ):  # which means the order is already pushed by websocket
+        if not self._check_status_transition(order):
             return
+        
         self._mem_orders[order.id] = order
         self._mem_open_orders.add(order.id)
         self._mem_symbol_orders[order.symbol].add(order.id)
         self._mem_symbol_open_orders[order.symbol].add(order.id)
 
     def order_status_update(self, order: Order):
+        if not self._check_status_transition(order):
+            return
+        
         self._mem_orders[order.id] = order
         if order.status in (
             OrderStatus.FILLED,

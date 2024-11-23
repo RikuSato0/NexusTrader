@@ -1,8 +1,7 @@
 import os
 
 from configparser import ConfigParser
-from typing import Literal, Union
-
+from typing import Literal, Union, Dict, List
 from enum import Enum
 
 
@@ -358,3 +357,14 @@ class AssetType(Enum):
 class OptionType(Enum):
     CALL = "call"
     PUT = "put"
+
+STATUS_TRANSITIONS: Dict[OrderStatus, List[OrderStatus]] = {
+    OrderStatus.PENDING: [OrderStatus.CANCELING, OrderStatus.ACCEPTED, OrderStatus.PARTIALLY_FILLED, OrderStatus.FILLED],
+    OrderStatus.CANCELING: [OrderStatus.CANCELED],
+    OrderStatus.ACCEPTED: [OrderStatus.PARTIALLY_FILLED, OrderStatus.FILLED, OrderStatus.CANCELING, OrderStatus.EXPIRED],
+    OrderStatus.PARTIALLY_FILLED: [OrderStatus.FILLED, OrderStatus.CANCELING, OrderStatus.EXPIRED],
+    OrderStatus.FILLED: [],
+    OrderStatus.CANCELED: [],
+    OrderStatus.EXPIRED: [],
+    OrderStatus.FAILED: [],
+}

@@ -101,6 +101,7 @@ class Order(Struct):
     def success(self) -> bool:
         return self.status != OrderStatus.FAILED
 
+
 class Asset(Struct):
     """
     Buy BTC/USDT: amount = 0.01, cost: 600
@@ -162,9 +163,6 @@ class Asset(Struct):
             self.borrowed = borrowed
         if locked is not None:
             self.locked = locked
-
-
-
 
 
 class Precision(Struct):
@@ -290,6 +288,7 @@ class MarketData(Struct):
     def update_index_price(self, index_price: IndexPrice):
         self.index_price[index_price.exchange][index_price.symbol] = index_price
 
+
 """
 class Position(Struct):
 
@@ -308,39 +307,86 @@ class Position(Struct):
     
 """
 
+
 class Position(Struct):
     symbol: str
     exchange: str
     strategy_id: str
-    side: PositionSide
-    amount: Decimal
-    entry_price: float
-    unrealized_pnl: float
-    realized_pnl: float
+    side: Optional[PositionSide] = None
+    signed_amount: Decimal = Decimal("0")
+    entry_price: float = 0
+    unrealized_pnl: float = 0
+    realized_pnl: float = 0
+    last_order_filled: Dict[str, Decimal] = field(default_factory=dict)
     
+    @property
+    def amount(self) -> Decimal:
+        return abs(self.signed_amount)
+
     @property
     def is_open(self) -> bool:
         return self.amount != 0
     
     @property
+    def is_closed(self) -> bool:
+        return not self.is_open
+
+    @property
     def is_long(self) -> bool:
         return self.side == PositionSide.LONG
-    
+
     @property
     def is_short(self) -> bool:
         return self.side == PositionSide.SHORT
-    
+
+    def _calculate_fill_delta(self, order: Order) -> Decimal:
+        """
+        calculate the fill delta of the order, since filled in order is cumulative,
+        we need to calculate the delta of the order
+        """
+
+        previous_fill = self.last_order_filled.get(order.id, Decimal("0"))
+        current_fill = order.filled
+        fill_delta = current_fill - previous_fill
+        self.last_order_filled[order.id] = order.filled
+        return fill_delta
+
     def apply(self, order: Order):
         if order.position_side == PositionSide.FLAT:
             if order.reduce_only:
-                self._close(order)
+                self._close_position(order)
             else:
-                self._open(order)
+                self._open_position(order)
         else:
             pass
-    
-    def _open(self, order: Order):
-        pass
-    
-    def _close(self, order: Order):
-        pass
+
+    def _open_position(self, order: Order):
+        if order.side == OrderSide.BUY:
+            if not self.side:
+                self.side = PositionSide.LONG
+            else:
+                if self.side != PositionSide.LONG:
+                    raise RuntimeError(f"Cannot open long position with {self.side}")
+            self.signed_amount += self._calculate_fill_delta(order)
+        else:
+            if not self.side:
+                self.side = PositionSide.SHORT
+            else:
+                if self.side != PositionSide.SHORT:
+                    raise RuntimeError(f"Cannot open short position with {self.side}")
+            self.signed_amount -= self._calculate_fill_delta(order)
+            
+    def _close_position(self, order: Order):
+        if order.side == OrderSide.BUY:
+            # > order (OrderSide.BUY, reduce_only=True) -> close short position, so side must be short
+            if self.side != PositionSide.SHORT:
+                raise RuntimeError(f"Cannot close short position with {self.side}")
+            self.signed_amount += self._calculate_fill_delta(order)
+        else:
+            # > order (OrderSide.SELL, reduce_only=True) -> close long position, so side must be long
+            if self.side != PositionSide.LONG:
+                raise RuntimeError(f"Cannot close long position with {self.side}")
+            self.signed_amount -= self._calculate_fill_delta(order)
+        
+        if self.signed_amount == 0:
+            self.side = None

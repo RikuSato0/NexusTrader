@@ -378,6 +378,7 @@ STATUS_TRANSITIONS: Dict[OrderStatus, List[OrderStatus]] = {
         OrderStatus.EXPIRED,
     ],
     OrderStatus.PARTIALLY_FILLED: [
+        OrderStatus.PARTIALLY_FILLED,
         OrderStatus.FILLED,
         OrderStatus.CANCELING,
         OrderStatus.CANCELED,

@@ -348,7 +348,10 @@ class Position(Struct):
         previous_fill = self.last_order_filled.get(order.id, Decimal("0"))
         current_fill = order.filled
         fill_delta = current_fill - previous_fill
-        self.last_order_filled[order.id] = order.filled
+        if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
+            self.last_order_filled.pop(order.id, None)
+        else:
+            self.last_order_filled[order.id] = order.filled
         return fill_delta
 
     def apply(self, order: Order):
@@ -367,14 +370,26 @@ class Position(Struct):
             else:
                 if self.side != PositionSide.LONG:
                     raise RuntimeError(f"Cannot open long position with {self.side}")
-            self.signed_amount += self._calculate_fill_delta(order)
+            fill_delta = self._calculate_fill_delta(order)
+            """
+            self.signed_amount = 0, fill_delta = 0.01, entry_price = 0
+            10 * -2 + 8 * -2 / -4 = 9
+            """
+            tmp_amount = self.signed_amount + fill_delta
+            price = order.average or order.price
+            self.entry_price = (self.entry_price * self.signed_amount + price * fill_delta) / tmp_amount
+            self.signed_amount = tmp_amount
         else:
             if not self.side:
                 self.side = PositionSide.SHORT
             else:
                 if self.side != PositionSide.SHORT:
                     raise RuntimeError(f"Cannot open short position with {self.side}")
-            self.signed_amount -= self._calculate_fill_delta(order)
+            fill_delta = self._calculate_fill_delta(order)
+            tmp_amount = self.signed_amount - fill_delta
+            price = order.average or order.price
+            self.entry_price = (self.entry_price * self.signed_amount - price * fill_delta) / tmp_amount
+            self.signed_amount = tmp_amount
             
     def _close_position(self, order: Order):
         if order.side == OrderSide.BUY:

@@ -78,6 +78,8 @@ class Order(Struct):
     symbol: str
     status: OrderStatus
     id: Optional[str] = None
+    amount: Optional[Decimal] = None
+    filled: Optional[Decimal] = None
     client_order_id: Optional[str] = None
     timestamp: Optional[int] = None
     type: Optional[OrderType] = None
@@ -86,8 +88,6 @@ class Order(Struct):
     price: Optional[float] = None
     average: Optional[float] = None
     last_filled_price: Optional[float] = None
-    amount: Optional[Decimal] = None
-    filled: Optional[Decimal] = None
     last_filled: Optional[Decimal] = None
     remaining: Optional[Decimal] = None
     fee: Optional[float] = None

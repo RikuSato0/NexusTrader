@@ -5,8 +5,8 @@ from typing import Literal, Callable
 from typing import Any, List
 from asynciolimiter import Limiter
 
-from ...log import SpdLog
-from .constants import BinanceAccountType
+from tradebot.log import SpdLog
+from tradebot.exchange.binance.constants import BinanceAccountType
 
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.core.nautilus_pyo3 import WebSocketClient

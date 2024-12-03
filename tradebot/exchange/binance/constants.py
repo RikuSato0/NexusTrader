@@ -1,5 +1,5 @@
 from enum import Enum
-from ...constants import AccountType, OrderStatus, OrderType
+from tradebot.constants import AccountType, OrderStatus, OrderType
 
 class BinanceOrderType(Enum):
     LIMIT = "LIMIT"

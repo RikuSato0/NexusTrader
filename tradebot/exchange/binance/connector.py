@@ -5,9 +5,9 @@ import orjson
 
 from typing import Dict, Any
 from decimal import Decimal
-from ...base import PublicConnector, PrivateConnector
-from ...entity import EventSystem, AsyncCache
-from ...constants import (
+from tradebot.base import PublicConnector, PrivateConnector
+from tradebot.entity import EventSystem, AsyncCache
+from tradebot.constants import (
     EventType,
     OrderSide,
     OrderStatus,
@@ -15,13 +15,13 @@ from ...constants import (
     PositionSide,
     TimeInForce,
 )
-from ...types import Order
-from ...types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
-from .types import BinanceMarket
-from .rest_api import BinanceApiClient
-from .constants import BinanceAccountType
-from .websockets import BinanceWSClient
-from .exchange import BinanceExchangeManager
+from tradebot.types import Order
+from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
+from tradebot.exchange.binance.types import BinanceMarket
+from tradebot.exchange.binance.rest_api import BinanceApiClient
+from tradebot.exchange.binance.constants import BinanceAccountType
+from tradebot.exchange.binance.websockets import BinanceWSClient
+from tradebot.exchange.binance.exchange import BinanceExchangeManager
 
 
 class BinancePublicConnector(PublicConnector):

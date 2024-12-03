@@ -1,11 +1,11 @@
-from .constants import BybitAccountType
-from .websockets import BybitWSClient
-from .connector import (
+from tradebot.exchange.bybit.constants import BybitAccountType
+from tradebot.exchange.bybit.websockets import BybitWSClient
+from tradebot.exchange.bybit.connector import (
     BybitPublicConnector,
     BybitPrivateConnector,
 )
-from .exchange import BybitExchangeManager
-from .rest_api import BybitApiClient
+from tradebot.exchange.bybit.exchange import BybitExchangeManager
+from tradebot.exchange.bybit.rest_api import BybitApiClient
 
 __all__ = [
     "BybitAccountType",

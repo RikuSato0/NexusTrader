@@ -2,8 +2,8 @@ import ccxt
 import orjson
 import msgspec
 from typing import Any, Dict
-from ...base import ExchangeManager
-from .types import BinanceMarket
+from tradebot.base import ExchangeManager
+from tradebot.exchange.binance.types import BinanceMarket
 
 
 class BinanceExchangeManager(ExchangeManager):

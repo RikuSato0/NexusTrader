@@ -2,11 +2,11 @@ import msgspec
 from typing import Dict
 from decimal import Decimal
 from collections import defaultdict
-from ...base import PublicConnector, PrivateConnector, OrderManagerSystem
-from ...entity import EventSystem
-from ...types import BookL1, Order, Trade
-from ...entity import AsyncCache
-from ...constants import (
+from tradebot.base import PublicConnector, PrivateConnector, OrderManagerSystem
+from tradebot.entity import EventSystem
+from tradebot.types import BookL1, Order, Trade
+from tradebot.entity import AsyncCache
+from tradebot.constants import (
     EventType,
     OrderSide,
     OrderStatus,
@@ -14,7 +14,7 @@ from ...constants import (
     TimeInForce,
     PositionSide,
 )
-from .types import (
+from tradebot.exchange.bybit.types import (
     BybitWsMessageGeneral,
     BybitWsOrderMsg,
     BybitWsOrderbookDepthMsg,
@@ -22,14 +22,14 @@ from .types import (
     BybitMarket,
     BybitWsTradeMsg,
 )
-from .rest_api import BybitApiClient
-from .websockets import BybitWSClient
-from .constants import (
+from tradebot.exchange.bybit.rest_api import BybitApiClient
+from tradebot.exchange.bybit.websockets import BybitWSClient
+from tradebot.exchange.bybit.constants import (
     BybitAccountType,
     BybitEnumParser,
     BybitProductType,
 )
-from .exchange import BybitExchangeManager
+from tradebot.exchange.bybit.exchange import BybitExchangeManager
 
 
 class BybitPublicConnector(PublicConnector):

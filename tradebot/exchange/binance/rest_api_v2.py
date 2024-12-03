@@ -6,9 +6,9 @@ from typing import Any, Dict
 from urllib.parse import urljoin, urlencode
 
 
-from ...log import SpdLog
-from ...constants import OrderSide, OrderType
-from .error import BinanceClientError, BinanceServerError
+from tradebot.log import SpdLog
+from tradebot.constants import OrderSide, OrderType
+from tradebot.exchange.binance.error import BinanceClientError, BinanceServerError
 
 
 from nautilus_trader.common.component import LiveClock

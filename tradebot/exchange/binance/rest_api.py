@@ -10,11 +10,11 @@ import aiohttp
 from typing import Any, Dict
 from urllib.parse import urljoin, urlencode
 
-from ...base import RestApi, ApiClient
-from .types import BinanceOrder
-from .constants import BASE_URLS, ENDPOINTS
-from .constants import BinanceAccountType, EndpointsType
-from .error import BinanceClientError, BinanceServerError
+from tradebot.base import RestApi, ApiClient
+from tradebot.exchange.binance.types import BinanceOrder
+from tradebot.exchange.binance.constants import BASE_URLS, ENDPOINTS
+from tradebot.exchange.binance.constants import BinanceAccountType, EndpointsType
+from tradebot.exchange.binance.error import BinanceClientError, BinanceServerError
 
 
 class BinanceRestApi(RestApi):

@@ -500,7 +500,9 @@ class AsyncCache:
         for order_id, order in self._mem_orders.items():
             await self._r.hset(self._orders_key, order_id, self._encode_order(order))
 
-        await self._r.delete(self._open_orders_key)
+        if await self._r.exists(self._open_orders_key):
+            await self._r.delete(self._open_orders_key)
+            
         if self._mem_open_orders:
             await self._r.sadd(self._open_orders_key, *self._mem_open_orders)
 

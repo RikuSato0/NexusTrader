@@ -1,4 +1,4 @@
-from tradebot.exchange.binance.constants import BinanceErrorCode, BINANCE_RETRY_ERRORS
+from .constants import BinanceErrorCode, BINANCE_RETRY_ERRORS
 
 
 class BinanceError(Exception):

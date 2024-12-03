@@ -1,8 +1,8 @@
 import msgspec
 from typing import Any, Dict, List
-from tradebot.types import Order, Precision, Limit, MarginMode, BaseMarket
-from tradebot.constants import OrderSide, TimeInForce, AssetType
-from tradebot.exchange.binance.constants import BinanceOrderStatus, BinanceOrderType, BinancePositionSide
+from ...types import Order, BaseMarket
+from ...constants import OrderSide, TimeInForce
+from .constants import BinanceOrderStatus, BinanceOrderType, BinancePositionSide
 
 class BinanceUserTrade(msgspec.Struct, frozen=True):
     """

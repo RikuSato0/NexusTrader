@@ -8,10 +8,10 @@ from typing import Any, Dict, List
 from urllib.parse import urljoin, urlencode
 from decimal import Decimal
 
-from tradebot.base import ApiClient
-from tradebot.exchange.bybit.constants import BybitBaseUrl
-from tradebot.exchange.bybit.error import BybitError
-from tradebot.exchange.bybit.types import BybitResponse, BybitOrderResponse, BybitPositionResponse
+from ...base import ApiClient
+from .constants import BybitBaseUrl
+from .error import BybitError
+from .types import BybitResponse, BybitOrderResponse, BybitPositionResponse
 
 
 class BybitApiClient(ApiClient):

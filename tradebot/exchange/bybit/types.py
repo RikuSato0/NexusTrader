@@ -1,10 +1,8 @@
 import msgspec
-from enum import Enum
 from typing import Final
-from typing import Dict, Any, List, Generic, TypeVar
-from tradebot.constants import AssetType
-from tradebot.types import Precision, Limit, MarginMode, BaseMarket
-from tradebot.exchange.bybit.constants import (
+from typing import Dict, Any, Generic, TypeVar
+from ...types import BaseMarket
+from .constants import (
     BybitProductType,
     BybitOrderSide,
     BybitOrderType,

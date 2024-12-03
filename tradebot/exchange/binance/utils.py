@@ -2,7 +2,7 @@ from typing import Any, Dict, List
 from typing import Literal, Optional
 from decimal import Decimal
 
-from tradebot.types import Order
+from ...types import Order
 
 
 def in_orders(orders: List[Order], method: str, params: Dict[str, Any]) -> bool:

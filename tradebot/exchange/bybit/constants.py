@@ -1,4 +1,4 @@
-from tradebot.constants import (
+from ...constants import (
     AccountType,
     OrderStatus,
     PositionSide,

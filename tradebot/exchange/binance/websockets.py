@@ -5,9 +5,8 @@ from typing import Any
 from asynciolimiter import Limiter
 
 
-from tradebot.base import WSClient
-from tradebot.exchange.binance.constants import STREAM_URLS
-from tradebot.exchange.binance.constants import BinanceAccountType
+from ...base import WSClient
+from .constants import BinanceAccountType
 
 
 class BinanceWSClient(WSClient):

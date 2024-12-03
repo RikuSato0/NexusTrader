@@ -2,8 +2,8 @@ import ccxt
 import orjson
 import msgspec
 from typing import Any, Dict
-from tradebot.base import ExchangeManager
-from tradebot.exchange.bybit.types import BybitMarket
+from ...base import ExchangeManager
+from .types import BybitMarket
 
 class BybitExchangeManager(ExchangeManager):
     api: ccxt.bybit

@@ -5,9 +5,8 @@ import asyncio
 from typing import Any, Callable
 from asynciolimiter import Limiter
 
-
-from tradebot.base import WSClient
-from tradebot.exchange.bybit.constants import BybitAccountType
+from ...base import WSClient
+from .constants import BybitAccountType
 
 from nautilus_trader.common.component import LiveClock
 

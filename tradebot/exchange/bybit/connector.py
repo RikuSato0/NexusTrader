@@ -2,10 +2,11 @@ import msgspec
 from typing import Dict
 from decimal import Decimal
 from collections import defaultdict
-from tradebot.base import PublicConnector, PrivateConnector, OrderManagerSystem
-from tradebot.entity import EventSystem
-from tradebot.types import BookL1, Order, Trade
-from tradebot.constants import (
+from ...base import PublicConnector, PrivateConnector, OrderManagerSystem
+from ...entity import EventSystem
+from ...types import BookL1, Order, Trade
+from ...entity import AsyncCache
+from ...constants import (
     EventType,
     OrderSide,
     OrderStatus,
@@ -13,7 +14,7 @@ from tradebot.constants import (
     TimeInForce,
     PositionSide,
 )
-from tradebot.exchange.bybit.types import (
+from .types import (
     BybitWsMessageGeneral,
     BybitWsOrderMsg,
     BybitWsOrderbookDepthMsg,
@@ -21,16 +22,14 @@ from tradebot.exchange.bybit.types import (
     BybitMarket,
     BybitWsTradeMsg,
 )
-from tradebot.entity import AsyncCache
-from tradebot.exchange.bybit.rest_api import BybitApiClient
-from tradebot.exchange.bybit.websockets import BybitWSClient
-from tradebot.exchange.bybit.constants import (
+from .rest_api import BybitApiClient
+from .websockets import BybitWSClient
+from .constants import (
     BybitAccountType,
     BybitEnumParser,
-    BybitOrderType,
     BybitProductType,
 )
-from tradebot.exchange.bybit.exchange import BybitExchangeManager
+from .exchange import BybitExchangeManager
 
 
 class BybitPublicConnector(PublicConnector):
@@ -44,7 +43,7 @@ class BybitPublicConnector(PublicConnector):
     ):
         if account_type in {BybitAccountType.ALL, BybitAccountType.ALL_TESTNET}:
             raise ValueError(
-                f"Please not using `BybitAccountType.ALL` or `BybitAccountType.ALL_TESTNET` in `PublicConnector`"
+                "Please not using `BybitAccountType.ALL` or `BybitAccountType.ALL_TESTNET` in `PublicConnector`"
             )
 
         super().__init__(

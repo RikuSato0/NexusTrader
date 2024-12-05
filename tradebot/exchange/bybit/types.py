@@ -18,6 +18,48 @@ from tradebot.exchange.bybit.constants import (
 
 BYBIT_PONG: Final[str] = "pong"
 
+class BybitOrder(msgspec.Struct, omit_defaults=True, kw_only=True):
+    orderId: str
+    orderLinkId: str
+    blockTradeId: str | None = None
+    symbol: str
+    price: str
+    qty: str
+    side: BybitOrderSide
+    isLeverage: str
+    positionIdx: int
+    orderStatus: BybitOrderStatus
+    cancelType: str
+    rejectReason: str
+    avgPrice: str | None = None
+    leavesQty: str
+    leavesValue: str
+    cumExecQty: str
+    cumExecValue: str
+    cumExecFee: str
+    timeInForce: BybitTimeInForce
+    orderType: BybitOrderType
+    stopOrderType: BybitStopOrderType
+    orderIv: str
+    triggerPrice: str
+    takeProfit: str
+    stopLoss: str
+    tpTriggerBy: str
+    slTriggerBy: str
+    triggerDirection: BybitTriggerDirection = BybitTriggerDirection.NONE
+    triggerBy: BybitTriggerType
+    lastPriceOnCreated: str
+    reduceOnly: bool
+    closeOnTrigger: bool
+    smpType: str
+    smpGroup: int
+    smpOrderId: str
+    tpslMode: str | None = None
+    tpLimitPrice: str
+    slLimitPrice: str
+    placeType: str
+    createdTime: str
+    updatedTime: str
 
 class BybitOrderResult(msgspec.Struct):
     orderId: str
@@ -68,6 +110,18 @@ class BybitPositionResponse(msgspec.Struct):
     retCode: int
     retMsg: str
     result: BybitListResult[BybitPositionStruct]
+    time: int
+
+class BybitOrderHistoryResponse(msgspec.Struct):
+    retCode: int
+    retMsg: str
+    result: BybitListResult[BybitOrder]
+    time: int
+
+class BybitOpenOrdersResponse(msgspec.Struct):
+    retCode: int
+    retMsg: str
+    result: BybitListResult[BybitOrder]
     time: int
 
 class BybitResponse(msgspec.Struct, frozen=True):

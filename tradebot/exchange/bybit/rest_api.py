@@ -11,7 +11,13 @@ from decimal import Decimal
 from tradebot.base import ApiClient
 from tradebot.exchange.bybit.constants import BybitBaseUrl
 from tradebot.exchange.bybit.error import BybitError
-from tradebot.exchange.bybit.types import BybitResponse, BybitOrderResponse, BybitPositionResponse
+from tradebot.exchange.bybit.types import (
+    BybitResponse,
+    BybitOrderResponse,
+    BybitPositionResponse,
+    BybitOrderHistoryResponse,
+    BybitOpenOrdersResponse,
+)
 
 
 class BybitApiClient(ApiClient):
@@ -59,6 +65,12 @@ class BybitApiClient(ApiClient):
         self._response_decoder = msgspec.json.Decoder(BybitResponse)
         self._order_response_decoder = msgspec.json.Decoder(BybitOrderResponse)
         self._position_response_decoder = msgspec.json.Decoder(BybitPositionResponse)
+        self._order_history_response_decoder = msgspec.json.Decoder(
+            BybitOrderHistoryResponse
+        )
+        self._open_orders_response_decoder = msgspec.json.Decoder(
+            BybitOpenOrdersResponse
+        )
 
     def _generate_signature(self, payload: str) -> List[str]:
         timestamp = str(self._clock.timestamp_ms())
@@ -171,8 +183,10 @@ class BybitApiClient(ApiClient):
         }
         raw = await self._fetch("POST", self._base_url, endpoint, payload, signed=True)
         return self._order_response_decoder.decode(raw)
-    
-    async def get_v5_position_list(self, category: str, **kwargs) -> BybitPositionResponse:
+
+    async def get_v5_position_list(
+        self, category: str, **kwargs
+    ) -> BybitPositionResponse:
         endpoint = "/v5/position/list"
         payload = {
             "category": category,
@@ -180,7 +194,30 @@ class BybitApiClient(ApiClient):
         }
         raw = await self._fetch("GET", self._base_url, endpoint, payload, signed=True)
         return self._position_response_decoder.decode(raw)
-    
+
+    async def get_v5_order_realtime(self, category: str, **kwargs):
+        """
+        https://bybit-exchange.github.io/docs/v5/order/open-order
+        """
+        endpoint = "/v5/order/realtime"
+        payload = {
+            "category": category,
+            **kwargs,
+        }
+        raw = await self._fetch("GET", self._base_url, endpoint, payload, signed=True)
+        return self._open_orders_response_decoder.decode(raw)
+
+    async def get_v5_order_history(self, category: str, **kwargs):
+        """
+        https://bybit-exchange.github.io/docs/v5/order/order-list
+        """
+        endpoint = "/v5/order/history"
+        payload = {
+            "category": category,
+            **kwargs,
+        }
+        raw = await self._fetch("GET", self._base_url, endpoint, payload, signed=True)
+        return self._order_history_response_decoder.decode(raw)
 
     def raise_error(self, raw: bytes, status: int, headers: Dict[str, Any]):
         pass

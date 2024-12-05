@@ -328,7 +328,7 @@ class BybitPrivateConnector(PrivateConnector):
                 type=type,
                 side=side,
                 amount=amount,
-                price=float(price),
+                price=float(price) if price else None,
                 time_in_force=time_in_force,
                 position_side=position_side,
                 status=OrderStatus.PENDING,
@@ -346,7 +346,7 @@ class BybitPrivateConnector(PrivateConnector):
                 type=type,
                 side=side,
                 amount=amount,
-                price=float(price),
+                price=float(price) if price else None,
                 time_in_force=time_in_force,
                 position_side=position_side,
                 status=OrderStatus.FAILED,
@@ -357,6 +357,7 @@ class BybitPrivateConnector(PrivateConnector):
 
     def _parse_order_update(self, raw: bytes):
         order_msg = self._ws_msg_order_update_decoder.decode(raw)
+        self._log.debug(f"Order update: {str(order_msg)}")
         for data in order_msg.data:
             category = data.category
             if category == BybitProductType.SPOT:

@@ -18,14 +18,14 @@ from decimal import Decimal
 from asynciolimiter import Limiter
 from ccxt.base.errors import RequestTimeout
 from aiohttp.client_exceptions import ClientResponseError, ClientError
-from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
+from decimal import ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
 
 
 from tradebot.log import SpdLog
 from tradebot.entity import EventSystem, TaskManager
 from tradebot.constants import OrderStatus
 from tradebot.types import Order, BaseMarket
-from tradebot.entity import Cache, AsyncCache
+from tradebot.entity import AsyncCache
 from tradebot.exceptions import OrderError, ExchangeResponseError
 from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
 from picows import (

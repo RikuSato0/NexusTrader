@@ -13,7 +13,7 @@ scrape_configs:
     pipeline_stages:
       - regex:
           # 解析日志的各个部分
-          expression: '^\[(?P<timestamp>.*)\] \[(?P<service>.*)\] \[(?P<level>.*)\] (?P<message>.*)'
+          expression: '^\[(?P<timestamp>[^\]]*)\] \[(?P<service>[^\]]*)\] \[(?P<level>[^\]]*)\] (?P<message>.*)'
       
       - labels:
           level:  # 提取日志级别作为标签

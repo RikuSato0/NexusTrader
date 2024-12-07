@@ -1,6 +1,7 @@
 __pycache__/
 .context/
 .logs/
+.log/
 .pytest_cache/
 .vscode/
 *_log.py

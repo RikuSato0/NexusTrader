@@ -385,7 +385,7 @@ class Position(Struct):
             """
             tmp_amount = self.signed_amount + fill_delta
             price = order.average or order.price
-            self.entry_price = (self.entry_price * float(self.signed_amount) + price * float(fill_delta)) / float(tmp_amount)
+            self.entry_price = (self.entry_price * float(self.signed_amount) + price * float(fill_delta)) / float(tmp_amount) if tmp_amount != 0 else 0
             self.signed_amount = tmp_amount
             self.unrealized_pnl = self._calculate_pnl(price, self.amount)  # Fixed: pass self.signed_amount
         else:
@@ -397,7 +397,7 @@ class Position(Struct):
             fill_delta = self._calculate_fill_delta(order)
             tmp_amount = self.signed_amount - fill_delta
             price = order.average or order.price
-            self.entry_price = (self.entry_price * float(self.signed_amount) - price * float(fill_delta)) / float(tmp_amount)   
+            self.entry_price = (self.entry_price * float(self.signed_amount) - price * float(fill_delta)) / float(tmp_amount) if tmp_amount != 0 else 0
             self.signed_amount = tmp_amount
             self.unrealized_pnl = self._calculate_pnl(price, self.amount)  # Fixed: pass self.signed_amount
             

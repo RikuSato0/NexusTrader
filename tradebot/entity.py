@@ -5,15 +5,15 @@ import collections
 
 from decimal import Decimal
 from collections import defaultdict
-from typing import Callable, Union, Optional
+from typing import Callable, Optional
 from typing import Dict, List, Any, Set
 from dataclasses import dataclass
 
 
 import redis
-import orjson
 import msgspec
 
+from tradebot.types import Position
 from tradebot.constants import get_redis_config
 from tradebot.constants import STATUS_TRANSITIONS
 from tradebot.constants import OrderStatus, AccountType
@@ -131,170 +131,170 @@ class RedisClient:
         return redis.asyncio.Redis(**cls._get_params())
 
 
-@dataclass
-class Account:
-    def __init__(self, user: str, account_type: str, redis_client: redis.Redis):
-        self.r = redis_client
-        self.account_type = f"{user}:account:{account_type}"
-        self.load_account()
+# @dataclass
+# class Account:
+#     def __init__(self, user: str, account_type: str, redis_client: redis.Redis):
+#         self.r = redis_client
+#         self.account_type = f"{user}:account:{account_type}"
+#         self.load_account()
 
-    def __setattr__(self, key, value):
-        super().__setattr__(key, value)
-        if key not in ["r", "account_type"]:
-            self.r.hset(f"{self.account_type}", key, str(value))
+#     def __setattr__(self, key, value):
+#         super().__setattr__(key, value)
+#         if key not in ["r", "account_type"]:
+#             self.r.hset(f"{self.account_type}", key, str(value))
 
-    def __getattr__(self, key):
-        if key not in ["r", "account_type"]:
-            value = self.r.hget(f"{self.account_type}", key)
-            if value is not None:
-                return Decimal(value.decode())
-            return Decimal("0")
-        raise AttributeError(
-            f"'{self.__class__.__name__}' object has no attribute '{key}'"
-        )
+#     def __getattr__(self, key):
+#         if key not in ["r", "account_type"]:
+#             value = self.r.hget(f"{self.account_type}", key)
+#             if value is not None:
+#                 return Decimal(value.decode())
+#             return Decimal("0")
+#         raise AttributeError(
+#             f"'{self.__class__.__name__}' object has no attribute '{key}'"
+#         )
 
-    def __getitem__(self, key):
-        return getattr(self, key)
+#     def __getitem__(self, key):
+#         return getattr(self, key)
 
-    def __setitem__(self, key, value):
-        setattr(self, key, value)
+#     def __setitem__(self, key, value):
+#         setattr(self, key, value)
 
-    def keys(self):
-        return [k for k in self.__dict__.keys() if k not in ["r", "account_type"]]
+#     def keys(self):
+#         return [k for k in self.__dict__.keys() if k not in ["r", "account_type"]]
 
-    def load_account(self):
-        for key, value in self.r.hgetall(f"{self.account_type}").items():
-            setattr(self, key.decode(), Decimal(value.decode()))
-
-
-@dataclass
-class Position:
-    symbol: str = None
-    amount: Decimal = Decimal("0")
-    last_price: Decimal = Decimal("0")
-    avg_price: Decimal = Decimal("0")
-    total_cost: Decimal = Decimal("0")
-
-    def update(
-        self,
-        order_amount: Union[str, float, Decimal],
-        order_price: Union[str, float, Decimal],
-    ):
-        order_amount = Decimal(str(order_amount))
-        order_price = Decimal(str(order_price))
-
-        self.total_cost += order_amount * order_price
-        self.amount += order_amount
-        self.avg_price = (
-            self.total_cost / self.amount if self.amount != 0 else Decimal("0")
-        )
-        self.last_price = order_price
-
-    @classmethod
-    def from_dict(cls, data):
-        return cls(
-            symbol=data["symbol"],
-            amount=Decimal(data["amount"]),
-            last_price=Decimal(data["last_price"]),
-            avg_price=Decimal(data["avg_price"]),
-            total_cost=Decimal(data["total_cost"]),
-        )
-
-    def to_dict(self):
-        return {
-            "symbol": self.symbol,
-            "amount": str(self.amount),
-            "last_price": str(self.last_price),
-            "avg_price": str(self.avg_price),
-            "total_cost": str(self.total_cost),
-        }
+#     def load_account(self):
+#         for key, value in self.r.hgetall(f"{self.account_type}").items():
+#             setattr(self, key.decode(), Decimal(value.decode()))
 
 
-class PositionDict:
-    def __init__(self, user: str, redis_client: redis.Redis):
-        self.user = user
-        self.r = redis_client
-        self.key = f"{user}:position"
+# @dataclass
+# class Position:
+#     symbol: str = None
+#     amount: Decimal = Decimal("0")
+#     last_price: Decimal = Decimal("0")
+#     avg_price: Decimal = Decimal("0")
+#     total_cost: Decimal = Decimal("0")
 
-    def __getitem__(self, symbol: str) -> Position:
-        data = self.r.hget(self.key, symbol)
-        if data:
-            return Position.from_dict(orjson.loads(data))
-        return Position(symbol=symbol)
+#     def update(
+#         self,
+#         order_amount: Union[str, float, Decimal],
+#         order_price: Union[str, float, Decimal],
+#     ):
+#         order_amount = Decimal(str(order_amount))
+#         order_price = Decimal(str(order_price))
 
-    def __setitem__(self, symbol: str, position: Position):
-        self.r.hset(self.key, symbol, orjson.dumps(position.to_dict()))
+#         self.total_cost += order_amount * order_price
+#         self.amount += order_amount
+#         self.avg_price = (
+#             self.total_cost / self.amount if self.amount != 0 else Decimal("0")
+#         )
+#         self.last_price = order_price
 
-    def __delitem__(self, symbol: str):
-        self.r.hdel(self.key, symbol)
+#     @classmethod
+#     def from_dict(cls, data):
+#         return cls(
+#             symbol=data["symbol"],
+#             amount=Decimal(data["amount"]),
+#             last_price=Decimal(data["last_price"]),
+#             avg_price=Decimal(data["avg_price"]),
+#             total_cost=Decimal(data["total_cost"]),
+#         )
 
-    def __contains__(self, symbol: str):
-        return self.r.hexists(self.key, symbol)
-
-    def __iter__(self):
-        return iter([k.decode("utf-8") for k in self.r.hkeys(self.key)])
-
-    def update(
-        self,
-        symbol: str,
-        order_amount: Union[str, float, Decimal],
-        order_price: Union[str, float, Decimal],
-    ):
-        position = self[symbol]
-        position.update(order_amount, order_price)
-
-        if abs(position.amount) <= Decimal("1e-8"):
-            del self[symbol]
-        else:
-            self[symbol] = position
-
-    def items(self) -> Dict[str, Position]:
-        all_positions = self.r.hgetall(self.key)
-        return {
-            k.decode(): Position.from_dict(orjson.loads(v))
-            for k, v in all_positions.items()
-        }
-
-    def __repr__(self):
-        return repr(self.items())
-
-    @property
-    def symbols(self):
-        return list(self)
+#     def to_dict(self):
+#         return {
+#             "symbol": self.symbol,
+#             "amount": str(self.amount),
+#             "last_price": str(self.last_price),
+#             "avg_price": str(self.avg_price),
+#             "total_cost": str(self.total_cost),
+#         }
 
 
-class Context:
-    def __init__(self, user: str, redis_client: redis.Redis):
-        self._redis_client = redis_client
-        self._user = user
-        self.portfolio_account = Account(
-            user, "portfolio", self._redis_client
-        )  # Portfolio-margin account
-        self.position = PositionDict(user, self._redis_client)
+# class PositionDict:
+#     def __init__(self, user: str, redis_client: redis.Redis):
+#         self.user = user
+#         self.r = redis_client
+#         self.key = f"{user}:position"
 
-    def __setattr__(self, name, value):
-        if name in ["_redis_client", "_user", "portfolio_account", "position"]:
-            super().__setattr__(name, value)
-        else:
-            self._redis_client.set(f"context:{self._user}:{name}", orjson.dumps(value))
+#     def __getitem__(self, symbol: str) -> Position:
+#         data = self.r.hget(self.key, symbol)
+#         if data:
+#             return Position.from_dict(orjson.loads(data))
+#         return Position(symbol=symbol)
 
-    def __getattr__(self, name):
-        if name in ["_redis_client", "_user", "portfolio_account", "position"]:
-            return super().__getattr__(name)
+#     def __setitem__(self, symbol: str, position: Position):
+#         self.r.hset(self.key, symbol, orjson.dumps(position.to_dict()))
 
-        value = self._redis_client.get(f"context:{self._user}:{name}")
-        if value is not None:
-            return orjson.loads(value)
-        raise AttributeError(
-            f"'{self.__class__.__name__}' object has no attribute '{name}'"
-        )
+#     def __delitem__(self, symbol: str):
+#         self.r.hdel(self.key, symbol)
 
-    def clear(self, name: str = None):
-        if name is None:
-            for key in self._redis_client.keys(f"context:{self._user}:*"):
-                self._redis_client.delete(key)
-        else:
-            self._redis_client.delete(f"context:{self._user}:{name}")
+#     def __contains__(self, symbol: str):
+#         return self.r.hexists(self.key, symbol)
+
+#     def __iter__(self):
+#         return iter([k.decode("utf-8") for k in self.r.hkeys(self.key)])
+
+#     def update(
+#         self,
+#         symbol: str,
+#         order_amount: Union[str, float, Decimal],
+#         order_price: Union[str, float, Decimal],
+#     ):
+#         position = self[symbol]
+#         position.update(order_amount, order_price)
+
+#         if abs(position.amount) <= Decimal("1e-8"):
+#             del self[symbol]
+#         else:
+#             self[symbol] = position
+
+#     def items(self) -> Dict[str, Position]:
+#         all_positions = self.r.hgetall(self.key)
+#         return {
+#             k.decode(): Position.from_dict(orjson.loads(v))
+#             for k, v in all_positions.items()
+#         }
+
+#     def __repr__(self):
+#         return repr(self.items())
+
+#     @property
+#     def symbols(self):
+#         return list(self)
+
+
+# class Context:
+#     def __init__(self, user: str, redis_client: redis.Redis):
+#         self._redis_client = redis_client
+#         self._user = user
+#         self.portfolio_account = Account(
+#             user, "portfolio", self._redis_client
+#         )  # Portfolio-margin account
+#         self.position = PositionDict(user, self._redis_client)
+
+#     def __setattr__(self, name, value):
+#         if name in ["_redis_client", "_user", "portfolio_account", "position"]:
+#             super().__setattr__(name, value)
+#         else:
+#             self._redis_client.set(f"context:{self._user}:{name}", orjson.dumps(value))
+
+#     def __getattr__(self, name):
+#         if name in ["_redis_client", "_user", "portfolio_account", "position"]:
+#             return super().__getattr__(name)
+
+#         value = self._redis_client.get(f"context:{self._user}:{name}")
+#         if value is not None:
+#             return orjson.loads(value)
+#         raise AttributeError(
+#             f"'{self.__class__.__name__}' object has no attribute '{name}'"
+#         )
+
+#     def clear(self, name: str = None):
+#         if name is None:
+#             for key in self._redis_client.keys(f"context:{self._user}:*"):
+#                 self._redis_client.delete(key)
+#         else:
+#             self._redis_client.delete(f"context:{self._user}:{name}")
 
 
 class RollingMedian:
@@ -455,6 +455,10 @@ class AsyncCache:
         sync_interval: int = 300,
         expire_time: int = 3600,
     ):
+        self.strategy_id = strategy_id
+        self.user_id = user_id
+        self.account_type = account_type
+        
         self._log = SpdLog.get_logger(name=type(self).__name__, level="DEBUG", flush=True)
         self._clock = LiveClock()
         self._r = RedisClient.get_async_client()
@@ -462,6 +466,7 @@ class AsyncCache:
         self._open_orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:open_orders"
         self._symbol_open_orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:symbol_open_orders"
         self._symbol_orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:symbol_orders"
+        self._symbol_positions_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:symbol_positions"
 
         # in-memory save
         self._mem_orders: Dict[str, Order] = {}  # order_id -> Order
@@ -472,6 +477,7 @@ class AsyncCache:
         self._mem_symbol_orders: Dict[str, Set[str]] = defaultdict(
             set
         )  # symbol -> set(order_id)
+        self._mem_symbol_positions: Dict[str, Position] = {}  # symbol -> Position
 
         # set params
         self._sync_interval = sync_interval  # sync interval
@@ -545,7 +551,25 @@ class AsyncCache:
             return False
             
         return True
-
+    
+    def _generate_position_id(self, order: Order):
+        return f"{order.symbol}:{order.exchange}"
+    
+    def apply_position(self, order: Order):
+        position_id = self._generate_position_id(order)
+        if position_id not in self._mem_symbol_positions:
+            self._mem_symbol_positions[position_id] = Position(
+                symbol=order.symbol,
+                exchange=order.exchange,
+                strategy_id=self.strategy_id,
+            )
+        if order.status in (OrderStatus.FILLED, OrderStatus.PARTIALLY_FILLED):
+            self._mem_symbol_positions[position_id].apply(order)
+    
+    def get_position(self, symbol: str, exchange: str) -> Position:
+        position_id = f"{symbol}:{exchange}"
+        return self._mem_symbol_positions.get(position_id)
+        
     def order_initialized(self, order: Order):
         if not self._check_status_transition(order):
             return

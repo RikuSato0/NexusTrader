@@ -1,16 +1,14 @@
 import re
 from tradebot.types import Position, Order
+from tradebot.constants import OrderStatus
 from typing import Dict
 from tqdm import tqdm
-import re
 import orjson
-from typing import Optional, Dict, Any
-from decimal import Decimal
+from typing import Optional, Any
 import msgspec
 from tradebot.log import SpdLog
 
 logger = SpdLog.get_logger(__name__, "INFO", flush=True)
-
 
 def clean_enum_value(value: str) -> Optional[str]:
     """Clean enum values like <OrderStatus.PENDING: 'PENDING'> to just 'PENDING'"""
@@ -33,28 +31,28 @@ def clean_value(value: str) -> Any:
 def parse_order_log(order_str: str) -> Optional[Dict[str, Any]]:
     """Parse an Order string into a dictionary"""
     pattern = r"""Order\(
-        exchange='(?P<exchange>[^']+)',\s*
-        symbol='(?P<symbol>[^']+)',\s*
-        status=<[^:]+:\s*'(?P<status>[^']+)'>,\s*
-        id='(?P<id>[^']+)',\s*
-        amount=(?P<amount>[^,]+),\s*
-        filled=(?P<filled>[^,]+),\s*
+        exchange='(?P<exchange>[^']*)',\s*
+        symbol='(?P<symbol>[^']*)',\s*
+        status=(?P<status>(?:<[^>]+>|None)),\s*
+        id='(?P<id>[^']*)',\s*
+        amount=(?P<amount>(?:None|[^,]+)),\s*
+        filled=(?P<filled>(?:None|[^,]+)),\s*
         client_order_id='(?P<client_order_id>[^']*)',\s*
-        timestamp=(?P<timestamp>\d+),\s*
-        type=(?P<type>(?:<[^:]+:\s*'[^']+'>\s*|None)),\s*
-        side=(?P<side>(?:<[^:]+:\s*'[^']+'>\s*|None)),\s*
-        time_in_force=(?P<time_in_force>(?:<[^:]+:\s*'[^']+'>\s*|None)),\s*
-        price=(?P<price>[^,]+),\s*
-        average=(?P<average>[^,]+),\s*
-        last_filled_price=(?P<last_filled_price>[^,]+),\s*
-        last_filled=(?P<last_filled>[^,]+),\s*
-        remaining=(?P<remaining>[^,]+),\s*
-        fee=(?P<fee>[^,]+),\s*
-        fee_currency='(?P<fee_currency>[^']*)',\s*
-        cost=(?P<cost>[^,]+),\s*
-        cum_cost=(?P<cum_cost>[^,]+),\s*
-        reduce_only=(?P<reduce_only>[^,]+),\s*
-        position_side=(?P<position_side>(?:<[^:]+:\s*'[^']+'>\s*|None))
+        timestamp=(?P<timestamp>(?:None|\d+)),\s*
+        type=(?P<type>(?:<[^>]+>|None)),\s*
+        side=(?P<side>(?:<[^>]+>|None)),\s*
+        time_in_force=(?P<time_in_force>(?:<[^>]+>|None)),\s*
+        price=(?P<price>(?:None|[^,]+)),\s*
+        average=(?P<average>(?:None|[^,]+)),\s*
+        last_filled_price=(?P<last_filled_price>(?:None|[^,]+)),\s*
+        last_filled=(?P<last_filled>(?:None|[^,]+)),\s*
+        remaining=(?P<remaining>(?:None|[^,]+)),\s*
+        fee=(?P<fee>(?:None|[^,]+)),\s*
+        fee_currency=(?P<fee_currency>(?:None|[^,]+)),\s*
+        cost=(?P<cost>(?:None|[^,]+)),\s*
+        cum_cost=(?P<cum_cost>(?:None|[^,]+)),\s*
+        reduce_only=(?P<reduce_only>(?:None|[^,]+)),\s*
+        position_side=(?P<position_side>(?:<[^>]+>|None))
     \)"""
 
     match = re.search(pattern, order_str, re.VERBOSE)
@@ -82,6 +80,8 @@ def parse_order_log(order_str: str) -> Optional[Dict[str, Any]]:
         order_dict['reduce_only'] = False
     elif order_dict['reduce_only'] == 'True':
         order_dict['reduce_only'] = True
+    else:
+        order_dict['reduce_only'] = None
     
     return order_dict
 
@@ -99,18 +99,19 @@ def parse_log_line(line: str) -> Optional[Dict[str, Any]]:
 def process_log_file(log_content: str) -> list[Order]:
     """Process the entire log file and print results"""
     orders = []
-    for line in tqdm(log_content.split('\n')):
+    for line in tqdm(log_content.split('\n')[:-1]):
         if line.strip():  # Skip empty lines
             result = parse_log_line(line)
             if result:
                 result_json = orjson.dumps(result)
                 order = msgspec.json.decode(result_json, type=Order)
                 orders.append(order)
+    print(f"Processed {len(orders)} orders")
     return orders
         
 def test_position_updates():
     # Read the log file
-    with open('.log/OrderManagerSystem_2024-12-07.log', 'r') as f:
+    with open('.log/oms.log', 'r') as f:
         log_content = f.read()
     
     # Extract relevant orders
@@ -133,18 +134,19 @@ def test_position_updates():
         
         # Apply the order to position
         try:
-            pos_dict[symbol].apply(order)
-            
-            # Print position status after each order
-            pos = pos_dict[symbol]
-            logger.info(f"\nApplied Order: {order.id} ({order.status})")
-            logger.info("Position Status:")
-            logger.info(f"  Symbol: {pos.symbol}")
-            logger.info(f"  Side: {pos.side}")
-            logger.info(f"  Signed Amount: {pos.signed_amount}")
-            logger.info(f"  Entry Price: {pos.entry_price}")
-            logger.info(f"  Unrealized PNL: {pos.unrealized_pnl}")
-            logger.info(f"  Realized PNL: {pos.realized_pnl}")
+            if order.status in (OrderStatus.FILLED, OrderStatus.PARTIALLY_FILLED):
+                pos_dict[symbol].apply(order)
+                
+                # Print position status after each order
+                pos = pos_dict[symbol]
+                logger.info(f"\nApplied Order: {order.id} ({order.status}) filled: {order.filled} amount: {order.amount}")
+                logger.info("Position Status:")
+                logger.info(f"  Symbol: {pos.symbol}")
+                logger.info(f"  Side: {pos.side}")
+                logger.info(f"  Signed Amount: {pos.signed_amount}")
+                logger.info(f"  Entry Price: {pos.entry_price}")
+                logger.info(f"  Unrealized PNL: {pos.unrealized_pnl}")
+                logger.info(f"  Realized PNL: {pos.realized_pnl}")
             
         except Exception as e:
             logger.error(f"Error processing order {order.id}: {str(e)}")

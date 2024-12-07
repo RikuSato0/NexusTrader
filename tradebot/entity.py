@@ -5,7 +5,7 @@ import collections
 
 from decimal import Decimal
 from collections import defaultdict
-from typing import Literal, Callable, Union, Optional
+from typing import Callable, Union, Optional
 from typing import Dict, List, Any, Set
 from dataclasses import dataclass
 
@@ -531,7 +531,7 @@ class AsyncCache:
         for order_id in expired_orders:
             del self._mem_orders[order_id]
             self._log.debug(f"removing order {order_id} from memory")
-            for symbol, order_set in self._mem_symbol_orders.items():
+            for symbol, order_set in self._mem_symbol_orders.copy().items():
                 self._log.debug(f"removing order {order_id} from symbol {symbol}")
                 order_set.discard(order_id)
     

@@ -1,12 +1,12 @@
-version: '3.3'
+version: '3.8'
 services:
-  tradebot:
-    build: .
-    container_name: tradebot
-    depends_on:
-      - redis
-    tty: true
-    stdin_open: true
+  # tradebot:
+  #   build: .
+  #   container_name: tradebot
+  #   depends_on:
+  #     - redis
+  #   tty: true
+  #   stdin_open: true
 
   redis:
     image: redis:alpine
@@ -18,5 +18,26 @@ services:
       - redis_data:/data
     command: redis-server --appendonly yes --requirepass "password"
 
+  loki:
+    image: grafana/loki:3.3.1
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./yaml-config:/etc/loki
+      - loki-data:/loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: promtail
+    volumes:
+      - ./.log:/var/log
+      - ./yaml-config:/etc/promtail
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    restart: unless-stopped
+
 volumes:
   redis_data:
+  loki-data:

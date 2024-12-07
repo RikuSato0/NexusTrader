@@ -692,7 +692,6 @@ class Clock:
         self._clock = LiveClock()
         self._tick_callbacks: List[Callable[[float], None]] = []
         self._started = False
-        self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
 
     @property
     def tick_size(self) -> float:

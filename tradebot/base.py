@@ -896,7 +896,6 @@ class OrderManagerSystem:
         while True:
             try:
                 order = await self._order_msg_queue.get()
-                await self._cache.apply_position(order)
                 match order.status:
                     case OrderStatus.PENDING:
                         self._log.debug(f"ORDER STATUS PENDING: {str(order)}")
@@ -923,6 +922,7 @@ class OrderManagerSystem:
                     case OrderStatus.EXPIRED:
                         self._log.debug(f"ORDER STATUS EXPIRED: {str(order)}")
                         self._cache.order_status_update(order)
+                await self._cache.apply_position(order)
                 self._order_msg_queue.task_done()
             except Exception as e:
                 self._log.error(f"Error in handle_order_event: {e}")

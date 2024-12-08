@@ -3,6 +3,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Tuple
 from typing import Literal, Optional
 from msgspec import Struct, field
+from tradebot.exceptions import PositionError
 from tradebot.constants import (
     OrderSide,
     OrderType,
@@ -377,7 +378,7 @@ class Position(Struct):
                 self.side = PositionSide.LONG
             else:
                 if self.side != PositionSide.LONG:
-                    raise RuntimeError(f"Cannot open long position with {self.side}")
+                    raise PositionError(f"Cannot open long position with {self.side}", self)
             fill_delta = self._calculate_fill_delta(order)
             """
             self.signed_amount = 0, fill_delta = 0.01, entry_price = 0
@@ -393,7 +394,7 @@ class Position(Struct):
                 self.side = PositionSide.SHORT
             else:
                 if self.side != PositionSide.SHORT:
-                    raise RuntimeError(f"Cannot open short position with {self.side}")
+                    raise PositionError(f"Cannot open short position with {self.side}", self)
             fill_delta = self._calculate_fill_delta(order)
             tmp_amount = self.signed_amount - fill_delta
             price = order.average or order.price
@@ -408,13 +409,13 @@ class Position(Struct):
         if order.side == OrderSide.BUY:
             # -> order (OrderSide.BUY, reduce_only=True) -> close short position, so side must be short
             if self.side != PositionSide.SHORT:
-                raise RuntimeError(f"Cannot close short position with {self.side}")
+                raise PositionError(f"Cannot close short position with {self.side}", self)
             self.realized_pnl += self._calculate_pnl(price, fill_delta)  # Update realized PNL
             self.signed_amount += fill_delta
         elif order.side == OrderSide.SELL:
             # -> order (OrderSide.SELL, reduce_only=True) -> close long position, so side must be long
             if self.side != PositionSide.LONG:
-                raise RuntimeError(f"Cannot close long position with {self.side}")
+                raise PositionError(f"Cannot close long position with {self.side}", self)
             self.realized_pnl += self._calculate_pnl(price, fill_delta)  # Update realized PNL
             self.signed_amount -= fill_delta
         

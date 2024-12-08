@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 class OrderError(Exception):
     def __init__(self, original_error: Exception, params: dict):
         self.original_error = original_error
@@ -22,6 +24,17 @@ class ExchangeResponseError(Exception):
     
     def __str__(self):
         return f"Exchange {self.method} {self.url}: {self.data}"
+    
+    def __repr__(self):
+        return self.__str__()
+
+class PositionError(Exception):
+    def __init__(self, message: str, position):
+        self.position = position
+        super().__init__(message)
+
+    def __str__(self):
+        return f"{self.message}\nPosition: {self.position}"
     
     def __repr__(self):
         return self.__str__()

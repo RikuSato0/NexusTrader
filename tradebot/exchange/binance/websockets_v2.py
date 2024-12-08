@@ -7,15 +7,18 @@ from asynciolimiter import Limiter
 
 from tradebot.log import SpdLog
 from tradebot.exchange.binance.constants import BinanceAccountType
+from tradebot.nautilius_core import (
+    LiveClock,
+    WebSocketClient,
+    WebSocketClientError,
+    WebSocketConfig,
+)
 
-from nautilus_trader.common.component import LiveClock
-from nautilus_trader.core.nautilus_pyo3 import WebSocketClient
-from nautilus_trader.core.nautilus_pyo3 import WebSocketClientError
-from nautilus_trader.core.nautilus_pyo3 import WebSocketConfig
 
 ####################################################################################################
 ############################### CODE USING THE NAUTILUS_PY03 LIBRARY ###############################
 ####################################################################################################
+
 
 class BinanceWebSocketClient:
     def __init__(

@@ -20,7 +20,7 @@ from tradebot.constants import OrderStatus, AccountType
 from tradebot.types import Order
 from tradebot.log import SpdLog
 
-from nautilus_trader.common.component import LiveClock
+from tradebot.nautilius_core import LiveClock
 
 
 class TaskManager:

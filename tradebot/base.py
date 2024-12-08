@@ -36,7 +36,7 @@ from picows import (
     WSMsgType,
     WSAutoPingStrategy,
 )
-from nautilus_trader.common.component import LiveClock
+from tradebot.nautilius_core import LiveClock
 
 
 class ExchangeManager(ABC):
@@ -779,7 +779,7 @@ class PrivateConnector(ABC):
         rate_limit: float = None,
     ):
         self._log = SpdLog.get_logger(
-            name=type(self).__name__, level="INFO", flush=True
+            name=type(self).__name__, level="DEBUG", flush=True
         )
         self._account_type = account_type
         self._market = market

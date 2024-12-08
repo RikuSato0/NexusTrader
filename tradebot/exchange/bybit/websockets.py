@@ -7,9 +7,7 @@ from asynciolimiter import Limiter
 
 from tradebot.base import WSClient
 from tradebot.exchange.bybit.constants import BybitAccountType
-
-from nautilus_trader.common.component import LiveClock
-
+from tradebot.nautilius_core import LiveClock
 
 class BybitWSClient(WSClient):
     def __init__(

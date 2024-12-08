@@ -21,3 +21,4 @@ strategy_bybit_twap.py
 strategy/
 clear.sh
 *.key
+.idea/

@@ -7,8 +7,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'TradeBot'
-copyright = '2024, Your Name'
-author = 'Your Name'
+copyright = '2024, River Shi'
 release = '0.1.0'
 
 # -- General configuration ---------------------------------------------------
@@ -18,14 +17,11 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
 ]
 
 templates_path = ['_templates']
 exclude_patterns = []
 
-# Enable TODO
-todo_include_todos = True
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -44,26 +40,6 @@ html_theme_options = {
         'navigation.sections',
         'navigation.instant',
         'header.autohide',
-    ],
-    'palette': [
-        {
-            'scheme': 'default',
-            'primary': 'blue-grey',
-            'accent': 'indigo',
-            'toggle': {
-                'icon': 'material/weather-night',
-                'name': 'Switch to dark mode',
-            }
-        },
-        {
-            'scheme': 'slate',
-            'primary': 'blue-grey',
-            'accent': 'indigo',
-            'toggle': {
-                'icon': 'material/weather-sunny',
-                'name': 'Switch to light mode',
-            }
-        }
     ],
 }
 

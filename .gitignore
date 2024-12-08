@@ -20,3 +20,4 @@ strategy_bybit_vwap.py
 strategy_bybit_twap.py
 strategy/
 clear.sh
+*.key

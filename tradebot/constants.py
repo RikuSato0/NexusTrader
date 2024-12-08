@@ -1,9 +1,10 @@
 import os
-
+from dotenv import load_dotenv
 from configparser import ConfigParser
 from typing import Literal, Union, Dict, List
 from enum import Enum
 
+load_dotenv()
 
 if not os.path.exists(".keys/"):
     os.makedirs(".keys/")
@@ -17,19 +18,38 @@ CONFIG.read(".keys/config.cfg")
 
 
 def get_redis_config(in_docker: bool = False):
-    if in_docker:
-        return {
-            "host": "redis",
-            "db": CONFIG["redis_config"]["db"],
-            "password": CONFIG["redis_config"]["password"],
-        }
+    try:
+        import subprocess
+        
+        # 使用主密钥文件解密
+        result = subprocess.run(
+            [
+                "openssl", "enc", "-aes-256-cbc", "-salt", "-pbkdf2",
+                "-d", "-pass", "file:.keys/master.key",
+                "-in", ".keys/redis.key"
+            ],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            raise ValueError("Failed to decrypt Redis password")
+        password = result.stdout.strip()
+        
+        if in_docker:
+            return {
+                "host": "redis",
+                "db": CONFIG["redis_config"]["db"],
+                "password": password,
+            }
 
-    return {
-        "host": CONFIG["redis_config"]["host"],
-        "port": CONFIG["redis_config"]["port"],
-        "db": CONFIG["redis_config"]["db"],
-        "password": CONFIG["redis_config"]["password"],
-    }
+        return {
+            "host": CONFIG["redis_config"]["host"],
+            "port": CONFIG["redis_config"]["port"],
+            "db": CONFIG["redis_config"]["db"],
+            "password": password,
+        }
+    except Exception as e:
+        raise ValueError(f"Failed to get Redis password: {e}")
 
 
 class Url:
@@ -389,3 +409,6 @@ STATUS_TRANSITIONS: Dict[OrderStatus, List[OrderStatus]] = {
     OrderStatus.EXPIRED: [],
     OrderStatus.FAILED: [],
 }
+
+if __name__ == "__main__":
+    get_redis_config()

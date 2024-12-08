@@ -18,10 +18,14 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.todo',
 ]
 
 templates_path = ['_templates']
 exclude_patterns = []
+
+# Enable TODO
+todo_include_todos = True
 
 # -- Options for HTML output -------------------------------------------------
 

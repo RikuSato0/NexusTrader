@@ -34,3 +34,10 @@ zmq = "^0.0.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[project.optional-dependencies]
+docs = [
+    "sphinx",
+    "sphinx-material",
+    "sphinx-autodoc-typehints"
+]

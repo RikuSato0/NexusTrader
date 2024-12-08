@@ -116,10 +116,8 @@ class RedisClient:
     @classmethod
     def _get_params(cls) -> dict:
         if cls._params is None:
-            if cls._is_in_docker():
-                cls._params = {"host": "redis", "db": 0, "password": "password"}
-            else:
-                cls._params = get_redis_config()
+            in_docker = cls._is_in_docker()
+            cls._params = get_redis_config(in_docker)
         return cls._params
 
     @classmethod
@@ -507,7 +505,7 @@ class AsyncCache:
 
     async def _sync_to_redis(self):
         self._log.debug("syncing to redis")
-        for order_id, order in self._mem_orders.items():
+        for order_id, order in self._mem_orders.copy().items():
             await self._r.hset(self._orders_key, order_id, self._encode(order))
 
         if await self._r.exists(self._open_orders_key):
@@ -516,20 +514,20 @@ class AsyncCache:
         if self._mem_open_orders:
             await self._r.sadd(self._open_orders_key, *self._mem_open_orders)
 
-        for symbol, order_ids in self._mem_symbol_orders.items():
+        for symbol, order_ids in self._mem_symbol_orders.copy().items():
             key = f"{self._symbol_orders_key}:{symbol}"
             await self._r.delete(key)
             if order_ids:
                 await self._r.sadd(key, *order_ids)
 
-        for symbol, order_ids in self._mem_symbol_open_orders.items():
+        for symbol, order_ids in self._mem_symbol_open_orders.copy().items():
             key = f"{self._symbol_open_orders_key}:{symbol}"
             await self._r.delete(key)
             if order_ids:
                 await self._r.sadd(key, *order_ids)
 
         # Add position sync
-        for symbol, position in self._mem_symbol_positions.items():
+        for symbol, position in self._mem_symbol_positions.copy().items():
             key = f"{self._symbol_positions_key}:{symbol}"
             await self._r.set(key, self._encode(position))
 
@@ -540,7 +538,7 @@ class AsyncCache:
         # 清理过期orders
         expired_orders = [
             order_id
-            for order_id, order in self._mem_orders.items()
+            for order_id, order in self._mem_orders.copy().items()
             if order.timestamp < expire_before
         ]
         for order_id in expired_orders:

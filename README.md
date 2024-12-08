@@ -131,3 +131,22 @@ Contributions to TradeBotPro are welcome! Please refer to our [contribution guid
 ## License
 
 TradeBotPro is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Documentation
+
+Documentation is available at [Read the Docs](https://your-project-name.readthedocs.io/).
+
+### Building Docs Locally
+
+1. Install documentation dependencies:
+   ```bash
+   pip install -r docs/requirements.txt
+   ```
+
+2. Build the documentation:
+   ```bash
+   cd docs
+   make html
+   ```
+
+The generated documentation will be in `docs/build/html`.

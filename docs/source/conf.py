@@ -31,8 +31,36 @@ html_theme_options = {
     'repo_url': 'https://github.com/yourusername/tradebot/',
     'repo_name': 'TradeBot',
     'globaltoc_depth': 2,
-    'color_primary': 'blue',
-    'color_accent': 'light-blue',
+    'color_primary': 'blue-grey',
+    'color_accent': 'indigo',
+    'features': [
+        'navigation.expand',
+        'navigation.tabs',
+        'toc.integrate',
+        'navigation.sections',
+        'navigation.instant',
+        'header.autohide',
+    ],
+    'palette': [
+        {
+            'scheme': 'default',
+            'primary': 'blue-grey',
+            'accent': 'indigo',
+            'toggle': {
+                'icon': 'material/weather-night',
+                'name': 'Switch to dark mode',
+            }
+        },
+        {
+            'scheme': 'slate',
+            'primary': 'blue-grey',
+            'accent': 'indigo',
+            'toggle': {
+                'icon': 'material/weather-sunny',
+                'name': 'Switch to light mode',
+            }
+        }
+    ],
 }
 
 html_sidebars = {

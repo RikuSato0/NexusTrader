@@ -1,3 +1,4 @@
 sphinx
 sphinx-material
-sphinx-autodoc-typehints 
+sphinx-autodoc-typehints
+material-icons 

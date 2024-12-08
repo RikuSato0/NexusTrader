@@ -1,10 +1,7 @@
 import os
-from dotenv import load_dotenv
 from configparser import ConfigParser
 from typing import Literal, Union, Dict, List
 from enum import Enum
-
-load_dotenv()
 
 if not os.path.exists(".keys/"):
     os.makedirs(".keys/")
@@ -32,7 +29,7 @@ def get_redis_config(in_docker: bool = False):
             text=True
         )
         if result.returncode != 0:
-            raise ValueError("Failed to decrypt Redis password")
+            raise ValueError("Failed to decrypt Redis password, please run `start_redis.sh` first")
         password = result.stdout.strip()
         
         if in_docker:

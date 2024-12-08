@@ -388,7 +388,7 @@ class Position(Struct):
             self.entry_price = (self.entry_price * float(self.signed_amount) + price * float(fill_delta)) / float(tmp_amount) if tmp_amount != 0 else 0
             self.signed_amount = tmp_amount
             self.unrealized_pnl = self._calculate_pnl(price, self.amount)  # Fixed: pass self.signed_amount
-        else:
+        elif order.side == OrderSide.SELL:
             if not self.side:
                 self.side = PositionSide.SHORT
             else:
@@ -411,7 +411,7 @@ class Position(Struct):
                 raise RuntimeError(f"Cannot close short position with {self.side}")
             self.realized_pnl += self._calculate_pnl(price, fill_delta)  # Update realized PNL
             self.signed_amount += fill_delta
-        else:
+        elif order.side == OrderSide.SELL:
             # -> order (OrderSide.SELL, reduce_only=True) -> close long position, so side must be long
             if self.side != PositionSide.LONG:
                 raise RuntimeError(f"Cannot close long position with {self.side}")

@@ -199,10 +199,6 @@ class BybitPrivateConnector(PrivateConnector):
             testnet=account_type.is_testnet,
         )
 
-        self._oms = OrderManagerSystem(
-            cache=self._cache,
-        )
-
         self._ws_msg_general_decoder = msgspec.json.Decoder(BybitWsMessageGeneral)
         self._ws_msg_order_update_decoder = msgspec.json.Decoder(BybitWsOrderMsg)
 

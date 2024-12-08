@@ -5,7 +5,7 @@ import collections
 
 from decimal import Decimal
 from collections import defaultdict
-from typing import Callable, Optional
+from typing import Callable, Optional, Type
 from typing import Dict, List, Any, Set
 from dataclasses import dataclass
 
@@ -452,14 +452,16 @@ class AsyncCache:
         account_type: AccountType,
         strategy_id: str,
         user_id: str,
-        sync_interval: int = 300,
+        sync_interval: int = 60,
         expire_time: int = 3600,
     ):
         self.strategy_id = strategy_id
         self.user_id = user_id
         self.account_type = account_type
-        
-        self._log = SpdLog.get_logger(name=type(self).__name__, level="DEBUG", flush=True)
+
+        self._log = SpdLog.get_logger(
+            name=type(self).__name__, level="DEBUG", flush=True
+        )
         self._clock = LiveClock()
         self._r = RedisClient.get_async_client()
         self._orders_key = f"strategy:{strategy_id}:user_id:{user_id}:account_type:{account_type}:orders"
@@ -486,11 +488,13 @@ class AsyncCache:
         self._shutdown_event = asyncio.Event()
         self._task_manager = TaskManager()
 
-    def _encode_order(self, order: Order) -> bytes:
-        return msgspec.json.encode(order)
+    def _encode(self, obj: Order | Position) -> bytes:
+        return msgspec.json.encode(obj)
 
-    def _decode_order(self, data: bytes) -> Order:
-        return msgspec.json.decode(data, type=Order)
+    def _decode(
+        self, data: bytes, obj_type: Type[Order | Position]
+    ) -> Order | Position:
+        return msgspec.json.decode(data, type=obj_type)
 
     async def sync(self):
         self._task_manager.create_task(self._periodic_sync())
@@ -504,11 +508,11 @@ class AsyncCache:
     async def _sync_to_redis(self):
         self._log.debug("syncing to redis")
         for order_id, order in self._mem_orders.items():
-            await self._r.hset(self._orders_key, order_id, self._encode_order(order))
+            await self._r.hset(self._orders_key, order_id, self._encode(order))
 
         if await self._r.exists(self._open_orders_key):
             await self._r.delete(self._open_orders_key)
-            
+
         if self._mem_open_orders:
             await self._r.sadd(self._open_orders_key, *self._mem_open_orders)
 
@@ -523,6 +527,11 @@ class AsyncCache:
             await self._r.delete(key)
             if order_ids:
                 await self._r.sadd(key, *order_ids)
+
+        # Add position sync
+        for symbol, position in self._mem_symbol_positions.items():
+            key = f"{self._symbol_positions_key}:{symbol}"
+            await self._r.set(key, self._encode(position))
 
     def _cleanup_expired_data(self):
         current_time = self._clock.timestamp_ms()
@@ -540,40 +549,58 @@ class AsyncCache:
             for symbol, order_set in self._mem_symbol_orders.copy().items():
                 self._log.debug(f"removing order {order_id} from symbol {symbol}")
                 order_set.discard(order_id)
-    
+
     def _check_status_transition(self, order: Order):
         previous_order = self._mem_orders.get(order.id)
         if not previous_order:
             return True
-            
+
         if order.status not in STATUS_TRANSITIONS[previous_order.status]:
-            self._log.error(f"Invalid status transition: {previous_order.status} -> {order.status}")
-            return False
-            
-        return True
-    
-    def _generate_position_id(self, order: Order):
-        return f"{order.symbol}:{order.exchange}"
-    
-    def apply_position(self, order: Order):
-        position_id = self._generate_position_id(order)
-        if position_id not in self._mem_symbol_positions:
-            self._mem_symbol_positions[position_id] = Position(
-                symbol=order.symbol,
-                exchange=order.exchange,
-                strategy_id=self.strategy_id,
+            self._log.error(
+                f"Invalid status transition: {previous_order.status} -> {order.status}"
             )
-        if order.status in (OrderStatus.FILLED, OrderStatus.PARTIALLY_FILLED):
-            self._mem_symbol_positions[position_id].apply(order)
-    
-    def get_position(self, symbol: str, exchange: str) -> Position:
-        position_id = f"{symbol}:{exchange}"
-        return self._mem_symbol_positions.get(position_id)
-        
+            return False
+
+        return True
+
+    async def apply_position(self, order: Order):
+        symbol = order.symbol
+        if symbol not in self._mem_symbol_positions:
+            position = await self.get_position(symbol)
+            if not position:
+                position = Position(
+                    symbol=symbol,
+                    exchange=order.exchange,
+                    strategy_id=self.strategy_id,
+                )
+            self._mem_symbol_positions[symbol] = position
+        if order.status in (
+            OrderStatus.FILLED,
+            OrderStatus.PARTIALLY_FILLED,
+            OrderStatus.CANCELED,
+        ):
+            self._log.debug(
+                f"POSITION UPDATED: status {order.status} order_id {order.id} side {order.side} filled: {order.filled} amount: {order.amount} reduceOnly: {order.reduce_only}"
+            )
+            self._mem_symbol_positions[symbol].apply(order)
+
+    async def get_position(self, symbol: str) -> Position:
+        # First try memory
+        if position := self._mem_symbol_positions.get(symbol):
+            return position
+
+        # Then try Redis
+        key = f"{self._symbol_positions_key}:{symbol}"
+        if position_data := await self._r.get(key):
+            position = self._decode(position_data, Position)
+            self._mem_symbol_positions[symbol] = position  # Cache in memory
+            return position
+
+        return None
+
     def order_initialized(self, order: Order):
         if not self._check_status_transition(order):
             return
-        
         self._mem_orders[order.id] = order
         self._mem_open_orders.add(order.id)
         self._mem_symbol_orders[order.symbol].add(order.id)
@@ -582,7 +609,7 @@ class AsyncCache:
     def order_status_update(self, order: Order):
         if not self._check_status_transition(order):
             return
-        
+
         self._mem_orders[order.id] = order
         if order.status in (
             OrderStatus.FILLED,
@@ -598,7 +625,7 @@ class AsyncCache:
 
         raw_order = await self._r.hget(self._orders_key, order_id)
         if raw_order:
-            order = self._decode_order(raw_order)
+            order = self._decode(raw_order, Order)
             self._mem_orders[order_id] = order
             return order
         return None

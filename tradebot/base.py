@@ -789,6 +789,8 @@ class PrivateConnector(ABC):
         self._ws_client = ws_client
         self._clock = LiveClock()
         self._cache = cache
+        self._oms = OrderManagerSystem(cache)
+        
         if rate_limit:
             self._limiter = Limiter(rate_limit)
         else:
@@ -893,7 +895,7 @@ class OrderManagerSystem:
     async def handle_order_event(self):
         while True:
             order = await self._order_msg_queue.get()
-
+            await self._cache.apply_position(order)
             match order.status:
                 case OrderStatus.PENDING:
                     self._log.debug(f"ORDER STATUS PENDING: {str(order)}")

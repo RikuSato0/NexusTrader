@@ -36,7 +36,7 @@ from picows import (
     WSMsgType,
     WSAutoPingStrategy,
 )
-from tradebot.nautilius_core import LiveClock
+from tradebot.core.nautilius_core import LiveClock
 
 
 class ExchangeManager(ABC):

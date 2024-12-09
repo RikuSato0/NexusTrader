@@ -7,7 +7,7 @@ from asynciolimiter import Limiter
 
 from tradebot.log import SpdLog
 from tradebot.exchange.binance.constants import BinanceAccountType
-from tradebot.nautilius_core import (
+from tradebot.core.nautilius_core import (
     LiveClock,
     WebSocketClient,
     WebSocketClientError,

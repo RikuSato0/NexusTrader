@@ -9,7 +9,7 @@ from urllib.parse import urljoin, urlencode
 from tradebot.log import SpdLog
 from tradebot.constants import OrderSide, OrderType
 from tradebot.exchange.binance.error import BinanceClientError, BinanceServerError
-from tradebot.nautilius_core import LiveClock, HttpClient, HttpMethod, HttpResponse
+from tradebot.core.nautilius_core import LiveClock, HttpClient, HttpMethod, HttpResponse
 
 
 class BinanceHttpClient:

@@ -365,93 +365,34 @@ class Position(Struct):
 
     def apply(self, order: Order):
         if order.position_side == PositionSide.FLAT:
+            fill_delta = self._calculate_fill_delta(order)
+            
             if (self.signed_amount > 0 and order.side == OrderSide.SELL) or (
                 self.signed_amount < 0 and order.side == OrderSide.BUY
             ):
-                self._close_position(order)
+                close_amount = min(abs(self.signed_amount), fill_delta) # 平仓数量最大不超过当前持仓数量
+                remaining_amount = fill_delta - close_amount # 剩余数量
+                self._close_position(order, close_amount)
+                if remaining_amount > 0:
+                    self._open_position(order, remaining_amount)
             else:
-                self._open_position(order)
+                self._open_position(order, fill_delta)
         else:
             pass
 
-    def _open_position(self, order: Order):
-        if order.side == OrderSide.BUY:
-            if not self.side:
-                self.side = PositionSide.LONG
-            else:
-                if self.side != PositionSide.LONG:
-                    warnings.warn(
-                        f"Cannot open long position with {self.side}"
-                    )
-            fill_delta = self._calculate_fill_delta(order)
-            """
-            self.signed_amount = 0, fill_delta = 0.01, entry_price = 0
-            10 * -2 + 8 * -2 / -4 = 9
-            """
-            tmp_amount = self.signed_amount + fill_delta
-            price = order.average or order.price
-            self.entry_price = (
-                (
-                    self.entry_price * float(self.signed_amount)
-                    + price * float(fill_delta)
-                )
-                / float(tmp_amount)
-                if tmp_amount != 0
-                else 0
-            )
-            self.signed_amount = tmp_amount
-            self.unrealized_pnl = self._calculate_pnl(
-                price, self.amount
-            )  # Fixed: pass self.signed_amount
-        elif order.side == OrderSide.SELL:
-            if not self.side:
-                self.side = PositionSide.SHORT
-            else:
-                if self.side != PositionSide.SHORT:
-                    warnings.warn(
-                        f"Cannot open short position with {self.side}"
-                    )
-            fill_delta = self._calculate_fill_delta(order)
-            tmp_amount = self.signed_amount - fill_delta
-            price = order.average or order.price
-            self.entry_price = (
-                (
-                    self.entry_price * float(self.signed_amount)
-                    - price * float(fill_delta)
-                )
-                / float(tmp_amount)
-                if tmp_amount != 0
-                else 0
-            )
-            self.signed_amount = tmp_amount
-            self.unrealized_pnl = self._calculate_pnl(
-                price, self.amount
-            )  # Fixed: pass self.signed_amount
-
-    def _close_position(self, order: Order):
-        fill_delta = self._calculate_fill_delta(order)
+    def _close_position(self, order: Order, close_amount: Decimal):
         price = order.average or order.price
 
         if order.side == OrderSide.BUY:
-            # -> order (OrderSide.BUY, reduce_only=True) -> close short position, so side must be short
             if self.side != PositionSide.SHORT:
-                warnings.warn(
-                    f"Cannot close short position with {self.side}"
-                )
-            self.realized_pnl += self._calculate_pnl(
-                price, fill_delta
-            )  # Update realized PNL
-            self.signed_amount += fill_delta
+                warnings.warn(f"Cannot close short position with {self.side}")
+            self.realized_pnl += self._calculate_pnl(price, close_amount)
+            self.signed_amount += close_amount
         elif order.side == OrderSide.SELL:
-            # -> order (OrderSide.SELL, reduce_only=True) -> close long position, so side must be long
             if self.side != PositionSide.LONG:
-                warnings.warn(
-                    f"Cannot close long position with {self.side}"
-                )
-            self.realized_pnl += self._calculate_pnl(
-                price, fill_delta
-            )  # Update realized PNL
-            self.signed_amount -= fill_delta
+                warnings.warn(f"Cannot close long position with {self.side}")
+            self.realized_pnl += self._calculate_pnl(price, close_amount)
+            self.signed_amount -= close_amount
 
         self.unrealized_pnl = self._calculate_pnl(price, self.amount)
 
@@ -459,3 +400,40 @@ class Position(Struct):
             self.side = None
             self.entry_price = 0
             self.unrealized_pnl = 0
+
+    def _open_position(self, order: Order, open_amount: Decimal):
+        if order.side == OrderSide.BUY:
+            if not self.side:
+                self.side = PositionSide.LONG
+            else:
+                if self.side != PositionSide.LONG:
+                    warnings.warn(f"Cannot open long position with {self.side}")
+                
+            tmp_amount = self.signed_amount + open_amount
+            price = order.average or order.price
+            self.entry_price = (
+                (self.entry_price * float(self.signed_amount) + price * float(open_amount))
+                / float(tmp_amount)
+                if tmp_amount != 0
+                else 0
+            )
+            self.signed_amount = tmp_amount
+            
+        elif order.side == OrderSide.SELL:
+            if not self.side:
+                self.side = PositionSide.SHORT
+            else:
+                if self.side != PositionSide.SHORT:
+                    warnings.warn(f"Cannot open short position with {self.side}")
+                
+            tmp_amount = self.signed_amount - open_amount
+            price = order.average or order.price
+            self.entry_price = (
+                (self.entry_price * float(self.signed_amount) - price * float(open_amount))
+                / float(tmp_amount)
+                if tmp_amount != 0
+                else 0
+            )
+            self.signed_amount = tmp_amount
+            
+        self.unrealized_pnl = self._calculate_pnl(price, self.amount)

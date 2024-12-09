@@ -2,6 +2,14 @@
 
 ![logo](docs/source/_static/logo-light.png)
 
+<style>
+  @media (prefers-color-scheme: dark) {
+    .logo {
+      content: url(docs/source/_static/logo-dark.png);
+    }
+  }
+</style>
+
 TradeBotPro is a flexible and powerful trading bot framework designed to interact with various cryptocurrency exchanges. It provides a robust architecture for managing exchange connections, order placements, and real-time data streaming via WebSockets.
 
 ## Features

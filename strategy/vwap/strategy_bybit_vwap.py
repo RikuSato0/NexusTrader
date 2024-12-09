@@ -11,7 +11,7 @@ from collections import defaultdict
 from tradebot.constants import CONFIG
 from tradebot.types import Order, BookL1
 from tradebot.constants import OrderSide, OrderType, OrderStatus
-from tradebot.strategy import Strategy
+from tradebot.core import Strategy
 from tradebot.exchange.bybit.types import BybitMarket
 from decimal import Decimal
 from tradebot.entity import EventSystem

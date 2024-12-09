@@ -29,16 +29,19 @@ async def main():
             strategy_id="strategy_01",
             user_id="test_user",
         )
-
+        await connector.connect()
+        await asyncio.sleep(10)
         order = await connector.create_order(
             symbol="BTC/USDT:USDT",
             side=OrderSide.SELL,
             type=OrderType.MARKET,
-            amount=Decimal("0.01"),
+            amount=Decimal("0.005"),
             reduce_only=True,
         )
         print(order)
-        
+
+        await asyncio.sleep(10)
+
     except asyncio.CancelledError:
         print("CancelledError")
     finally:

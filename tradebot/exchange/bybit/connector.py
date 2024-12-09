@@ -310,9 +310,9 @@ class BybitPrivateConnector(PrivateConnector):
                 position_side
             ).value
 
-        # reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop("reduce_only", False)
-        # if reduce_only:
-        #     params["reduceOnly"] = True
+        reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop("reduce_only", False)
+        if reduce_only:
+            params["reduceOnly"] = True
         params.update(kwargs)
 
         try:
@@ -333,7 +333,7 @@ class BybitPrivateConnector(PrivateConnector):
                 status=OrderStatus.PENDING,
                 filled=Decimal(0),
                 remaining=amount,
-                # reduce_only=reduce_only,
+                reduce_only=reduce_only,
             )
             self._oms.add_order_msg(order)
             return order

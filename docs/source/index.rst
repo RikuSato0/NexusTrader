@@ -6,6 +6,7 @@ Welcome to TradeBot's documentation!
    :caption: Contents:
 
    installation
+   quickstart
    usage
    modules
 

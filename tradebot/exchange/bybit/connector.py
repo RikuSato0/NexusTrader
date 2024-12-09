@@ -2,7 +2,7 @@ import msgspec
 from typing import Dict
 from decimal import Decimal
 from collections import defaultdict
-from tradebot.base import PublicConnector, PrivateConnector, OrderManagerSystem
+from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.entity import EventSystem
 from tradebot.types import BookL1, Order, Trade
 from tradebot.entity import AsyncCache
@@ -310,6 +310,9 @@ class BybitPrivateConnector(PrivateConnector):
                 position_side
             ).value
 
+        # reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop("reduce_only", False)
+        # if reduce_only:
+        #     params["reduceOnly"] = True
         params.update(kwargs)
 
         try:
@@ -330,6 +333,7 @@ class BybitPrivateConnector(PrivateConnector):
                 status=OrderStatus.PENDING,
                 filled=Decimal(0),
                 remaining=amount,
+                # reduce_only=reduce_only,
             )
             self._oms.add_order_msg(order)
             return order

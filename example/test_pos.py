@@ -111,7 +111,7 @@ def process_log_file(log_content: str) -> list[Order]:
         
 def test_position_updates():
     # Read the log file
-    with open('.log/oms.log', 'r') as f:
+    with open('.log/OrderManagerSystem_2024-12-08.log', 'r') as f:
         log_content = f.read()
     
     # Extract relevant orders

@@ -1,5 +1,3 @@
-import time
-
 from typing import Literal, Callable
 from typing import Any
 from asynciolimiter import Limiter
@@ -18,7 +16,7 @@ class BinanceWSClient(WSClient):
     async def _subscribe(self, params: str, subscription_id: str):
         if subscription_id not in self._subscriptions:
             await self.connect()
-            id = time.time_ns() // 1_000_000
+            id = self._clock.timestamp_ms()
             payload = {
                 "method": "SUBSCRIBE",
                 "params": [params],

@@ -456,6 +456,7 @@ class WSClient(ABC):
         enable_auto_ping: bool = True,
         enable_auto_pong: bool = False,
     ):
+        self._clock = LiveClock()
         self._url = url
         self._specific_ping_msg = specific_ping_msg
         self._reconnect_interval = reconnect_interval

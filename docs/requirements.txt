@@ -1,3 +1,2 @@
 sphinx
-sphinx-material
-sphinx-autodoc-typehints
+furo

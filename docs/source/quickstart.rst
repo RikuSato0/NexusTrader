@@ -44,7 +44,7 @@ Public Market Data
 Public market data supports ``Trade``, ``BookL1/L2``, ``Kline``, ``MarkPrice``, ``IndexPrice``, and ``FundingRate``. These are imported from ``tradebot.types``.
 
 BookL1 Data Structure
-^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -131,6 +131,10 @@ Index Price Data Structure
         price: float
         timestamp: int
 
+.. note::
+
+    Not all `AccountType` supports all `DataTypes`. For example, `IndexPrice`, `FundingRate` and `MarkPrice` are only supported by Future `AccountType`.
+    
 Retrieving Market Data
 ^^^^^^^^^^^^^^^^^^^^^^
 

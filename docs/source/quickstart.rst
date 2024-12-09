@@ -2,10 +2,10 @@ Quick Start Guide
 =================
 
 1. Starting with a Simple TWAP Strategy
-----------------------------------------
+------------------------------------------
 
 Configuring ExchangeManager
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Each exchange has its own ``ExchangeManager``, imported from ``tradebot.exchange.{$exchange_name}``. Using Bybit as an example:
 
@@ -44,7 +44,7 @@ Public Market Data
 Public market data supports ``Trade``, ``BookL1/L2``, ``Kline``, ``MarkPrice``, ``IndexPrice``, and ``FundingRate``. These are imported from ``tradebot.types``.
 
 BookL1 Data Structure
-~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
@@ -174,18 +174,18 @@ Private Connector
     )
 
 Strategy
-^^^^^^^^
+^^^^^^^^^
 
 All strategy implementations must inherit from ``Strategy``, which provides the following methods:
 
 Adding Connectors
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
 - ``add_public_connector``
 - ``add_private_connector``
 
 Market Data Subscription
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - ``subscribe_bookl1``
 - ``subscribe_trade``
@@ -195,7 +195,7 @@ Market Data Subscription
 - ``subscribe_indexprice``
 
 Order Callbacks
-~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
 - ``on_accepted_order``
 - ``on_partially_filled_order``
@@ -203,7 +203,7 @@ Order Callbacks
 - ``on_canceled_order``
 
 Market Data Retrieval
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 - ``get_bookl1``
 - ``get_trade``
@@ -213,7 +213,7 @@ Market Data Retrieval
 - ``get_indexprice``
 
 Market Data Callbacks
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 - ``on_trade``
 - ``on_bookl1``
@@ -223,25 +223,26 @@ Market Data Callbacks
 - ``on_indexprice``
 
 Order Management
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
 - ``create_order``
 - ``cancel_order``
 
 Precision Formatting
-~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^
 
 - ``amount_to_precision``
 - ``price_to_precision``
 
 Event Loop
-~~~~~~~~~
+^^^^^^^^^^^^^^^
+
 
 - ``on_tick`` - Executes at fixed intervals
 - ``run`` - Starts the strategy
 
 Cache/Market Access
-~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^
 
 - ``cache`` - Access the ``PrivateConnector``'s Cache
 - ``market`` - Access the ``PrivateConnector``'s Market
@@ -257,7 +258,7 @@ Cache
 - ``get_position`` - Get Position for a Symbol
 
 Putting it All Together
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Here's a simple TWAP strategy example:
 

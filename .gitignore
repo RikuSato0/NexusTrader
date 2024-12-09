@@ -21,3 +21,4 @@ strategy/
 clear.sh
 *.key
 .idea/
+.DS_Store

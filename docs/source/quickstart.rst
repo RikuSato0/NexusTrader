@@ -133,7 +133,7 @@ Index Price Data Structure
 
 .. note::
 
-    Not all `AccountType` supports all `DataTypes`. For example, `IndexPrice`, `FundingRate` and `MarkPrice` are only supported by Future `AccountType`.
+    Not all ``AccountType`` supports all ``DataTypes``. For example, ``IndexPrice``, ``FundingRate`` and ``MarkPrice`` are only supported by ``Future`` ``AccountType``.
     
 Retrieving Market Data
 ^^^^^^^^^^^^^^^^^^^^^^

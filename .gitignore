@@ -12,7 +12,6 @@ binance_markets.json
 bybit_markets.json
 build/
 venv/
-*.svg
 *.c
 *.so
 result.json

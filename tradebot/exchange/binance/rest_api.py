@@ -11,7 +11,7 @@ from typing import Any, Dict
 from urllib.parse import urljoin, urlencode
 
 from tradebot.base import RestApi, ApiClient
-from tradebot.exchange.binance.types import BinanceOrder
+from tradebot.exchange.binance.types import BinanceOrder, BinanceListenKey
 from tradebot.exchange.binance.constants import BASE_URLS, ENDPOINTS
 from tradebot.exchange.binance.constants import BinanceAccountType, EndpointsType
 from tradebot.exchange.binance.error import BinanceClientError, BinanceServerError
@@ -120,6 +120,7 @@ class BinanceApiClient(ApiClient):
         }
         self._testnet = testnet
         self._order_decoder = msgspec.json.Decoder(BinanceOrder)
+        self._listen_key_decoder = msgspec.json.Decoder(BinanceListenKey)
 
     def _generate_signature(self, query: str) -> str:
         signature = hmac.new(
@@ -208,16 +209,16 @@ class BinanceApiClient(ApiClient):
         base_url = self._get_base_url(BinanceAccountType.COIN_M_FUTURE)
         end_point = "/dapi/v1/listenKey"
         raw = await self._fetch("POST", base_url, end_point)
-        return orjson.loads(raw)
+        return self._listen_key_decoder.decode(raw)
 
-    async def post_api_v3_user_data_stream(self):
+    async def post_api_v3_user_data_stream(self) -> BinanceListenKey:
         """
         https://developers.binance.com/docs/binance-spot-api-docs/user-data-stream#create-a-listenkey-user_stream
         """
         base_url = self._get_base_url(BinanceAccountType.SPOT)
         end_point = "/api/v3/userDataStream"
         raw = await self._fetch("POST", base_url, end_point)
-        return orjson.loads(raw)
+        return self._listen_key_decoder.decode(raw)
 
     async def put_api_v3_user_data_stream(self, listen_key: str):
         """
@@ -230,14 +231,14 @@ class BinanceApiClient(ApiClient):
         )
         return orjson.loads(raw)
 
-    async def post_sapi_v1_user_data_stream(self):
+    async def post_sapi_v1_user_data_stream(self) -> BinanceListenKey:
         """
         https://developers.binance.com/docs/margin_trading/trade-data-stream/Start-Margin-User-Data-Stream
         """
         base_url = self._get_base_url(BinanceAccountType.MARGIN)
         end_point = "/sapi/v1/userDataStream"
         raw = await self._fetch("POST", base_url, end_point)
-        return orjson.loads(raw)
+        return self._listen_key_decoder.decode(raw)
 
     async def put_sapi_v1_user_data_stream(self, listen_key: str):
         """
@@ -250,14 +251,14 @@ class BinanceApiClient(ApiClient):
         )
         return orjson.loads(raw)
 
-    async def post_sapi_v1_user_data_stream_isolated(self, symbol: str):
+    async def post_sapi_v1_user_data_stream_isolated(self, symbol: str) -> BinanceListenKey:
         """
         https://developers.binance.com/docs/margin_trading/trade-data-stream/Start-Isolated-Margin-User-Data-Stream
         """
         base_url = self._get_base_url(BinanceAccountType.ISOLATED_MARGIN)
         end_point = "/sapi/v1/userDataStream/isolated"
         raw = await self._fetch("POST", base_url, end_point, payload={"symbol": symbol})
-        return orjson.loads(raw)
+        return self._listen_key_decoder.decode(raw)
 
     async def put_sapi_v1_user_data_stream_isolated(self, symbol: str, listen_key: str):
         """
@@ -273,14 +274,14 @@ class BinanceApiClient(ApiClient):
         )
         return orjson.loads(raw)
 
-    async def post_fapi_v1_listen_key(self):
+    async def post_fapi_v1_listen_key(self) -> BinanceListenKey:
         """
         https://developers.binance.com/docs/derivatives/usds-margined-futures/user-data-streams/Start-User-Data-Stream
         """
         base_url = self._get_base_url(BinanceAccountType.USD_M_FUTURE)
         end_point = "/fapi/v1/listenKey"
         raw = await self._fetch("POST", base_url, end_point)
-        return orjson.loads(raw)
+        return self._listen_key_decoder.decode(raw)
 
     async def put_fapi_v1_listen_key(self):
         """
@@ -291,14 +292,14 @@ class BinanceApiClient(ApiClient):
         raw = await self._fetch("PUT", base_url, end_point)
         return orjson.loads(raw)
 
-    async def post_papi_v1_listen_key(self):
+    async def post_papi_v1_listen_key(self) -> BinanceListenKey:
         """
         https://developers.binance.com/docs/derivatives/portfolio-margin/user-data-streams/Start-User-Data-Stream
         """
         base_url = self._get_base_url(BinanceAccountType.PORTFOLIO_MARGIN)
         end_point = "/papi/v1/listenKey"
         raw = await self._fetch("POST", base_url, end_point)
-        return orjson.loads(raw)
+        return self._listen_key_decoder.decode(raw)
 
     async def put_papi_v1_listen_key(self):
         """

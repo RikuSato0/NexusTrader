@@ -1,9 +1,9 @@
+import warnings
 from decimal import Decimal
 from collections import defaultdict
 from typing import Any, Dict, List, Tuple
 from typing import Literal, Optional
 from msgspec import Struct, field
-from tradebot.exceptions import PositionError
 from tradebot.constants import (
     OrderSide,
     OrderType,
@@ -380,8 +380,8 @@ class Position(Struct):
                 self.side = PositionSide.LONG
             else:
                 if self.side != PositionSide.LONG:
-                    raise PositionError(
-                        f"Cannot open long position with {self.side}", self
+                    warnings.warn(
+                        f"Cannot open long position with {self.side}"
                     )
             fill_delta = self._calculate_fill_delta(order)
             """
@@ -408,8 +408,8 @@ class Position(Struct):
                 self.side = PositionSide.SHORT
             else:
                 if self.side != PositionSide.SHORT:
-                    raise PositionError(
-                        f"Cannot open short position with {self.side}", self
+                    warnings.warn(
+                        f"Cannot open short position with {self.side}"
                     )
             fill_delta = self._calculate_fill_delta(order)
             tmp_amount = self.signed_amount - fill_delta
@@ -435,8 +435,8 @@ class Position(Struct):
         if order.side == OrderSide.BUY:
             # -> order (OrderSide.BUY, reduce_only=True) -> close short position, so side must be short
             if self.side != PositionSide.SHORT:
-                raise PositionError(
-                    f"Cannot close short position with {self.side}", self
+                warnings.warn(
+                    f"Cannot close short position with {self.side}"
                 )
             self.realized_pnl += self._calculate_pnl(
                 price, fill_delta
@@ -445,8 +445,8 @@ class Position(Struct):
         elif order.side == OrderSide.SELL:
             # -> order (OrderSide.SELL, reduce_only=True) -> close long position, so side must be long
             if self.side != PositionSide.LONG:
-                raise PositionError(
-                    f"Cannot close long position with {self.side}", self
+                warnings.warn(
+                    f"Cannot close long position with {self.side}"
                 )
             self.realized_pnl += self._calculate_pnl(
                 price, fill_delta

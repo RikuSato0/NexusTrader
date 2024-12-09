@@ -301,7 +301,7 @@ class BinancePrivateConnector(PrivateConnector):
             res = await self._api_client.post_dapi_v1_listen_key()
         elif self._account_type.is_portfolio_margin:
             res = await self._api_client.post_papi_v1_listen_key()
-        return res.get("listenKey", None)
+        return res.listenKey
 
     async def _keep_alive_listen_key(self, listen_key: str):
         if self._account_type.is_spot:

@@ -15,12 +15,10 @@ venv/
 *.c
 *.so
 result.json
-strategy_bybit_vwap.py
-strategy_bybit_twap.py
-strategy/
 clear.sh
 *.key
 .idea/
 .DS_Store
 md_source/
 nautilus_trader/
+*.pkl

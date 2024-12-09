@@ -1,6 +1,5 @@
 import asyncio
-from tradebot.types import BookL1
-from tradebot.strategy import Strategy
+from tradebot.core import Strategy
 from tradebot.exchange.bybit import (
     BybitPublicConnector,
     BybitAccountType,

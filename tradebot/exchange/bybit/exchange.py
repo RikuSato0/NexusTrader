@@ -36,29 +36,16 @@ class BybitExchangeManager(ExchangeManager):
                 mkt_json = orjson.dumps(mkt)
                 mkt = msgspec.json.decode(mkt_json, type=BybitMarket)
                 if mkt.spot or mkt.future or mkt.linear or mkt.inverse:
-                
+                    symbol = self.parse_symbol(mkt)
+                    mkt.symbol = symbol
                     self.market[symbol] = mkt
                     if mkt.type.value == "spot":
-                        self.market_id[f"{mkt.id}_spot"] = mkt
+                        self.market_id[f"{mkt.id}_spot"] = symbol
                     elif mkt.linear:
-                        self.market_id[f"{mkt.id}_linear"] = mkt
+                        self.market_id[f"{mkt.id}_linear"] = symbol
                     elif mkt.inverse:
-                        self.market_id[f"{mkt.id}_inverse"] = mkt
+                        self.market_id[f"{mkt.id}_inverse"] = symbol
                 
             except Exception as e:
                 print(f"Error: {e}, {symbol}, {mkt}")
                 continue
-        
-    # def _get_market_id(self):
-    #     self.market_id = {}
-    #     if not self.market:
-    #         raise ValueError(
-    #             "Market data not loaded, please call `load_markets()` first"
-    #         )
-    #     for _, v in self.market.items():
-    #         if v["type"] == "spot":
-    #             self.market_id[f"{v['id']}_spot"] = v
-    #         elif v["linear"]:
-    #             self.market_id[f"{v['id']}_linear"] = v
-    #         elif v["inverse"]:
-    #             self.market_id[f"{v['id']}_inverse"] = v

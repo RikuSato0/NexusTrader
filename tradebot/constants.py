@@ -191,9 +191,9 @@ class OrderStatus(Enum):
 
 
 class ExchangeType(Enum):
-    BINANCE = "BINANCE"
-    OKX = "OKX"
-    BYBIT = "BYBIT"
+    BINANCE = "binance"
+    OKX = "okx"
+    BYBIT = "bybit"
 
 
 class BinanceAccountType(Enum):

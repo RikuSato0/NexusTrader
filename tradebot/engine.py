@@ -1,32 +1,102 @@
 import asyncio
 import signal
 import uvloop
-from typing import List
+from typing import Dict
+from tradebot.constants import AccountType, ExchangeType
+from tradebot.config import Config
+from tradebot.strategy import Strategy
+from tradebot.base import ExchangeManager, PublicConnector, PrivateConnector
+from tradebot.exchange.bybit import BybitExchangeManager, BybitPrivateConnector, BybitPublicConnector, BybitAccountType
+from tradebot.exchange.binance import BinanceExchangeManager
+from tradebot.exchange.okx import OkxExchangeManager
 
-from tradebot.base import PublicConnector, PrivateConnector
-from tradebot.core import Strategy
-
+from tradebot.core.nautilius_core import MessageBus, TraderId, LiveClock
 
 class Engine:
-    def __init__(self, config: dict):
-        self.config = config
-        self._public_connectors: List[PublicConnector] = []
-        self._private_connectors: List[PrivateConnector] = []
-        self._strategies: List[Strategy] = []
+    def __init__(self, config: Config):
+        self._config = config
+        self._strategy = None
         self._is_running = False
         self._is_built = False
         self.loop = asyncio.get_event_loop()
-
-    def add_connector(self, connector: PublicConnector | PrivateConnector):
-        self.connectors.append(connector)
-
-    def add_strategy(self, strategy: Strategy):
-        self.strategies.append(strategy)
-
+        
+        self._exchanges: Dict[ExchangeType, ExchangeManager] = None
+        self._public_connectors: Dict[AccountType, PublicConnector] = None
+        self._private_connectors: Dict[AccountType, PrivateConnector] = None
+        
+        trader_id = f"{self._config.strategy_id}-{self._config.user_id}"
+        self._msgbus = MessageBus(
+            trader_id=TraderId(trader_id),
+            clock=LiveClock(),
+        )
+    
+    def _build_public_connectors(self):
+        for exchange_id, public_conn_configs in self._config.public_conn_config.items():
+            for config in public_conn_configs:
+                if exchange_id == ExchangeType.BYBIT:
+                    exchange: BybitExchangeManager = self.exchanges[exchange_id]
+                    public_connector = BybitPublicConnector(
+                        account_type=config.account_type,
+                        exchange=exchange,
+                        msgbus=self._msgbus,
+                    )
+                elif exchange_id == ExchangeType.BINANCE:
+                    pass
+                elif exchange_id == ExchangeType.OKX:
+                    pass
+                
+                self._public_connectors[config.account_type] = public_connector
+    
+    def _build_private_connectors(self):
+        for exchange_id, private_conn_configs in self._config.private_conn_config.items():
+            
+            if exchange_id == ExchangeType.BYBIT:
+                exchange: BybitExchangeManager = self.exchanges[exchange_id]
+                
+                if exchange.is_testnet:
+                    account_type = BybitAccountType.ALL_TESTNET
+                else:
+                    account_type = BybitAccountType.ALL
+                
+                private_connector = BybitPrivateConnector(
+                    account_type=account_type,
+                    exchange=exchange,
+                    msgbus=self._msgbus,
+                    strategy_id=self._config.strategy_id,
+                    user_id=self._config.user_id,
+                    rate_limit=private_conn_configs.rate_limit,
+                )
+                self._private_connectors[account_type] = private_connector
+            
+            elif exchange_id == ExchangeType.BINANCE:
+                pass
+            elif exchange_id == ExchangeType.OKX:
+                pass
+    
+    def _build_exchanges(self):
+        for exchange_id, basic_config in self._config.basic_config.items():
+            config = {
+                "apiKey": basic_config.api_key,
+                "secret": basic_config.secret,
+                "sandbox": basic_config.sandbox,
+            }
+            if basic_config.passphrase:
+                config["password"] = basic_config.passphrase
+            
+            if exchange_id == ExchangeType.BYBIT:
+                self._exchanges[exchange_id] = BybitExchangeManager(config)
+            elif exchange_id == ExchangeType.BINANCE:
+                self._exchanges[exchange_id] = BinanceExchangeManager(config)
+            elif exchange_id == ExchangeType.OKX:
+                self._exchanges[exchange_id] = OkxExchangeManager(config)
+    
+    
     def build(self):
         if self._is_built:
             raise RuntimeError("The engine is already built.")
-        
+        self._build_exchanges()
+        self._build_public_connectors()
+        self._build_private_connectors()
         self._is_built = True
 
     def start(self):

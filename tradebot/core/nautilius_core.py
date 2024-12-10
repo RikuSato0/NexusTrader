@@ -15,7 +15,7 @@ from nautilus_trader.core.nautilus_pyo3 import WebSocketConfig # noqa
 def usage():
     clock = LiveClock()
 
-    async def handler1(msg):
+    def handler1(msg):
         print(f"Received message: {msg}")
     def handler2(msg):
         print(f"Received message: {msg}")
@@ -33,6 +33,21 @@ def usage():
     msgbus.subscribe(topic = "order", handler=handler3)
 
     msgbus.publish("order", clock.timestamp_ns())
+    
+    
+    msgbus.register(endpoint="pos", handler=handler1)
+    msgbus.register(endpoint="pos1", handler=handler1)
+    msgbus.register(endpoint="pos2", handler=handler1)
+    
+
+    
+    msgbus.send(endpoint="pos", msg=clock.timestamp_ns())
+    msgbus.send(endpoint="pos1", msg=clock.timestamp_ns())
+    msgbus.send(endpoint="pos2", msg=clock.timestamp_ns())
+    
+    
+    
+    
 
 if __name__ == "__main__":
     usage()

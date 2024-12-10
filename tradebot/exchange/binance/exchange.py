@@ -37,6 +37,7 @@ class BinanceExchangeManager(ExchangeManager):
                 
                 if v.spot or v.future or v.linear or v.inverse:
                     symbol = self.parse_symbol(v)
+                    v.symbol = symbol
                     self.market[symbol] = v
                     if v.type.value == "spot":
                         self.market_id[f"{v.id}_spot"] = v
@@ -59,6 +60,8 @@ def check():
             assert instrument_id.type == mkt.subType
         else:
             assert instrument_id.type == mkt.type
+    
+    print("All checks passed")
 
 if __name__ == "__main__":
     check()

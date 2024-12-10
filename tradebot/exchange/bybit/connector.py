@@ -3,11 +3,10 @@ from typing import Dict
 from decimal import Decimal
 from collections import defaultdict
 from tradebot.base import PublicConnector, PrivateConnector
-from tradebot.core.entity import EventSystem
 from tradebot.core.cache import AsyncCache
+from tradebot.core.nautilius_core import MessageBus
 from tradebot.types import BookL1, Order, Trade
 from tradebot.constants import (
-    EventType,
     OrderSide,
     OrderStatus,
     OrderType,
@@ -40,6 +39,7 @@ class BybitPublicConnector(PublicConnector):
         self,
         account_type: BybitAccountType,
         exchange: BybitExchangeManager,
+        msgbus: MessageBus,
     ):
         if account_type in {BybitAccountType.ALL, BybitAccountType.ALL_TESTNET}:
             raise ValueError(
@@ -54,6 +54,7 @@ class BybitPublicConnector(PublicConnector):
             ws_client=BybitWSClient(
                 account_type=account_type, handler=self._ws_msg_handler
             ),
+            msgbus=msgbus,
         )
         self._ws_client: BybitWSClient = self._ws_client
         self._ws_msg_trade_decoder = msgspec.json.Decoder(BybitWsTradeMsg)
@@ -96,8 +97,7 @@ class BybitPublicConnector(PublicConnector):
         msg: BybitWsTradeMsg = self._ws_msg_trade_decoder.decode(raw)
         for d in msg.data:
             id = d.s + self.market_type
-            market = self._market_id[id]
-            symbol = market.symbol
+            symbol = self._market_id[id]
             trade = Trade(
                 exchange=self._exchange_id,
                 symbol=symbol,
@@ -105,15 +105,13 @@ class BybitPublicConnector(PublicConnector):
                 size=float(d.v),
                 timestamp=msg.ts,
             )
-            EventSystem.emit(EventType.TRADE, trade)
+            self._msgbus.send(endpoint="trade", msg=trade)
             
 
     def _handle_orderbook(self, raw: bytes, topic: str):
         msg: BybitWsOrderbookDepthMsg = self._ws_msg_orderbook_decoder.decode(raw)
         id = msg.data.s + self.market_type
-        market = self._market_id[id]
-        symbol = market.symbol
-
+        symbol = self._market_id[id]
         res = self._orderbook[symbol].parse_orderbook_depth(msg, levels=1)
 
         bid, bid_size = (
@@ -132,33 +130,42 @@ class BybitPublicConnector(PublicConnector):
             ask=ask,
             ask_size=ask_size,
         )
-        EventSystem.emit(EventType.BOOKL1, bookl1)
+        self._msgbus.send(endpoint="bookl1", msg=bookl1)
 
     async def subscribe_bookl1(self, symbol: str):
         market = self._market.get(symbol, None)
-        symbol = market.id if market else symbol
-        await self._ws_client.subscribe_order_book(symbol, depth=1)
+        if not market:
+            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
+        id = market.id
+        await self._ws_client.subscribe_order_book(id, depth=1)
 
     async def subscribe_trade(self, symbol: str):
         market = self._market.get(symbol, None)
-        symbol = market.id if market else symbol
-        await self._ws_client.subscribe_trade(symbol)
+        if not market:
+            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
+        id = market.id
+        await self._ws_client.subscribe_trade(id)
         
 
     async def subscribe_kline(self, symbol: str, interval: str):
-        pass
+        market = self._market.get(symbol, None)
+        if not market:
+            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
+        id = market.id
+        await self._ws_client.subscribe_kline(id, interval)
 
 
 class BybitPrivateConnector(PrivateConnector):
     _ws_client: BybitWSClient
     _account_type: BybitAccountType
     _market: Dict[str, BybitMarket]
-    _market_id: Dict[str, BybitMarket]
+    _market_id: Dict[str, str]
 
     def __init__(
         self,
         exchange: BybitExchangeManager,
         account_type: BybitAccountType,
+        msgbus: MessageBus,
         strategy_id: str = None,
         user_id: str = None,
         rate_limit: float = None,
@@ -190,6 +197,7 @@ class BybitPrivateConnector(PrivateConnector):
                 strategy_id=strategy_id,
                 user_id=user_id,
             ),
+            msgbus=msgbus,
             rate_limit=rate_limit,
         )
 
@@ -366,11 +374,11 @@ class BybitPrivateConnector(PrivateConnector):
                 id = data.symbol + "_linear"
             elif category == BybitProductType.INVERSE:
                 id = data.symbol + "_inverse"
-            market = self._market_id[id]
+            symbol = self._market_id[id]
 
             order = Order(
                 exchange=self._exchange_id,
-                symbol=market.symbol,
+                symbol=symbol,
                 status=BybitEnumParser.parse_order_status(data.orderStatus),
                 id=data.orderId,
                 client_order_id=data.orderLinkId,

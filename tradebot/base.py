@@ -16,7 +16,7 @@ from decimal import Decimal
 from asynciolimiter import Limiter
 from decimal import ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
 
-from tradebot.types import Order, BaseMarket
+from tradebot.types import Order, BaseMarket, ExchangeType
 from tradebot.core.log import SpdLog
 from tradebot.core.entity import TaskManager
 from tradebot.core.cache import AsyncCache
@@ -30,7 +30,7 @@ from picows import (
     WSMsgType,
     WSAutoPingStrategy,
 )
-from tradebot.core.nautilius_core import LiveClock
+from tradebot.core.nautilius_core import LiveClock, MessageBus
 
 
 class ExchangeManager(ABC):
@@ -285,9 +285,10 @@ class PublicConnector(ABC):
         self,
         account_type,
         market: Dict[str, BaseMarket],
-        market_id: Dict[str, BaseMarket],
+        market_id: Dict[str, str],
         exchange_id: str,
         ws_client: WSClient,
+        msgbus: MessageBus,
     ):
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="DEBUG", flush=True
@@ -297,7 +298,8 @@ class PublicConnector(ABC):
         self._market_id = market_id
         self._exchange_id = exchange_id
         self._ws_client = ws_client
-
+        self._msgbus = msgbus
+        
     @property
     def account_type(self):
         return self._account_type
@@ -323,10 +325,11 @@ class PrivateConnector(ABC):
         self,
         account_type,
         market: Dict[str, BaseMarket],
-        market_id: Dict[str, BaseMarket],
+        market_id: Dict[str, str],
         exchange_id: str,
         ws_client: WSClient,
         cache: AsyncCache,
+        msgbus: MessageBus,
         rate_limit: float = None,
     ):
         self._log = SpdLog.get_logger(
@@ -340,12 +343,13 @@ class PrivateConnector(ABC):
         self._ws_client = ws_client
         self._clock = LiveClock()
         self._cache = cache
-        self._oms = OrderManagerSystem(cache)
+        self._oms = OrderManagerSystem(cache, msgbus)
         
         if rate_limit:
             self._limiter = Limiter(rate_limit)
         else:
             self._limiter = None
+        
         
     @property
     def account_type(self):

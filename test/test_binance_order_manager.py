@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from ccxt.base.errors import RequestTimeout
 from tradebot.exchange.binance import BinanceOrderManager, BinanceExchangeManager
-from tradebot.entity import Order
+from tradebot.core.entity import Order
 
 @pytest.fixture
 def mock_exchange():

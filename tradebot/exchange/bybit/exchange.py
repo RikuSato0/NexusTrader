@@ -16,23 +16,37 @@ class BybitExchangeManager(ExchangeManager):
         config["exchange_id"] = config.get("exchange_id", "bybit")
         super().__init__(config)
 
+    def parse_symbol(self, bm: BybitMarket) -> str:
+        if bm.spot:
+            return f"{bm.base}{bm.quote}.BYBIT"
+        elif bm.future:
+            symbol = bm.symbol
+            expiry_suffix = symbol.split("-")[-1]
+            return f"{bm.base}{bm.quote}-{expiry_suffix}.BYBIT"
+        elif bm.linear:
+            return f"{bm.base}{bm.quote}-PERP.BYBIT"
+        elif bm.inverse:
+            return f"{bm.base}{bm.quote}-PERP.BYBIT"
+    
     def load_markets(self):
         market = self.api.load_markets()
-        for k,v in market.items():
+        for symbol, mkt in market.items():
             try:
-                v_json = orjson.dumps(v)
-                v = msgspec.json.decode(v_json, type=BybitMarket)
                 
-                self.market[k] = v
-                if v.type.value == "spot":
-                    self.market_id[f"{v.id}_spot"] = v
-                elif v.linear:
-                    self.market_id[f"{v.id}_linear"] = v
-                elif v.inverse:
-                    self.market_id[f"{v.id}_inverse"] = v
+                mkt_json = orjson.dumps(mkt)
+                mkt = msgspec.json.decode(mkt_json, type=BybitMarket)
+                if mkt.spot or mkt.future or mkt.linear or mkt.inverse:
+                
+                    self.market[symbol] = mkt
+                    if mkt.type.value == "spot":
+                        self.market_id[f"{mkt.id}_spot"] = mkt
+                    elif mkt.linear:
+                        self.market_id[f"{mkt.id}_linear"] = mkt
+                    elif mkt.inverse:
+                        self.market_id[f"{mkt.id}_inverse"] = mkt
                 
             except Exception as e:
-                print(f"Error: {e}, {k}, {v}")
+                print(f"Error: {e}, {symbol}, {mkt}")
                 continue
         
     # def _get_market_id(self):

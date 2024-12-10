@@ -1,127 +1,16 @@
-import asyncio
-import socket
-
-from collections import defaultdict
-from typing import Callable, Optional, Type
-from typing import Dict, List, Any, Set
-
-import redis
 import msgspec
+import asyncio
 
-from tradebot.types import Position
-from tradebot.constants import get_redis_config
-from tradebot.constants import STATUS_TRANSITIONS
-from tradebot.constants import OrderStatus, AccountType
-from tradebot.types import Order
-from tradebot.log import SpdLog
+from typing import Dict, Set, Type
+from collections import defaultdict
 
+
+
+from tradebot.types import Order, Position
+from tradebot.constants import AccountType, OrderStatus, STATUS_TRANSITIONS
+from tradebot.core.entity import TaskManager, RedisClient
+from tradebot.core.log import SpdLog
 from tradebot.core.nautilius_core import LiveClock
-
-
-class TaskManager:
-    def __init__(self):
-        self._tasks: List[asyncio.Task] = []
-
-    def create_task(self, coro: asyncio.coroutines) -> asyncio.Task:
-        task = asyncio.create_task(coro)
-        self._tasks.append(task)
-        task.add_done_callback(self._handle_task_done)
-        return task
-
-    def _handle_task_done(self, task: asyncio.Task):
-        self._tasks.remove(task)
-        try:
-            task.result()
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            raise
-
-    async def cancel(self):
-        for task in self._tasks:
-            task.cancel()
-        await asyncio.gather(*self._tasks, return_exceptions=True)
-
-
-class EventSystem:
-    _listeners: Dict[str, List[Callable]] = defaultdict(list)
-
-    @classmethod
-    def on(cls, event: str, callback: Optional[Callable] = None):
-        """
-        Register an event listener. Can be used as a decorator or as a direct method.
-
-        Usage as a method:
-            EventSystem.on('order_update', callback_function)
-
-        Usage as a decorator:
-            @EventSystem.on('order_update')
-            def callback_function(msg):
-                ...
-        """
-        if callback is None:
-
-            def decorator(fn: Callable):
-                if event not in cls._listeners:
-                    cls._listeners[event] = []
-                cls._listeners[event].append(fn)
-                return fn
-
-            return decorator
-
-        cls._listeners[event].append(callback)
-        return callback  # Optionally return the callback for chaining
-
-    @classmethod
-    def emit(cls, event: str, *args: Any, **kwargs: Any):
-        """
-        Emit an event to all registered synchronous listeners.
-
-        :param event: The event name.
-        :param args: Positional arguments to pass to the listeners.
-        :param kwargs: Keyword arguments to pass to the listeners.
-        """
-        for callback in cls._listeners.get(event, []):
-            callback(*args, **kwargs)
-
-    @classmethod
-    async def aemit(cls, event: str, *args: Any, **kwargs: Any):
-        """
-        Asynchronously emit an event to all registered asynchronous listeners.
-
-        :param event: The event name.
-        :param args: Positional arguments to pass to the listeners.
-        :param kwargs: Keyword arguments to pass to the listeners.
-        """
-        for callback in cls._listeners.get(event, []):
-            await callback(*args, **kwargs)
-
-
-class RedisClient:
-    _params = None
-
-    @classmethod
-    def _is_in_docker(cls) -> bool:
-        try:
-            socket.gethostbyname("redis")
-            return True
-        except socket.gaierror:
-            return False
-
-    @classmethod
-    def _get_params(cls) -> dict:
-        if cls._params is None:
-            in_docker = cls._is_in_docker()
-            cls._params = get_redis_config(in_docker)
-        return cls._params
-
-    @classmethod
-    def get_client(cls) -> redis.Redis:
-        return redis.Redis(**cls._get_params())
-
-    @classmethod
-    def get_async_client(cls) -> redis.asyncio.Redis:
-        return redis.asyncio.Redis(**cls._get_params())
 
 
 class AsyncCache:

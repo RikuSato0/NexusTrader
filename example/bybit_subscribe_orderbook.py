@@ -3,7 +3,7 @@ import orjson
 import json
 import os
 from tradebot.exchange.bybit import BybitAccountType, BybitWSClient
-from tradebot.log import SpdLog
+from tradebot.core.log import SpdLog
 
 log = SpdLog.get_logger(__name__, level="INFO", flush=False)
 

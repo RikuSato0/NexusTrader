@@ -2,10 +2,10 @@ import asyncio
 from typing import Dict
 from decimal import Decimal
 from typing import Literal
-from tradebot.log import SpdLog
+from tradebot.core.log import SpdLog
 from tradebot.constants import EventType, AccountType, OrderStatus
 from tradebot.base import Clock, PublicConnector, PrivateConnector, TaskManager
-from tradebot.entity import EventSystem
+from tradebot.core.entity import EventSystem
 from tradebot.types import BookL1, Trade, Kline, Order, MarketData
 from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
 

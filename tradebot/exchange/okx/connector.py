@@ -3,7 +3,7 @@ import orjson
 import msgspec
 from decimal import Decimal
 from tradebot.exchange.okx import OkxAccountType
-from tradebot.entity import AsyncCache
+from tradebot.core.entity import AsyncCache
 from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.websockets_v2 import OkxWSClient as OkxWSClientV2
 from tradebot.exchange.okx.exchange import OkxExchangeManager
@@ -12,11 +12,10 @@ from tradebot.exchange.okx.types import OkxMarket
 from tradebot.constants import (
     EventType,
     OrderStatus,
-    OrderType,
     TimeInForce,
     PositionSide,
 )
-from tradebot.entity import EventSystem
+from tradebot.core.entity import EventSystem
 from tradebot.base import PublicConnector, PrivateConnector, OrderManagerSystem
 from tradebot.exchange.okx.rest_api import OkxApiClient
 from tradebot.types import Order, OrderSide, OrderType
@@ -30,7 +29,6 @@ from tradebot.exchange.okx.constants import (
     OKXWsPositionsPushDataMsg,
     TdMode,
     OkxEnumParser,
-    OkxOrderType,
 )
 
 

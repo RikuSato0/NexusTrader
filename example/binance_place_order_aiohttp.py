@@ -1,4 +1,3 @@
-import time
 import asyncio
 from pprint import pprint
 from tradebot.constants import CONFIG

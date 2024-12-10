@@ -171,11 +171,6 @@ class EventType(Enum):
     FUNDING_RATE = 4
     INDEX_PRICE = 5
 
-class InstrumentType(Enum):
-    SPOT = "SPOT"
-    LINEAR = "LINEAR"
-    INVERSE = "INVERSE"
-
 class OrderStatus(Enum):
     # LOCAL
     # INITIALIZED = "INITIALIZED"
@@ -364,7 +359,7 @@ class PositionSide(Enum):
     FLAT = "FLAT"
 
 
-class AssetType(Enum):
+class InstrumentType(Enum):
     SPOT = "spot"
     MARGIN = "margin"
     FUTURE = "future"

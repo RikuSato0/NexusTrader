@@ -4,7 +4,7 @@ import msgspec
 from typing import Any, Dict
 from tradebot.base import ExchangeManager
 from tradebot.exchange.binance.types import BinanceMarket
-
+from tradebot.types import InstrumentId
 
 class BinanceExchangeManager(ExchangeManager):
     api: ccxt.binance
@@ -48,25 +48,20 @@ class BinanceExchangeManager(ExchangeManager):
             except Exception as e:
                 print(f"Error: {e}, {k}, {v}")
                 continue
-        
-        
-    #     self._get_market_id()
 
-    # def _get_market_id(self):
-    #     self.market_id = {}
-    #     if not self.market:
-    #         raise ValueError(
-    #             "Market data not loaded, please call `load_markets()` first"
-    #         )
-    #     for _, v in self.market.items():
-    #         if v["type"] == "spot":
-    #             self.market_id[f"{v['id']}_spot"] = v
-    #         elif v["linear"]:
-    #             self.market_id[f"{v['id']}_linear"] = v
-    #         elif v["inverse"]:
-    #             self.market_id[f"{v['id']}_inverse"] = v
+def check():
+    bnc = BinanceExchangeManager()
+    market = bnc.market
+    
+    for symbol, mkt in market.items():
+        instrument_id = InstrumentId.from_str(symbol)
+        if mkt.subType:
+            assert instrument_id.type == mkt.subType
+        else:
+            assert instrument_id.type == mkt.type
 
 if __name__ == "__main__":
-    bm = BinanceExchangeManager()
-    bm.load_markets()
-    print(bm.market.keys())
+    check()
+    
+    
+    

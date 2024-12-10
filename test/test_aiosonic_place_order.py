@@ -1,9 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Literal
-from decimal import Decimal
 from asynciolimiter import Limiter
 from tradebot.base import AsyncHttpRequests, WSClient
-from tradebot.entity import Order
 import asyncio
 
 
@@ -14,7 +11,7 @@ from typing import Dict, Any, Literal
 from decimal import Decimal
 
 # from tradebot.exchanges.base import ExchangeInterface
-from tradebot.entity import Order
+from tradebot.core.entity import Order
 from tradebot.constants import CONFIG
 
 OKX_API_KEY = CONFIG["okex_demo"]["API_KEY"]

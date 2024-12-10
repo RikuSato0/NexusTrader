@@ -4,7 +4,7 @@ from decimal import Decimal
 from tradebot.constants import OrderStatus
 from tradebot.exchange.bybit import BybitAccountType
 from tradebot.types import Order, OrderType, OrderSide
-from tradebot.entity import AsyncCache, RedisClient
+from tradebot.core.entity import AsyncCache, RedisClient
 
 async def test_async_cache():
     # Initialize test parameters

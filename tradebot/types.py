@@ -1,8 +1,8 @@
 import warnings
 from decimal import Decimal
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple
-from typing import Literal, Optional
+from typing import Dict, List, Tuple
+from typing import Optional
 from msgspec import Struct, field
 from tradebot.constants import (
     OrderSide,
@@ -10,11 +10,9 @@ from tradebot.constants import (
     TimeInForce,
     OrderStatus,
     PositionSide,
-    AssetType,
-    ExchangeType,
     InstrumentType,
+    ExchangeType,
 )
-
 
 class InstrumentId(Struct):
     id: str
@@ -267,7 +265,7 @@ class BaseMarket(Struct):
     baseId: str
     quoteId: str
     settleId: str | None
-    type: AssetType
+    type: InstrumentType
     spot: bool
     margin: bool | None
     swap: bool
@@ -278,7 +276,7 @@ class BaseMarket(Struct):
     contract: bool
     linear: bool | None
     inverse: bool | None
-    subType: AssetType | None
+    subType: InstrumentType | None
     taker: float
     maker: float
     contractSize: float | None

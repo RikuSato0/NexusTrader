@@ -1,12 +1,8 @@
 import asyncio
 import uvloop
 
-
-from pprint import pprint
-
-
-from tradebot.entity import redis_pool
-from tradebot.entity import Context
+from tradebot.core.entity import redis_pool
+from tradebot.core.entity import Context
 from tradebot.exchange import OkxWebsocketManager
 from tradebot.constants import CONFIG, Url
 

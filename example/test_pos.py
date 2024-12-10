@@ -6,7 +6,7 @@ from tqdm import tqdm
 import orjson
 from typing import Optional, Any
 import msgspec
-from tradebot.log import SpdLog
+from tradebot.core.log import SpdLog
 
 logger = SpdLog.get_logger(__name__, "INFO", flush=True)
 

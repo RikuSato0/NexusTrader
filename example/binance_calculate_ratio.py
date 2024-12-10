@@ -8,9 +8,7 @@ from streamz import Stream
 
 
 from tradebot.exchange import BinanceWebsocketManager
-from tradebot.entity import log_register
-from tradebot.constants import MARKET_URLS
-
+from tradebot.core.entity import log_register
 
 # ratio description
 

@@ -1,6 +1,5 @@
 import time
 import asyncio
-from pprint import pprint
 from tradebot.constants import CONFIG
 from tradebot.base import ExchangeManager
 from tradebot.exchange._binance import BinanceOrderManager

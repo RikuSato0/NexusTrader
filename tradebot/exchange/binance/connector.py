@@ -6,7 +6,8 @@ import orjson
 from typing import Dict, Any
 from decimal import Decimal
 from tradebot.base import PublicConnector, PrivateConnector
-from tradebot.entity import EventSystem, AsyncCache
+from tradebot.core.entity import EventSystem
+from tradebot.core.cache import AsyncCache
 from tradebot.constants import (
     EventType,
     OrderSide,

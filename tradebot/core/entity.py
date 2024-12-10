@@ -1,0 +1,167 @@
+import asyncio
+import socket
+
+from collections import defaultdict
+from typing import Callable, Optional
+from typing import Dict, List, Any
+
+import time
+import redis
+
+from tradebot.constants import get_redis_config
+from tradebot.core.nautilius_core import LiveClock
+
+
+class TaskManager:
+    def __init__(self):
+        self._tasks: List[asyncio.Task] = []
+
+    def create_task(self, coro: asyncio.coroutines) -> asyncio.Task:
+        task = asyncio.create_task(coro)
+        self._tasks.append(task)
+        task.add_done_callback(self._handle_task_done)
+        return task
+
+    def _handle_task_done(self, task: asyncio.Task):
+        self._tasks.remove(task)
+        try:
+            task.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            raise
+
+    async def cancel(self):
+        for task in self._tasks:
+            task.cancel()
+        await asyncio.gather(*self._tasks, return_exceptions=True)
+
+
+class EventSystem:
+    _listeners: Dict[str, List[Callable]] = defaultdict(list)
+
+    @classmethod
+    def on(cls, event: str, callback: Optional[Callable] = None):
+        """
+        Register an event listener. Can be used as a decorator or as a direct method.
+
+        Usage as a method:
+            EventSystem.on('order_update', callback_function)
+
+        Usage as a decorator:
+            @EventSystem.on('order_update')
+            def callback_function(msg):
+                ...
+        """
+        if callback is None:
+
+            def decorator(fn: Callable):
+                if event not in cls._listeners:
+                    cls._listeners[event] = []
+                cls._listeners[event].append(fn)
+                return fn
+
+            return decorator
+
+        cls._listeners[event].append(callback)
+        return callback  # Optionally return the callback for chaining
+
+    @classmethod
+    def emit(cls, event: str, *args: Any, **kwargs: Any):
+        """
+        Emit an event to all registered synchronous listeners.
+
+        :param event: The event name.
+        :param args: Positional arguments to pass to the listeners.
+        :param kwargs: Keyword arguments to pass to the listeners.
+        """
+        for callback in cls._listeners.get(event, []):
+            callback(*args, **kwargs)
+
+    @classmethod
+    async def aemit(cls, event: str, *args: Any, **kwargs: Any):
+        """
+        Asynchronously emit an event to all registered asynchronous listeners.
+
+        :param event: The event name.
+        :param args: Positional arguments to pass to the listeners.
+        :param kwargs: Keyword arguments to pass to the listeners.
+        """
+        for callback in cls._listeners.get(event, []):
+            await callback(*args, **kwargs)
+
+
+class RedisClient:
+    _params = None
+
+    @classmethod
+    def _is_in_docker(cls) -> bool:
+        try:
+            socket.gethostbyname("redis")
+            return True
+        except socket.gaierror:
+            return False
+
+    @classmethod
+    def _get_params(cls) -> dict:
+        if cls._params is None:
+            in_docker = cls._is_in_docker()
+            cls._params = get_redis_config(in_docker)
+        return cls._params
+
+    @classmethod
+    def get_client(cls) -> redis.Redis:
+        return redis.Redis(**cls._get_params())
+
+    @classmethod
+    def get_async_client(cls) -> redis.asyncio.Redis:
+        return redis.asyncio.Redis(**cls._get_params())
+
+
+
+
+class Clock:
+    def __init__(self, tick_size: float = 1.0):
+        """
+        :param tick_size_s: Time interval of each tick in seconds (supports sub-second precision).
+        """
+        self._tick_size = tick_size  # Tick size in seconds
+        self._current_tick = (time.time() // self._tick_size) * self._tick_size
+        self._clock = LiveClock()
+        self._tick_callbacks: List[Callable[[float], None]] = []
+        self._started = False
+
+    @property
+    def tick_size(self) -> float:
+        return self._tick_size
+
+    @property
+    def current_timestamp(self) -> float:
+        return self._clock.timestamp()
+
+    def add_tick_callback(self, callback: Callable[[float], None]):
+        """
+        Register a callback to be called on each tick.
+        :param callback: Function to be called with current_tick as argument.
+        """
+        self._tick_callbacks.append(callback)
+
+    async def run(self):
+        if self._started:
+            raise RuntimeError("Clock is already running.")
+        self._started = True
+        while True:
+            now = time.time()
+            next_tick_time = self._current_tick + self._tick_size
+            sleep_duration = next_tick_time - now
+            if sleep_duration > 0:
+                await asyncio.sleep(sleep_duration)
+            else:
+                # If we're behind schedule, skip to the next tick to prevent drift
+                next_tick_time = now
+            self._current_tick = next_tick_time
+            for callback in self._tick_callbacks:
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(self.current_timestamp)
+                else:
+                    callback(self.current_timestamp)

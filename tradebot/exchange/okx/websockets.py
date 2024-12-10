@@ -4,21 +4,12 @@ import base64
 import asyncio
 
 from typing import Literal
-from typing import Any, Dict
-from decimal import Decimal
+from typing import Any
 from typing import Callable
 
 from asynciolimiter import Limiter
 
-
-from tradebot.types import (
-    BookL1,
-    Trade,
-)
-from tradebot.entity import EventSystem
 from tradebot.base import WSClient
-from tradebot.constants import EventType
-
 
 from tradebot.exchange.okx.constants import STREAM_URLS
 from tradebot.exchange.okx.constants import OkxAccountType

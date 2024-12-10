@@ -15,7 +15,7 @@ from tradebot.constants import OrderSide, OrderType, OrderStatus
 from tradebot.core import Strategy
 from tradebot.exchange.bybit.types import BybitMarket
 from decimal import Decimal
-from tradebot.entity import EventSystem
+from tradebot.core.entity import EventSystem
 from tradebot.exchange.bybit import (
     BybitPublicConnector,
     BybitPrivateConnector,

@@ -3,9 +3,9 @@ from typing import Dict
 from decimal import Decimal
 from collections import defaultdict
 from tradebot.base import PublicConnector, PrivateConnector
-from tradebot.entity import EventSystem
+from tradebot.core.entity import EventSystem
+from tradebot.core.cache import AsyncCache
 from tradebot.types import BookL1, Order, Trade
-from tradebot.entity import AsyncCache
 from tradebot.constants import (
     EventType,
     OrderSide,

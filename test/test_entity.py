@@ -1,8 +1,6 @@
 import pytest
 
-from collections import defaultdict
-
-from tradebot.entity import Account, RedisPool, Context, PositionDict
+from tradebot.core.entity import Account, RedisPool, Context, PositionDict
 
 
 @pytest.fixture

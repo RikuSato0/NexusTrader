@@ -11,7 +11,43 @@ from tradebot.constants import (
     OrderStatus,
     PositionSide,
     AssetType,
+    ExchangeType,
+    InstrumentType,
 )
+
+
+class InstrumentId(Struct):
+    id: str
+    exchange: ExchangeType
+    type: InstrumentType
+    
+    @property
+    def symbol(self) -> str:
+        return f"{self.id}.{self.exchange.value}"
+    
+    @classmethod
+    def from_str(cls, symbol: str):
+        """
+        BTCETH.BINANCE -> SPOT
+        BTCUSDT-PERP.BINANCE -> LINEAR
+        BTCUSD.BINANCE -> INVERSE
+        BTCUSD-241227.BINANCE 
+        """
+        id, exchange = symbol.split(".")
+        
+        # if numirical number in id, then it is a future
+        if "-" in id:
+            id_prefix, _ = id.split("-")
+            if id_prefix.endswith("USD"):
+                type = InstrumentType.INVERSE
+            else:
+                type = InstrumentType.LINEAR
+        else:
+            type = InstrumentType.SPOT
+            
+                
+        return cls(id=id, exchange=ExchangeType(exchange), type=type)
+
 
 
 class BookL1(Struct, gc=False):

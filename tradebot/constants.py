@@ -171,6 +171,10 @@ class EventType(Enum):
     FUNDING_RATE = 4
     INDEX_PRICE = 5
 
+class InstrumentType(Enum):
+    SPOT = "SPOT"
+    LINEAR = "LINEAR"
+    INVERSE = "INVERSE"
 
 class OrderStatus(Enum):
     # LOCAL
@@ -192,9 +196,9 @@ class OrderStatus(Enum):
 
 
 class ExchangeType(Enum):
-    BINANCE = 0
-    OKX = 1
-    BYBIT = 2
+    BINANCE = "BINANCE"
+    OKX = "OKX"
+    BYBIT = "BYBIT"
 
 
 class BinanceAccountType(Enum):
@@ -407,5 +411,4 @@ STATUS_TRANSITIONS: Dict[OrderStatus, List[OrderStatus]] = {
     OrderStatus.FAILED: [],
 }
 
-if __name__ == "__main__":
-    get_redis_config()
+

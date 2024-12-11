@@ -7,6 +7,7 @@ from tradebot.core.cache import AsyncCache
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.types import BookL1, Order, Trade
 from tradebot.constants import (
+    ExchangeType,
     OrderSide,
     OrderStatus,
     OrderType,

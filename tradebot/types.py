@@ -45,7 +45,7 @@ class InstrumentId(Struct):
 
 
 class BookL1(Struct, gc=False):
-    exchange: str
+    exchange: ExchangeType
     symbol: str
     bid: float
     ask: float
@@ -55,7 +55,7 @@ class BookL1(Struct, gc=False):
 
 
 class BookL2(Struct):
-    exchange: str
+    exchange: ExchangeType
     symbol: str
     bids: List[Tuple[float, float]]
     asks: List[Tuple[float, float]]
@@ -63,7 +63,7 @@ class BookL2(Struct):
 
 
 class Trade(Struct, gc=False):
-    exchange: str
+    exchange: ExchangeType
     symbol: str
     price: float
     size: float
@@ -71,7 +71,7 @@ class Trade(Struct, gc=False):
 
 
 class Kline(Struct, gc=False):
-    exchange: str
+    exchange: ExchangeType
     symbol: str
     interval: str
     open: float
@@ -83,14 +83,14 @@ class Kline(Struct, gc=False):
 
 
 class MarkPrice(Struct, gc=False):
-    exchange: str
+    exchange: ExchangeType
     symbol: str
     price: float
     timestamp: int
 
 
 class FundingRate(Struct, gc=False):
-    exchange: str
+    exchange: ExchangeType
     symbol: str
     rate: float
     timestamp: int
@@ -98,14 +98,14 @@ class FundingRate(Struct, gc=False):
 
 
 class IndexPrice(Struct, gc=False):
-    exchange: str
+    exchange: ExchangeType
     symbol: str
     price: float
     timestamp: int
 
 
 class Order(Struct):
-    exchange: str
+    exchange: ExchangeType
     symbol: str
     status: OrderStatus
     id: Optional[str] = None
@@ -341,7 +341,7 @@ class Position(Struct):
 
 class Position(Struct):
     symbol: str
-    exchange: str
+    exchange: ExchangeType
     strategy_id: str
     side: Optional[PositionSide] = None
     signed_amount: Decimal = Decimal("0")

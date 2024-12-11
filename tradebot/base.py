@@ -38,7 +38,7 @@ class ExchangeManager(ABC):
         self.config = config
         self.api_key = config.get("apiKey", None)
         self.secret = config.get("secret", None)
-        self.exchange_id = config.get("exchange_id", None)
+        self.exchange_id = ExchangeType(config["exchange_id"])
         self.api = self._init_exchange()
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="INFO", flush=True
@@ -286,7 +286,7 @@ class PublicConnector(ABC):
         account_type,
         market: Dict[str, BaseMarket],
         market_id: Dict[str, str],
-        exchange_id: str,
+        exchange_id: ExchangeType,
         ws_client: WSClient,
         msgbus: MessageBus,
     ):
@@ -326,7 +326,7 @@ class PrivateConnector(ABC):
         account_type,
         market: Dict[str, BaseMarket],
         market_id: Dict[str, str],
-        exchange_id: str,
+        exchange_id: ExchangeType,
         ws_client: WSClient,
         cache: AsyncCache,
         msgbus: MessageBus,

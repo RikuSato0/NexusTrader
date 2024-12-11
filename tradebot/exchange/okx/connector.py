@@ -3,7 +3,7 @@ import orjson
 import msgspec
 from decimal import Decimal
 from tradebot.exchange.okx import OkxAccountType
-from tradebot.core.entity import AsyncCache
+from tradebot.core.cache import AsyncCache
 from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.websockets_v2 import OkxWSClient as OkxWSClientV2
 from tradebot.exchange.okx.exchange import OkxExchangeManager

@@ -27,7 +27,7 @@ class Config:
     user_id: str
     basic_config: Dict[ExchangeType, BasicConfig]
     public_conn_config: Dict[ExchangeType, List[PublicConnectorConfig]]
-    private_conn_config: Dict[ExchangeType, PrivateConnectorConfig]
+    private_conn_config: Dict[ExchangeType, List[PrivateConnectorConfig]]
 
 def main():
     config = Config(
@@ -50,9 +50,11 @@ def main():
             ]
         },
         private_conn_config={
-            ExchangeType.BYBIT: PrivateConnectorConfig(
-                account_type=BybitAccountType.SPOT,
-            )
+            ExchangeType.BYBIT: [
+                PrivateConnectorConfig(
+                    account_type=BybitAccountType.SPOT,
+                )
+            ]
         },
     )
 

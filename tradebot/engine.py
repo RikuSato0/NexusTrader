@@ -34,7 +34,7 @@ class Engine:
         for exchange_id, public_conn_configs in self._config.public_conn_config.items():
             for config in public_conn_configs:
                 if exchange_id == ExchangeType.BYBIT:
-                    exchange: BybitExchangeManager = self.exchanges[exchange_id]
+                    exchange: BybitExchangeManager = self._exchanges[exchange_id]
                     public_connector = BybitPublicConnector(
                         account_type=config.account_type,
                         exchange=exchange,
@@ -49,14 +49,11 @@ class Engine:
     
     def _build_private_connectors(self):
         for exchange_id, private_conn_configs in self._config.private_conn_config.items():
-            
             if exchange_id == ExchangeType.BYBIT:
-                exchange: BybitExchangeManager = self.exchanges[exchange_id]
+                config = private_conn_configs[0]
+                exchange: BybitExchangeManager = self._exchanges[exchange_id]
                 
-                if exchange.is_testnet:
-                    account_type = BybitAccountType.ALL_TESTNET
-                else:
-                    account_type = BybitAccountType.ALL
+                account_type = BybitAccountType.ALL_TESTNET if exchange.is_testnet else BybitAccountType.ALL
                 
                 private_connector = BybitPrivateConnector(
                     account_type=account_type,
@@ -64,14 +61,16 @@ class Engine:
                     msgbus=self._msgbus,
                     strategy_id=self._config.strategy_id,
                     user_id=self._config.user_id,
-                    rate_limit=private_conn_configs.rate_limit,
+                    rate_limit=config.rate_limit,
                 )
                 self._private_connectors[account_type] = private_connector
+                continue
             
-            elif exchange_id == ExchangeType.BINANCE:
-                pass
-            elif exchange_id == ExchangeType.OKX:
-                pass
+            for config in private_conn_configs:
+                if exchange_id == ExchangeType.BINANCE:
+                    pass
+                elif exchange_id == ExchangeType.OKX:
+                    pass
     
     def _build_exchanges(self):
         for exchange_id, basic_config in self._config.basic_config.items():

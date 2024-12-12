@@ -10,7 +10,6 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
 aiohttp = "3.10.10"
-asynciolimiter = "1.0.0"
 ccxt = "^4.4.25"
 numpy = "2.1.1"
 orjson = "3.10.10"
@@ -29,6 +28,7 @@ certifi = "^2024.8.30"
 bcrypt = "^4.2.0"
 nautilus-trader = "^1.204.0"
 zmq = "^0.0.0"
+asynciolimiter = "^1.1.0.post3"
 
 
 [build-system]

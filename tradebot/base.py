@@ -8,7 +8,7 @@ import aiohttp
 
 import ccxt
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from typing import Callable, Literal
 from decimal import Decimal
 
@@ -17,7 +17,7 @@ from asynciolimiter import Limiter
 from decimal import ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
 
 from tradebot.types import Order, BaseMarket
-from tradebot.constants import DataType, ExchangeType
+from tradebot.constants import ExchangeType
 from tradebot.core.log import SpdLog
 from tradebot.core.entity import TaskManager
 from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide

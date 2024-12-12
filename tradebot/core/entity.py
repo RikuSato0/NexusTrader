@@ -50,7 +50,6 @@ class TaskManager:
         try:
             if self._tasks:
                 await self._shutdown_event.wait()
-                await self.cancel()
         except Exception as e:
             self._log.error(f"Error during wait: {e}")
             raise

@@ -238,11 +238,14 @@ class Engine:
         await self._task_manager.wait()
 
     async def _dispose(self):
+        
         for connector in self._public_connectors.values():
             await connector.disconnect()
         for connector in self._private_connectors.values():
             await connector.disconnect()
+        
         await self._task_manager.cancel()
+        
 
     def start(self):
         self._build()

@@ -6,7 +6,6 @@ from tradebot.exchange.bybit import BybitAccountType
 
 @dataclass
 class BasicConfig:
-    exchange_id: ExchangeType
     api_key: str
     secret: str
     testnet: bool = False

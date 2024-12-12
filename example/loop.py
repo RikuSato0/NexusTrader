@@ -1,7 +1,70 @@
 import asyncio
 import platform
-from tradebot.engine import TaskManager
+from tradebot.core.log import SpdLog
+from typing import List
+import signal
 
+class TaskManager:
+    def __init__(self, loop: asyncio.AbstractEventLoop):
+        self._log = SpdLog.get_logger(type(self).__name__, level="DEBUG", flush=True)
+        self._tasks: List[asyncio.Task] = []
+        self._shutdown_event = asyncio.Event()
+        self._loop = loop
+        self._setup_signal_handlers()
+
+    def _setup_signal_handlers(self):
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            self._loop.add_signal_handler(sig, lambda: asyncio.create_task(self._shutdown()))
+
+    async def _shutdown(self):
+        self._log.info("Shutdown signal received, cleaning up...")
+        self._shutdown_event.set()
+
+    def create_task(self, coro: asyncio.coroutines) -> asyncio.Task:
+        task = asyncio.create_task(coro)
+        self._tasks.append(task)
+        task.add_done_callback(self._handle_task_done)
+        return task
+
+    def _handle_task_done(self, task: asyncio.Task):
+        try:
+            self._tasks.remove(task)
+            task.result()
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            self._log.error(f"Error during task done: {e}")
+            raise
+
+    async def wait(self):
+        try:
+            if self._tasks:
+                await self._shutdown_event.wait()
+        except Exception as e:
+            self._log.error(f"Error during wait: {e}")
+            raise
+
+    async def cancel(self):
+        try:
+            for task in self._tasks:
+                if not task.done():
+                    task.cancel()
+
+            if self._tasks:
+                results = await asyncio.gather(*self._tasks, return_exceptions=True)
+
+                for result in results:
+                    if isinstance(result, Exception) and not isinstance(
+                        result, asyncio.CancelledError
+                    ):
+                        self._log.error(f"Task failed during cancellation: {result}")
+
+        except Exception as e:
+            self._log.error(f"Error during cancellation: {e}")
+            raise
+        finally:
+            self._tasks.clear()
+            
 class Loop1:
     def __init__(self, task_manager: TaskManager):
         self._task_manager = task_manager
@@ -69,4 +132,5 @@ def main():
 
 
 if __name__ == "__main__":
+
     main()

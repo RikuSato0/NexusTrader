@@ -179,16 +179,17 @@ files = [
 
 [[package]]
 name = "asynciolimiter"
-version = "1.0.0"
+version = "1.1.0.post3"
 description = "Rate limiter for Async IO"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.11"
 files = [
-    {file = "asynciolimiter-1.0.0-py3-none-any.whl", hash = "sha256:81f91400df1c9440b4b68b2ee65379241482ba9b78d58fb3401fcfad6f0e4407"},
+    {file = "asynciolimiter-1.1.0.post3-py3-none-any.whl", hash = "sha256:101b3b8c95f7fa6312f33df96cc773bc7ce46f53f5044b97b832cc1ec9f24688"},
+    {file = "asynciolimiter-1.1.0.post3.tar.gz", hash = "sha256:0ce279695126350b38fdb661f6d5976722bf367557156526b93f27614434977d"},
 ]
 
 [package.extras]
-build = ["sphinx", "twine", "wheel"]
+dev = ["flake8", "git-cliff", "isort", "mypy", "sphinx", "sphinx-rtd-theme"]
 
 [[package]]
 name = "attrs"
@@ -2285,4 +2286,4 @@ pyzmq = "*"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.13"
-content-hash = "c4fb615683184898827f5122e6f4fccbb25e13e8c8276cdad8324ab097f0efca"
+content-hash = "9b2fa76ff5f6594b32e57dca49386fe5a3b94c3bbdfefcdee2933e3b4388acb5"

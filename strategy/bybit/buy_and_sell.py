@@ -26,7 +26,6 @@ config = Config(
     strategy=Demo(),
     basic_config={
         ExchangeType.BYBIT: BasicConfig(
-            exchange_id=ExchangeType.BYBIT,
             api_key=BYBIT_API_KEY,
             secret=BYBIT_SECRET,
             testnet=True,

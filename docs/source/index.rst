@@ -1,5 +1,5 @@
 Welcome to TradeBot's documentation!
-=====================================
+==================================
 
 .. toctree::
    :maxdepth: 2
@@ -7,22 +7,33 @@ Welcome to TradeBot's documentation!
 
    installation
    quickstart
-   usage
-   modules
+   modules/index
+   api/index
 
 Overview
 --------
 
-TradeBot is a sophisticated trading bot framework designed for cryptocurrency trading.
+TradeBot is a high-performance cryptocurrency trading bot framework with support for multiple exchanges and advanced order management capabilities.
 
-Features
---------
+Key Features
+-----------
 
-- Microservices architecture
-- Support for multiple exchanges
-- Asynchronous design
-- Advanced order management
-- Flexible configuration
+- Multi-exchange support (Binance, Bybit, OKX)
+- Asynchronous architecture
+- Advanced order management system
+- Real-time market data streaming
+- Position tracking and risk management
+- Extensible strategy framework
+
+Getting Started
+--------------
+
+Check out the :doc:`quickstart` guide to get started with TradeBot.
+
+API Reference
+------------
+
+For detailed API documentation, see the :doc:`api/index` section.
 
 Indices and tables
 ==================

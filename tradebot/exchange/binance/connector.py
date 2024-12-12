@@ -103,20 +103,23 @@ class BinancePublicConnector(PublicConnector):
         await self._ws_client.subscribe_kline(symbol, interval)
 
     def _ws_msg_handler(self, raw: bytes):
-        msg = self._ws_general_decoder.decode(raw)
-        if msg.e:
-            match msg.e:
-                case BinanceWsEventType.TRADE:
-                    self._parse_trade(raw)
-                case BinanceWsEventType.BOOK_TICKER:
-                    self._parse_futures_book_ticker(raw)
-                case BinanceWsEventType.KLINE:
-                    self._parse_kline(raw)
-                case BinanceWsEventType.MARK_PRICE_UPDATE:
-                    self._parse_mark_price(raw)
-        elif msg.u:
-            # spot book ticker doesn't have "e" key. FUCK BINANCE
-            self._parse_spot_book_ticker(raw)
+        try:
+            msg = self._ws_general_decoder.decode(raw)
+            if msg.e:
+                match msg.e:
+                    case BinanceWsEventType.TRADE:
+                        self._parse_trade(raw)
+                    case BinanceWsEventType.BOOK_TICKER:
+                        self._parse_futures_book_ticker(raw)
+                    case BinanceWsEventType.KLINE:
+                        self._parse_kline(raw)
+                    case BinanceWsEventType.MARK_PRICE_UPDATE:
+                        self._parse_mark_price(raw)
+            elif msg.u:
+                # spot book ticker doesn't have "e" key. FUCK BINANCE
+                self._parse_spot_book_ticker(raw)
+        except msgspec.DecodeError:
+            self._log.error(f"Error decoding message: {str(raw)}")
 
     def _parse_kline(self, raw: bytes) -> Kline:
         """

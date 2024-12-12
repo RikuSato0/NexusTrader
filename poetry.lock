@@ -137,6 +137,17 @@ yarl = ">=1.12.0,<2.0"
 speedups = ["Brotli", "aiodns (>=3.2.0)", "brotlicffi"]
 
 [[package]]
+name = "aiolimiter"
+version = "1.2.1"
+description = "asyncio rate limiter, a leaky bucket implementation"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "aiolimiter-1.2.1-py3-none-any.whl", hash = "sha256:d3f249e9059a20badcb56b61601a83556133655c11d1eb3dd3e04ff069e5f3c7"},
+    {file = "aiolimiter-1.2.1.tar.gz", hash = "sha256:e02a37ea1a855d9e832252a105420ad4d15011505512a1a1d814647451b5cca9"},
+]
+
+[[package]]
 name = "aiosignal"
 version = "1.3.1"
 description = "aiosignal: a list of registered asynchronous callbacks"
@@ -176,20 +187,6 @@ files = [
     {file = "async-timeout-4.0.3.tar.gz", hash = "sha256:4640d96be84d82d02ed59ea2b7105a0f7b33abe8703703cd0ab0bf87c427522f"},
     {file = "async_timeout-4.0.3-py3-none-any.whl", hash = "sha256:7405140ff1230c310e51dc27b3145b9092d659ce68ff733fb0cefe3ee42be028"},
 ]
-
-[[package]]
-name = "asynciolimiter"
-version = "1.1.0.post3"
-description = "Rate limiter for Async IO"
-optional = false
-python-versions = ">=3.11"
-files = [
-    {file = "asynciolimiter-1.1.0.post3-py3-none-any.whl", hash = "sha256:101b3b8c95f7fa6312f33df96cc773bc7ce46f53f5044b97b832cc1ec9f24688"},
-    {file = "asynciolimiter-1.1.0.post3.tar.gz", hash = "sha256:0ce279695126350b38fdb661f6d5976722bf367557156526b93f27614434977d"},
-]
-
-[package.extras]
-dev = ["flake8", "git-cliff", "isort", "mypy", "sphinx", "sphinx-rtd-theme"]
 
 [[package]]
 name = "attrs"
@@ -2286,4 +2283,4 @@ pyzmq = "*"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.13"
-content-hash = "9b2fa76ff5f6594b32e57dca49386fe5a3b94c3bbdfefcdee2933e3b4388acb5"
+content-hash = "a3e9f741c736757b184f4a52a0b21361b4e6c145684bc55676483c0c989dcf84"

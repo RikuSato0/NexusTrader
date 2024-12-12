@@ -6,6 +6,7 @@ from tradebot.core.cache import AsyncCache
 from tradebot.core.log import SpdLog
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager
+
 class OrderManagerSystem:
     def __init__(self, cache: AsyncCache, msgbus: MessageBus, task_manager: TaskManager):
         self._log = SpdLog.get_logger(

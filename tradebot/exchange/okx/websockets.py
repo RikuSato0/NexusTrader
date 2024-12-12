@@ -7,7 +7,7 @@ from typing import Literal
 from typing import Any
 from typing import Callable
 
-from asynciolimiter import Limiter
+from aiolimiter import AsyncLimiter
 
 from tradebot.base import WSClient
 
@@ -33,7 +33,7 @@ class OkxWSClient(WSClient):
             url = f"{STREAM_URLS[account_type]}/v5/private"
         else:
             url = f"{STREAM_URLS[account_type]}/v5/public"
-        super().__init__(url, limiter=Limiter(2 / 1), handler=handler)
+        super().__init__(url, limiter=AsyncLimiter(max_rate=2, time_period=1), handler=handler)
 
     @property
     def is_private(self):

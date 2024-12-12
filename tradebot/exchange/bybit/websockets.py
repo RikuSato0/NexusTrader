@@ -3,7 +3,7 @@ import orjson
 import asyncio
 
 from typing import Any, Callable
-from asynciolimiter import Limiter
+from aiolimiter import AsyncLimiter
 
 from tradebot.base import WSClient
 from tradebot.core.entity import TaskManager
@@ -30,7 +30,7 @@ class BybitWSClient(WSClient):
         # Bybit: do not exceed 500 requests per 5 minutes
         super().__init__(
             url,
-            limiter=Limiter(500 / 5 * 60),
+            limiter=AsyncLimiter(max_rate=500, time_period=5 * 60),
             handler=handler,
             task_manager=task_manager,
             ping_idle_timeout=2,

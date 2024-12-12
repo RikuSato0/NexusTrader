@@ -1,7 +1,6 @@
 import signal
 import asyncio
 import socket
-
 from collections import defaultdict
 from typing import Callable, Optional
 from typing import Dict, List, Any
@@ -9,9 +8,20 @@ from typing import Dict, List, Any
 import time
 import redis
 
+from dataclasses import dataclass
 from tradebot.constants import get_redis_config
 from tradebot.core.log import SpdLog
 from tradebot.core.nautilius_core import LiveClock
+
+
+@dataclass
+class RateLimit:
+    """
+    max_rate: Allow up to max_rate / time_period acquisitions before blocking.
+    time_period: Time period in seconds.
+    """
+    max_rate: float
+    time_period: float = 60
 
 
 class TaskManager:
@@ -24,11 +34,12 @@ class TaskManager:
 
     def _setup_signal_handlers(self):
         for sig in (signal.SIGINT, signal.SIGTERM):
-            self._loop.add_signal_handler(sig, lambda: asyncio.create_task(self._shutdown()))
+            self._loop.add_signal_handler(sig, lambda: self.create_task(self._shutdown()))
 
     async def _shutdown(self):
         self._log.info("Shutdown signal received, cleaning up...")
         self._shutdown_event.set()
+        self._log.info("Shutdown event set")
 
     def create_task(self, coro: asyncio.coroutines) -> asyncio.Task:
         task = asyncio.create_task(coro)
@@ -49,7 +60,9 @@ class TaskManager:
     async def wait(self):
         try:
             if self._tasks:
+                self._log.info("Waiting for shutdown event")
                 await self._shutdown_event.wait()
+                self._log.info("Shutdown event received")
         except Exception as e:
             self._log.error(f"Error during wait: {e}")
             raise

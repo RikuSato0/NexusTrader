@@ -13,13 +13,13 @@ from typing import Callable, Literal
 from decimal import Decimal
 
 
-from asynciolimiter import Limiter
+from aiolimiter import AsyncLimiter
 from decimal import ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
 
 from tradebot.types import Order, BaseMarket
 from tradebot.constants import ExchangeType
 from tradebot.core.log import SpdLog
-from tradebot.core.entity import TaskManager
+from tradebot.core.entity import TaskManager, RateLimit
 from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
 from picows import (
     ws_connect,
@@ -149,7 +149,7 @@ class WSClient(ABC):
     def __init__(
         self,
         url: str,
-        limiter: Limiter,
+        limiter: AsyncLimiter,
         handler: Callable[..., Any],
         task_manager: TaskManager,
         specific_ping_msg: bytes = None,
@@ -222,7 +222,7 @@ class WSClient(ABC):
                 await asyncio.sleep(self._reconnect_interval)
 
     async def _send(self, payload: dict):
-        await self._limiter.wait()
+        await self._limiter.acquire()
         self._transport.send(WSMsgType.TEXT, orjson.dumps(payload))
 
     async def _msg_handler(self, queue: asyncio.Queue):
@@ -327,7 +327,7 @@ class PrivateConnector(ABC):
         exchange_id: ExchangeType,
         ws_client: WSClient,
         msgbus: MessageBus,
-        rate_limit: float = None,
+        rate_limit: RateLimit | None = None,
     ):
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="DEBUG", flush=True
@@ -341,7 +341,7 @@ class PrivateConnector(ABC):
         self._msgbus: MessageBus = msgbus
         
         if rate_limit:
-            self._limiter = Limiter(rate_limit)
+            self._limiter = AsyncLimiter(rate_limit.max_rate, rate_limit.time_period)
         else:
             self._limiter = None
         

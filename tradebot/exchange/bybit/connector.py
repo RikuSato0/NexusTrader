@@ -4,7 +4,7 @@ from decimal import Decimal
 from collections import defaultdict
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.core.nautilius_core import MessageBus
-from tradebot.core.entity import TaskManager
+from tradebot.core.entity import TaskManager, RateLimit
 from tradebot.types import BookL1, Order, Trade
 from tradebot.constants import (
     OrderSide,
@@ -168,7 +168,7 @@ class BybitPrivateConnector(PrivateConnector):
         account_type: BybitAccountType,
         msgbus: MessageBus,
         task_manager: TaskManager,
-        rate_limit: float = None,
+        rate_limit: RateLimit | None = None,
     ):
         # all the private endpoints are the same for all account types, so no need to pass account_type
         # only need to determine if it's testnet or not
@@ -236,7 +236,7 @@ class BybitPrivateConnector(PrivateConnector):
 
     async def cancel_order(self, symbol: str, order_id: str, **kwargs):
         if self._limiter:
-            await self._limiter.wait()
+            await self._limiter.acquire()
         try:
             market = self._market.get(symbol)
             if not market:
@@ -287,7 +287,7 @@ class BybitPrivateConnector(PrivateConnector):
         **kwargs,
     ):
         if self._limiter:
-            await self._limiter.wait()
+            await self._limiter.acquire()
         market = self._market.get(symbol)
         if not market:
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")

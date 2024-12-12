@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict, List
 from tradebot.constants import AccountType, ExchangeType
+from tradebot.core.entity import RateLimit
 from tradebot.strategy import Strategy
 from tradebot.exchange.bybit import BybitAccountType
 
@@ -18,7 +19,7 @@ class PublicConnectorConfig:
 @dataclass
 class PrivateConnectorConfig:
     account_type: AccountType
-    rate_limit: float = None
+    rate_limit: RateLimit | None = None
 
 @dataclass
 class Config:

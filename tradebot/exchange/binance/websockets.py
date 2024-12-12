@@ -1,6 +1,6 @@
 from typing import Literal, Callable
 from typing import Any
-from asynciolimiter import Limiter
+from aiolimiter import AsyncLimiter
 
 
 from tradebot.base import WSClient
@@ -11,7 +11,9 @@ class BinanceWSClient(WSClient):
     def __init__(self, account_type: BinanceAccountType, handler: Callable[..., Any]):
         self._account_type = account_type
         url = account_type.ws_url
-        super().__init__(url, limiter=Limiter(3 / 1), handler=handler)
+        super().__init__(
+            url, limiter=AsyncLimiter(max_rate=3, time_period=1), handler=handler
+        )
 
     async def _subscribe(self, params: str, subscription_id: str):
         if subscription_id not in self._subscriptions:
@@ -113,5 +115,3 @@ class BinanceWSClient(WSClient):
     async def _resubscribe(self):
         for _, payload in self._subscriptions.items():
             await self._send(payload)
-
-

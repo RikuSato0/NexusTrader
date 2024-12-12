@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict, List
 from tradebot.constants import AccountType, ExchangeType
+from tradebot.strategy import Strategy
 from tradebot.exchange.bybit import BybitAccountType
 
 @dataclass
@@ -8,13 +9,12 @@ class BasicConfig:
     exchange_id: ExchangeType
     api_key: str
     secret: str
-    sandbox: bool = False
+    testnet: bool = False
     passphrase: str = None
 
 @dataclass
 class PublicConnectorConfig:
     account_type: AccountType
-    symbols: List[str]
 
 @dataclass
 class PrivateConnectorConfig:
@@ -25,6 +25,7 @@ class PrivateConnectorConfig:
 class Config:
     strategy_id: str
     user_id: str
+    strategy: Strategy
     basic_config: Dict[ExchangeType, BasicConfig]
     public_conn_config: Dict[ExchangeType, List[PublicConnectorConfig]]
     private_conn_config: Dict[ExchangeType, List[PrivateConnectorConfig]]
@@ -47,7 +48,6 @@ def main():
             ExchangeType.BYBIT: [
                 PublicConnectorConfig(
                     account_type=BybitAccountType.SPOT,
-                    symbols=["BTCUSDT.BYBIT", "ETHUSDT.BYBIT"],
                 )
             ]
         },

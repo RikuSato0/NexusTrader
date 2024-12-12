@@ -1,20 +1,23 @@
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Any
 from tradebot.core.log import SpdLog
-from tradebot.constants import AccountType, ExchangeType, InstrumentType
-from tradebot.base import PublicConnector, PrivateConnector, TaskManager
+from tradebot.base import TaskManager
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.types import BookL1, Trade, Kline, Order, MarketData, InstrumentId
+from tradebot.constants import DataType
 
-from tradebot.exchange.bybit import BybitAccountType
-from tradebot.exchange.binance import BinanceAccountType
-from tradebot.exchange.okx import OkxAccountType
 
 class Strategy:
     def __init__(self, msgbus: MessageBus, task_manager: TaskManager):
         self.log = SpdLog.get_logger(name = type(self).__name__, level = "DEBUG", flush = True)
-        self._subscribed_symbols: Set[InstrumentId] = set()
+
+        self._subscriptions: Dict[DataType, Dict[InstrumentId, str] | Set[InstrumentId]] = {
+            DataType.BOOKL1: set(),
+            DataType.TRADE: set(),
+            DataType.KLINE: {},
+        }
+        
         self._market_data: MarketData = MarketData()
-        self._subscribed_pairs = set() # Store (exchange_id, symbol, data_type) tuples
+        
         self._ready = False
         self._task_manager = task_manager
         self._msgbus = msgbus
@@ -28,13 +31,19 @@ class Strategy:
                 
     
     def subscribe_bookl1(self, symbols: List[str]):
-        pass
+        for symbol in symbols:
+            instrument_id = InstrumentId.from_str(symbol)
+            self._subscriptions[DataType.BOOKL1].add(instrument_id)
         
     def subscribe_trade(self, symbols: List[str]):
-        pass
+        for symbol in symbols:
+            instrument_id = InstrumentId.from_str(symbol)
+            self._subscriptions[DataType.TRADE].add(instrument_id)
     
     def subscribe_kline(self, symbols: List[str], interval: str):
-        pass
+        for symbol in symbols:
+            instrument_id = InstrumentId.from_str(symbol)
+            self._subscriptions[DataType.KLINE][instrument_id] = interval
         
     def on_trade(self, trade: Trade):
         pass

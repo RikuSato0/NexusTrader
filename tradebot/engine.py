@@ -1,6 +1,5 @@
 import asyncio
-import signal
-import uvloop
+import platform
 from typing import Dict
 from tradebot.constants import AccountType, ExchangeType
 from tradebot.config import Config
@@ -11,16 +10,24 @@ from tradebot.base import ExchangeManager, PublicConnector, PrivateConnector
 from tradebot.exchange.bybit import BybitExchangeManager, BybitPrivateConnector, BybitPublicConnector, BybitAccountType
 from tradebot.exchange.binance import BinanceExchangeManager
 from tradebot.exchange.okx import OkxExchangeManager
-
+from tradebot.core.entity import TaskManager
 from tradebot.core.nautilius_core import MessageBus, TraderId, LiveClock
 
 class Engine:
+    @staticmethod
+    def set_loop_policy():
+        if platform.system() != 'Windows':
+            import uvloop
+            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    
     def __init__(self, config: Config):
         self._config = config
         self._strategy = None
         self._is_running = False
         self._is_built = False
-        self.loop = asyncio.get_event_loop()
+        self.set_loop_policy()
+        self._loop = asyncio.new_event_loop()
+        self._task_manager = TaskManager(self._loop)
         
         self._exchanges: Dict[ExchangeType, ExchangeManager] = None
         self._public_connectors: Dict[AccountType, PublicConnector] = None
@@ -31,6 +38,7 @@ class Engine:
         self._cache: AsyncCache = AsyncCache(
             strategy_id=config.strategy_id,
             user_id=config.user_id,
+            task_manager=self._task_manager,
             sync_interval=config.cache_sync_interval,
             expire_time=config.cache_expire_time,
         )
@@ -43,6 +51,7 @@ class Engine:
         self._oms = OrderManagerSystem(
             cache=self._cache,
             msgbus=self._msgbus,
+            task_manager=self._task_manager,
         )
     
     def _build_public_connectors(self):
@@ -54,6 +63,7 @@ class Engine:
                         account_type=config.account_type,
                         exchange=exchange,
                         msgbus=self._msgbus,
+                        task_manager=self._task_manager,
                     )
                 elif exchange_id == ExchangeType.BINANCE:
                     pass
@@ -77,6 +87,7 @@ class Engine:
                     strategy_id=self._config.strategy_id,
                     user_id=self._config.user_id,
                     rate_limit=config.rate_limit,
+                    task_manager=self._task_manager,
                 )
                 self._private_connectors[account_type] = private_connector
                 continue
@@ -112,19 +123,22 @@ class Engine:
         self._build_public_connectors()
         self._build_private_connectors()
         self._is_built = True
+    
+    async def _start_connectors(self):
+        for connector in self._public_connectors.values():
+            connector.connect()
+        for connector in self._private_connectors.values():
+            await connector.connect()
+        
+    async def _start(self):
+        await self._cache.start()
+        await self._oms.start()
+        await self._task_manager.wait()
+
 
     def start(self):
         if not self._is_built:
             raise RuntimeError("The engine is not built. Call `build()` first.")
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-        self.loop = asyncio.get_event_loop()
         self._is_running = True
-        self.loop.run_until_complete(self.run_async())
+        self._loop.run_until_complete(self._start())
 
-    async def run_async(self):
-        try:
-            tasks = [connector.connect() for connector in self.connectors]
-            tasks += [strategy.run() for strategy in self.strategies]
-            await asyncio.gather(*tasks)
-        except asyncio.CancelledError as e:
-            print(f"Cancelled: {e}")

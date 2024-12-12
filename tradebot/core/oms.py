@@ -5,9 +5,9 @@ from tradebot.constants import OrderStatus
 from tradebot.core.cache import AsyncCache
 from tradebot.core.log import SpdLog
 from tradebot.core.nautilius_core import MessageBus
-
+from tradebot.core.entity import TaskManager
 class OrderManagerSystem:
-    def __init__(self, cache: AsyncCache, msgbus: MessageBus):
+    def __init__(self, cache: AsyncCache, msgbus: MessageBus, task_manager: TaskManager):
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="DEBUG", flush=True
         )
@@ -15,7 +15,7 @@ class OrderManagerSystem:
         self._order_msg_queue: asyncio.Queue[Order] = asyncio.Queue()
         self._position_msg_queue: asyncio.Queue[Order] = asyncio.Queue()    
         self._msgbus = msgbus
-        
+        self._task_manager = task_manager
         self._msgbus.subscribe(topic="order", handler=self.add_order_msg)
         self._msgbus.subscribe(topic="order", handler=self.add_position_msg)
         
@@ -67,3 +67,7 @@ class OrderManagerSystem:
                 self._order_msg_queue.task_done()
             except Exception as e:
                 self._log.error(f"Error in handle_order_event: {e}")
+    
+    async def start(self):
+        await self._task_manager.create_task(self.handle_order_event())
+        await self._task_manager.create_task(self.handle_position_event())

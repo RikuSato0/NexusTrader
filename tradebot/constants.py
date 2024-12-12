@@ -373,7 +373,6 @@ class OptionType(Enum):
     CALL = "call"
     PUT = "put"
 
-
 STATUS_TRANSITIONS: Dict[OrderStatus, List[OrderStatus]] = {
     OrderStatus.PENDING: [
         OrderStatus.CANCELING,
@@ -405,5 +404,15 @@ STATUS_TRANSITIONS: Dict[OrderStatus, List[OrderStatus]] = {
     OrderStatus.EXPIRED: [],
     OrderStatus.FAILED: [],
 }
+
+
+class DataType(Enum):
+    BOOKL1 = "bookl1"
+    BOOKL2 = "bookl2"
+    TRADE = "trade"
+    KLINE = "kline"
+    MARK_PRICE = "mark_price"
+    FUNDING_RATE = "funding_rate"
+    INDEX_PRICE = "index_price"
 
 

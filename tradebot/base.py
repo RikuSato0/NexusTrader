@@ -8,7 +8,7 @@ import aiohttp
 
 import ccxt
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 from typing import Callable, Literal
 from decimal import Decimal
 
@@ -16,11 +16,10 @@ from decimal import Decimal
 from asynciolimiter import Limiter
 from decimal import ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
 
-from tradebot.types import Order, BaseMarket, ExchangeType
+from tradebot.types import Order, BaseMarket
+from tradebot.constants import DataType, ExchangeType
 from tradebot.core.log import SpdLog
 from tradebot.core.entity import TaskManager
-from tradebot.core.cache import AsyncCache
-from tradebot.core.oms import OrderManagerSystem
 from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
 from picows import (
     ws_connect,
@@ -233,10 +232,9 @@ class WSClient(ABC):
             self._callback(msg)
             queue.task_done()
 
-    async def disconnect(self):
+    def disconnect(self):
         if self.connected:
             self._transport.disconnect()
-            await self._task_manager.cancel()
 
     @abstractmethod
     async def _resubscribe(self):
@@ -318,7 +316,7 @@ class PublicConnector(ABC):
         pass
 
     async def disconnect(self):
-        await self._ws_client.disconnect()
+        self._ws_client.disconnect() # not needed to await
 
 
 class PrivateConnector(ABC):
@@ -377,8 +375,7 @@ class PrivateConnector(ABC):
         pass
 
     async def disconnect(self):
-        await self._ws_client.disconnect()
-        await self._task_manager.cancel()
+        self._ws_client.disconnect()
 
     def amount_to_precision(
         self,

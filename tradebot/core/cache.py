@@ -59,7 +59,7 @@ class AsyncCache:
     ) -> Order | Position:
         return msgspec.json.decode(data, type=obj_type)
 
-    async def sync(self):
+    async def start(self):
         self._task_manager.create_task(self._periodic_sync())
 
     async def _periodic_sync(self):
@@ -230,4 +230,3 @@ class AsyncCache:
         self._shutdown_event.set()
         await self._sync_to_redis()
         await self._r.aclose()
-        await self._task_manager.cancel()

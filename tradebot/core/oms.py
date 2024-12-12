@@ -13,9 +13,26 @@ class OrderManagerSystem:
         )
         self._cache = cache
         self._order_msg_queue: asyncio.Queue[Order] = asyncio.Queue()
+        self._position_msg_queue: asyncio.Queue[Order] = asyncio.Queue()    
         self._msgbus = msgbus
+        
+        self._msgbus.subscribe(topic="order", handler=self.add_order_msg)
+        self._msgbus.subscribe(topic="order", handler=self.add_position_msg)
+        
     def add_order_msg(self, order: Order):
         self._order_msg_queue.put_nowait(order)
+
+    def add_position_msg(self, order: Order):
+        self._position_msg_queue.put_nowait(order)
+    
+    async def handle_position_event(self):
+        while True:
+            try:
+                order = await self._position_msg_queue.get()
+                self._cache.apply_position(order)
+                self._position_msg_queue.task_done()
+            except Exception as e:
+                self._log.error(f"Error in handle_position_event: {e}")
 
     async def handle_order_event(self):
         while True:
@@ -47,7 +64,6 @@ class OrderManagerSystem:
                     case OrderStatus.EXPIRED:
                         self._log.debug(f"ORDER STATUS EXPIRED: {str(order)}")
                         self._cache.order_status_update(order)
-                await self._cache.apply_position(order)
                 self._order_msg_queue.task_done()
             except Exception as e:
                 self._log.error(f"Error in handle_order_event: {e}")

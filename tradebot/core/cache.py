@@ -17,6 +17,7 @@ class AsyncCache:
         self,
         strategy_id: str,
         user_id: str,
+        task_manager: TaskManager,
         sync_interval: int = 60,
         expire_time: int = 3600,
     ):
@@ -48,7 +49,7 @@ class AsyncCache:
         self._expire_time = expire_time  # expire time
 
         self._shutdown_event = asyncio.Event()
-        self._task_manager = TaskManager()
+        self._task_manager = task_manager
 
     def _encode(self, obj: Order | Position) -> bytes:
         return msgspec.json.encode(obj)
@@ -70,12 +71,11 @@ class AsyncCache:
     async def _sync_to_redis(self):
         self._log.debug("syncing to redis")
         for order_id, order in self._mem_orders.copy().items():
-            exchange = order.exchange
-            orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{exchange.value}:orders"
+            orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:orders"
             await self._r.hset(orders_key, order_id, self._encode(order))
 
         for exchange, open_order_ids in self._mem_open_orders.copy().items():
-            open_orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:account_type:{exchange.value}:open_orders"
+            open_orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{exchange.value}:open_orders"
 
             await self._r.delete(open_orders_key)
 
@@ -192,8 +192,7 @@ class AsyncCache:
         if order_id in self._mem_orders:
             return self._mem_orders[order_id]
 
-        exchange = self._mem_orders[order_id].exchange
-        orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{exchange}:orders"
+        orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:orders"
         raw_order = await self._r.hget(orders_key, order_id)
         if raw_order:
             order = self._decode(raw_order, Order)
@@ -218,7 +217,7 @@ class AsyncCache:
         return memory_orders
 
     async def get_open_orders(
-        self, symbol: str = None, exchange: ExchangeType = None
+        self, symbol: str | None = None, exchange: ExchangeType | None = None
     ) -> Set[str]:
         if symbol is not None:
             return self._mem_symbol_open_orders[symbol]

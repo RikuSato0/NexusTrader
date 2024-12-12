@@ -7,14 +7,14 @@ from tradebot.types import BookL1, Trade, Kline, Order, MarketData
 
 
 class Strategy:
-    def __init__(self, msgbus: MessageBus):
+    def __init__(self, msgbus: MessageBus, task_manager: TaskManager):
         self.log = SpdLog.get_logger(name = type(self).__name__, level = "DEBUG", flush = True)
         self._pulic_connectors: Dict[AccountType, PublicConnector] = {}
         self._private_connectors: Dict[AccountType, PrivateConnector] = {}
         self._market_data: MarketData = MarketData()
         self._subscribed_pairs = set() # Store (exchange_id, symbol, data_type) tuples
         self._ready = False
-        self._task_manager = TaskManager()
+        self._task_manager = task_manager
         self._msgbus = msgbus
         self._msgbus.register(endpoint="trade", handler=self.on_trade)
         self._msgbus.register(endpoint="bookl1", handler=self.on_bookl1)

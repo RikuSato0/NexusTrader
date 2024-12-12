@@ -152,6 +152,7 @@ class WSClient(ABC):
         url: str,
         limiter: Limiter,
         handler: Callable[..., Any],
+        task_manager: TaskManager,
         specific_ping_msg: bytes = None,
         reconnect_interval: int = 0.2,
         ping_idle_timeout: int = 2,
@@ -179,7 +180,7 @@ class WSClient(ABC):
             self._auto_ping_strategy = WSAutoPingStrategy.PING_WHEN_IDLE
         elif auto_ping_strategy == "ping_periodically":
             self._auto_ping_strategy = WSAutoPingStrategy.PING_PERIODICALLY
-        self._task_manager = TaskManager()
+        self._task_manager = task_manager
         self._log = SpdLog.get_logger(type(self).__name__, level="DEBUG", flush=True)
 
     @property
@@ -328,7 +329,6 @@ class PrivateConnector(ABC):
         market_id: Dict[str, str],
         exchange_id: ExchangeType,
         ws_client: WSClient,
-        cache: AsyncCache,
         msgbus: MessageBus,
         rate_limit: float = None,
     ):
@@ -342,8 +342,7 @@ class PrivateConnector(ABC):
         self._task_manager = TaskManager()
         self._ws_client = ws_client
         self._clock = LiveClock()
-        self._cache = cache
-        self._oms = OrderManagerSystem(cache, msgbus)
+        self._msgbus: MessageBus = msgbus
         
         if rate_limit:
             self._limiter = Limiter(rate_limit)
@@ -372,12 +371,12 @@ class PrivateConnector(ABC):
     @abstractmethod
     async def cancel_order(self, symbol: str, order_id: str, **kwargs) -> Order:
         pass
-
+    
+    @abstractmethod
     async def connect(self):
-        await self._cache.sync()
+        pass
 
     async def disconnect(self):
-        await self._cache.close()
         await self._ws_client.disconnect()
         await self._task_manager.cancel()
 

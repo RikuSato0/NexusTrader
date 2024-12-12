@@ -28,6 +28,8 @@ class Config:
     basic_config: Dict[ExchangeType, BasicConfig]
     public_conn_config: Dict[ExchangeType, List[PublicConnectorConfig]]
     private_conn_config: Dict[ExchangeType, List[PrivateConnectorConfig]]
+    cache_sync_interval: int = 60
+    cache_expire_time: int = 3600
 
 def main():
     config = Config(

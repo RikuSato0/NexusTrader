@@ -6,6 +6,7 @@ from typing import Any, Callable
 from asynciolimiter import Limiter
 
 from tradebot.base import WSClient
+from tradebot.core.entity import TaskManager
 from tradebot.exchange.bybit.constants import BybitAccountType
 
 
@@ -14,6 +15,7 @@ class BybitWSClient(WSClient):
         self,
         account_type: BybitAccountType,
         handler: Callable[..., Any],
+        task_manager: TaskManager,
         api_key: str = None,
         secret: str = None,
     ):
@@ -30,6 +32,7 @@ class BybitWSClient(WSClient):
             url,
             limiter=Limiter(500 / 5 * 60),
             handler=handler,
+            task_manager=task_manager,
             ping_idle_timeout=2,
             specific_ping_msg=orjson.dumps({"op": "ping"}),
             auto_ping_strategy="ping_when_idle",

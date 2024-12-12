@@ -5,6 +5,8 @@ from typing import Dict
 from tradebot.constants import AccountType, ExchangeType
 from tradebot.config import Config
 from tradebot.strategy import Strategy
+from tradebot.core.cache import AsyncCache
+from tradebot.core.oms import OrderManagerSystem
 from tradebot.base import ExchangeManager, PublicConnector, PrivateConnector
 from tradebot.exchange.bybit import BybitExchangeManager, BybitPrivateConnector, BybitPublicConnector, BybitAccountType
 from tradebot.exchange.binance import BinanceExchangeManager
@@ -25,9 +27,22 @@ class Engine:
         self._private_connectors: Dict[AccountType, PrivateConnector] = None
         
         trader_id = f"{self._config.strategy_id}-{self._config.user_id}"
+        
+        self._cache: AsyncCache = AsyncCache(
+            strategy_id=config.strategy_id,
+            user_id=config.user_id,
+            sync_interval=config.cache_sync_interval,
+            expire_time=config.cache_expire_time,
+        )
+                
         self._msgbus = MessageBus(
             trader_id=TraderId(trader_id),
             clock=LiveClock(),
+        )
+        
+        self._oms = OrderManagerSystem(
+            cache=self._cache,
+            msgbus=self._msgbus,
         )
     
     def _build_public_connectors(self):
@@ -113,20 +128,3 @@ class Engine:
             await asyncio.gather(*tasks)
         except asyncio.CancelledError as e:
             print(f"Cancelled: {e}")
-
-    def stop(self):
-        self._is_running = False
-        for connector in self.connectors:
-            connector.stop()
-        self.loop.stop()
-
-    def dispose(self):
-        if self.loop.is_running():
-            print("Cannot close a running event loop")
-        else:
-            print("Closing event loop")
-            self.loop.close()
-
-    def _loop_sig_handler(self, sig: signal.Signals):
-        print(f"Received {sig.name}, shutting down")
-        self.stop()

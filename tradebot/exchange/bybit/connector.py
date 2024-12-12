@@ -3,11 +3,10 @@ from typing import Dict
 from decimal import Decimal
 from collections import defaultdict
 from tradebot.base import PublicConnector, PrivateConnector
-from tradebot.core.cache import AsyncCache
 from tradebot.core.nautilius_core import MessageBus
+from tradebot.core.entity import TaskManager
 from tradebot.types import BookL1, Order, Trade
 from tradebot.constants import (
-    ExchangeType,
     OrderSide,
     OrderStatus,
     OrderType,
@@ -41,6 +40,7 @@ class BybitPublicConnector(PublicConnector):
         account_type: BybitAccountType,
         exchange: BybitExchangeManager,
         msgbus: MessageBus,
+        task_manager: TaskManager,
     ):
         if account_type in {BybitAccountType.ALL, BybitAccountType.ALL_TESTNET}:
             raise ValueError(
@@ -53,7 +53,9 @@ class BybitPublicConnector(PublicConnector):
             market_id=exchange.market_id,
             exchange_id=exchange.exchange_id,
             ws_client=BybitWSClient(
-                account_type=account_type, handler=self._ws_msg_handler
+                account_type=account_type,
+                handler=self._ws_msg_handler,
+                task_manager=task_manager,
             ),
             msgbus=msgbus,
         )
@@ -90,10 +92,10 @@ class BybitPublicConnector(PublicConnector):
                 self._handle_orderbook(raw, ws_msg.topic)
             elif "publicTrade" in ws_msg.topic:
                 self._handle_trade(raw)
-            
+
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
-    
+
     def _handle_trade(self, raw: bytes):
         msg: BybitWsTradeMsg = self._ws_msg_trade_decoder.decode(raw)
         for d in msg.data:
@@ -107,7 +109,6 @@ class BybitPublicConnector(PublicConnector):
                 timestamp=msg.ts,
             )
             self._msgbus.send(endpoint="trade", msg=trade)
-            
 
     def _handle_orderbook(self, raw: bytes, topic: str):
         msg: BybitWsOrderbookDepthMsg = self._ws_msg_orderbook_decoder.decode(raw)
@@ -121,7 +122,7 @@ class BybitPublicConnector(PublicConnector):
         ask, ask_size = (
             (res["asks"][0][0], res["asks"][0][1]) if res["asks"] else (0, 0)
         )
-        
+
         bookl1 = BookL1(
             exchange=self._exchange_id,
             symbol=symbol,
@@ -146,7 +147,6 @@ class BybitPublicConnector(PublicConnector):
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
         id = market.id
         await self._ws_client.subscribe_trade(id)
-        
 
     async def subscribe_kline(self, symbol: str, interval: str):
         market = self._market.get(symbol, None)
@@ -167,8 +167,7 @@ class BybitPrivateConnector(PrivateConnector):
         exchange: BybitExchangeManager,
         account_type: BybitAccountType,
         msgbus: MessageBus,
-        strategy_id: str = None,
-        user_id: str = None,
+        task_manager: TaskManager,
         rate_limit: float = None,
     ):
         # all the private endpoints are the same for all account types, so no need to pass account_type
@@ -190,13 +189,9 @@ class BybitPrivateConnector(PrivateConnector):
             ws_client=BybitWSClient(
                 account_type=account_type,
                 handler=self._ws_msg_handler,
+                task_manager=task_manager,
                 api_key=exchange.api_key,
                 secret=exchange.secret,
-            ),
-            cache=AsyncCache(
-                account_type="BYBIT",
-                strategy_id=strategy_id,
-                user_id=user_id,
             ),
             msgbus=msgbus,
             rate_limit=rate_limit,
@@ -212,8 +207,6 @@ class BybitPrivateConnector(PrivateConnector):
         self._ws_msg_order_update_decoder = msgspec.json.Decoder(BybitWsOrderMsg)
 
     async def connect(self):
-        await super().connect()
-        self._task_manager.create_task(self._oms.handle_order_event())
         await self._ws_client.subscribe_order(topic="order")
 
     def _ws_msg_handler(self, raw: bytes):
@@ -268,7 +261,9 @@ class BybitPrivateConnector(PrivateConnector):
                 symbol=market.symbol,
                 status=OrderStatus.CANCELING,
             )
-            self._oms.add_order_msg(order)
+
+            self._msgbus.publish(topic="order", msg=order)
+
             return order
         except Exception as e:
             self._log.error(f"Error canceling order: {e} params: {str(params)}")
@@ -319,7 +314,9 @@ class BybitPrivateConnector(PrivateConnector):
                 position_side
             ).value
 
-        reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop("reduce_only", False)
+        reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop(
+            "reduce_only", False
+        )
         if reduce_only:
             params["reduceOnly"] = True
         params.update(kwargs)
@@ -344,7 +341,7 @@ class BybitPrivateConnector(PrivateConnector):
                 remaining=amount,
                 reduce_only=reduce_only,
             )
-            self._oms.add_order_msg(order)
+            self._msgbus.publish(topic="order", msg=order)
             return order
         except Exception as e:
             self._log.error(f"Error creating order: {e} params: {str(params)}")
@@ -399,7 +396,7 @@ class BybitPrivateConnector(PrivateConnector):
                 position_side=BybitEnumParser.parse_position_side(data.positionIdx),
             )
 
-            self._oms.add_order_msg(order)
+            self._msgbus.publish(topic="order", msg=order)
 
     async def disconnect(self):
         await super().disconnect()

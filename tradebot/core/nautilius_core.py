@@ -32,7 +32,7 @@ def usage():
     msgbus.subscribe(topic = "order", handler=handler2)
     msgbus.subscribe(topic = "order", handler=handler3)
 
-    msgbus.publish("order", clock.timestamp_ns())
+    msgbus.publish(topic="order", msg=clock.timestamp_ns())
     
     
     msgbus.register(endpoint="pos", handler=handler1)

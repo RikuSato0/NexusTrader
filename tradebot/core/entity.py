@@ -1,3 +1,4 @@
+import signal
 import asyncio
 import socket
 
@@ -9,12 +10,25 @@ import time
 import redis
 
 from tradebot.constants import get_redis_config
+from tradebot.core.log import SpdLog
 from tradebot.core.nautilius_core import LiveClock
 
 
 class TaskManager:
-    def __init__(self):
+    def __init__(self, loop: asyncio.AbstractEventLoop):
+        self._log = SpdLog.get_logger(type(self).__name__, level="DEBUG", flush=True)
         self._tasks: List[asyncio.Task] = []
+        self._shutdown_event = asyncio.Event()
+        self._loop = loop
+        self._setup_signal_handlers()
+
+    def _setup_signal_handlers(self):
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            self._loop.add_signal_handler(sig, lambda: asyncio.create_task(self._shutdown()))
+
+    async def _shutdown(self):
+        self._log.info("Shutdown signal received, cleaning up...")
+        self._shutdown_event.set()
 
     def create_task(self, coro: asyncio.coroutines) -> asyncio.Task:
         task = asyncio.create_task(coro)
@@ -23,18 +37,44 @@ class TaskManager:
         return task
 
     def _handle_task_done(self, task: asyncio.Task):
-        self._tasks.remove(task)
         try:
+            self._tasks.remove(task)
             task.result()
         except asyncio.CancelledError:
             pass
-        except Exception:
+        except Exception as e:
+            self._log.error(f"Error during task done: {e}")
+            raise
+
+    async def wait(self):
+        try:
+            if self._tasks:
+                await self._shutdown_event.wait()
+                await self.cancel()
+        except Exception as e:
+            self._log.error(f"Error during wait: {e}")
             raise
 
     async def cancel(self):
-        for task in self._tasks:
-            task.cancel()
-        await asyncio.gather(*self._tasks, return_exceptions=True)
+        try:
+            for task in self._tasks:
+                if not task.done():
+                    task.cancel()
+
+            if self._tasks:
+                results = await asyncio.gather(*self._tasks, return_exceptions=True)
+
+                for result in results:
+                    if isinstance(result, Exception) and not isinstance(
+                        result, asyncio.CancelledError
+                    ):
+                        self._log.error(f"Task failed during cancellation: {result}")
+
+        except Exception as e:
+            self._log.error(f"Error during cancellation: {e}")
+            raise
+        finally:
+            self._tasks.clear()
 
 
 class EventSystem:

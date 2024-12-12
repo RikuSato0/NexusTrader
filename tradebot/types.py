@@ -40,7 +40,7 @@ class InstrumentId(Struct):
             type = InstrumentType.SPOT
             
                 
-        return cls(symbol=symbol, exchange=ExchangeType(exchange), type=type)
+        return cls(symbol=symbol, exchange=ExchangeType(exchange.lower()), type=type)
 
 
 

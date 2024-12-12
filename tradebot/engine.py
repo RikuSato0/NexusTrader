@@ -234,6 +234,7 @@ class Engine:
     async def _start(self):
         await self._cache.start()
         await self._oms.start()
+        await self._start_connectors()
         await self._task_manager.wait()
 
     async def _dispose(self):

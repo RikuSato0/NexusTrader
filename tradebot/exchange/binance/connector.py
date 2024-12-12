@@ -1,15 +1,12 @@
-
 import asyncio
 import orjson
 import msgspec
-import time
 from typing import Dict, Any
 from decimal import Decimal
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.core.entity import EventSystem
 from tradebot.core.cache import AsyncCache
 from tradebot.constants import (
-    EventType,
     OrderSide,
     OrderStatus,
     OrderType,
@@ -23,15 +20,25 @@ from tradebot.exchange.binance.rest_api import BinanceApiClient
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWSClient
 from tradebot.exchange.binance.exchange import BinanceExchangeManager
-from tradebot.exchange.binance.types import BinanceWsMessageGeneral, BinanceWsEventType, BinanceTradeData
+from tradebot.exchange.binance.constants import BinanceWsEventType, BinanceUserDataStreamWsEventType
+from tradebot.exchange.binance.types import (
+    BinanceWsMessageGeneral,
+    BinanceTradeData,
+    BinanceSpotBookTicker,
+    BinanceFuturesBookTicker,
+    BinanceKline,
+    BinanceMarkPrice,
+    BinanceUserDataStreamMsg,
+)
 from tradebot.core.nautilius_core import MessageBus
-from tradebot.core.entity import TaskManager
+from tradebot.core.entity import TaskManager, RateLimit
+
 
 class BinancePublicConnector(PublicConnector):
     _ws_client: BinanceWSClient
     _account_type: BinanceAccountType
     _market: Dict[str, BinanceMarket]
-    _market_id: Dict[str, BinanceMarket]
+    _market_id: Dict[str, str]
 
     def __init__(
         self,
@@ -57,9 +64,15 @@ class BinancePublicConnector(PublicConnector):
             ),
             msgbus=msgbus,
         )
-        
+
         self._ws_general_decoder = msgspec.json.Decoder(BinanceWsMessageGeneral)
         self._ws_trade_decoder = msgspec.json.Decoder(BinanceTradeData)
+        self._ws_spot_book_ticker_decoder = msgspec.json.Decoder(BinanceSpotBookTicker)
+        self._ws_futures_book_ticker_decoder = msgspec.json.Decoder(
+            BinanceFuturesBookTicker
+        )
+        self._ws_kline_decoder = msgspec.json.Decoder(BinanceKline)
+        self._ws_mark_price_decoder = msgspec.json.Decoder(BinanceMarkPrice)
 
     @property
     def market_type(self):
@@ -96,16 +109,16 @@ class BinancePublicConnector(PublicConnector):
                 case BinanceWsEventType.TRADE:
                     self._parse_trade(raw)
                 case BinanceWsEventType.BOOK_TICKER:
-                    self._parse_book_ticker(msg)
+                    self._parse_futures_book_ticker(raw)
                 case BinanceWsEventType.KLINE:
-                    self._parse_kline(msg)
+                    self._parse_kline(raw)
                 case BinanceWsEventType.MARK_PRICE_UPDATE:
-                    self._parse_mark_price(msg)
+                    self._parse_mark_price(raw)
         elif msg.u:
             # spot book ticker doesn't have "e" key. FUCK BINANCE
-            self._parse_book_ticker(msg)
+            self._parse_spot_book_ticker(raw)
 
-    def _parse_kline(self, res: Dict[str, Any]) -> Kline:
+    def _parse_kline(self, raw: bytes) -> Kline:
         """
         {
             "e": "kline",     // Event type
@@ -132,22 +145,23 @@ class BinancePublicConnector(PublicConnector):
             }
         }
         """
-        id = res["s"] + self.market_type
-        market = self._market_id[id]
+        res = self._ws_kline_decoder.decode(raw)
+        id = res.s + self.market_type
+        symbol = self._market_id[id]
 
         ticker = Kline(
             exchange=self._exchange_id,
-            symbol=market.symbol,
-            interval=res["k"]["i"],
-            open=float(res["k"]["o"]),
-            high=float(res["k"]["h"]),
-            low=float(res["k"]["l"]),
-            close=float(res["k"]["c"]),
-            volume=float(res["k"]["v"]),
-            timestamp=res.get("E", time.time_ns() // 1_000_000),
+            symbol=symbol,
+            interval=res.k.i,
+            open=float(res.k.o),
+            high=float(res.k.h),
+            low=float(res.k.l),
+            close=float(res.k.c),
+            volume=float(res.k.v),
+            timestamp=res.E,
         )
         self._log.debug(f"{ticker}")
-        EventSystem.emit(EventType.KLINE, ticker)
+        self._msgbus.send(endpoint="kline", msg=ticker)
 
     def _parse_trade(self, raw: bytes) -> Trade:
         """
@@ -172,23 +186,23 @@ class BinancePublicConnector(PublicConnector):
             "A":"40.66000000"  // best ask qty
         }
         """
-        
+
         res = self._ws_trade_decoder.decode(raw)
-        
+
         id = res.s + self.market_type
-        market = self._market_id[id]  # map exchange id to ccxt symbol
+        symbol = self._market_id[id]  # map exchange id to ccxt symbol
 
         trade = Trade(
             exchange=self._exchange_id,
-            symbol=market.symbol,
-            price=float(res["p"]),
-            size=float(res["q"]),
-            timestamp=res.get("T", time.time_ns() // 1_000_000),
+            symbol=symbol,
+            price=float(res.p),
+            size=float(res.q),
+            timestamp=res.T,
         )
         self._log.debug(f"{trade}")
-        EventSystem.emit(EventType.TRADE, trade)
+        self._msgbus.send(endpoint="trade", msg=trade)
 
-    def _parse_book_ticker(self, res: Dict[str, Any]) -> BookL1:
+    def _parse_spot_book_ticker(self, raw: bytes) -> BookL1:
         """
         {
             "u":400900217,     // order book updateId
@@ -199,22 +213,39 @@ class BinancePublicConnector(PublicConnector):
             "A":"40.66000000"  // best ask qty
         }
         """
-        id = res["s"] + self.market_type
-        market = self._market_id[id]
+        res = self._ws_spot_book_ticker_decoder.decode(raw)
+        id = res.s + self.market_type
+        symbol = self._market_id[id]
 
         bookl1 = BookL1(
             exchange=self._exchange_id,
-            symbol=market.symbol,
-            bid=float(res["b"]),
-            ask=float(res["a"]),
-            bid_size=float(res["B"]),
-            ask_size=float(res["A"]),
-            timestamp=res.get("T", time.time_ns() // 1_000_000),
+            symbol=symbol,
+            bid=float(res.b),
+            ask=float(res.a),
+            bid_size=float(res.B),
+            ask_size=float(res.A),
+            timestamp=self._clock.timestamp_ms(),
         )
         self._log.debug(f"{bookl1}")
-        EventSystem.emit(EventType.BOOKL1, bookl1)
+        self._msgbus.send(endpoint="bookl1", msg=bookl1)
+    
+    def _parse_futures_book_ticker(self, raw: bytes) -> BookL1:
+        res = self._ws_futures_book_ticker_decoder.decode(raw)
+        id = res.s + self.market_type
+        symbol = self._market_id[id]
+        bookl1 = BookL1(
+            exchange=self._exchange_id,
+            symbol=symbol,
+            bid=float(res.b),
+            ask=float(res.a),
+            bid_size=float(res.B),
+            ask_size=float(res.A),
+            timestamp=res.E,
+        )
+        self._log.debug(f"{bookl1}")
+        self._msgbus.send(endpoint="bookl1", msg=bookl1)
 
-    def _parse_mark_price(self, res: Dict[str, Any]):
+    def _parse_mark_price(self, raw: bytes):
         """
          {
             "e": "markPriceUpdate",     // Event type
@@ -227,51 +258,52 @@ class BinancePublicConnector(PublicConnector):
             "T": 1562306400000          // Next funding time
         }
         """
-        id = res["s"] + self.market_type
-        market = self._market_id[id]
+        res = self._ws_mark_price_decoder.decode(raw)
+        id = res.s + self.market_type
+        symbol = self._market_id[id]
 
         mark_price = MarkPrice(
             exchange=self._exchange_id,
-            symbol=market.symbol,
-            price=float(res["p"]),
-            timestamp=res.get("E", time.time_ns() // 1_000_000),
+            symbol=symbol,
+            price=float(res.p),
+            timestamp=res.E,
         )
 
         funding_rate = FundingRate(
             exchange=self._exchange_id,
-            symbol=market.symbol,
-            rate=float(res["r"]),
-            timestamp=res.get("E", time.time_ns() // 1_000_000),
-            next_funding_time=res.get("T", time.time_ns() // 1_000_000),
+            symbol=symbol,
+            rate=float(res.r),
+            timestamp=res.E,
+            next_funding_time=res.T,
         )
 
         index_price = IndexPrice(
             exchange=self._exchange_id,
-            symbol=market.symbol,
-            price=float(res["i"]),
-            timestamp=res.get("E", time.time_ns() // 1_000_000),
+            symbol=symbol,
+            price=float(res.i),
+            timestamp=res.E,
         )
         self._log.debug(f"{mark_price}")
         self._log.debug(f"{funding_rate}")
         self._log.debug(f"{index_price}")
-        EventSystem.emit(EventType.MARK_PRICE, mark_price)
-        EventSystem.emit(EventType.FUNDING_RATE, funding_rate)
-        EventSystem.emit(EventType.INDEX_PRICE, index_price)
+        self._msgbus.send(endpoint="mark_price", msg=mark_price)
+        self._msgbus.send(endpoint="funding_rate", msg=funding_rate)
+        self._msgbus.send(endpoint="index_price", msg=index_price)
 
 
 class BinancePrivateConnector(PrivateConnector):
     _ws_client: BinanceWSClient
     _account_type: BinanceAccountType
     _market: Dict[str, BinanceMarket]
-    _market_id: Dict[str, BinanceMarket]
+    _market_id: Dict[str, str]
 
     def __init__(
         self,
         account_type: BinanceAccountType,
         exchange: BinanceExchangeManager,
-        strategy_id: str = None,
-        user_id: str = None,
-        rate_limit: float = None,
+        msgbus: MessageBus,
+        task_manager: TaskManager,
+        rate_limit: RateLimit | None = None,
     ):
         super().__init__(
             account_type=account_type,
@@ -279,13 +311,11 @@ class BinancePrivateConnector(PrivateConnector):
             market_id=exchange.market_id,
             exchange_id=exchange.exchange_id,
             ws_client=BinanceWSClient(
-                account_type=account_type, handler=self._ws_msg_handler
-            ),
-            cache=AsyncCache(
                 account_type=account_type,
-                strategy_id=strategy_id,
-                user_id=user_id,
+                handler=self._ws_msg_handler,
+                task_manager=task_manager,
             ),
+            msgbus=msgbus,
             rate_limit=rate_limit,
         )
 
@@ -294,6 +324,9 @@ class BinancePrivateConnector(PrivateConnector):
             secret=exchange.secret,
             testnet=account_type.is_testnet,
         )
+        
+        self._task_manager = task_manager
+        self._ws_msg_general_decoder = msgspec.json.Decoder(BinanceUserDataStreamMsg)
 
     @property
     def market_type(self):
@@ -350,22 +383,20 @@ class BinancePrivateConnector(PrivateConnector):
                     break
 
     async def connect(self):
-        await super().connect()
         listen_key = await self._start_user_data_stream()
-        if listen_key:
-            self._task_manager.create_task(
-                self._keep_alive_user_data_stream(listen_key)
-            )
-            await self._ws_client.subscribe_user_data_stream(listen_key)
+        self._task_manager.create_task(
+            self._keep_alive_user_data_stream(listen_key)
+        )
+        await self._ws_client.subscribe_user_data_stream(listen_key)
 
-    def _ws_msg_handler(self, msg):
-        msg = orjson.loads(msg)
-        if "e" in msg:
-            match msg["e"]:
-                case "ORDER_TRADE_UPDATE":
-                    self._parse_order_trade_update(msg)
-                case "executionReport":
-                    self._parse_execution_report(msg)
+    def _ws_msg_handler(self, raw: bytes):
+        msg = self._ws_msg_general_decoder.decode(raw)
+        if msg.e:
+            match msg.e:
+                case BinanceUserDataStreamWsEventType.ORDER_TRADE_UPDATE:
+                    self._parse_order_trade_update(raw)
+                case BinanceUserDataStreamWsEventType.EXECUTION_REPORT:
+                    self._parse_execution_report(raw)
 
     def _parse_order_trade_update(self, res: Dict[str, Any]) -> Order:
         """

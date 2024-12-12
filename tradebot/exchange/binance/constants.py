@@ -2,6 +2,27 @@ from enum import Enum
 from tradebot.constants import AccountType, OrderStatus, OrderType
 
 
+class BinanceKlineInterval(Enum):
+    """
+    Represents a Binance kline chart interval.
+    """
+
+    SECOND_1 = "1s"
+    MINUTE_1 = "1m"
+    MINUTE_3 = "3m"
+    MINUTE_5 = "5m"
+    MINUTE_15 = "15m"
+    MINUTE_30 = "30m"
+    HOUR_1 = "1h"
+    HOUR_2 = "2h"
+    HOUR_4 = "4h"
+    HOUR_6 = "6h"
+    HOUR_8 = "8h"
+    HOUR_12 = "12h"
+    DAY_1 = "1d"
+    DAY_3 = "3d"
+    WEEK_1 = "1w"
+    MONTH_1 = "1M"
 
 class BinanceWsEventType(Enum):
     TRADE = "trade"
@@ -10,6 +31,21 @@ class BinanceWsEventType(Enum):
     KLINE = "kline"
     MARK_PRICE_UPDATE = "markPriceUpdate"
     DEPTH_UPDATE = "depthUpdate"
+    
+
+class BinanceUserDataStreamWsEventType(Enum):
+    MARGIN_CALL = "MARGIN_CALL"
+    ACCOUNT_UPDATE = "ACCOUNT_UPDATE"
+    ORDER_TRADE_UPDATE = "ORDER_TRADE_UPDATE"
+    ACCOUNT_CONFIG_UPDATE = "ACCOUNT_CONFIG_UPDATE"
+    STRATEGY_UPDATE = "STRATEGY_UPDATE"
+    GRID_UPDATE = "GRID_UPDATE"
+    CONDITIONAL_ORDER_TIGGER_REJECT = "CONDITIONAL_ORDER_TIGGER_REJECT"
+    OUT_BOUND_ACCOUNT_POSITION = "outboundAccountPosition"
+    BALANCE_UPDATE = "balanceUpdate"
+    EXECUTION_REPORT = "executionReport"
+    LISTING_STATUS = "listingStatus"
+    LISTEN_KEY_EXPIRED = "listenKeyExpired"
 
 
 class BinanceOrderType(Enum):

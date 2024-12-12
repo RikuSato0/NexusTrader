@@ -297,6 +297,7 @@ class PublicConnector(ABC):
         self._exchange_id = exchange_id
         self._ws_client = ws_client
         self._msgbus = msgbus
+        self._clock = LiveClock()
         
     @property
     def account_type(self):

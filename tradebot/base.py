@@ -44,7 +44,7 @@ class ExchangeManager(ABC):
         )
         self.is_testnet = config.get("sandbox", False)
         self.market: Dict[str, BaseMarket] = {}
-        self.market_id: Dict[str, BaseMarket] = {}
+        self.market_id: Dict[str, str] = {}
 
         if not self.api_key or not self.secret:
             warnings.warn(

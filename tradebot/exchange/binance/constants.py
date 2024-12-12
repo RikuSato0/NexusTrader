@@ -1,6 +1,17 @@
 from enum import Enum
 from tradebot.constants import AccountType, OrderStatus, OrderType
 
+
+
+class BinanceWsEventType(Enum):
+    TRADE = "trade"
+    AGG_TRADE = "aggTrade"
+    BOOK_TICKER = "bookTicker"
+    KLINE = "kline"
+    MARK_PRICE_UPDATE = "markPriceUpdate"
+    DEPTH_UPDATE = "depthUpdate"
+
+
 class BinanceOrderType(Enum):
     LIMIT = "LIMIT"
     MARKET = "MARKET"

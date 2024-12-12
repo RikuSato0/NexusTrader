@@ -5,14 +5,23 @@ from aiolimiter import AsyncLimiter
 
 from tradebot.base import WSClient
 from tradebot.exchange.binance.constants import BinanceAccountType
+from tradebot.core.entity import TaskManager
 
 
 class BinanceWSClient(WSClient):
-    def __init__(self, account_type: BinanceAccountType, handler: Callable[..., Any]):
+    def __init__(
+        self,
+        account_type: BinanceAccountType,
+        handler: Callable[..., Any],
+        task_manager: TaskManager,
+    ):
         self._account_type = account_type
         url = account_type.ws_url
         super().__init__(
-            url, limiter=AsyncLimiter(max_rate=3, time_period=1), handler=handler
+            url,
+            limiter=AsyncLimiter(max_rate=3, time_period=1),
+            handler=handler,
+            task_manager=task_manager,
         )
 
     async def _subscribe(self, params: str, subscription_id: str):

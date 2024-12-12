@@ -1,8 +1,8 @@
-import time
+
 import asyncio
 import orjson
-
-
+import msgspec
+import time
 from typing import Dict, Any
 from decimal import Decimal
 from tradebot.base import PublicConnector, PrivateConnector
@@ -23,7 +23,9 @@ from tradebot.exchange.binance.rest_api import BinanceApiClient
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWSClient
 from tradebot.exchange.binance.exchange import BinanceExchangeManager
-
+from tradebot.exchange.binance.types import BinanceWsMessageGeneral, BinanceWsEventType, BinanceTradeData
+from tradebot.core.nautilius_core import MessageBus
+from tradebot.core.entity import TaskManager
 
 class BinancePublicConnector(PublicConnector):
     _ws_client: BinanceWSClient
@@ -35,6 +37,8 @@ class BinancePublicConnector(PublicConnector):
         self,
         account_type: BinanceAccountType,
         exchange: BinanceExchangeManager,
+        msgbus: MessageBus,
+        task_manager: TaskManager,
     ):
         if not account_type.is_spot and not account_type.is_future:
             raise ValueError(
@@ -47,9 +51,15 @@ class BinancePublicConnector(PublicConnector):
             market_id=exchange.market_id,
             exchange_id=exchange.exchange_id,
             ws_client=BinanceWSClient(
-                account_type=account_type, handler=self._ws_msg_handler
+                account_type=account_type,
+                handler=self._ws_msg_handler,
+                task_manager=task_manager,
             ),
+            msgbus=msgbus,
         )
+        
+        self._ws_general_decoder = msgspec.json.Decoder(BinanceWsMessageGeneral)
+        self._ws_trade_decoder = msgspec.json.Decoder(BinanceTradeData)
 
     @property
     def market_type(self):
@@ -79,19 +89,19 @@ class BinancePublicConnector(PublicConnector):
         symbol = market.id if market else symbol
         await self._ws_client.subscribe_kline(symbol, interval)
 
-    def _ws_msg_handler(self, msg):
-        msg = orjson.loads(msg)
-        if "e" in msg:
-            match msg["e"]:
-                case "trade":
-                    self._parse_trade(msg)
-                case "bookTicker":
+    def _ws_msg_handler(self, raw: bytes):
+        msg = self._ws_general_decoder.decode(raw)
+        if msg.e:
+            match msg.e:
+                case BinanceWsEventType.TRADE:
+                    self._parse_trade(raw)
+                case BinanceWsEventType.BOOK_TICKER:
                     self._parse_book_ticker(msg)
-                case "kline":
+                case BinanceWsEventType.KLINE:
                     self._parse_kline(msg)
-                case "markPriceUpdate":
+                case BinanceWsEventType.MARK_PRICE_UPDATE:
                     self._parse_mark_price(msg)
-        elif "u" in msg:
+        elif msg.u:
             # spot book ticker doesn't have "e" key. FUCK BINANCE
             self._parse_book_ticker(msg)
 
@@ -139,7 +149,7 @@ class BinancePublicConnector(PublicConnector):
         self._log.debug(f"{ticker}")
         EventSystem.emit(EventType.KLINE, ticker)
 
-    def _parse_trade(self, res: Dict[str, Any]) -> Trade:
+    def _parse_trade(self, raw: bytes) -> Trade:
         """
         {
             "e": "trade",       // Event type
@@ -162,7 +172,10 @@ class BinancePublicConnector(PublicConnector):
             "A":"40.66000000"  // best ask qty
         }
         """
-        id = res["s"] + self.market_type
+        
+        res = self._ws_trade_decoder.decode(raw)
+        
+        id = res.s + self.market_type
         market = self._market_id[id]  # map exchange id to ccxt symbol
 
         trade = Trade(

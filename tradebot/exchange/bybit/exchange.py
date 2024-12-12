@@ -8,7 +8,7 @@ from tradebot.exchange.bybit.types import BybitMarket
 class BybitExchangeManager(ExchangeManager):
     api: ccxt.bybit
     market = Dict[str, BybitMarket]
-    market_id = Dict[str, BybitMarket]
+    market_id = Dict[str, str]
     
     
     def __init__(self, config: Dict[str, Any] = None):

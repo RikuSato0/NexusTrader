@@ -9,7 +9,7 @@ from tradebot.types import InstrumentId
 class BinanceExchangeManager(ExchangeManager):
     api: ccxt.binance
     market: Dict[str, BinanceMarket] 
-    market_id: Dict[str, BinanceMarket]
+    market_id: Dict[str, str]
     
     def __init__(self, config: Dict[str, Any] = None):
         config = config or {}
@@ -30,24 +30,24 @@ class BinanceExchangeManager(ExchangeManager):
             
     def load_markets(self):
         market = self.api.load_markets()
-        for k,v in market.items():
+        for symbol,mkt in market.items():
             try:
-                v_json = orjson.dumps(v)
-                v = msgspec.json.decode(v_json, type=BinanceMarket)
+                mkt_json = orjson.dumps(mkt)
+                mkt = msgspec.json.decode(mkt_json, type=BinanceMarket)
                 
-                if v.spot or v.future or v.linear or v.inverse:
-                    symbol = self.parse_symbol(v)
-                    v.symbol = symbol
-                    self.market[symbol] = v
-                    if v.type.value == "spot":
-                        self.market_id[f"{v.id}_spot"] = v
-                    elif v.linear:
-                        self.market_id[f"{v.id}_linear"] = v
-                    elif v.inverse:
-                        self.market_id[f"{v.id}_inverse"] = v
+                if mkt.spot or mkt.future or mkt.linear or mkt.inverse:
+                    symbol = self.parse_symbol(mkt)
+                    mkt.symbol = symbol
+                    self.market[symbol] = mkt
+                    if mkt.type.value == "spot":
+                        self.market_id[f"{mkt.id}_spot"] = symbol
+                    elif mkt.linear:
+                        self.market_id[f"{mkt.id}_linear"] = symbol
+                    elif mkt.inverse:
+                        self.market_id[f"{mkt.id}_inverse"] = symbol
                 
             except Exception as e:
-                print(f"Error: {e}, {k}, {v}")
+                print(f"Error: {e}, {symbol}, {mkt}")
                 continue
 
 def check():

@@ -2,7 +2,26 @@ import msgspec
 from typing import Any, Dict, List
 from tradebot.types import Order, BaseMarket
 from tradebot.constants import OrderSide, TimeInForce
-from tradebot.exchange.binance.constants import BinanceOrderStatus, BinanceOrderType, BinancePositionSide
+from tradebot.exchange.binance.constants import BinanceOrderStatus, BinanceOrderType, BinancePositionSide, BinanceWsEventType
+
+
+
+class BinanceTradeData(msgspec.Struct):
+    e: BinanceWsEventType 
+    E: int 
+    s: str 
+    t: int
+    p: str 
+    q: str 
+    T: int 
+    m: bool
+
+class BinanceWsMessageGeneral(msgspec.Struct):
+    e: BinanceWsEventType | None = None
+    u: int | None = None
+    
+  
+
 
 class BinanceListenKey(msgspec.Struct):
     listenKey: str 

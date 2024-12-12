@@ -1,5 +1,5 @@
 Core Components
-=============
+===============
 
 .. toctree::
    :maxdepth: 2
@@ -16,14 +16,16 @@ Cache System
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Entity Management
----------------
+----------------
 
 .. automodule:: tradebot.core.entity
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Logging
 -------
@@ -32,11 +34,13 @@ Logging
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Order Management System
----------------------
+----------------------
 
 .. automodule:: tradebot.core.oms
    :members:
    :undoc-members:
-   :show-inheritance: 
+   :show-inheritance:
+   :no-index:

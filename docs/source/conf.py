@@ -14,6 +14,7 @@ extensions = [
     'sphinx.ext.viewcode', 
     'sphinx.ext.intersphinx',
     'sphinx_autodoc_typehints',
+    'sphinx.ext.todo',
 ]
 
 templates_path = ['_templates']
@@ -36,3 +37,9 @@ autodoc_default_options = {
     'undoc-members': True,
     'exclude-members': '__weakref__'
 }
+
+# Todo settings
+todo_include_todos = True
+
+# Mock modules that might cause import issues
+autodoc_mock_imports = ['redis', 'aioredis', 'ccxt', 'ccxt.pro']

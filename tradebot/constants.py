@@ -1,11 +1,15 @@
 import os
+import sys
 from configparser import ConfigParser
 from typing import Literal, Union, Dict, List
 from enum import Enum
 
+def is_sphinx_build():
+    return 'sphinx' in sys.modules
+
 if not os.path.exists(".keys/"):
     os.makedirs(".keys/")
-if not os.path.exists(".keys/config.cfg"):
+if not os.path.exists(".keys/config.cfg") and not is_sphinx_build():
     raise FileNotFoundError(
         "Config file not found, please create a config file at .keys/config.cfg"
     )

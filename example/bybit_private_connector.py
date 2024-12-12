@@ -1,9 +1,9 @@
 import asyncio
-from tradebot.constants import CONFIG
+from tradebot.constants import KEYS
 from tradebot.exchange.bybit import BybitPrivateConnector, BybitExchangeManager, BybitAccountType
 
-BYBIT_API_KEY = CONFIG['bybit_testnet']['API_KEY']
-BYBIT_API_SECRET = CONFIG['bybit_testnet']['SECRET']
+BYBIT_API_KEY = KEYS['bybit_testnet']['API_KEY']
+BYBIT_API_SECRET = KEYS['bybit_testnet']['SECRET']
 
 async def main():
     try:

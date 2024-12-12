@@ -1,0 +1,60 @@
+from tradebot.constants import KEYS
+from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
+from tradebot.strategy import Strategy
+from tradebot.constants import ExchangeType
+from tradebot.exchange.bybit import BybitAccountType
+from tradebot.types import BookL1
+from tradebot.engine import Engine
+
+BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]
+BYBIT_SECRET = KEYS["bybit_testnet_2"]["SECRET"]
+
+
+class Demo(Strategy):
+    def __init__(self):
+        super().__init__()
+        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT", "ETHUSDT-PERP.BYBIT"])
+        self.subscribe_bookl1(symbols=["BTCUSDT.BYBIT", "ETHUSDT.BYBIT"])
+    
+    def on_bookl1(self, data: BookL1):
+        print(data)
+    
+
+config = Config(
+    strategy_id="buy_and_sell",
+    user_id="user_test",
+    strategy=Demo(),
+    basic_config={
+        ExchangeType.BYBIT: BasicConfig(
+            exchange_id=ExchangeType.BYBIT,
+            api_key=BYBIT_API_KEY,
+            secret=BYBIT_SECRET,
+            testnet=True,
+        )
+    },
+    public_conn_config={
+        ExchangeType.BYBIT: [
+            PublicConnectorConfig(
+                account_type=BybitAccountType.LINEAR_TESTNET,
+            ),
+            PublicConnectorConfig(
+                account_type=BybitAccountType.SPOT_TESTNET,
+            ),
+        ]
+    },
+    private_conn_config={
+        ExchangeType.BYBIT: [
+            PrivateConnectorConfig(
+                account_type=BybitAccountType.ALL_TESTNET,
+            )
+        ]
+    }
+)
+
+engine = Engine(config)
+
+if __name__ == "__main__":
+    try:
+        engine.start()
+    finally:
+        engine.dispose()

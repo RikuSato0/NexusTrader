@@ -1,11 +1,11 @@
 import asyncio
 import time
-from tradebot.constants import CONFIG
+from tradebot.constants import KEYS
 from tradebot.exchange.okx.rest_api import OkxApiClient
 
-OKX_API_KEY = CONFIG["okex_demo"]["API_KEY"]
-OKX_API_SECRET = CONFIG["okex_demo"]["SECRET"]
-OKX_PASSPHRASE = CONFIG["okex_demo"]["PASSPHRASE"]
+OKX_API_KEY = KEYS["okex_demo"]["API_KEY"]
+OKX_API_SECRET = KEYS["okex_demo"]["SECRET"]
+OKX_PASSPHRASE = KEYS["okex_demo"]["PASSPHRASE"]
 
 async def main():
     rest_api = OkxApiClient(

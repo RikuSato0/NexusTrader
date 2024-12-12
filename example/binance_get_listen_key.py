@@ -1,12 +1,12 @@
 import asyncio
 
-from tradebot.constants import CONFIG
+from tradebot.constants import KEYS
 from tradebot.exchange._binance import BinanceRestApi
 from tradebot.constants import BinanceAccountType
 
 
-BINANCE_API_KEY = CONFIG['binance_future_testnet']['API_KEY']
-BINANCE_API_SECRET = CONFIG['binance_future_testnet']['SECRET']
+BINANCE_API_KEY = KEYS['binance_future_testnet']['API_KEY']
+BINANCE_API_SECRET = KEYS['binance_future_testnet']['SECRET']
 
 
 async def main():

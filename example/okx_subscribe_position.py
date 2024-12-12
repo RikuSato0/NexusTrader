@@ -6,12 +6,12 @@ from pprint import pprint
 
 
 from tradebot.exchange import OkxWebsocketManager
-from tradebot.constants import CONFIG, Url
+from tradebot.constants import KEYS, Url
 
-OKX_API_KEY = CONFIG['okex_demo']['API_KEY']
-OKX_SECRET = CONFIG['okex_demo']['SECRET']
-OKX_PASSPHRASE = CONFIG['okex_demo']['PASSPHRASE']
-OKX_USER = CONFIG['okex_demo']['USER']
+OKX_API_KEY = KEYS['okex_demo']['API_KEY']
+OKX_SECRET = KEYS['okex_demo']['SECRET']
+OKX_PASSPHRASE = KEYS['okex_demo']['PASSPHRASE']
+OKX_USER = KEYS['okex_demo']['USER']
 
 
 def cb(msg):

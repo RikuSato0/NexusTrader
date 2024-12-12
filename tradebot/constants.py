@@ -10,8 +10,8 @@ if not os.path.exists(".keys/config.cfg"):
         "Config file not found, please create a config file at .keys/config.cfg"
     )
 
-CONFIG = ConfigParser()
-CONFIG.read(".keys/config.cfg")
+KEYS = ConfigParser()
+KEYS.read(".keys/config.cfg")
 
 
 def get_redis_config(in_docker: bool = False):
@@ -35,14 +35,14 @@ def get_redis_config(in_docker: bool = False):
         if in_docker:
             return {
                 "host": "redis",
-                "db": CONFIG["redis_config"]["db"],
+                "db": KEYS["redis_config"]["db"],
                 "password": password,
             }
 
         return {
-            "host": CONFIG["redis_config"]["host"],
-            "port": CONFIG["redis_config"]["port"],
-            "db": CONFIG["redis_config"]["db"],
+            "host": KEYS["redis_config"]["host"],
+            "port": KEYS["redis_config"]["port"],
+            "db": KEYS["redis_config"]["db"],
             "password": password,
         }
     except Exception as e:

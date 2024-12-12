@@ -1,5 +1,5 @@
 import asyncio
-from tradebot.constants import CONFIG
+from tradebot.constants import KEYS
 from tradebot.types import Order
 from tradebot.constants import OrderSide, OrderType, OrderStatus
 from tradebot.core import Strategy
@@ -11,8 +11,8 @@ from tradebot.exchange.bybit import (
     BybitExchangeManager,
 )
 
-BYBIT_API_KEY = CONFIG["bybit_testnet_2"]["API_KEY"]
-BYBIT_API_SECRET = CONFIG["bybit_testnet_2"]["SECRET"]
+BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]
+BYBIT_API_SECRET = KEYS["bybit_testnet_2"]["SECRET"]
 
 
 class Demo(Strategy):

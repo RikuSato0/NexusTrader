@@ -29,14 +29,14 @@ API key and secret can be configured by copying ``config_demo.cfg`` to ``config.
     API_KEY = your_api_key
     SECRET = your_api_secret
 
-Then you can import related configurations using ``CONFIG``:
+Then you can import related configurations using ``KEYS``:
 
 .. code-block:: python
 
-    from tradebot.constants import CONFIG
+    from tradebot.constants import KEYS
 
-    BYBIT_API_KEY = CONFIG["bybit_testnet_2"]["API_KEY"]
-    BYBIT_API_SECRET = CONFIG["bybit_testnet_2"]["SECRET"]
+    BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]
+    BYBIT_API_SECRET = KEYS["bybit_testnet_2"]["SECRET"]
 
 Public Market Data
 ^^^^^^^^^^^^^^^^^^
@@ -269,7 +269,7 @@ Here's a simple TWAP strategy example:
 .. code-block:: python
 
     import asyncio
-    from tradebot.constants import CONFIG
+    from tradebot.constants import KEYS
     from tradebot.types import Order
     from tradebot.constants import OrderSide, OrderType, OrderStatus
     from tradebot.strategy import Strategy
@@ -281,8 +281,8 @@ Here's a simple TWAP strategy example:
         BybitExchangeManager,
     )
 
-    BYBIT_API_KEY = CONFIG["bybit_testnet_2"]["API_KEY"]
-    BYBIT_API_SECRET = CONFIG["bybit_testnet_2"]["SECRET"]
+    BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]
+    BYBIT_API_SECRET = KEYS["bybit_testnet_2"]["SECRET"]
 
 
     class Demo(Strategy):

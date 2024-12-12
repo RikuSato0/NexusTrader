@@ -39,14 +39,14 @@ Here's a basic example of how to use TradeBotPro:
 ```python
 import asyncio
 from tradebot.exchange import BinanceExchangeManager, BinanceOrderManager
-from tradebot.constants import CONFIG
+from tradebot.constants import KEYS
 
 async def main():
     config = {
         'exchange_id': 'binance',
         'sandbox': True,
-        'apiKey': CONFIG['binance_future_testnet']['API_KEY'],
-        'secret': CONFIG['binance_future_testnet']['SECRET'],
+        'apiKey': KEYS['binance_future_testnet']['API_KEY'],
+        'secret': KEYS['binance_future_testnet']['SECRET'],
         'enableRateLimit': False,
     }
     

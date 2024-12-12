@@ -16,7 +16,8 @@ from tradebot.constants import (
     PositionSide,
 )
 from tradebot.core.entity import EventSystem
-from tradebot.base import PublicConnector, PrivateConnector, OrderManagerSystem
+from tradebot.base import PublicConnector, PrivateConnector
+from tradebot.core.oms import OrderManagerSystem
 from tradebot.exchange.okx.rest_api import OkxApiClient
 from tradebot.types import Order, OrderSide, OrderType
 from tradebot.exchange.okx.constants import (

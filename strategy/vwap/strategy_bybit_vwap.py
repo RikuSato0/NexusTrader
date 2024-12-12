@@ -8,7 +8,7 @@ import zmq.asyncio
 import orjson
 from typing import Dict, Tuple
 from collections import defaultdict
-from tradebot.constants import CONFIG
+from tradebot.constants import KEYS
 from tradebot.types import Order, BookL1
 from tradebot.constants import OrderSide, OrderType, OrderStatus
 from tradebot.core import Strategy
@@ -24,8 +24,8 @@ from tradebot.exchange.bybit import (
 
 DIR_PATH = os.path.dirname(os.path.abspath(__file__))
 
-BYBIT_API_KEY = CONFIG["bybit"]["API_KEY"]
-BYBIT_API_SECRET = CONFIG["bybit"]["SECRET"]
+BYBIT_API_KEY = KEYS["bybit"]["API_KEY"]
+BYBIT_API_SECRET = KEYS["bybit"]["SECRET"]
 
 
 class BybitSignal:

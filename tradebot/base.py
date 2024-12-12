@@ -254,9 +254,8 @@ class ApiClient(ABC):
         self._ssl_context = ssl.create_default_context(cafile=certifi.where())
         self._session: Optional[aiohttp.ClientSession] = None
         self._clock = LiveClock()
-        self._init_session()
-
-    def _init_session(self):
+        
+    async def _init_session(self):
         if self._session is None:
             timeout = aiohttp.ClientTimeout(total=self._timeout)
             tcp_connector = aiohttp.TCPConnector(
@@ -337,7 +336,6 @@ class PrivateConnector(ABC):
         self._market = market
         self._market_id = market_id
         self._exchange_id = exchange_id
-        self._task_manager = TaskManager()
         self._ws_client = ws_client
         self._clock = LiveClock()
         self._msgbus: MessageBus = msgbus

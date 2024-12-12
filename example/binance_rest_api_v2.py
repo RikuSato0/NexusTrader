@@ -1,15 +1,15 @@
 import asyncio
 import time
 from tradebot.constants import OrderSide, OrderType
-from tradebot.constants import CONFIG
+from tradebot.constants import KEYS
 from tradebot.exchange.binance import BinanceHttpClient, BinanceApiClient
 
 
-BINANCE_API_KEY = CONFIG["binance_future_testnet"]["API_KEY"]
-BINANCE_API_SECRET = CONFIG["binance_future_testnet"]["SECRET"]
+BINANCE_API_KEY = KEYS["binance_future_testnet"]["API_KEY"]
+BINANCE_API_SECRET = KEYS["binance_future_testnet"]["SECRET"]
 
-# BINANCE_API_KEY = CONFIG['binance_uni']['API_KEY']
-# BINANCE_API_SECRET = CONFIG['binance_uni']['SECRET']
+# BINANCE_API_KEY = KEYS['binance_uni']['API_KEY']
+# BINANCE_API_SECRET = KEYS['binance_uni']['SECRET']
 
 async def main():
     

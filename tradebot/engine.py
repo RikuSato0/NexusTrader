@@ -26,7 +26,6 @@ class Engine:
     def set_loop_policy():
         if platform.system() != "Windows":
             import uvloop
-
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
     def __init__(self, config: Config):
@@ -37,13 +36,9 @@ class Engine:
         self._loop = asyncio.new_event_loop()
         self._task_manager = TaskManager(self._loop)
 
-        self._exchanges: Dict[ExchangeType, ExchangeManager] = None
-        self._public_connectors: Dict[AccountType, PublicConnector] = None
-        self._private_connectors: Dict[AccountType, PrivateConnector] = None
-        self._strategy: Strategy = config.strategy
-        self._subscriptions: Dict[
-            DataType, Dict[InstrumentId, str] | Set[InstrumentId]
-        ] = self._strategy._subscriptions
+        self._exchanges: Dict[ExchangeType, ExchangeManager] = {}
+        self._public_connectors: Dict[AccountType, PublicConnector] = {}
+        self._private_connectors: Dict[AccountType, PrivateConnector] = {}
 
         trader_id = f"{self._config.strategy_id}-{self._config.user_id}"
 
@@ -65,6 +60,13 @@ class Engine:
             msgbus=self._msgbus,
             task_manager=self._task_manager,
         )
+
+        self._strategy: Strategy = config.strategy
+        self._strategy._init_core(msgbus=self._msgbus, task_manager=self._task_manager)
+
+        self._subscriptions: Dict[
+            DataType, Dict[str, str] | Set[str]
+        ] = self._strategy._subscriptions
 
     def _build_public_connectors(self):
         for exchange_id, public_conn_configs in self._config.public_conn_config.items():
@@ -110,11 +112,9 @@ class Engine:
                 )
 
                 private_connector = BybitPrivateConnector(
-                    account_type=account_type,
                     exchange=exchange,
+                    account_type=account_type,
                     msgbus=self._msgbus,
-                    strategy_id=self._config.strategy_id,
-                    user_id=self._config.user_id,
                     rate_limit=config.rate_limit,
                     task_manager=self._task_manager,
                 )
@@ -186,7 +186,8 @@ class Engine:
         for data_type, sub in self._subscriptions.items():
             match data_type:
                 case DataType.BOOKL1:
-                    for instrument_id in sub:
+                    for symbol in sub:
+                        instrument_id = InstrumentId.from_str(symbol)
                         account_type = self._instrument_id_to_account_type(
                             instrument_id
                         )
@@ -197,7 +198,8 @@ class Engine:
                             )
                         await connector.subscribe_bookl1(instrument_id.symbol)
                 case DataType.TRADE:
-                    for instrument_id in sub:
+                    for symbol in sub:
+                        instrument_id = InstrumentId.from_str(symbol)
                         account_type = self._instrument_id_to_account_type(
                             instrument_id
                         )
@@ -208,7 +210,8 @@ class Engine:
                             )
                         await connector.subscribe_trade(instrument_id.symbol)
                 case DataType.KLINE:
-                    for instrument_id, interval in sub.items():
+                    for symbol, interval in sub.items():
+                        instrument_id = InstrumentId.from_str(symbol)
                         account_type = self._instrument_id_to_account_type(
                             instrument_id
                         )
@@ -227,14 +230,12 @@ class Engine:
 
         for connector in self._private_connectors.values():
             await connector.connect()
-    
-    
 
     async def _start(self):
         await self._cache.start()
         await self._oms.start()
         await self._task_manager.wait()
-    
+
     async def _dispose(self):
         for connector in self._public_connectors.values():
             await connector.disconnect()

@@ -1,17 +1,17 @@
 import asyncio
 from pprint import pprint
-from tradebot.constants import CONFIG
+from tradebot.constants import KEYS
 from tradebot.base import ExchangeManager
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.rest_api import BinanceRestApi
 from tradebot.exceptions import OrderError
 
 
-BINANCE_API_KEY = CONFIG["binance_future_testnet"]["API_KEY"]
-BINANCE_API_SECRET = CONFIG["binance_future_testnet"]["SECRET"]
+BINANCE_API_KEY = KEYS["binance_future_testnet"]["API_KEY"]
+BINANCE_API_SECRET = KEYS["binance_future_testnet"]["SECRET"]
 
-# BINANCE_API_KEY = CONFIG['binance_vip']['API_KEY']
-# BINANCE_API_SECRET = CONFIG['binance_vip']['SECRET']
+# BINANCE_API_KEY = KEYS['binance_vip']['API_KEY']
+# BINANCE_API_SECRET = KEYS['binance_vip']['SECRET']
 
 
 async def main():

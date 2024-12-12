@@ -3,11 +3,11 @@ import ccxt.pro as ccxt
 import msgspec
 from decimal import Decimal
 from tradebot.types import Asset
-from tradebot.constants import CONFIG
+from tradebot.constants import KEYS
 from tradebot.exchange.binance import BinanceExchangeManager
 
-BINANCE_PM_API = CONFIG["binance_uni"]["API_KEY"]
-BINANCE_PM_SECRET = CONFIG["binance_uni"]["SECRET"]
+BINANCE_PM_API = KEYS["binance_uni"]["API_KEY"]
+BINANCE_PM_SECRET = KEYS["binance_uni"]["SECRET"]
 
 
 async def main():

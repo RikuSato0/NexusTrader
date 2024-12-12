@@ -22,6 +22,8 @@ from tradebot.exchange.binance.constants import (
     BinanceWsEventType,
     BinanceUserDataStreamWsEventType,
     BinanceBusinessUnit,
+    BinanceEnumParser,
+    BinanceOrderType,
 )
 from tradebot.exchange.binance.types import (
     BinanceWsMessageGeneral,
@@ -468,42 +470,43 @@ class BinancePrivateConnector(PrivateConnector):
             symbol = self._market_id[id]
 
         # we use the last filled quantity to calculate the cost, instead of the accumulated filled quantity
-        if (type := event_data["o"].lower()) == "market":
-            cost = float(event_data.get("l", "0")) * float(event_data.get("ap", "0"))
-        elif type == "limit":
-            price = float(event_data.get("ap", "0")) or float(
-                event_data.get("p", "0")
+        if (type := event_data.o) == BinanceOrderType.MARKET:
+            cost = float(event_data.l) * float(event_data.ap)
+            cum_cost = float(event_data.z) * float(event_data.ap)
+        elif type == BinanceOrderType.LIMIT:
+            price = float(event_data.ap) or float(
+                event_data.p
             )  # if average price is 0 or empty, use price
-            cost = float(event_data.get("l", "0")) * price
+            cost = float(event_data.l) * price
+            cum_cost = float(event_data.z) * price
 
         order = Order(
-            raw=event_data,
-            success=True,
             exchange=self._exchange_id,
-            id=event_data.get("i", None),
-            client_order_id=event_data.get("c", None),
-            timestamp=event_data.get("T", None),
             symbol=symbol,
-            type=type,
-            side=event_data.get("S", "").lower(),
-            status=event_data.get("X", "").lower(),
-            price=float(event_data.get("p", None)),
-            average=float(event_data.get("ap", None)),
-            last_filled_price=float(event_data.get("L", None)),
-            amount=Decimal(event_data.get("q", None)),
-            filled=Decimal(event_data.get("z", None)),
-            last_filled=Decimal(event_data.get("l", None)),
-            remaining=Decimal(event_data["q"]) - Decimal(event_data["z"]),
-            fee=float(event_data.get("n", None)),
-            fee_currency=event_data.get("N", None),
+            status=BinanceEnumParser.parse_order_status(event_data.X),
+            id=event_data.i,
+            amount=Decimal(event_data.q),
+            filled=Decimal(event_data.z),
+            client_order_id=event_data.c,
+            timestamp=res.E,
+            type=BinanceEnumParser.parse_order_type(event_data.o),
+            side=BinanceEnumParser.parse_order_side(event_data.S),
+            time_in_force=BinanceEnumParser.parse_time_in_force(event_data.f),
+            price=float(event_data.p),
+            average=float(event_data.ap),
+            last_filled_price=float(event_data.L),
+            last_filled=float(event_data.l),
+            remaining=Decimal(event_data.q) - Decimal(event_data.z),
+            fee=float(event_data.n),
+            fee_currency=event_data.N,
+            cum_cost=cum_cost,
             cost=cost,
-            last_trade_timestamp=event_data.get("T", None),
-            reduce_only=event_data.get("R", None),
-            position_side=event_data.get("ps", "").lower(),
-            time_in_force=event_data.get("f", None),
+            last_trade_timestamp=event_data.T,
+            reduce_only=event_data.R,
+            position_side=BinanceEnumParser.parse_position_side(event_data.ps),
         )
         # order status can be "new", "partially_filled", "filled", "canceled", "expired", "failed"
-        self._emit_order(order)
+        self._msgbus.publish(topic="order", msg=order)
 
     def _parse_execution_report(self, event_data: Dict[str, Any]) -> Order:
         """
@@ -598,21 +601,6 @@ class BinancePrivateConnector(PrivateConnector):
             time_in_force=event_data.get("f", None),
         )
         self._emit_order(order)
-
-    def _emit_order(self, order: Order):
-        match order.status:
-            case "new":
-                EventSystem.emit(OrderStatus.NEW, order)
-            case "partially_filled":
-                EventSystem.emit(OrderStatus.PARTIALLY_FILLED, order)
-            case "filled":
-                EventSystem.emit(OrderStatus.FILLED, order)
-            case "canceled":
-                EventSystem.emit(OrderStatus.CANCELED, order)
-            case "expired":
-                EventSystem.emit(OrderStatus.EXPIRED, order)
-            case "failed":
-                EventSystem.emit(OrderStatus.FAILED, order)
 
     def create_order(
         self,

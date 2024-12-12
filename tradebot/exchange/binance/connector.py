@@ -393,13 +393,16 @@ class BinancePrivateConnector(PrivateConnector):
         await self._ws_client.subscribe_user_data_stream(listen_key)
 
     def _ws_msg_handler(self, raw: bytes):
-        msg = self._ws_msg_general_decoder.decode(raw)
-        if msg.e:
-            match msg.e:
-                case BinanceUserDataStreamWsEventType.ORDER_TRADE_UPDATE:
-                    self._parse_order_trade_update(raw)
-                case BinanceUserDataStreamWsEventType.EXECUTION_REPORT:
-                    self._parse_execution_report(raw)
+        try:
+            msg = self._ws_msg_general_decoder.decode(raw)
+            if msg.e:
+                match msg.e:
+                    case BinanceUserDataStreamWsEventType.ORDER_TRADE_UPDATE:
+                        self._parse_order_trade_update(raw)
+                    case BinanceUserDataStreamWsEventType.EXECUTION_REPORT:
+                        self._parse_execution_report(raw)
+        except msgspec.DecodeError:
+            self._log.error(f"Error decoding message: {str(raw)}")
 
     def _parse_order_trade_update(self, res: Dict[str, Any]) -> Order:
         """

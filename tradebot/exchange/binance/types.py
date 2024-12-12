@@ -9,7 +9,72 @@ from tradebot.exchange.binance.constants import (
     BinanceWsEventType,
     BinanceKlineInterval,
     BinanceUserDataStreamWsEventType,
+    BinanceOrderSide,
+    BinanceTimeInForce,
+    BinanceExecutionType,
+    BinanceFuturesWorkingType,
+    BinanceFuturesPositionSide,
+    BinanceBusinessUnit,
 )
+
+
+class BinanceFuturesOrderData(msgspec.Struct, kw_only=True):
+    """
+    WebSocket message 'inner struct' for Binance Futures Order Update events.
+
+    Client Order ID 'c':
+     - starts with "autoclose-": liquidation order/
+     - starts with "adl_autoclose": ADL auto close order/
+
+    """
+
+    s: str  # Symbol
+    c: str  # Client Order ID
+    S: BinanceOrderSide
+    o: BinanceOrderType
+    f: BinanceTimeInForce
+    q: str  # Original Quantity
+    p: str  # Original Price
+    ap: str  # Average Price
+    sp: str | None = None  # Stop Price. Ignore with TRAILING_STOP_MARKET order
+    x: BinanceExecutionType
+    X: BinanceOrderStatus
+    i: int  # Order ID
+    l: str  # Order Last Filled Quantity
+    z: str  # Order Filled Accumulated Quantity
+    L: str  # Last Filled Price
+    N: str | None = None  # Commission Asset, will not push if no commission
+    n: str | None = None  # Commission, will not push if no commission
+    T: int  # Order Trade Time
+    t: int  # Trade ID
+    b: str  # Bids Notional
+    a: str  # Ask Notional
+    m: bool  # Is trade the maker side
+    R: bool  # Is reduce only
+    wt: BinanceFuturesWorkingType
+    ot: BinanceOrderType
+    ps: BinanceFuturesPositionSide
+    cp: bool | None = None  # If Close-All, pushed with conditional order
+    AP: str | None = (
+        None  # Activation Price, only pushed with TRAILING_STOP_MARKET order
+    )
+    cr: str | None = None  # Callback Rate, only pushed with TRAILING_STOP_MARKET order
+    pP: bool  # ignore
+    si: int  # ignore
+    ss: int  # ignore
+    rp: str  # Realized Profit of the trade
+    gtd: int  # TIF GTD order auto cancel time
+
+
+class BinanceFuturesOrderUpdateMsg(msgspec.Struct):
+    """
+    WebSocket message for Binance Futures Order Update events.
+    """
+
+    E: int  # Event Time
+    T: int  # Transaction Time
+    fs: BinanceBusinessUnit  # Event business unit. 'UM' for USDS-M futures and 'CM' for COIN-M futures
+    o: BinanceFuturesOrderData
 
 
 class BinanceMarkPrice(msgspec.Struct):
@@ -118,6 +183,7 @@ class BinanceFuturesBookTicker(msgspec.Struct):
 class BinanceWsMessageGeneral(msgspec.Struct):
     e: BinanceWsEventType | None = None
     u: int | None = None
+
 
 class BinanceUserDataStreamMsg(msgspec.Struct):
     e: BinanceUserDataStreamWsEventType | None = None

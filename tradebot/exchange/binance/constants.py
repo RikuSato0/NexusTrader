@@ -2,6 +2,52 @@ from enum import Enum
 from tradebot.constants import AccountType, OrderStatus, OrderType
 
 
+class BinanceBusinessUnit(Enum):
+    """
+    Represents a Binance business unit.
+    """
+
+    UM = "UM"
+    CM = "CM"
+
+
+class BinanceFuturesPositionSide(Enum):
+    """
+    Represents a Binance Futures position side.
+    """
+
+    BOTH = "BOTH"
+    LONG = "LONG"
+    SHORT = "SHORT"
+
+class BinanceFuturesWorkingType(Enum):
+    """
+    Represents a Binance Futures working type.
+    """
+
+    MARK_PRICE = "MARK_PRICE"
+    CONTRACT_PRICE = "CONTRACT_PRICE"
+
+class BinanceTimeInForce(Enum):
+    """
+    Represents a Binance order time in force.
+    """
+
+    GTC = "GTC"
+    IOC = "IOC"
+    FOK = "FOK"
+    GTX = "GTX"  # FUTURES only, Good-Till-Crossing (Post Only)
+    GTD = "GTD"  # FUTURES only
+    GTE_GTC = "GTE_GTC"  # Undocumented
+    
+class BinanceOrderSide(Enum):
+    """
+    Represents a Binance order side.
+    """
+
+    BUY = "BUY"
+    SELL = "SELL"
+
 class BinanceKlineInterval(Enum):
     """
     Represents a Binance kline chart interval.

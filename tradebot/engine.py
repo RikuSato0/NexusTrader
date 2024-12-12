@@ -20,11 +20,13 @@ from tradebot.core.nautilius_core import MessageBus, TraderId, LiveClock
 from tradebot.types import InstrumentId
 from tradebot.constants import DataType, InstrumentType
 
+
 class Engine:
     @staticmethod
     def set_loop_policy():
         if platform.system() != "Windows":
             import uvloop
+
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
     def __init__(self, config: Config):
@@ -39,7 +41,9 @@ class Engine:
         self._public_connectors: Dict[AccountType, PublicConnector] = None
         self._private_connectors: Dict[AccountType, PrivateConnector] = None
         self._strategy: Strategy = config.strategy
-        self._subscriptions: Dict[DataType, Dict[InstrumentId, str] | Set[InstrumentId]] = self._strategy._subscriptions
+        self._subscriptions: Dict[
+            DataType, Dict[InstrumentId, str] | Set[InstrumentId]
+        ] = self._strategy._subscriptions
 
         trader_id = f"{self._config.strategy_id}-{self._config.user_id}"
 
@@ -140,73 +144,109 @@ class Engine:
             elif exchange_id == ExchangeType.OKX:
                 self._exchanges[exchange_id] = OkxExchangeManager(config)
 
-    def build(self):
-        if self._is_built:
-            raise RuntimeError("The engine is already built.")
+    def _build(self):
         self._build_exchanges()
         self._build_public_connectors()
         self._build_private_connectors()
         self._is_built = True
-        
-    def _instrument_id_to_account_type(self, instrument_id: InstrumentId) -> AccountType:
+
+    def _instrument_id_to_account_type(
+        self, instrument_id: InstrumentId
+    ) -> AccountType:
         match instrument_id.exchange:
             case ExchangeType.BYBIT:
                 if instrument_id.type == InstrumentType.SPOT:
-                    return BybitAccountType.SPOT_TESTNET if self._config.basic_config[ExchangeType.BYBIT].testnet else BybitAccountType.SPOT
+                    return (
+                        BybitAccountType.SPOT_TESTNET
+                        if self._config.basic_config[ExchangeType.BYBIT].testnet
+                        else BybitAccountType.SPOT
+                    )
                 elif instrument_id.type == InstrumentType.LINEAR:
-                    return BybitAccountType.LINEAR_TESTNET if self._config.basic_config[ExchangeType.BYBIT].testnet else BybitAccountType.LINEAR
+                    return (
+                        BybitAccountType.LINEAR_TESTNET
+                        if self._config.basic_config[ExchangeType.BYBIT].testnet
+                        else BybitAccountType.LINEAR
+                    )
                 elif instrument_id.type == InstrumentType.INVERSE:
-                    return BybitAccountType.INVERSE_TESTNET if self._config.basic_config[ExchangeType.BYBIT].testnet else BybitAccountType.INVERSE
+                    return (
+                        BybitAccountType.INVERSE_TESTNET
+                        if self._config.basic_config[ExchangeType.BYBIT].testnet
+                        else BybitAccountType.INVERSE
+                    )
                 else:
-                    raise ValueError(f"Unsupported instrument type: {instrument_id.type}")
+                    raise ValueError(
+                        f"Unsupported instrument type: {instrument_id.type}"
+                    )
             case ExchangeType.BINANCE:
                 pass
             case ExchangeType.OKX:
                 pass
-    
+
     async def _start_connectors(self):
         for data_type, sub in self._subscriptions.items():
             match data_type:
                 case DataType.BOOKL1:
                     for instrument_id in sub:
-                        account_type = self._instrument_id_to_account_type(instrument_id)
+                        account_type = self._instrument_id_to_account_type(
+                            instrument_id
+                        )
                         connector = self._public_connectors.get(account_type, None)
                         if connector is None:
-                            raise ValueError(f"Please add `{account_type}` public connector to the `config.public_conn_config`.")
+                            raise ValueError(
+                                f"Please add `{account_type}` public connector to the `config.public_conn_config`."
+                            )
                         await connector.subscribe_bookl1(instrument_id.symbol)
                 case DataType.TRADE:
                     for instrument_id in sub:
-                        account_type = self._instrument_id_to_account_type(instrument_id)
+                        account_type = self._instrument_id_to_account_type(
+                            instrument_id
+                        )
                         connector = self._public_connectors.get(account_type, None)
                         if connector is None:
-                            raise ValueError(f"Please add `{account_type}` public connector to the `config.public_conn_config`.")
+                            raise ValueError(
+                                f"Please add `{account_type}` public connector to the `config.public_conn_config`."
+                            )
                         await connector.subscribe_trade(instrument_id.symbol)
                 case DataType.KLINE:
                     for instrument_id, interval in sub.items():
-                        account_type = self._instrument_id_to_account_type(instrument_id)
+                        account_type = self._instrument_id_to_account_type(
+                            instrument_id
+                        )
                         connector = self._public_connectors.get(account_type, None)
                         if connector is None:
-                            raise ValueError(f"Please add `{account_type}` public connector to the `config.public_conn_config`.")
+                            raise ValueError(
+                                f"Please add `{account_type}` public connector to the `config.public_conn_config`."
+                            )
                         await connector.subscribe_kline(instrument_id.symbol, interval)
                 case DataType.MARK_PRICE:
-                    pass # TODO: implement
+                    pass  # TODO: implement
                 case DataType.FUNDING_RATE:
-                    pass # TODO: implement
+                    pass  # TODO: implement
                 case DataType.INDEX_PRICE:
-                    pass # TODO: implement
-                
+                    pass  # TODO: implement
+
         for connector in self._private_connectors.values():
             await connector.connect()
+    
+    
 
     async def _start(self):
-        if not self._is_built:
-            raise RuntimeError("The engine is not built. Call `build()` first.")
         await self._cache.start()
         await self._oms.start()
         await self._task_manager.wait()
+    
+    async def _dispose(self):
+        for connector in self._public_connectors.values():
+            await connector.disconnect()
+        for connector in self._private_connectors.values():
+            await connector.disconnect()
+        await self._task_manager.cancel()
 
     def start(self):
-        if not self._is_built:
-            raise RuntimeError("The engine is not built. Call `build()` first.")
+        self._build()
         self._is_running = True
         self._loop.run_until_complete(self._start())
+
+    def dispose(self):
+        self._loop.run_until_complete(self._dispose())
+        self._loop.close()

@@ -18,6 +18,44 @@ from tradebot.exchange.binance.constants import (
 )
 
 
+class BinanceSpotOrderUpdateMsg(msgspec.Struct, kw_only=True):
+    """
+    WebSocket message 'inner struct' for Binance Spot/Margin Order Update events.
+    """
+
+    e: BinanceUserDataStreamWsEventType
+    E: int  # Event time
+    s: str  # Symbol
+    c: str  # Client order ID
+    S: BinanceOrderSide 
+    o: BinanceOrderType
+    f: BinanceTimeInForce
+    q: str  # Original Quantity
+    p: str  # Original Price
+    P: str  # Stop price
+    F: str  # Iceberg quantity
+    g: int  # Order list ID
+    C: str  # Original client order ID; This is the ID of the order being canceled
+    x: BinanceExecutionType
+    X: BinanceOrderStatus
+    r: str  # Order reject reason; will be an error code
+    i: int  # Order ID
+    l: str  # Order Last Filled Quantity # noqa
+    z: str  # Order Filled Accumulated Quantity
+    L: str  # Last Filled Price
+    n: str | None = None  # Commission, will not push if no commission
+    N: str | None = None  # Commission Asset, will not push if no commission
+    T: int  # Order Trade Time
+    t: int  # Trade ID
+    I: int  # Ignore # noqa
+    w: bool  # Is the order on the book?
+    m: bool  # Is trade the maker side
+    M: bool  # Ignore 
+    O: int  # Order creation time # noqa
+    Z: str  # Cumulative quote asset transacted quantity
+    Y: str  # Last quote asset transacted quantity (i.e. lastPrice * lastQty)
+    Q: str  # Quote Order Qty
+
 class BinanceFuturesOrderData(msgspec.Struct, kw_only=True):
     """
     WebSocket message 'inner struct' for Binance Futures Order Update events.
@@ -27,7 +65,6 @@ class BinanceFuturesOrderData(msgspec.Struct, kw_only=True):
      - starts with "adl_autoclose": ADL auto close order/
 
     """
-
     s: str  # Symbol
     c: str  # Client Order ID
     S: BinanceOrderSide
@@ -40,7 +77,7 @@ class BinanceFuturesOrderData(msgspec.Struct, kw_only=True):
     x: BinanceExecutionType
     X: BinanceOrderStatus
     i: int  # Order ID
-    l: str  # Order Last Filled Quantity
+    l: str  # Order Last Filled Quantity # noqa
     z: str  # Order Filled Accumulated Quantity
     L: str  # Last Filled Price
     N: str | None = None  # Commission Asset, will not push if no commission
@@ -66,14 +103,14 @@ class BinanceFuturesOrderData(msgspec.Struct, kw_only=True):
     gtd: int  # TIF GTD order auto cancel time
 
 
-class BinanceFuturesOrderUpdateMsg(msgspec.Struct):
+class BinanceFuturesOrderUpdateMsg(msgspec.Struct, kw_only = True):
     """
     WebSocket message for Binance Futures Order Update events.
     """
-
+    e: BinanceUserDataStreamWsEventType
     E: int  # Event Time
     T: int  # Transaction Time
-    fs: BinanceBusinessUnit  # Event business unit. 'UM' for USDS-M futures and 'CM' for COIN-M futures
+    fs: BinanceBusinessUnit | None = None  # Event business unit. 'UM' for USDS-M futures and 'CM' for COIN-M futures 
     o: BinanceFuturesOrderData
 
 
@@ -90,7 +127,7 @@ class BinanceMarkPrice(msgspec.Struct):
         "T": 1562306400000          // Next funding time
     }
     """
-
+    e: BinanceWsEventType
     E: int
     s: str
     p: str
@@ -101,6 +138,7 @@ class BinanceMarkPrice(msgspec.Struct):
 
 
 class BinanceKlineData(msgspec.Struct):
+    e: BinanceWsEventType
     t: int  # Kline start time
     T: int  # Kline close time
     s: str  # Symbol
@@ -110,7 +148,7 @@ class BinanceKlineData(msgspec.Struct):
     o: str  # Open price
     c: str  # Close price
     h: str  # High price
-    l: str  # Low price
+    l: str  # Low price # noqa
     v: str  # Base asset volume
     n: int  # Number of trades
     x: bool  # Is this kline closed?
@@ -121,12 +159,14 @@ class BinanceKlineData(msgspec.Struct):
 
 
 class BinanceKline(msgspec.Struct):
+    e: BinanceWsEventType
     E: int
     s: str
     k: BinanceKlineData
 
 
 class BinanceTradeData(msgspec.Struct):
+    e: BinanceWsEventType
     E: int
     s: str
     t: int
@@ -146,7 +186,6 @@ class BinanceSpotBookTicker(msgspec.Struct):
         "A":"40.66000000"  // best ask qty
     }
     """
-
     u: int
     s: str
     b: str
@@ -169,7 +208,7 @@ class BinanceFuturesBookTicker(msgspec.Struct):
       "A":"40.66000000"         // best ask qty
     }
     """
-
+    e: BinanceWsEventType
     u: int
     E: int
     T: int

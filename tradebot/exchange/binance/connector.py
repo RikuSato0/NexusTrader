@@ -1,11 +1,9 @@
 import asyncio
-import orjson
 import msgspec
 from typing import Dict, Any
 from decimal import Decimal
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.core.entity import EventSystem
-from tradebot.core.cache import AsyncCache
 from tradebot.constants import (
     OrderSide,
     OrderStatus,
@@ -20,7 +18,11 @@ from tradebot.exchange.binance.rest_api import BinanceApiClient
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWSClient
 from tradebot.exchange.binance.exchange import BinanceExchangeManager
-from tradebot.exchange.binance.constants import BinanceWsEventType, BinanceUserDataStreamWsEventType
+from tradebot.exchange.binance.constants import (
+    BinanceWsEventType,
+    BinanceUserDataStreamWsEventType,
+    BinanceBusinessUnit,
+)
 from tradebot.exchange.binance.types import (
     BinanceWsMessageGeneral,
     BinanceTradeData,
@@ -29,6 +31,8 @@ from tradebot.exchange.binance.types import (
     BinanceKline,
     BinanceMarkPrice,
     BinanceUserDataStreamMsg,
+    BinanceSpotOrderUpdateMsg,
+    BinanceFuturesOrderUpdateMsg,
 )
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager, RateLimit
@@ -231,7 +235,7 @@ class BinancePublicConnector(PublicConnector):
         )
         self._log.debug(f"{bookl1}")
         self._msgbus.send(endpoint="bookl1", msg=bookl1)
-    
+
     def _parse_futures_book_ticker(self, raw: bytes) -> BookL1:
         res = self._ws_futures_book_ticker_decoder.decode(raw)
         id = res.s + self.market_type
@@ -327,9 +331,15 @@ class BinancePrivateConnector(PrivateConnector):
             secret=exchange.secret,
             testnet=account_type.is_testnet,
         )
-        
+
         self._task_manager = task_manager
         self._ws_msg_general_decoder = msgspec.json.Decoder(BinanceUserDataStreamMsg)
+        self._ws_msg_spot_order_update_decoder = msgspec.json.Decoder(
+            BinanceSpotOrderUpdateMsg
+        )
+        self._ws_msg_futures_order_update_decoder = msgspec.json.Decoder(
+            BinanceFuturesOrderUpdateMsg
+        )
 
     @property
     def market_type(self):
@@ -387,9 +397,7 @@ class BinancePrivateConnector(PrivateConnector):
 
     async def connect(self):
         listen_key = await self._start_user_data_stream()
-        self._task_manager.create_task(
-            self._keep_alive_user_data_stream(listen_key)
-        )
+        self._task_manager.create_task(self._keep_alive_user_data_stream(listen_key))
         await self._ws_client.subscribe_user_data_stream(listen_key)
 
     def _ws_msg_handler(self, raw: bytes):
@@ -404,7 +412,7 @@ class BinancePrivateConnector(PrivateConnector):
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
 
-    def _parse_order_trade_update(self, res: Dict[str, Any]) -> Order:
+    def _parse_order_trade_update(self, raw: bytes) -> Order:
         """
         {
             "e": "ORDER_TRADE_UPDATE", // Event type
@@ -443,19 +451,21 @@ class BinancePrivateConnector(PrivateConnector):
             }
         }
         """
-        event_data = res["o"]
-        event_unit = res.get("fs", "")
+        res = self._ws_msg_futures_order_update_decoder.decode(raw)
+
+        event_data = res.o
+        event_unit = res.fs
 
         # Only portfolio margin has "UM" and "CM" event business unit
-        if event_unit == "UM":
+        if event_unit == BinanceBusinessUnit.UM:
             id = event_data["s"] + "_linear"
-            market = self._market_id[id]
-        elif event_unit == "CM":
+            symbol = self._market_id[id]
+        elif event_unit == BinanceBusinessUnit.CM:
             id = event_data["s"] + "_inverse"
-            market = self._market_id[id]
+            symbol = self._market_id[id]
         else:
             id = event_data["s"] + self.market_type
-            market = self._market_id[id]
+            symbol = self._market_id[id]
 
         # we use the last filled quantity to calculate the cost, instead of the accumulated filled quantity
         if (type := event_data["o"].lower()) == "market":
@@ -473,7 +483,7 @@ class BinancePrivateConnector(PrivateConnector):
             id=event_data.get("i", None),
             client_order_id=event_data.get("c", None),
             timestamp=event_data.get("T", None),
-            symbol=market.symbol,
+            symbol=symbol,
             type=type,
             side=event_data.get("S", "").lower(),
             status=event_data.get("X", "").lower(),

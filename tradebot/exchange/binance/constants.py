@@ -1,5 +1,12 @@
 from enum import Enum
-from tradebot.constants import AccountType, OrderStatus, OrderType
+from tradebot.constants import (
+    AccountType,
+    OrderStatus,
+    OrderType,
+    PositionSide,
+    OrderSide,
+    TimeInForce,
+)
 
 
 class BinanceBusinessUnit(Enum):
@@ -20,6 +27,7 @@ class BinanceFuturesPositionSide(Enum):
     LONG = "LONG"
     SHORT = "SHORT"
 
+
 class BinanceFuturesWorkingType(Enum):
     """
     Represents a Binance Futures working type.
@@ -27,6 +35,7 @@ class BinanceFuturesWorkingType(Enum):
 
     MARK_PRICE = "MARK_PRICE"
     CONTRACT_PRICE = "CONTRACT_PRICE"
+
 
 class BinanceTimeInForce(Enum):
     """
@@ -39,7 +48,8 @@ class BinanceTimeInForce(Enum):
     GTX = "GTX"  # FUTURES only, Good-Till-Crossing (Post Only)
     GTD = "GTD"  # FUTURES only
     GTE_GTC = "GTE_GTC"  # Undocumented
-    
+
+
 class BinanceOrderSide(Enum):
     """
     Represents a Binance order side.
@@ -47,6 +57,7 @@ class BinanceOrderSide(Enum):
 
     BUY = "BUY"
     SELL = "SELL"
+
 
 class BinanceKlineInterval(Enum):
     """
@@ -70,6 +81,7 @@ class BinanceKlineInterval(Enum):
     WEEK_1 = "1w"
     MONTH_1 = "1M"
 
+
 class BinanceWsEventType(Enum):
     TRADE = "trade"
     AGG_TRADE = "aggTrade"
@@ -77,7 +89,7 @@ class BinanceWsEventType(Enum):
     KLINE = "kline"
     MARK_PRICE_UPDATE = "markPriceUpdate"
     DEPTH_UPDATE = "depthUpdate"
-    
+
 
 class BinanceUserDataStreamWsEventType(Enum):
     MARGIN_CALL = "MARGIN_CALL"
@@ -107,6 +119,7 @@ class BinanceOrderType(Enum):
     TAKE_PROFIT_MARKET = "TAKE_PROFIT_MARKET"
     STOP_MARKET = "STOP_MARKET"
 
+
 class BinanceExecutionType(Enum):
     NEW = "NEW"
     CANCELED = "CANCELED"
@@ -115,7 +128,8 @@ class BinanceExecutionType(Enum):
     EXPIRED = "EXPIRED"
     CALCULATED = "CALCULATED"
     TRADE_PREVENTION = "TRADE_PREVENTION"
-    
+
+
 class BinanceOrderStatus(Enum):
     NEW = "NEW"
     PARTIALLY_FILLED = "PARTIALLY_FILLED"
@@ -123,10 +137,12 @@ class BinanceOrderStatus(Enum):
     CANCELED = "CANCELED"
     EXPIRED = "EXPIRED"
 
+
 class BinancePositionSide(Enum):
     BOTH = "BOTH"
     LONG = "LONG"
     SHORT = "SHORT"
+
 
 class BinanceAccountType(AccountType):
     SPOT = "SPOT"
@@ -138,15 +154,15 @@ class BinanceAccountType(AccountType):
     SPOT_TESTNET = "SPOT_TESTNET"
     USD_M_FUTURE_TESTNET = "USD_M_FUTURE_TESTNET"
     COIN_M_FUTURE_TESTNET = "COIN_M_FUTURE_TESTNET"
-    
+
     @property
     def exchange_id(self):
         return "binance"
-    
+
     @property
     def is_spot(self):
         return self in (self.SPOT, self.SPOT_TESTNET)
-    
+
     @property
     def is_margin(self):
         return self in (self.MARGIN,)
@@ -154,23 +170,28 @@ class BinanceAccountType(AccountType):
     @property
     def is_isolated_margin(self):
         return self in (self.ISOLATED_MARGIN,)
-    
+
     @property
     def is_isolated_margin_or_margin(self):
         return self in (self.MARGIN, self.ISOLATED_MARGIN)
-    
+
     @property
     def is_spot_or_margin(self):
         return self in (self.SPOT, self.MARGIN, self.ISOLATED_MARGIN, self.SPOT_TESTNET)
-    
+
     @property
     def is_future(self):
-        return self in (self.USD_M_FUTURE, self.COIN_M_FUTURE, self.USD_M_FUTURE_TESTNET, self.COIN_M_FUTURE_TESTNET)
-    
+        return self in (
+            self.USD_M_FUTURE,
+            self.COIN_M_FUTURE,
+            self.USD_M_FUTURE_TESTNET,
+            self.COIN_M_FUTURE_TESTNET,
+        )
+
     @property
     def is_linear(self):
         return self in (self.USD_M_FUTURE, self.USD_M_FUTURE_TESTNET)
-    
+
     @property
     def is_inverse(self):
         return self in (self.COIN_M_FUTURE, self.COIN_M_FUTURE_TESTNET)
@@ -178,19 +199,23 @@ class BinanceAccountType(AccountType):
     @property
     def is_portfolio_margin(self):
         return self in (self.PORTFOLIO_MARGIN,)
-    
+
     @property
     def is_testnet(self):
-        return self in (self.SPOT_TESTNET, self.USD_M_FUTURE_TESTNET, self.COIN_M_FUTURE_TESTNET)
-    
+        return self in (
+            self.SPOT_TESTNET,
+            self.USD_M_FUTURE_TESTNET,
+            self.COIN_M_FUTURE_TESTNET,
+        )
+
     @property
     def base_url(self):
         return BASE_URLS[self]
-    
+
     @property
     def ws_url(self):
         return STREAM_URLS[self]
-        
+
 
 class EndpointsType(Enum):
     USER_DATA_STREAM = "USER_DATA_STREAM"
@@ -198,6 +223,7 @@ class EndpointsType(Enum):
     TRADING = "TRADING"
     MARKET = "MARKET"
     GENERAL = "GENERAL"
+
 
 BASE_URLS = {
     BinanceAccountType.SPOT: "https://api.binance.com",
@@ -248,26 +274,6 @@ ENDPOINTS = {
     },
 }
 
-class BinanceEnumParser:
-    def __init__(self) -> None:
-        self._order_status_map = {
-            BinanceOrderStatus.NEW: OrderStatus.ACCEPTED,
-            BinanceOrderStatus.PARTIALLY_FILLED: OrderStatus.PARTIALLY_FILLED,
-            BinanceOrderStatus.FILLED: OrderStatus.FILLED,
-            BinanceOrderStatus.CANCELED: OrderStatus.CANCELED,
-            BinanceOrderStatus.EXPIRED: OrderStatus.EXPIRED,
-        }
-        
-        #TODO: Add the rest of the order status, Currently only supported LIMIT and MARKET
-        self._order_type_map = {
-            BinanceOrderType.LIMIT: OrderType.LIMIT,
-            BinanceOrderType.MARKET: OrderType.MARKET,
-            BinanceOrderType.STOP_LOSS: None,
-            BinanceOrderType.STOP_LOSS_LIMIT: None,
-            BinanceOrderType.TAKE_PROFIT: None,
-            BinanceOrderType.TAKE_PROFIT_LIMIT: None,
-            BinanceOrderType.LIMIT_MAKER: None,
-        }
 
 class BinanceErrorCode(Enum):
     """
@@ -470,6 +476,7 @@ class BinanceErrorCode(Enum):
     ME_RECVWINDOW_REJECT = -5028
     INVALID_GOOD_TILL_DATE = -5040
 
+
 BINANCE_RETRY_ERRORS: set[BinanceErrorCode] = {
     BinanceErrorCode.DISCONNECTED,
     BinanceErrorCode.TOO_MANY_REQUESTS,  # Short retry delays may result in bans
@@ -479,3 +486,83 @@ BINANCE_RETRY_ERRORS: set[BinanceErrorCode] = {
     BinanceErrorCode.CANCEL_REJECTED,
     BinanceErrorCode.ME_RECVWINDOW_REJECT,
 }
+
+
+class BinanceEnumParser:
+    _binance_order_status_map = {
+        BinanceOrderStatus.NEW: OrderStatus.ACCEPTED,
+        BinanceOrderStatus.PARTIALLY_FILLED: OrderStatus.PARTIALLY_FILLED,
+        BinanceOrderStatus.FILLED: OrderStatus.FILLED,
+        BinanceOrderStatus.CANCELED: OrderStatus.CANCELED,
+        BinanceOrderStatus.EXPIRED: OrderStatus.EXPIRED,
+    }
+
+    _binance_position_side_map = {
+        BinancePositionSide.LONG: PositionSide.LONG,
+        BinancePositionSide.SHORT: PositionSide.SHORT,
+        BinancePositionSide.BOTH: PositionSide.FLAT,
+    }
+
+    _binance_order_side_map = {
+        BinanceOrderSide.BUY: OrderSide.BUY,
+        BinanceOrderSide.SELL: OrderSide.SELL,
+    }
+
+    _binance_order_time_in_force_map = {
+        BinanceTimeInForce.IOC: TimeInForce.IOC,
+        BinanceTimeInForce.GTC: TimeInForce.GTC,
+        BinanceTimeInForce.FOK: TimeInForce.FOK,
+    }
+
+    _binance_order_type_map = {
+        BinanceOrderType.LIMIT: OrderType.LIMIT,
+        BinanceOrderType.MARKET: OrderType.MARKET,
+    }
+
+    _order_status_to_binance_map = {v: k for k, v in _binance_order_status_map.items()}
+    _position_side_to_binance_map = {v: k for k, v in _binance_position_side_map.items()}
+    _order_side_to_binance_map = {v: k for k, v in _binance_order_side_map.items()}
+    _time_in_force_to_binance_map = {
+        v: k for k, v in _binance_order_time_in_force_map.items()
+    }
+    _order_type_to_binance_map = {v: k for k, v in _binance_order_type_map.items()}
+
+    @classmethod
+    def parse_order_status(cls, status: BinanceOrderStatus) -> OrderStatus:
+        return cls._binance_order_status_map[status]
+    
+    @classmethod
+    def parse_position_side(cls, side: BinancePositionSide) -> PositionSide:
+        return cls._binance_position_side_map[side]
+    
+    @classmethod
+    def parse_order_side(cls, side: BinanceOrderSide) -> OrderSide:
+        return cls._binance_order_side_map[side]
+    
+    @classmethod
+    def parse_time_in_force(cls, tif: BinanceTimeInForce) -> TimeInForce:
+        return cls._binance_order_time_in_force_map[tif]
+    
+    @classmethod
+    def parse_order_type(cls, order_type: BinanceOrderType) -> OrderType:
+        return cls._binance_order_type_map[order_type]
+    
+    @classmethod
+    def to_binance_order_status(cls, status: OrderStatus) -> BinanceOrderStatus:
+        return cls._order_status_to_binance_map[status]
+    
+    @classmethod
+    def to_binance_position_side(cls, side: PositionSide) -> BinancePositionSide:
+        return cls._position_side_to_binance_map[side]
+    
+    @classmethod
+    def to_binance_order_side(cls, side: OrderSide) -> BinanceOrderSide:
+        return cls._order_side_to_binance_map[side]
+    
+    @classmethod
+    def to_binance_time_in_force(cls, tif: TimeInForce) -> BinanceTimeInForce:
+        return cls._time_in_force_to_binance_map[tif]
+    
+    @classmethod
+    def to_binance_order_type(cls, order_type: OrderType) -> BinanceOrderType:
+        return cls._order_type_to_binance_map[order_type]

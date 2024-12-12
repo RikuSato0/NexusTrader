@@ -69,5 +69,9 @@ class OrderManagerSystem:
                 self._log.error(f"Error in handle_order_event: {e}")
     
     async def start(self):
-        await self._task_manager.create_task(self.handle_order_event())
-        await self._task_manager.create_task(self.handle_position_event())
+        self._log.debug("OrderManagerSystem started")
+        self._task_manager.create_task(self.handle_order_event())
+        self._task_manager.create_task(self.handle_position_event())
+
+
+

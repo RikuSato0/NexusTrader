@@ -14,21 +14,22 @@ from tradebot.constants import (
     ExchangeType,
 )
 
+
 class InstrumentId(Struct):
     symbol: str
     exchange: ExchangeType
     type: InstrumentType
-    
+
     @classmethod
     def from_str(cls, symbol: str):
         """
         BTCETH.BINANCE -> SPOT
         BTCUSDT-PERP.BINANCE -> LINEAR
         BTCUSD.BINANCE -> INVERSE
-        BTCUSD-241227.BINANCE 
+        BTCUSD-241227.BINANCE
         """
         symbol_prefix, exchange = symbol.split(".")
-        
+
         # if numirical number in id, then it is a future
         if "-" in symbol_prefix:
             prefix, _ = symbol_prefix.split("-")
@@ -38,10 +39,8 @@ class InstrumentId(Struct):
                 type = InstrumentType.LINEAR
         else:
             type = InstrumentType.SPOT
-            
-                
-        return cls(symbol=symbol, exchange=ExchangeType(exchange.lower()), type=type)
 
+        return cls(symbol=symbol, exchange=ExchangeType(exchange.lower()), type=type)
 
 
 class BookL1(Struct, gc=False):
@@ -156,7 +155,6 @@ class Asset(Struct):
     OrderStatus.FILLED: BTC(free: 0.01, locked: 0.0) USDT(free: 500, locked: 0) BTC.update_locked(-0.005) USDT.update_free(150)
     """
 
-    asset: str
     free: Decimal = field(default=Decimal("0.0"))
     borrowed: Decimal = field(default=Decimal("0.0"))
     locked: Decimal = field(default=Decimal("0.0"))
@@ -194,6 +192,24 @@ class Asset(Struct):
             self.borrowed = borrowed
         if locked is not None:
             self.locked = locked
+
+
+class Balance(Struct):
+    assets: Dict[str, Asset] = field(default_factory=defaultdict(Asset))
+
+    def _update_asset_free(self, asset: str, amount: Decimal):
+        self.assets[asset]._update_free(amount)
+
+    def _update_asset_locked(self, asset: str, amount: Decimal):
+        self.assets[asset]._update_locked(amount)
+
+    def _update_asset_borrowed(self, asset: str, amount: Decimal):
+        self.assets[asset]._update_borrowed(amount)
+
+    def _set_asset_value(
+        self, asset: str, free: Decimal, borrowed: Decimal, locked: Decimal
+    ):
+        self.assets[asset]._set_value(free, borrowed, locked)
 
 
 class Precision(Struct):
@@ -396,12 +412,14 @@ class Position(Struct):
     def apply(self, order: Order):
         if order.position_side == PositionSide.FLAT:
             fill_delta = self._calculate_fill_delta(order)
-            
+
             if (self.signed_amount > 0 and order.side == OrderSide.SELL) or (
                 self.signed_amount < 0 and order.side == OrderSide.BUY
             ):
-                close_amount = min(abs(self.signed_amount), fill_delta) # 平仓数量最大不超过当前持仓数量
-                remaining_amount = fill_delta - close_amount # 剩余数量
+                close_amount = min(
+                    abs(self.signed_amount), fill_delta
+                )  # 平仓数量最大不超过当前持仓数量
+                remaining_amount = fill_delta - close_amount  # 剩余数量
                 self._close_position(order, close_amount)
                 if remaining_amount > 0:
                     self._open_position(order, remaining_amount)
@@ -438,32 +456,38 @@ class Position(Struct):
             else:
                 if self.side != PositionSide.LONG:
                     warnings.warn(f"Cannot open long position with {self.side}")
-                
+
             tmp_amount = self.signed_amount + open_amount
             price = order.average or order.price
             self.entry_price = (
-                (self.entry_price * float(self.signed_amount) + price * float(open_amount))
+                (
+                    self.entry_price * float(self.signed_amount)
+                    + price * float(open_amount)
+                )
                 / float(tmp_amount)
                 if tmp_amount != 0
                 else 0
             )
             self.signed_amount = tmp_amount
-            
+
         elif order.side == OrderSide.SELL:
             if not self.side:
                 self.side = PositionSide.SHORT
             else:
                 if self.side != PositionSide.SHORT:
                     warnings.warn(f"Cannot open short position with {self.side}")
-                
+
             tmp_amount = self.signed_amount - open_amount
             price = order.average or order.price
             self.entry_price = (
-                (self.entry_price * float(self.signed_amount) - price * float(open_amount))
+                (
+                    self.entry_price * float(self.signed_amount)
+                    - price * float(open_amount)
+                )
                 / float(tmp_amount)
                 if tmp_amount != 0
                 else 0
             )
             self.signed_amount = tmp_amount
-            
+
         self.unrealized_pnl = self._calculate_pnl(price, self.amount)

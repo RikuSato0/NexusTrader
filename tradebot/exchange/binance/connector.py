@@ -605,18 +605,76 @@ class BinancePrivateConnector(PrivateConnector):
         
         self._msgbus.publish(topic="order", msg=order)
 
-    def create_order(
+    async def create_order(
         self,
         symbol: str,
         side: OrderSide,
         type: OrderType,
         amount: Decimal,
         price: Decimal,
-        time_in_force: TimeInForce,
-        position_side: PositionSide,
+        time_in_force: TimeInForce = TimeInForce.GTC,
+        position_side: PositionSide = None,
         **kwargs,
     ):
-        pass
+        if self._limiter:
+            await self._limiter.acquire()
+        market = self._market.get(symbol)
+        if not market:
+            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
+        symbol = market.id
+        
+        params = {
+            "symbol": symbol,
+            "side": BinanceEnumParser.to_binance_order_side(side).value,
+            "type": BinanceEnumParser.to_binance_order_type(type).value,
+            "quantity": amount,
+        }
+        
+        if type == OrderType.LIMIT:
+            params["price"] = price
+            params["timeInForce"] = BinanceEnumParser.to_binance_time_in_force(time_in_force).value
+        
+        if position_side:
+            params["positionSide"] = BinanceEnumParser.to_binance_position_side(position_side).value
+        
+        reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop("reduce_only", False)
+        if reduce_only:
+            params["reduceOnly"] = True
+        
+        params.update(kwargs)
+        
+        try:
+            if self._account_type.is_spot:
+                if not market.spot:
+                    raise ValueError(f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}")
+                res = await self._api_client.post_api_v3_order(**params)
+            elif self._account_type.is_isolated_margin_or_margin:
+                if not market.margin:
+                    raise ValueError(f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}")
+                res = await self._api_client.post_sapi_v1_margin_order(**params)
+            elif self._account_type.is_linear:
+                if not market.linear:
+                    raise ValueError(f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}")
+                res = await self._api_client.post_fapi_v1_order(**params)
+            elif self._account_type.is_inverse:
+                if not market.inverse:
+                    raise ValueError(f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}")
+                res = await self._api_client.post_dapi_v1_order(**params)
+            elif self._account_type.is_portfolio_margin:
+                if market.margin:
+                    res = await self._api_client.post_papi_v1_margin_order(**params)
+                elif market.linear:
+                    res = await self._api_client.post_papi_v1_um_order(**params)
+                elif market.inverse:
+                    res = await self._api_client.post_papi_v1_cm_order(**params)
+            # TODO: format the response and push to msgbus
+        except Exception as e:
+            self._log.error(f"Error creating order: {e} params: {str(params)}")
+            #TODO: handle error and format order
+            
+        
+        
+        
 
     def cancel_order(self, symbol: str, order_id: str, **kwargs):
         pass

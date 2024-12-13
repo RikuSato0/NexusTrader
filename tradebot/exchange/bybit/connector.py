@@ -304,6 +304,8 @@ class BybitPrivateConnector(PrivateConnector):
         }
 
         if type == OrderType.LIMIT:
+            if not price:
+                raise ValueError("Price is required for limit order")
             params["price"] = str(price)
             params["timeInForce"] = BybitEnumParser.to_bybit_time_in_force(
                 time_in_force

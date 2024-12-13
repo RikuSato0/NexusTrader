@@ -321,15 +321,6 @@ class BinanceOrder(msgspec.Struct, frozen=True):
     cumBase: str | None = None  # COIN-M FUTURES only
     pair: str | None = None  # COIN-M FUTURES only
 
-    def parse_order(self) -> Order:
-        return Order(
-            exchange="binance",
-            id=self.orderId,
-            client_order_id=self.clientOrderId,
-            timestamp=self.updateTime,
-            symbol=self.symbol,
-        )
-
 
 class BinanceMarketInfo(msgspec.Struct):
     """

@@ -1,9 +1,8 @@
 import asyncio
 import msgspec
-from typing import Dict, Any
+from typing import Dict
 from decimal import Decimal
 from tradebot.base import PublicConnector, PrivateConnector
-from tradebot.core.entity import EventSystem
 from tradebot.constants import (
     OrderSide,
     OrderStatus,
@@ -460,13 +459,13 @@ class BinancePrivateConnector(PrivateConnector):
 
         # Only portfolio margin has "UM" and "CM" event business unit
         if event_unit == BinanceBusinessUnit.UM:
-            id = event_data["s"] + "_linear"
+            id = event_data.s + "_linear"
             symbol = self._market_id[id]
         elif event_unit == BinanceBusinessUnit.CM:
-            id = event_data["s"] + "_inverse"
+            id = event_data.s + "_inverse"
             symbol = self._market_id[id]
         else:
-            id = event_data["s"] + self.market_type
+            id = event_data.s + self.market_type
             symbol = self._market_id[id]
 
         # we use the last filled quantity to calculate the cost, instead of the accumulated filled quantity
@@ -508,7 +507,7 @@ class BinancePrivateConnector(PrivateConnector):
         # order status can be "new", "partially_filled", "filled", "canceled", "expired", "failed"
         self._msgbus.publish(topic="order", msg=order)
 
-    def _parse_execution_report(self, event_data: Dict[str, Any]) -> Order:
+    def _parse_execution_report(self, raw: bytes) -> Order:
         """
         {
             "e": "executionReport", // Event type
@@ -573,34 +572,34 @@ class BinancePrivateConnector(PrivateConnector):
             "I": 1495839281094 // Ignore
         }
         """
-        id = event_data["s"] + self.market_type
-        market = self._market_id[id]
+        event_data = self._ws_msg_spot_order_update_decoder.decode(raw)
+        
+        id = event_data.s + self.market_type
+        symbol = self._market_id[id]
+        
         order = Order(
-            raw=event_data,
-            success=True,
             exchange=self._exchange_id,
-            id=event_data.get("i", None),
-            client_order_id=event_data.get("c", None),
-            timestamp=event_data.get("T", None),
-            symbol=market.symbol,
-            type=event_data.get("o", "").lower(),
-            side=event_data.get("S", "").lower(),
-            status=event_data.get("X", "").lower(),
-            price=float(event_data.get("p", None)),
-            average=float(event_data.get("ap", None)),
-            last_filled_price=float(event_data.get("L", None)),
-            amount=Decimal(event_data.get("q", None)),
-            filled=Decimal(event_data.get("z", None)),
-            last_filled=float(event_data.get("l", None)),
-            remaining=Decimal(event_data.get("q", "0"))
-            - Decimal(event_data.get("z", "0")),
-            fee=float(event_data.get("n", None)),
-            fee_currency=event_data.get("N", None),
-            cost=float(event_data.get("Y", None)),
-            last_trade_timestamp=event_data.get("T", None),
-            time_in_force=event_data.get("f", None),
+            symbol=symbol,
+            status=BinanceEnumParser.parse_order_status(event_data.X),
+            id=event_data.i,
+            amount=Decimal(event_data.q),
+            filled=Decimal(event_data.z),
+            client_order_id=event_data.c,
+            timestamp=event_data.E,
+            type=BinanceEnumParser.parse_order_type(event_data.o),
+            side=BinanceEnumParser.parse_order_side(event_data.S),
+            time_in_force=BinanceEnumParser.parse_time_in_force(event_data.f),
+            price=float(event_data.p),
+            last_filled_price=float(event_data.L),
+            last_filled=float(event_data.l),
+            remaining=Decimal(event_data.q) - Decimal(event_data.z),
+            fee=float(event_data.n),
+            fee_currency=event_data.N,
+            cum_cost=float(event_data.Z),
+            cost=float(event_data.Y),
         )
-        self._emit_order(order)
+        
+        self._msgbus.publish(topic="order", msg=order)
 
     def create_order(
         self,

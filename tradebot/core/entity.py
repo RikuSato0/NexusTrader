@@ -37,9 +37,8 @@ class TaskManager:
             self._loop.add_signal_handler(sig, lambda: self.create_task(self._shutdown()))
 
     async def _shutdown(self):
-        self._log.info("Shutdown signal received, cleaning up...")
         self._shutdown_event.set()
-        self._log.info("Shutdown event set")
+        self._log.debug("Shutdown signal received, cleaning up...")
 
     def create_task(self, coro: asyncio.coroutines) -> asyncio.Task:
         task = asyncio.create_task(coro)
@@ -60,9 +59,8 @@ class TaskManager:
     async def wait(self):
         try:
             if self._tasks:
-                self._log.info("Waiting for shutdown event")
                 await self._shutdown_event.wait()
-                self._log.info("Shutdown event received")
+                self._log.debug("Shutdown Completed")
         except Exception as e:
             self._log.error(f"Error during wait: {e}")
             raise

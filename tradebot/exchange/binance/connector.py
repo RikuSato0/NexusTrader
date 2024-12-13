@@ -398,8 +398,12 @@ class BinancePrivateConnector(PrivateConnector):
 
     async def connect(self):
         listen_key = await self._start_user_data_stream()
-        self._task_manager.create_task(self._keep_alive_user_data_stream(listen_key))
-        await self._ws_client.subscribe_user_data_stream(listen_key)
+        
+        if listen_key:
+            self._task_manager.create_task(self._keep_alive_user_data_stream(listen_key))
+            await self._ws_client.subscribe_user_data_stream(listen_key)
+        else:
+            raise RuntimeError("Failed to start user data stream")
 
     def _ws_msg_handler(self, raw: bytes):
         try:

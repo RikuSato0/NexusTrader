@@ -30,7 +30,7 @@ class OrderManagerSystem:
         while True:
             try:
                 order = await self._position_msg_queue.get()
-                self._cache.apply_position(order)
+                self._cache._apply_position(order)
                 self._position_msg_queue.task_done()
             except Exception as e:
                 self._log.error(f"Error in handle_position_event: {e}")
@@ -42,29 +42,29 @@ class OrderManagerSystem:
                 match order.status:
                     case OrderStatus.PENDING:
                         self._log.debug(f"ORDER STATUS PENDING: {str(order)}")
-                        self._cache.order_initialized(order)
+                        self._cache._order_initialized(order)
                     case OrderStatus.CANCELING:
                         self._log.debug(f"ORDER STATUS CANCELING: {str(order)}")
-                        self._cache.order_status_update(order)
+                        self._cache._order_status_update(order)
                     case OrderStatus.ACCEPTED:
                         self._log.debug(f"ORDER STATUS ACCEPTED: {str(order)}")
-                        self._cache.order_status_update(order)
+                        self._cache._order_status_update(order)
                         self._msgbus.send(endpoint="accepted", msg=order)
                     case OrderStatus.PARTIALLY_FILLED:
                         self._log.debug(f"ORDER STATUS PARTIALLY FILLED: {str(order)}")
-                        self._cache.order_status_update(order)
+                        self._cache._order_status_update(order)
                         self._msgbus.send(endpoint="partially_filled", msg=order)
                     case OrderStatus.CANCELED:
                         self._log.debug(f"ORDER STATUS CANCELED: {str(order)}")
-                        self._cache.order_status_update(order)
+                        self._cache._order_status_update(order)
                         self._msgbus.send(endpoint="canceled", msg=order)
                     case OrderStatus.FILLED:
                         self._log.debug(f"ORDER STATUS FILLED: {str(order)}")
-                        self._cache.order_status_update(order)
+                        self._cache._order_status_update(order)
                         self._msgbus.send(endpoint="filled", msg=order)
                     case OrderStatus.EXPIRED:
                         self._log.debug(f"ORDER STATUS EXPIRED: {str(order)}")
-                        self._cache.order_status_update(order)
+                        self._cache._order_status_update(order)
                 self._order_msg_queue.task_done()
             except Exception as e:
                 self._log.error(f"Error in handle_order_event: {e}")

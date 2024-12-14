@@ -42,7 +42,7 @@ async def test_async_cache():
         
         print("Testing order initialization...")
         for order in test_orders:
-            cache.order_initialized(order)
+            cache._order_initialized(order)
             
         # Verify orders are in memory
         open_orders = await cache.get_open_orders(exchange=ExchangeType.BYBIT)
@@ -59,7 +59,7 @@ async def test_async_cache():
         # Test order status update
         updated_order = test_orders[0]
         updated_order.status = OrderStatus.FILLED
-        cache.order_status_update(updated_order)
+        cache._order_status_update(updated_order)
         
         # Verify open orders after update
         open_orders = await cache.get_open_orders(exchange=ExchangeType.BYBIT)

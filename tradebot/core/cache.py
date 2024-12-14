@@ -131,7 +131,7 @@ class AsyncCache:
 
         return True
 
-    async def apply_position(self, order: Order):
+    async def _apply_position(self, order: Order):
         symbol = order.symbol
         if symbol not in self._mem_symbol_positions:
             position = await self.get_position(symbol)
@@ -167,7 +167,7 @@ class AsyncCache:
 
         return None
 
-    def order_initialized(self, order: Order):
+    def _order_initialized(self, order: Order):
         if not self._check_status_transition(order):
             return
         self._mem_orders[order.id] = order
@@ -175,7 +175,7 @@ class AsyncCache:
         self._mem_symbol_orders[order.symbol].add(order.id)
         self._mem_symbol_open_orders[order.symbol].add(order.id)
 
-    def order_status_update(self, order: Order):
+    def _order_status_update(self, order: Order):
         if not self._check_status_transition(order):
             return
 

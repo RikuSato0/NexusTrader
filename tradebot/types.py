@@ -195,7 +195,9 @@ class Asset(Struct):
 
 
 class Balance(Struct):
-    assets: Dict[str, Asset] = field(default_factory=defaultdict(Asset))
+    assets: Dict[str, Asset] = field(
+        default_factory=lambda: defaultdict(lambda: Asset())
+    )
 
     def _update_asset_free(self, asset: str, amount: Decimal):
         self.assets[asset]._update_free(amount)

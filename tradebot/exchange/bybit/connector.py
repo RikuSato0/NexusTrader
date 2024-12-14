@@ -161,6 +161,7 @@ class BybitPrivateConnector(PrivateConnector):
     _account_type: BybitAccountType
     _market: Dict[str, BybitMarket]
     _market_id: Dict[str, str]
+    _api_client: BybitApiClient
 
     def __init__(
         self,
@@ -193,14 +194,13 @@ class BybitPrivateConnector(PrivateConnector):
                 api_key=exchange.api_key,
                 secret=exchange.secret,
             ),
+            api_client=BybitApiClient(
+                api_key=exchange.api_key,
+                secret=exchange.secret,
+                testnet=account_type.is_testnet,
+            ),
             msgbus=msgbus,
             rate_limit=rate_limit,
-        )
-
-        self._api_client = BybitApiClient(
-            api_key=exchange.api_key,
-            secret=exchange.secret,
-            testnet=account_type.is_testnet,
         )
 
         self._ws_msg_general_decoder = msgspec.json.Decoder(BybitWsMessageGeneral)

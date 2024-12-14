@@ -327,6 +327,7 @@ class PrivateConnector(ABC):
         market_id: Dict[str, str],
         exchange_id: ExchangeType,
         ws_client: WSClient,
+        api_client: ApiClient,
         msgbus: MessageBus,
         rate_limit: RateLimit | None = None,
     ):
@@ -338,6 +339,7 @@ class PrivateConnector(ABC):
         self._market_id = market_id
         self._exchange_id = exchange_id
         self._ws_client = ws_client
+        self._api_client = api_client
         self._clock = LiveClock()
         self._msgbus: MessageBus = msgbus
         
@@ -375,6 +377,7 @@ class PrivateConnector(ABC):
 
     async def disconnect(self):
         self._ws_client.disconnect()
+        await self._api_client.close_session()
 
     def amount_to_precision(
         self,

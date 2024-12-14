@@ -50,6 +50,8 @@ class BinanceApiClient(ApiClient):
         payload: Dict[str, Any] = None,
         signed: bool = False,
     ) -> Any:
+        await self._init_session()
+        
         url = urljoin(base_url, endpoint)
         payload = payload or {}
         payload["timestamp"] = self._clock.timestamp_ms()
@@ -372,4 +374,102 @@ class BinanceApiClient(ApiClient):
             **kwargs,
         }
         raw = await self._fetch("POST", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
+    
+    async def delete_api_v3_order(self, symbol: str, order_id: int, **kwargs) -> BinanceOrder:
+        """
+        https://developers.binance.com/docs/binance-spot-api-docs/rest-api/public-api-endpoints#cancel-order-trade
+        """
+        base_url = self._get_base_url(BinanceAccountType.SPOT)
+        end_point = "/api/v3/order"
+        data = {
+            "symbol": symbol,
+            "orderId": order_id,
+            **kwargs,
+        }
+        raw = await self._fetch("DELETE", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
+
+    async def delete_sapi_v1_margin_order(self, symbol: str, order_id: int, **kwargs) -> BinanceOrder:
+        """
+        https://developers.binance.com/docs/margin_trading/trade/Margin-Account-Cancel-Order
+        """
+        base_url = self._get_base_url(BinanceAccountType.MARGIN)
+        end_point = "/sapi/v1/margin/order"
+        data = {
+            "symbol": symbol,
+            "orderId": order_id,
+            **kwargs,
+        }
+        raw = await self._fetch("DELETE", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
+
+    async def delete_fapi_v1_order(self, symbol: str, order_id: int, **kwargs) -> BinanceOrder:
+        """
+        https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/Cancel-Order
+        """
+        base_url = self._get_base_url(BinanceAccountType.USD_M_FUTURE)
+        end_point = "/fapi/v1/order"
+        data = {
+            "symbol": symbol,
+            "orderId": order_id,
+            **kwargs,
+        }
+        raw = await self._fetch("DELETE", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
+
+    async def delete_dapi_v1_order(self, symbol: str, order_id: int, **kwargs) -> BinanceOrder:
+        """
+        https://developers.binance.com/docs/derivatives/coin-margined-futures/trade/Cancel-Order
+        """
+        base_url = self._get_base_url(BinanceAccountType.COIN_M_FUTURE)
+        end_point = "/dapi/v1/order"
+        data = {
+            "symbol": symbol,
+            "orderId": order_id,
+            **kwargs,
+        }
+        raw = await self._fetch("DELETE", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
+
+    async def delete_papi_v1_um_order(self, symbol: str, order_id: int, **kwargs) -> BinanceOrder:
+        """
+        https://developers.binance.com/docs/derivatives/portfolio-margin/trade/Cancel-UM-Order
+        """
+        base_url = self._get_base_url(BinanceAccountType.PORTFOLIO_MARGIN)
+        end_point = "/papi/v1/um/order"
+        data = {
+            "symbol": symbol,
+            "orderId": order_id,
+            **kwargs,
+        }
+        raw = await self._fetch("DELETE", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
+
+    async def delete_papi_v1_cm_order(self, symbol: str, order_id: int, **kwargs) -> BinanceOrder:
+        """
+        https://developers.binance.com/docs/derivatives/portfolio-margin/trade/Cancel-CM-Order
+        """
+        base_url = self._get_base_url(BinanceAccountType.PORTFOLIO_MARGIN)
+        end_point = "/papi/v1/cm/order"
+        data = {
+            "symbol": symbol,
+            "orderId": order_id,
+            **kwargs,
+        }
+        raw = await self._fetch("DELETE", base_url, end_point, payload=data, signed=True)
+        return self._order_decoder.decode(raw)
+    
+    async def delete_papi_v1_margin_order(self, symbol: str, order_id: int, **kwargs) -> BinanceOrder:
+        """
+        https://developers.binance.com/docs/derivatives/portfolio-margin/trade/Cancel-Margin-Account-Order
+        """
+        base_url = self._get_base_url(BinanceAccountType.PORTFOLIO_MARGIN)
+        end_point = "/papi/v1/margin/order"
+        data = {
+            "symbol": symbol,
+            "orderId": order_id,
+            **kwargs,
+        }
+        raw = await self._fetch("DELETE", base_url, end_point, payload=data, signed=True)
         return self._order_decoder.decode(raw)

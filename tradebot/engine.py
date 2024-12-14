@@ -13,7 +13,7 @@ from tradebot.exchange.bybit import (
     BybitPublicConnector,
     BybitAccountType,
 )
-from tradebot.exchange.binance import BinanceExchangeManager
+from tradebot.exchange.binance import BinanceExchangeManager, BinanceAccountType, BinancePublicConnector, BinancePrivateConnector
 from tradebot.exchange.okx import OkxExchangeManager
 from tradebot.core.entity import TaskManager
 from tradebot.core.nautilius_core import MessageBus, TraderId, LiveClock
@@ -74,12 +74,12 @@ class Engine:
                 if exchange_id == ExchangeType.BYBIT:
                     exchange: BybitExchangeManager = self._exchanges[exchange_id]
                     account_type: BybitAccountType = config.account_type
-                    public_connector = BybitPublicConnector(
-                        account_type=account_type,
-                        exchange=exchange,
-                        msgbus=self._msgbus,
-                        task_manager=self._task_manager,
-                    )
+                    
+                    if account_type == BybitAccountType.ALL or account_type == BybitAccountType.ALL_TESTNET:
+                        raise ValueError(
+                            f"BybitAccountType.{account_type.value} is not supported for public connector."
+                        )
+                    
                     if (
                         self._config.basic_config[exchange_id].testnet
                         != account_type.is_testnet
@@ -87,14 +87,44 @@ class Engine:
                         raise ValueError(
                             f"The `testnet` setting of {exchange_id} is not consistent with the public connector's account type `{account_type}`."
                         )
+                        
+                    public_connector = BybitPublicConnector(
+                        account_type=account_type,
+                        exchange=exchange,
+                        msgbus=self._msgbus,
+                        task_manager=self._task_manager,
+                    )
                     self._public_connectors[account_type] = public_connector
 
                 elif exchange_id == ExchangeType.BINANCE:
-                    pass
+                    exchange: BinanceExchangeManager = self._exchanges[exchange_id]
+                    account_type: BinanceAccountType = config.account_type
+
+                    if account_type.is_isolated_margin_or_margin or account_type.is_portfolio_margin:
+                        raise ValueError(
+                            f"BinanceAccountType.{account_type.value} is not supported for public connector."
+                        )
+                    
+                    if (
+                        self._config.basic_config[exchange_id].testnet
+                        != account_type.is_testnet
+                    ):
+                        raise ValueError(
+                            f"The `testnet` setting of {exchange_id} is not consistent with the public connector's account type `{account_type}`."
+                        )
+                    
+                    public_connector = BinancePublicConnector(
+                        account_type=account_type,
+                        exchange=exchange,
+                        msgbus=self._msgbus,
+                        task_manager=self._task_manager,
+                    )
+                    
+                    self._public_connectors[account_type] = public_connector
+                    
                 elif exchange_id == ExchangeType.OKX:
                     pass
 
-                self._public_connectors[config.account_type] = public_connector
 
     def _build_private_connectors(self):
         for (
@@ -123,7 +153,20 @@ class Engine:
 
             for config in private_conn_configs:
                 if exchange_id == ExchangeType.BINANCE:
-                    pass
+                    
+                    exchange: BinanceExchangeManager = self._exchanges[exchange_id]
+                    account_type: BinanceAccountType = config.account_type
+                    
+                    private_connector = BinancePrivateConnector(
+                        exchange=exchange,
+                        account_type=account_type,
+                        msgbus=self._msgbus,
+                        rate_limit=config.rate_limit,
+                        task_manager=self._task_manager,
+                    )
+                    
+                    self._private_connectors[account_type] = private_connector
+                    
                 elif exchange_id == ExchangeType.OKX:
                     pass
 
@@ -178,7 +221,16 @@ class Engine:
                         f"Unsupported instrument type: {instrument_id.type}"
                     )
             case ExchangeType.BINANCE:
-                pass
+                if instrument_id.type == InstrumentType.SPOT:
+                    return BinanceAccountType.SPOT_TESTNET if self._config.basic_config[ExchangeType.BINANCE].testnet else BinanceAccountType.SPOT
+                elif instrument_id.type == InstrumentType.LINEAR:
+                    return BinanceAccountType.USD_M_FUTURE_TESTNET if self._config.basic_config[ExchangeType.BINANCE].testnet else BinanceAccountType.USD_M_FUTURE
+                elif instrument_id.type == InstrumentType.INVERSE:
+                    return BinanceAccountType.COIN_M_FUTURE_TESTNET if self._config.basic_config[ExchangeType.BINANCE].testnet else BinanceAccountType.COIN_M_FUTURE
+                else:
+                    raise ValueError(
+                        f"Unsupported instrument type: {instrument_id.type}"
+                    )
             case ExchangeType.OKX:
                 pass
 

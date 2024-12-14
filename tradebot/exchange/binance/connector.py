@@ -304,6 +304,7 @@ class BinancePrivateConnector(PrivateConnector):
     _account_type: BinanceAccountType
     _market: Dict[str, BinanceMarket]
     _market_id: Dict[str, str]
+    _api_client: BinanceApiClient
 
     def __init__(
         self,
@@ -323,14 +324,13 @@ class BinancePrivateConnector(PrivateConnector):
                 handler=self._ws_msg_handler,
                 task_manager=task_manager,
             ),
+            api_client=BinanceApiClient(
+                api_key=exchange.api_key,
+                secret=exchange.secret,
+                testnet=account_type.is_testnet,
+            ),
             msgbus=msgbus,
             rate_limit=rate_limit,
-        )
-
-        self._api_client = BinanceApiClient(
-            api_key=exchange.api_key,
-            secret=exchange.secret,
-            testnet=account_type.is_testnet,
         )
 
         self._task_manager = task_manager
@@ -719,11 +719,11 @@ class BinancePrivateConnector(PrivateConnector):
                 type=type,
                 side=side,
                 time_in_force=time_in_force,
-                price=res.price,
-                average=res.avgPrice,
+                price=res.price if res.price else None,
+                average=res.avgPrice if res.avgPrice else None,
                 remaining=amount,
-                reduce_only=res.reduceOnly,
-                position_side=res.positionSide,
+                reduce_only=res.reduceOnly if res.reduceOnly else None,
+                position_side=BinanceEnumParser.parse_position_side(res.positionSide) if res.positionSide else None,
             )
             self._msgbus.publish(topic="order", msg=order)
             return order
@@ -744,9 +744,78 @@ class BinancePrivateConnector(PrivateConnector):
                 remaining=amount,
             )
             return order
+    
+    async def _execute_cancel_order_request(self, market: BinanceMarket, symbol: str, params: Dict[str, Any]):
+        if self._account_type.is_spot:
+            if not market.spot:
+                raise ValueError(f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}")
+            return await self._api_client.delete_api_v3_order(**params)
+        elif self._account_type.is_isolated_margin_or_margin:
+            if not market.margin:
+                raise ValueError(f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}")
+            return await self._api_client.delete_sapi_v1_margin_order(**params)
+        elif self._account_type.is_linear:
+            if not market.linear:
+                raise ValueError(f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}")
+            return await self._api_client.delete_fapi_v1_order(**params)
+        elif self._account_type.is_inverse:
+            if not market.inverse:
+                raise ValueError(f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}")
+            return await self._api_client.delete_dapi_v1_order(**params)
+        elif self._account_type.is_portfolio_margin:
+            if market.margin:
+                return await self._api_client.delete_papi_v1_margin_order(**params)
+            elif market.linear:
+                return await self._api_client.delete_papi_v1_um_order(**params)
+            elif market.inverse:
+                return await self._api_client.delete_papi_v1_cm_order(**params)
 
-    def cancel_order(self, symbol: str, order_id: str, **kwargs):
-        pass
+    async def cancel_order(self, symbol: str, order_id: int, **kwargs):
+        if self._limiter:
+            await self._limiter.acquire()
+        try:
+            market = self._market.get(symbol)
+            if not market:
+                raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
+            symbol = market.id
+
+            params = {
+                "symbol": symbol,
+                "orderId": order_id,
+                **kwargs,
+            }
+
+            res = await self._execute_cancel_order_request(market, symbol, params)
+            order = Order(
+                exchange=self._exchange_id,
+                symbol=symbol,
+                status=OrderStatus.CANCELING,
+                id=res.orderId,
+                amount=res.origQty,
+                filled=Decimal(res.executedQty),
+                client_order_id=res.clientOrderId,
+                timestamp=res.updateTime,
+                type=BinanceEnumParser.parse_order_type(res.type) if res.type else None,
+                side=BinanceEnumParser.parse_order_side(res.side) if res.side else None,
+                time_in_force=BinanceEnumParser.parse_time_in_force(res.timeInForce) if res.timeInForce else None,
+                price=res.price,
+                average=res.avgPrice,
+                remaining=Decimal(res.origQty) - Decimal(res.executedQty),
+                reduce_only=res.reduceOnly,
+                position_side=BinanceEnumParser.parse_position_side(res.positionSide) if res.positionSide else None,
+            )
+            self._msgbus.publish(topic="order", msg=order)
+            return order
+        except Exception as e:
+            self._log.error(f"Error canceling order: {e} params: {str(params)}")
+            order = Order(
+                exchange=self._exchange_id,
+                timestamp=self._clock.timestamp_ms(),
+                symbol=symbol,
+                id=order_id,
+                status=OrderStatus.FAILED,
+            )
+            return order
 
     # async def place_market_order(
     #     self, symbol: str, side: Literal["buy", "sell"], amount: Decimal, **params

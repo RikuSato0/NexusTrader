@@ -28,7 +28,8 @@ class AsyncCache:
             name=type(self).__name__, level="DEBUG", flush=True
         )
         self._clock = LiveClock()
-        self._r = RedisClient.get_async_client()
+        self._r_async = RedisClient.get_async_client()
+        self._r = RedisClient.get_client()
 
         # in-memory save
         self._mem_orders: Dict[str, Order] = {}  # order_id -> Order
@@ -72,34 +73,34 @@ class AsyncCache:
         self._log.debug("syncing to redis")
         for order_id, order in self._mem_orders.copy().items():
             orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:orders"
-            await self._r.hset(orders_key, order_id, self._encode(order))
+            await self._r_async.hset(orders_key, order_id, self._encode(order))
 
         for exchange, open_order_ids in self._mem_open_orders.copy().items():
             open_orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{exchange.value}:open_orders"
 
-            await self._r.delete(open_orders_key)
+            await self._r_async.delete(open_orders_key)
 
             if open_order_ids:
-                await self._r.sadd(open_orders_key, *open_order_ids)
+                await self._r_async.sadd(open_orders_key, *open_order_ids)
 
         for symbol, order_ids in self._mem_symbol_orders.copy().items():
             instrument_id = InstrumentId.from_str(symbol)
             key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{instrument_id.exchange.value}:symbol_orders:{symbol}"
-            await self._r.delete(key)
+            await self._r_async.delete(key)
             if order_ids:
-                await self._r.sadd(key, *order_ids)
+                await self._r_async.sadd(key, *order_ids)
 
         for symbol, order_ids in self._mem_symbol_open_orders.copy().items():
             instrument_id = InstrumentId.from_str(symbol)
             key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{instrument_id.exchange.value}:symbol_open_orders:{symbol}"
-            await self._r.delete(key)
+            await self._r_async.delete(key)
             if order_ids:
-                await self._r.sadd(key, *order_ids)
+                await self._r_async.sadd(key, *order_ids)
 
         # Add position sync
         for symbol, position in self._mem_symbol_positions.copy().items():
             key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{position.exchange.value}:symbol_positions:{symbol}"
-            await self._r.set(key, self._encode(position))
+            await self._r_async.set(key, self._encode(position))
 
     def _cleanup_expired_data(self):
         current_time = self._clock.timestamp_ms()
@@ -152,7 +153,7 @@ class AsyncCache:
             )
             self._mem_symbol_positions[symbol].apply(order)
 
-    async def get_position(self, symbol: str) -> Position:
+    def get_position(self, symbol: str) -> Position:
         # First try memory
         if position := self._mem_symbol_positions.get(symbol):
             return position
@@ -160,7 +161,7 @@ class AsyncCache:
         # Then try Redis
         instrument_id = InstrumentId.from_str(symbol)
         key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{instrument_id.exchange.value}:symbol_positions:{symbol}"
-        if position_data := await self._r.get(key):
+        if position_data := self._r.get(key):
             position = self._decode(position_data, Position)
             self._mem_symbol_positions[symbol] = position  # Cache in memory
             return position
@@ -188,26 +189,26 @@ class AsyncCache:
             self._mem_open_orders[order.exchange].discard(order.id)
             self._mem_symbol_open_orders[order.symbol].discard(order.id)
 
-    async def get_order(self, order_id: str) -> Order:
+    def get_order(self, order_id: str) -> Order:
         if order_id in self._mem_orders:
             return self._mem_orders[order_id]
 
         orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:orders"
-        raw_order = await self._r.hget(orders_key, order_id)
+        raw_order = self._r.hget(orders_key, order_id)
         if raw_order:
             order = self._decode(raw_order, Order)
             self._mem_orders[order_id] = order
             return order
         return None
 
-    async def get_symbol_orders(self, symbol: str, in_mem: bool = True) -> Set[str]:
+    def get_symbol_orders(self, symbol: str, in_mem: bool = True) -> Set[str]:
         """Get all orders for a symbol from memory and Redis"""
 
         memory_orders = self._mem_symbol_orders.get(symbol, set())
         if not in_mem:
             instrument_id = InstrumentId.from_str(symbol)
             key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{instrument_id.exchange.value}:symbol_orders:{symbol}"
-            redis_orders = await self._r.smembers(key)
+            redis_orders = self._r.smembers(key)
             redis_orders = (
                 {order_id.decode() for order_id in redis_orders}
                 if redis_orders
@@ -216,7 +217,7 @@ class AsyncCache:
             return memory_orders.union(redis_orders)
         return memory_orders
 
-    async def get_open_orders(
+    def get_open_orders(
         self, symbol: str | None = None, exchange: ExchangeType | None = None
     ) -> Set[str]:
         if symbol is not None:
@@ -229,4 +230,4 @@ class AsyncCache:
     async def close(self):
         self._shutdown_event.set()
         await self._sync_to_redis()
-        await self._r.aclose()
+        await self._r_async.aclose()

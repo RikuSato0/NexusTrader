@@ -5,7 +5,7 @@ from collections import defaultdict
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager, RateLimit
-from tradebot.types import BookL1, Order, Trade
+from tradebot.schema import BookL1, Order, Trade
 from tradebot.constants import (
     OrderSide,
     OrderStatus,
@@ -13,7 +13,7 @@ from tradebot.constants import (
     TimeInForce,
     PositionSide,
 )
-from tradebot.exchange.bybit.types import (
+from tradebot.exchange.bybit.schema import (
     BybitWsMessageGeneral,
     BybitWsOrderMsg,
     BybitWsOrderbookDepthMsg,

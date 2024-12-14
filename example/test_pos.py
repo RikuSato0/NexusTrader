@@ -1,5 +1,5 @@
 import re
-from tradebot.types import Position, Order
+from tradebot.schema import Position, Order
 from tradebot.constants import OrderStatus
 from typing import Dict
 from tqdm import tqdm

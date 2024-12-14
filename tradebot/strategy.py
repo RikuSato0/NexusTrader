@@ -2,7 +2,7 @@ from typing import Dict, List, Set
 from tradebot.core.log import SpdLog
 from tradebot.base import TaskManager
 from tradebot.core.nautilius_core import MessageBus
-from tradebot.types import BookL1, Trade, Kline, Order, MarketData
+from tradebot.schema import BookL1, Trade, Kline, Order, MarketData
 from tradebot.constants import DataType
 
 

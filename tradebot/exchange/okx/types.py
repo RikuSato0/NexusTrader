@@ -1,5 +1,5 @@
 import msgspec
-from tradebot.types import BaseMarket
+from tradebot.schema import BaseMarket
 
 ################################################################################
 # Place Order: POST /api/v5/trade/order

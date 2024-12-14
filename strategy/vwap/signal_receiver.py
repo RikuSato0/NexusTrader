@@ -2,7 +2,7 @@ import zmq.asyncio
 import orjson
 import asyncio
 from typing import Dict
-from tradebot.exchange.bybit.types import BybitMarket
+from tradebot.exchange.bybit.schema import BybitMarket
 from tradebot.exchange.bybit import BybitExchangeManager
 from decimal import Decimal
 

@@ -1,7 +1,7 @@
 import msgspec
 from typing import Final
 from typing import Dict, Any, Generic, TypeVar
-from tradebot.types import BaseMarket
+from tradebot.schema import BaseMarket
 from tradebot.exchange.bybit.constants import (
     BybitProductType,
     BybitOrderSide,

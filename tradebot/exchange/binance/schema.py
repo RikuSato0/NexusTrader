@@ -1,6 +1,6 @@
 import msgspec
 from typing import Any, Dict, List
-from tradebot.types import Order, BaseMarket
+from tradebot.schema import Order, BaseMarket
 from tradebot.constants import OrderSide, TimeInForce
 from tradebot.exchange.binance.constants import (
     BinanceOrderStatus,

@@ -5,7 +5,7 @@ from typing import Dict, Set, Type
 from collections import defaultdict
 
 
-from tradebot.types import Order, Position, ExchangeType, InstrumentId
+from tradebot.schema import Order, Position, ExchangeType, InstrumentId
 from tradebot.constants import OrderStatus, STATUS_TRANSITIONS
 from tradebot.core.entity import TaskManager, RedisClient
 from tradebot.core.log import SpdLog

@@ -4,7 +4,7 @@ from tradebot.strategy import Strategy
 from tradebot.constants import ExchangeType
 from tradebot.exchange.bybit import BybitAccountType
 from tradebot.exchange.binance import BinanceAccountType
-from tradebot.types import BookL1
+from tradebot.schema import BookL1
 from tradebot.engine import Engine
 
 BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]

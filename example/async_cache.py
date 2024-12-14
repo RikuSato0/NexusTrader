@@ -2,7 +2,7 @@ import asyncio
 import time
 from decimal import Decimal
 from tradebot.constants import OrderStatus, ExchangeType
-from tradebot.types import Order, OrderType, OrderSide
+from tradebot.schema import Order, OrderType, OrderSide
 from tradebot.core.cache import AsyncCache
 from tradebot.core.entity import RedisClient, TaskManager
 

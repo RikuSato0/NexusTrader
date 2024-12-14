@@ -7,7 +7,7 @@ from tradebot.core.cache import AsyncCache
 from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.websockets_v2 import OkxWSClient as OkxWSClientV2
 from tradebot.exchange.okx.exchange import OkxExchangeManager
-from tradebot.types import Trade, BookL1, Kline
+from tradebot.schema import Trade, BookL1, Kline
 from tradebot.exchange.okx.types import OkxMarket
 from tradebot.constants import (
     EventType,
@@ -19,7 +19,7 @@ from tradebot.core.entity import EventSystem
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.core.oms import OrderManagerSystem
 from tradebot.exchange.okx.rest_api import OkxApiClient
-from tradebot.types import Order, OrderSide, OrderType
+from tradebot.schema import Order, OrderSide, OrderType
 from tradebot.exchange.okx.constants import (
     OKXWsGeneralMsg,
     OKXWsEventMsg,

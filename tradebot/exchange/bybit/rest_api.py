@@ -11,7 +11,7 @@ from decimal import Decimal
 from tradebot.base import ApiClient
 from tradebot.exchange.bybit.constants import BybitBaseUrl
 from tradebot.exchange.bybit.error import BybitError
-from tradebot.exchange.bybit.types import (
+from tradebot.exchange.bybit.schema import (
     BybitResponse,
     BybitOrderResponse,
     BybitPositionResponse,

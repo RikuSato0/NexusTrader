@@ -1,6 +1,6 @@
 import asyncio
 from tradebot.constants import KEYS
-from tradebot.types import Order
+from tradebot.schema import Order
 from tradebot.constants import OrderSide, OrderType, OrderStatus
 from tradebot.core import Strategy
 from decimal import Decimal

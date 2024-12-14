@@ -10,7 +10,7 @@ from typing import Any, Dict
 from urllib.parse import urljoin, urlencode
 
 from tradebot.base import ApiClient
-from tradebot.exchange.binance.types import BinanceOrder, BinanceListenKey
+from tradebot.exchange.binance.schema import BinanceOrder, BinanceListenKey
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.error import BinanceClientError, BinanceServerError
 

@@ -16,7 +16,7 @@ from decimal import Decimal
 from aiolimiter import AsyncLimiter
 from decimal import ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
 
-from tradebot.types import Order, BaseMarket
+from tradebot.schema import Order, BaseMarket
 from tradebot.constants import ExchangeType
 from tradebot.core.log import SpdLog
 from tradebot.core.entity import TaskManager, RateLimit

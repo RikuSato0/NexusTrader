@@ -1,6 +1,6 @@
 import asyncio
 
-from tradebot.types import Order
+from tradebot.schema import Order
 from tradebot.constants import OrderStatus
 from tradebot.core.cache import AsyncCache
 from tradebot.core.log import SpdLog

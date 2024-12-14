@@ -2,7 +2,7 @@ import asyncio
 import ccxt.pro as ccxt
 import msgspec
 from decimal import Decimal
-from tradebot.types import Asset
+from tradebot.schema import Asset
 from tradebot.constants import KEYS
 from tradebot.exchange.binance import BinanceExchangeManager
 

@@ -3,8 +3,8 @@ import orjson
 import msgspec
 from typing import Any, Dict
 from tradebot.base import ExchangeManager
-from tradebot.exchange.binance.types import BinanceMarket
-from tradebot.types import InstrumentId
+from tradebot.exchange.binance.schema import BinanceMarket
+from tradebot.schema import InstrumentId
 
 class BinanceExchangeManager(ExchangeManager):
     api: ccxt.binance

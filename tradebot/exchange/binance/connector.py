@@ -10,9 +10,9 @@ from tradebot.constants import (
     PositionSide,
     TimeInForce,
 )
-from tradebot.types import Order
-from tradebot.types import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
-from tradebot.exchange.binance.types import BinanceMarket
+from tradebot.schema import Order
+from tradebot.schema import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
+from tradebot.exchange.binance.schema import BinanceMarket
 from tradebot.exchange.binance.rest_api import BinanceApiClient
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.websockets import BinanceWSClient
@@ -24,7 +24,7 @@ from tradebot.exchange.binance.constants import (
     BinanceEnumParser,
     BinanceOrderType,
 )
-from tradebot.exchange.binance.types import (
+from tradebot.exchange.binance.schema import (
     BinanceWsMessageGeneral,
     BinanceTradeData,
     BinanceSpotBookTicker,

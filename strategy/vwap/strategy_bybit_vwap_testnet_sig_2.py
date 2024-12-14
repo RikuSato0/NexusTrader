@@ -10,10 +10,10 @@ import orjson
 from typing import Dict, Tuple
 from collections import defaultdict
 from tradebot.constants import KEYS
-from tradebot.types import Order, BookL1
+from tradebot.schema import Order, BookL1
 from tradebot.constants import OrderSide, OrderType, OrderStatus
 from tradebot.strategy import Strategy
-from tradebot.exchange.bybit.types import BybitMarket
+from tradebot.exchange.bybit.schema import BybitMarket
 from decimal import Decimal
 from tradebot.core.entity import EventSystem
 from tradebot.exchange.bybit import (

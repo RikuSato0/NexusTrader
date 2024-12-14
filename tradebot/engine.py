@@ -17,7 +17,7 @@ from tradebot.exchange.binance import BinanceExchangeManager, BinanceAccountType
 from tradebot.exchange.okx import OkxExchangeManager
 from tradebot.core.entity import TaskManager
 from tradebot.core.nautilius_core import MessageBus, TraderId, LiveClock
-from tradebot.types import InstrumentId
+from tradebot.schema import InstrumentId
 from tradebot.constants import DataType, InstrumentType
 
 

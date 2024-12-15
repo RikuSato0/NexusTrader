@@ -108,7 +108,7 @@ class BybitPublicConnector(PublicConnector):
                 size=float(d.v),
                 timestamp=msg.ts,
             )
-            self._msgbus.send(endpoint="trade", msg=trade)
+            self._msgbus.publish(topic="trade", msg=trade)
 
     def _handle_orderbook(self, raw: bytes, topic: str):
         msg: BybitWsOrderbookDepthMsg = self._ws_msg_orderbook_decoder.decode(raw)
@@ -132,7 +132,7 @@ class BybitPublicConnector(PublicConnector):
             ask=ask,
             ask_size=ask_size,
         )
-        self._msgbus.send(endpoint="bookl1", msg=bookl1)
+        self._msgbus.publish(topic="bookl1", msg=bookl1)
 
     async def subscribe_bookl1(self, symbol: str):
         market = self._market.get(symbol, None)

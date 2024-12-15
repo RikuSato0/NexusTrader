@@ -5,11 +5,11 @@ from typing import Dict, Set, Type
 from collections import defaultdict
 
 
-from tradebot.schema import Order, Position, ExchangeType, InstrumentId
+from tradebot.schema import Order, Position, ExchangeType, InstrumentId, Kline, BookL1, Trade
 from tradebot.constants import OrderStatus, STATUS_TRANSITIONS
 from tradebot.core.entity import TaskManager, RedisClient
 from tradebot.core.log import SpdLog
-from tradebot.core.nautilius_core import LiveClock
+from tradebot.core.nautilius_core import LiveClock, MessageBus
 
 
 class AsyncCache:
@@ -17,6 +17,7 @@ class AsyncCache:
         self,
         strategy_id: str,
         user_id: str,
+        msgbus: MessageBus,
         task_manager: TaskManager,
         sync_interval: int = 60,
         expire_time: int = 3600,
@@ -51,6 +52,34 @@ class AsyncCache:
 
         self._shutdown_event = asyncio.Event()
         self._task_manager = task_manager
+        
+        self._kline_cache: Dict[str, Kline] = {}
+        self._bookl1_cache: Dict[str, BookL1] = {}
+        self._trade_cache: Dict[str, Trade] = {}
+        
+        self._msgbus = msgbus
+        self._msgbus.subscribe(topic="kline", handler=self._update_kline_cache)
+        self._msgbus.subscribe(topic="bookl1", handler=self._update_bookl1_cache)
+        self._msgbus.subscribe(topic="trade", handler=self._update_trade_cache)
+
+    
+    def _update_kline_cache(self, kline: Kline):
+        self._kline_cache[kline.symbol] = kline
+    
+    def _update_bookl1_cache(self, bookl1: BookL1):
+        self._bookl1_cache[bookl1.symbol] = bookl1
+    
+    def _update_trade_cache(self, trade: Trade):
+        self._trade_cache[trade.symbol] = trade
+    
+    def kline(self, symbol: str) -> Kline:
+        return self._kline_cache.get(symbol, None)
+    
+    def bookl1(self, symbol: str) -> BookL1:
+        return self._bookl1_cache.get(symbol, None)
+    
+    def trade(self, symbol: str) -> Trade:
+        return self._trade_cache.get(symbol, None)
 
     def _encode(self, obj: Order | Position) -> bytes:
         return msgspec.json.encode(obj)

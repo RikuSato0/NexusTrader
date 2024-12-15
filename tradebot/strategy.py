@@ -33,9 +33,10 @@ class Strategy:
         self._oes = oes
         self._task_manager = task_manager
         self._msgbus = msgbus
-        self._msgbus.register(endpoint="trade", handler=self.on_trade)
-        self._msgbus.register(endpoint="bookl1", handler=self.on_bookl1)
-        self._msgbus.register(endpoint="kline", handler=self.on_kline)
+        self._msgbus.subscribe(topic="trade", handler=self.on_trade)
+        self._msgbus.subscribe(topic="bookl1", handler=self.on_bookl1)
+        self._msgbus.subscribe(topic="kline", handler=self.on_kline)
+        
         self._msgbus.register(endpoint="accepted", handler=self.on_accepted_order)
         self._msgbus.register(endpoint="partially_filled", handler=self.on_partially_filled_order)
         self._msgbus.register(endpoint="filled", handler=self.on_filled_order)

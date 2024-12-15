@@ -45,6 +45,7 @@ class OrderExecutionSystem:
         for account_type in self._private_connectors:
             self._order_msg_queues[account_type] = asyncio.Queue()
             self._cancel_order_msg_queues[account_type] = asyncio.Queue()
+            
     def _set_bybit_account_type(self):
         account_types = self._private_connectors.keys()
         if BybitAccountType.ALL_TESTNET in account_types:
@@ -126,6 +127,7 @@ class OrderExecutionSystem:
             
 
     async def start(self):
+        self._build_order_msg_queue()
         for account_type in self._private_connectors.keys():
             self._task_manager.create_task(
                 self._handle_submit_order(

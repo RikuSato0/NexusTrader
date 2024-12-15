@@ -42,17 +42,17 @@ class Engine:
 
         trader_id = f"{self._config.strategy_id}-{self._config.user_id}"
 
-        self._cache: AsyncCache = AsyncCache(
-            strategy_id=config.strategy_id,
-            user_id=config.user_id,
-            task_manager=self._task_manager,
-            sync_interval=config.cache_sync_interval,
-            expire_time=config.cache_expire_time,
-        )
-
         self._msgbus = MessageBus(
             trader_id=TraderId(trader_id),
             clock=LiveClock(),
+        )
+        self._cache: AsyncCache = AsyncCache(
+            strategy_id=config.strategy_id,
+            user_id=config.user_id,
+            msgbus=self._msgbus,
+            task_manager=self._task_manager,
+            sync_interval=config.cache_sync_interval,
+            expire_time=config.cache_expire_time,
         )
 
         self._oms = OrderManagerSystem(
@@ -67,7 +67,7 @@ class Engine:
         )
 
         self._strategy: Strategy = config.strategy
-        self._strategy._init_core(msgbus=self._msgbus, task_manager=self._task_manager)
+        self._strategy._init_core(msgbus=self._msgbus, task_manager=self._task_manager, oes=self._oes)
 
         self._subscriptions: Dict[
             DataType, Dict[str, str] | Set[str]

@@ -169,7 +169,7 @@ class BinancePublicConnector(PublicConnector):
             timestamp=res.E,
         )
         self._log.debug(f"{ticker}")
-        self._msgbus.send(endpoint="kline", msg=ticker)
+        self._msgbus.publish(topic="kline", msg=ticker)
 
     def _parse_trade(self, raw: bytes) -> Trade:
         """
@@ -208,7 +208,7 @@ class BinancePublicConnector(PublicConnector):
             timestamp=res.T,
         )
         self._log.debug(f"{trade}")
-        self._msgbus.send(endpoint="trade", msg=trade)
+        self._msgbus.publish(topic="trade", msg=trade)
 
     def _parse_spot_book_ticker(self, raw: bytes) -> BookL1:
         """
@@ -235,7 +235,7 @@ class BinancePublicConnector(PublicConnector):
             timestamp=self._clock.timestamp_ms(),
         )
         self._log.debug(f"{bookl1}")
-        self._msgbus.send(endpoint="bookl1", msg=bookl1)
+        self._msgbus.publish(topic="bookl1", msg=bookl1)
 
     def _parse_futures_book_ticker(self, raw: bytes) -> BookL1:
         res = self._ws_futures_book_ticker_decoder.decode(raw)
@@ -251,7 +251,7 @@ class BinancePublicConnector(PublicConnector):
             timestamp=res.E,
         )
         self._log.debug(f"{bookl1}")
-        self._msgbus.send(endpoint="bookl1", msg=bookl1)
+        self._msgbus.publish(topic="bookl1", msg=bookl1)
 
     def _parse_mark_price(self, raw: bytes):
         """
@@ -294,9 +294,9 @@ class BinancePublicConnector(PublicConnector):
         self._log.debug(f"{mark_price}")
         self._log.debug(f"{funding_rate}")
         self._log.debug(f"{index_price}")
-        self._msgbus.send(endpoint="mark_price", msg=mark_price)
-        self._msgbus.send(endpoint="funding_rate", msg=funding_rate)
-        self._msgbus.send(endpoint="index_price", msg=index_price)
+        self._msgbus.publish(topic="mark_price", msg=mark_price)
+        self._msgbus.publish(topic="funding_rate", msg=funding_rate)
+        self._msgbus.publish(topic="index_price", msg=index_price)
 
 
 class BinancePrivateConnector(PrivateConnector):

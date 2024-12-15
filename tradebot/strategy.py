@@ -5,7 +5,7 @@ from tradebot.base import TaskManager
 from tradebot.core.oms import OrderExecutionSystem
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.schema import BookL1, Trade, Kline, Order, MarketData, OrderSubmit
-from tradebot.constants import DataType, OrderSide, OrderType, TimeInForce, PositionSide
+from tradebot.constants import DataType, OrderSide, OrderType, TimeInForce, PositionSide, AccountType
 
 
 class Strategy:
@@ -55,6 +55,7 @@ class Strategy:
         price: Decimal | None = None,
         time_in_force: TimeInForce | None = None,
         position_side: PositionSide | None = None,
+        account_type: AccountType | None = None,
         **kwargs,
     ):
         order = OrderSubmit(
@@ -67,15 +68,15 @@ class Strategy:
             position_side=position_side,
             kwargs=kwargs,
         )
-        self._oes._submit_order(order)
+        self._oes._submit_order(order, account_type)
     
-    def cancel_order(self, symbol: str, order_id: str | int, **kwargs):
+    def cancel_order(self, symbol: str, order_id: str | int, account_type: AccountType | None = None, **kwargs):
         order = OrderSubmit(
             symbol=symbol,
             order_id=order_id,
             kwargs=kwargs,
         )
-        self._oes._submit_order(order)
+        self._oes._submit_cancel_order(order, account_type)
 
     def subscribe_bookl1(self, symbols: List[str]):
         for symbol in symbols:

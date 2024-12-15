@@ -95,15 +95,17 @@ class OrderExecutionSystem:
             case ExchangeType.OKX:
                 pass
 
-    def _submit_order(self, order: OrderSubmit):
+    def _submit_order(self, order: OrderSubmit, account_type: AccountType | None = None):
         instrument_id = InstrumentId.from_str(order.symbol)
-        account_type = self._instrument_id_to_account_type(instrument_id)
+        if not account_type:
+            account_type = self._instrument_id_to_account_type(instrument_id)
         self._order_msg_queues[account_type].put_nowait(order)
     
-    def _submit_cancel_order(self, order: OrderSubmit):
+    def _submit_cancel_order(self, order: OrderSubmit, account_type: AccountType | None = None):
         instrument_id = InstrumentId.from_str(order.symbol)
-        account_type = self._instrument_id_to_account_type(instrument_id)
-        self._order_msg_queues[account_type].put_nowait(order)
+        if not account_type:
+            account_type = self._instrument_id_to_account_type(instrument_id)
+        self._cancel_order_msg_queues[account_type].put_nowait(order)
 
     async def _handle_submit_order(
         self, account_type: AccountType, queue: asyncio.Queue[OrderSubmit]

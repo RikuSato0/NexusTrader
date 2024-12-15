@@ -3,25 +3,25 @@ from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfi
 from tradebot.strategy import Strategy
 from tradebot.constants import ExchangeType
 from tradebot.exchange.bybit import BybitAccountType
-from tradebot.exchange.binance import BinanceAccountType
-from tradebot.schema import BookL1
+from tradebot.schema import BookL1, Order
 from tradebot.engine import Engine
 
 BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]
 BYBIT_SECRET = KEYS["bybit_testnet_2"]["SECRET"]
 
-BINANCE_API_KEY = KEYS["binance_future_testnet"]["API_KEY"]
-BINANCE_SECRET = KEYS["binance_future_testnet"]["SECRET"]
-
 
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT", "ETHUSDT-PERP.BYBIT"])
-        self.subscribe_bookl1(symbols=["BTCUSDT.BYBIT", "ETHUSDT.BYBIT"])
+        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
+        self.schedule(func=self.algo, seconds=0.1)
+        
+    async def algo(self):
+        bookl1 = self.cache.bookl1(symbol="BTCUSDT-PERP.BYBIT")
+        if bookl1:
+            print(bookl1)
+        
     
-    def on_bookl1(self, data: BookL1):
-        print(data)
 
 config = Config(
     strategy_id="buy_and_sell",

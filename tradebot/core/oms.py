@@ -161,7 +161,7 @@ class OrderManagerSystem:
         while True:
             try:
                 order = await self._position_msg_queue.get()
-                self._cache._apply_position(order)
+                await self._cache._apply_position(order)
                 self._position_msg_queue.task_done()
             except Exception as e:
                 self._log.error(f"Error in handle_position_event: {e}")

@@ -29,6 +29,7 @@ bcrypt = "^4.2.0"
 nautilus-trader = "^1.204.0"
 zmq = "^0.0.0"
 aiolimiter = "^1.2.1"
+apscheduler = "^3.11.0"
 
 
 [build-system]

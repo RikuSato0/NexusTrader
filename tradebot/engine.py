@@ -206,16 +206,18 @@ class Engine:
                 self._exchanges[exchange_id] = BinanceExchangeManager(config)
             elif exchange_id == ExchangeType.OKX:
                 self._exchanges[exchange_id] = OkxExchangeManager(config)
-    
+
     def _build_custom_signal_recv(self):
         zmq_config = self._config.zero_mq_signal_config
         if zmq_config:
             if not hasattr(self._strategy, "on_custom_signal"):
-                raise ValueError("Please add `on_custom_signal` method to the strategy.")
-                        
-            self._custom_signal_recv = ZeroMQSignalRecv(zmq_config, self._strategy.on_custom_signal, self._task_manager)
-        
-        
+                raise ValueError(
+                    "Please add `on_custom_signal` method to the strategy."
+                )
+
+            self._custom_signal_recv = ZeroMQSignalRecv(
+                zmq_config, self._strategy.on_custom_signal, self._task_manager
+            )
 
     def _build(self):
         self._build_exchanges()
@@ -331,7 +333,8 @@ class Engine:
         await self._oms.start()
         await self._oes.start()
         await self._start_connectors()
-        await self._custom_signal_recv.start()
+        if self._custom_signal_recv:
+            await self._custom_signal_recv.start()
         self._strategy._scheduler.start()
         await self._task_manager.wait()
 

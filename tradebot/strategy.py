@@ -37,10 +37,9 @@ class Strategy:
         self._msgbus.register(endpoint="bookl1", handler=self.on_bookl1)
         self._msgbus.register(endpoint="kline", handler=self.on_kline)
         self._msgbus.register(endpoint="accepted", handler=self.on_accepted_order)
-        self._msgbus.register(
-            endpoint="partially_filled", handler=self.on_partially_filled_order
-        )
+        self._msgbus.register(endpoint="partially_filled", handler=self.on_partially_filled_order)
         self._msgbus.register(endpoint="filled", handler=self.on_filled_order)
+        self._msgbus.register(endpoint="canceling", handler=self.on_canceling_order)
         self._msgbus.register(endpoint="canceled", handler=self.on_canceled_order)
         self._msgbus.register(endpoint="failed", handler=self.on_failed_order)
         self._msgbus.register(endpoint="pending", handler=self.on_pending_order)
@@ -58,6 +57,23 @@ class Strategy:
         account_type: AccountType | None = None,
         **kwargs,
     ):
+        """
+        Submit a new order.
+
+        Args:
+            symbol (str): The trading symbol/pair (e.g. "BTCUSDT-PERP.BINANCE, BTCUSDT.OKX")
+            side (OrderSide): The side of the order (e.g. OrderSide.BUY)
+            type (OrderType): The type of the order (e.g. OrderType.MARKET)
+            amount (Decimal): The amount of the order (e.g. 1.0)
+            price (Decimal | None, optional): The price of the order. Defaults to None. (Only used for limit orders)
+            time_in_force (TimeInForce | None, optional): The time in force of the order. Defaults to None.
+            position_side (PositionSide | None, optional): The position side of the order. Defaults to None.
+            account_type (AccountType | None, optional): The specific account type to use. If None, will be inferred from symbol. Defaults to None.
+            **kwargs: Additional parameters to pass to the exchange API
+
+        Returns:
+            None: The order request is submitted asynchronously. Listen to order status updates via on_pending_order() etc.
+        """
         order = OrderSubmit(
             symbol=symbol,
             side=side,
@@ -71,6 +87,17 @@ class Strategy:
         self._oes._submit_order(order, account_type)
     
     def cancel_order(self, symbol: str, order_id: str | int, account_type: AccountType | None = None, **kwargs):
+        """Cancel an existing order.
+
+        Args:
+            symbol (str): The trading symbol/pair (e.g. "BTC/USDT")
+            order_id (str | int): The ID of the order to cancel. String for Bybit/OKX, int for Binance
+            account_type (AccountType | None, optional): The specific account type to use. If None, will be inferred from symbol. Defaults to None.
+            **kwargs: Additional parameters to pass to the exchange API
+
+        Returns:
+            None: The cancel request is submitted asynchronously. Listen to order status updates via on_canceling_order() etc.
+        """
         order = OrderSubmit(
             symbol=symbol,
             order_id=order_id,
@@ -79,14 +106,33 @@ class Strategy:
         self._oes._submit_cancel_order(order, account_type)
 
     def subscribe_bookl1(self, symbols: List[str]):
+        """
+        Subscribe to level 1 book data for the given symbols.
+
+        Args:
+            symbols (List[str]): The symbols to subscribe to.
+        """
         for symbol in symbols:
             self._subscriptions[DataType.BOOKL1].add(symbol)
 
     def subscribe_trade(self, symbols: List[str]):
+        """
+        Subscribe to trade data for the given symbols.
+
+        Args:
+            symbols (List[str]): The symbols to subscribe to.
+        """
         for symbol in symbols:
             self._subscriptions[DataType.TRADE].add(symbol)
 
     def subscribe_kline(self, symbols: List[str], interval: str):
+        """
+        Subscribe to kline data for the given symbols.
+
+        Args:
+            symbols (List[str]): The symbols to subscribe to.
+            interval (str): The interval of the kline data
+        """
         for symbol in symbols:
             self._subscriptions[DataType.KLINE][symbol] = interval
 
@@ -109,6 +155,9 @@ class Strategy:
         pass
 
     def on_filled_order(self, order: Order):
+        pass
+    
+    def on_canceling_order(self, order: Order):
         pass
 
     def on_canceled_order(self, order: Order):

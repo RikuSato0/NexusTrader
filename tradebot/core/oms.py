@@ -176,6 +176,7 @@ class OrderManagerSystem:
                     case OrderStatus.CANCELING:
                         self._log.debug(f"ORDER STATUS CANCELING: {str(order)}")
                         self._cache._order_status_update(order)
+                        self._msgbus.send(endpoint="canceling", msg=order)
                     case OrderStatus.ACCEPTED:
                         self._log.debug(f"ORDER STATUS ACCEPTED: {str(order)}")
                         self._cache._order_status_update(order)

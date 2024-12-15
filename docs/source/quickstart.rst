@@ -395,6 +395,6 @@ Here's a simple TWAP strategy example:
     if __name__ == "__main__":
         asyncio.run(main())
 
-This example demonstrates a basic Time-Weighted Average Price (TWAP) strategy using the tradebot framework.
+This example demonstrates a basic Time-Weighted Average Price (TWAP) strategy using the tradebot-pro framework.
 
 

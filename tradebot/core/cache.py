@@ -72,13 +72,13 @@ class AsyncCache:
     def _update_trade_cache(self, trade: Trade):
         self._trade_cache[trade.symbol] = trade
     
-    def kline(self, symbol: str) -> Kline:
+    def kline(self, symbol: str) -> Kline | None:
         return self._kline_cache.get(symbol, None)
     
-    def bookl1(self, symbol: str) -> BookL1:
+    def bookl1(self, symbol: str) -> BookL1 | None:
         return self._bookl1_cache.get(symbol, None)
     
-    def trade(self, symbol: str) -> Trade:
+    def trade(self, symbol: str) -> Trade | None:
         return self._trade_cache.get(symbol, None)
 
     def _encode(self, obj: Order | Position) -> bytes:

@@ -1,7 +1,9 @@
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Callable, Literal
 from decimal import Decimal
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from tradebot.core.log import SpdLog
 from tradebot.base import TaskManager
+from tradebot.core.cache import AsyncCache
 from tradebot.core.oms import OrderExecutionSystem
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.schema import BookL1, Trade, Kline, Order, MarketData, OrderSubmit
@@ -21,30 +23,41 @@ class Strategy:
         }
 
         self._market_data: MarketData = MarketData()
-
+        self._scheduler = AsyncIOScheduler()
         self._initialized = False
 
     def _init_core(
-        self, msgbus: MessageBus, task_manager: TaskManager, oes: OrderExecutionSystem
+        self, cache: AsyncCache, msgbus: MessageBus, task_manager: TaskManager, oes: OrderExecutionSystem
     ):
         if self._initialized:
             return
 
+        self.cache = cache
+        
         self._oes = oes
         self._task_manager = task_manager
         self._msgbus = msgbus
+        
         self._msgbus.subscribe(topic="trade", handler=self.on_trade)
         self._msgbus.subscribe(topic="bookl1", handler=self.on_bookl1)
         self._msgbus.subscribe(topic="kline", handler=self.on_kline)
         
+        self._msgbus.register(endpoint="pending", handler=self.on_pending_order)
         self._msgbus.register(endpoint="accepted", handler=self.on_accepted_order)
         self._msgbus.register(endpoint="partially_filled", handler=self.on_partially_filled_order)
         self._msgbus.register(endpoint="filled", handler=self.on_filled_order)
         self._msgbus.register(endpoint="canceling", handler=self.on_canceling_order)
         self._msgbus.register(endpoint="canceled", handler=self.on_canceled_order)
         self._msgbus.register(endpoint="failed", handler=self.on_failed_order)
-        self._msgbus.register(endpoint="pending", handler=self.on_pending_order)
         self._initialized = True
+    
+    def schedule(self, func: Callable, trigger: Literal['interval', 'cron'] = 'interval', **kwargs):
+        """
+        cron: run at a specific time second, minute, hour, day, month, year
+        interval: run at a specific interval  seconds, minutes, hours, days, weeks, months, years
+        """
+        
+        self._scheduler.add_job(func, trigger=trigger, **kwargs)
 
     def create_order(
         self,

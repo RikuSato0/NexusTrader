@@ -1,27 +1,35 @@
+import zmq
 from tradebot.constants import KEYS
-from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
+from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig, ZeroMQSignalConfig
 from tradebot.strategy import Strategy
 from tradebot.constants import ExchangeType
 from tradebot.exchange.bybit import BybitAccountType
-from tradebot.exchange.binance import BinanceAccountType
-from tradebot.schema import BookL1
+from tradebot.schema import BookL1, Order
 from tradebot.engine import Engine
+from zmq.asyncio import Context
 
 BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]
 BYBIT_SECRET = KEYS["bybit_testnet_2"]["SECRET"]
 
-BINANCE_API_KEY = KEYS["binance_future_testnet"]["API_KEY"]
-BINANCE_SECRET = KEYS["binance_future_testnet"]["SECRET"]
+context = Context()
+socket = context.socket(zmq.SUB)
+socket.connect("ipc:///tmp/zmq_data_test")
+socket.setsockopt(zmq.SUBSCRIBE, b"")
 
 
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT", "ETHUSDT-PERP.BYBIT"])
-        self.subscribe_bookl1(symbols=["BTCUSDT.BYBIT", "ETHUSDT.BYBIT"])
+        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
+        self.subscribe_trade(symbols=["BTCUSDT-PERP.BYBIT"])
     
-    def on_bookl1(self, data: BookL1):
-        print(data)
+    def on_bookl1(self, bookl1: BookL1):
+        print(bookl1)
+
+    
+    async def on_custom_signal(self, signal: bytes):
+        print(signal)
+    
 
 config = Config(
     strategy_id="buy_and_sell",
@@ -50,7 +58,10 @@ config = Config(
                 account_type=BybitAccountType.ALL_TESTNET,
             )
         ]
-    }
+    },
+    zero_mq_signal_config=ZeroMQSignalConfig(
+        socket=socket,
+    )
 )
 
 engine = Engine(config)

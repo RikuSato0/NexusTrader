@@ -13,9 +13,14 @@ from tradebot.exchange.bybit import (
     BybitPublicConnector,
     BybitAccountType,
 )
-from tradebot.exchange.binance import BinanceExchangeManager, BinanceAccountType, BinancePublicConnector, BinancePrivateConnector
+from tradebot.exchange.binance import (
+    BinanceExchangeManager,
+    BinanceAccountType,
+    BinancePublicConnector,
+    BinancePrivateConnector,
+)
 from tradebot.exchange.okx import OkxExchangeManager
-from tradebot.core.entity import TaskManager
+from tradebot.core.entity import TaskManager, ZeroMQSignalRecv
 from tradebot.core.nautilius_core import MessageBus, TraderId, LiveClock
 from tradebot.schema import InstrumentId
 from tradebot.constants import DataType
@@ -26,6 +31,7 @@ class Engine:
     def set_loop_policy():
         if platform.system() != "Windows":
             import uvloop
+
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
     def __init__(self, config: Config):
@@ -60,18 +66,23 @@ class Engine:
             msgbus=self._msgbus,
             task_manager=self._task_manager,
         )
-        
+
         self._oes = OrderExecutionSystem(
             task_manager=self._task_manager,
             private_connectors=self._private_connectors,
         )
 
         self._strategy: Strategy = config.strategy
-        self._strategy._init_core(msgbus=self._msgbus, task_manager=self._task_manager, oes=self._oes)
+        self._strategy._init_core(
+            cache=self._cache,
+            msgbus=self._msgbus,
+            task_manager=self._task_manager,
+            oes=self._oes,
+        )
 
-        self._subscriptions: Dict[
-            DataType, Dict[str, str] | Set[str]
-        ] = self._strategy._subscriptions
+        self._subscriptions: Dict[DataType, Dict[str, str] | Set[str]] = (
+            self._strategy._subscriptions
+        )
 
     def _build_public_connectors(self):
         for exchange_id, public_conn_configs in self._config.public_conn_config.items():
@@ -79,12 +90,15 @@ class Engine:
                 if exchange_id == ExchangeType.BYBIT:
                     exchange: BybitExchangeManager = self._exchanges[exchange_id]
                     account_type: BybitAccountType = config.account_type
-                    
-                    if account_type == BybitAccountType.ALL or account_type == BybitAccountType.ALL_TESTNET:
+
+                    if (
+                        account_type == BybitAccountType.ALL
+                        or account_type == BybitAccountType.ALL_TESTNET
+                    ):
                         raise ValueError(
                             f"BybitAccountType.{account_type.value} is not supported for public connector."
                         )
-                    
+
                     if (
                         self._config.basic_config[exchange_id].testnet
                         != account_type.is_testnet
@@ -92,7 +106,7 @@ class Engine:
                         raise ValueError(
                             f"The `testnet` setting of {exchange_id} is not consistent with the public connector's account type `{account_type}`."
                         )
-                        
+
                     public_connector = BybitPublicConnector(
                         account_type=account_type,
                         exchange=exchange,
@@ -105,11 +119,14 @@ class Engine:
                     exchange: BinanceExchangeManager = self._exchanges[exchange_id]
                     account_type: BinanceAccountType = config.account_type
 
-                    if account_type.is_isolated_margin_or_margin or account_type.is_portfolio_margin:
+                    if (
+                        account_type.is_isolated_margin_or_margin
+                        or account_type.is_portfolio_margin
+                    ):
                         raise ValueError(
                             f"BinanceAccountType.{account_type.value} is not supported for public connector."
                         )
-                    
+
                     if (
                         self._config.basic_config[exchange_id].testnet
                         != account_type.is_testnet
@@ -117,19 +134,18 @@ class Engine:
                         raise ValueError(
                             f"The `testnet` setting of {exchange_id} is not consistent with the public connector's account type `{account_type}`."
                         )
-                    
+
                     public_connector = BinancePublicConnector(
                         account_type=account_type,
                         exchange=exchange,
                         msgbus=self._msgbus,
                         task_manager=self._task_manager,
                     )
-                    
+
                     self._public_connectors[account_type] = public_connector
-                    
+
                 elif exchange_id == ExchangeType.OKX:
                     pass
-
 
     def _build_private_connectors(self):
         for (
@@ -158,10 +174,9 @@ class Engine:
 
             for config in private_conn_configs:
                 if exchange_id == ExchangeType.BINANCE:
-                    
                     exchange: BinanceExchangeManager = self._exchanges[exchange_id]
                     account_type: BinanceAccountType = config.account_type
-                    
+
                     private_connector = BinancePrivateConnector(
                         exchange=exchange,
                         account_type=account_type,
@@ -169,9 +184,9 @@ class Engine:
                         rate_limit=config.rate_limit,
                         task_manager=self._task_manager,
                     )
-                    
+
                     self._private_connectors[account_type] = private_connector
-                    
+
                 elif exchange_id == ExchangeType.OKX:
                     pass
 
@@ -191,11 +206,22 @@ class Engine:
                 self._exchanges[exchange_id] = BinanceExchangeManager(config)
             elif exchange_id == ExchangeType.OKX:
                 self._exchanges[exchange_id] = OkxExchangeManager(config)
+    
+    def _build_custom_signal_recv(self):
+        zmq_config = self._config.zero_mq_signal_config
+        if zmq_config:
+            if not hasattr(self._strategy, "on_custom_signal"):
+                raise ValueError("Please add `on_custom_signal` method to the strategy.")
+                        
+            self._custom_signal_recv = ZeroMQSignalRecv(zmq_config, self._strategy.on_custom_signal, self._task_manager)
+        
+        
 
     def _build(self):
         self._build_exchanges()
         self._build_public_connectors()
         self._build_private_connectors()
+        self._build_custom_signal_recv()
         self._is_built = True
 
     def _instrument_id_to_account_type(
@@ -227,11 +253,23 @@ class Engine:
                     )
             case ExchangeType.BINANCE:
                 if instrument_id.is_spot:
-                    return BinanceAccountType.SPOT_TESTNET if self._config.basic_config[ExchangeType.BINANCE].testnet else BinanceAccountType.SPOT
+                    return (
+                        BinanceAccountType.SPOT_TESTNET
+                        if self._config.basic_config[ExchangeType.BINANCE].testnet
+                        else BinanceAccountType.SPOT
+                    )
                 elif instrument_id.is_linear:
-                    return BinanceAccountType.USD_M_FUTURE_TESTNET if self._config.basic_config[ExchangeType.BINANCE].testnet else BinanceAccountType.USD_M_FUTURE
+                    return (
+                        BinanceAccountType.USD_M_FUTURE_TESTNET
+                        if self._config.basic_config[ExchangeType.BINANCE].testnet
+                        else BinanceAccountType.USD_M_FUTURE
+                    )
                 elif instrument_id.is_inverse:
-                    return BinanceAccountType.COIN_M_FUTURE_TESTNET if self._config.basic_config[ExchangeType.BINANCE].testnet else BinanceAccountType.COIN_M_FUTURE
+                    return (
+                        BinanceAccountType.COIN_M_FUTURE_TESTNET
+                        if self._config.basic_config[ExchangeType.BINANCE].testnet
+                        else BinanceAccountType.COIN_M_FUTURE
+                    )
                 else:
                     raise ValueError(
                         f"Unsupported instrument type: {instrument_id.type}"
@@ -293,17 +331,18 @@ class Engine:
         await self._oms.start()
         await self._oes.start()
         await self._start_connectors()
+        await self._custom_signal_recv.start()
+        self._strategy._scheduler.start()
         await self._task_manager.wait()
 
     async def _dispose(self):
-        
+        self._strategy._scheduler.shutdown()
         for connector in self._public_connectors.values():
             await connector.disconnect()
         for connector in self._private_connectors.values():
             await connector.disconnect()
-        
+
         await self._task_manager.cancel()
-        
 
     def start(self):
         self._build()

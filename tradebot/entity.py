@@ -33,9 +33,9 @@ class TaskManager:
         try:
             task.result()
         except asyncio.CancelledError:
-            pass
+            pass  # 任务取消是正常的，可以忽略
         except Exception:
-            raise
+            raise  # 其他异常需要处理
 
     async def cancel(self):
         for task in self._tasks:

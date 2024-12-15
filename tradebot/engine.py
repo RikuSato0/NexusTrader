@@ -1,7 +1,6 @@
 import asyncio
 import platform
 from typing import Dict, Set
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from tradebot.constants import AccountType, ExchangeType
 from tradebot.config import Config
 from tradebot.strategy import Strategy
@@ -21,7 +20,7 @@ from tradebot.exchange.binance import (
     BinancePrivateConnector,
 )
 from tradebot.exchange.okx import OkxExchangeManager
-from tradebot.core.entity import TaskManager
+from tradebot.core.entity import TaskManager, ZeroMQSignalRecv
 from tradebot.core.nautilius_core import MessageBus, TraderId, LiveClock
 from tradebot.schema import InstrumentId
 from tradebot.constants import DataType
@@ -207,11 +206,22 @@ class Engine:
                 self._exchanges[exchange_id] = BinanceExchangeManager(config)
             elif exchange_id == ExchangeType.OKX:
                 self._exchanges[exchange_id] = OkxExchangeManager(config)
+    
+    def _build_custom_signal_recv(self):
+        zmq_config = self._config.zero_mq_signal_config
+        if zmq_config:
+            if not hasattr(self._strategy, "on_custom_signal"):
+                raise ValueError("Please add `on_custom_signal` method to the strategy.")
+                        
+            self._custom_signal_recv = ZeroMQSignalRecv(zmq_config, self._strategy.on_custom_signal, self._task_manager)
+        
+        
 
     def _build(self):
         self._build_exchanges()
         self._build_public_connectors()
         self._build_private_connectors()
+        self._build_custom_signal_recv()
         self._is_built = True
 
     def _instrument_id_to_account_type(
@@ -321,6 +331,7 @@ class Engine:
         await self._oms.start()
         await self._oes.start()
         await self._start_connectors()
+        await self._custom_signal_recv.start()
         self._strategy._scheduler.start()
         await self._task_manager.wait()
 

@@ -215,3 +215,21 @@ class Clock:
                     await callback(self.current_timestamp)
                 else:
                     callback(self.current_timestamp)
+
+class ZeroMQSignalRecv:
+    def __init__(self, config, callback: Callable, task_manager: TaskManager):
+        self._socket = config.socket
+        self._callback = callback
+        self._task_manager = task_manager
+    
+    async def _recv(self):
+        while True:
+            date = await self._socket.recv()
+            if asyncio.iscoroutinefunction(self._callback):
+                await self._callback(date)
+            else:
+                self._callback(date)
+                
+    async def start(self):
+        self._task_manager.create_task(self._recv())
+                

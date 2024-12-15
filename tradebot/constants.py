@@ -177,7 +177,7 @@ class EventType(Enum):
 
 class OrderStatus(Enum):
     # LOCAL
-    # INITIALIZED = "INITIALIZED"
+    INITIALIZED = "INITIALIZED"
     FAILED = "FAILED"
 
     # IN-FLOW

@@ -273,6 +273,7 @@ class BybitPrivateConnector(PrivateConnector):
                 symbol=symbol,
                 status=OrderStatus.FAILED,
             )
+            self._msgbus.publish(topic="order", msg=order)
             return order
 
     async def create_order(
@@ -361,6 +362,7 @@ class BybitPrivateConnector(PrivateConnector):
                 filled=Decimal(0),
                 remaining=amount,
             )
+            self._msgbus.publish(topic="order", msg=order)
             return order
 
     def _parse_order_update(self, raw: bytes):

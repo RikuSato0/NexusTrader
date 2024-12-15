@@ -1,7 +1,7 @@
 import warnings
 from decimal import Decimal
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 from typing import Optional
 from msgspec import Struct, field
 from tradebot.constants import (
@@ -19,6 +19,18 @@ class InstrumentId(Struct):
     symbol: str
     exchange: ExchangeType
     type: InstrumentType
+    
+    @property
+    def is_spot(self) -> bool:
+        return self.type == InstrumentType.SPOT
+    
+    @property
+    def is_linear(self) -> bool:
+        return self.type == InstrumentType.LINEAR
+    
+    @property
+    def is_inverse(self) -> bool:
+        return self.type == InstrumentType.INVERSE
 
     @classmethod
     def from_str(cls, symbol: str):
@@ -102,6 +114,17 @@ class IndexPrice(Struct, gc=False):
     price: float
     timestamp: int
 
+class OrderSubmit(Struct):
+    symbol: str
+    order_id: str | int | None = None
+    side: OrderSide | None = None
+    type: OrderType | None = None
+    amount: Decimal | None = None
+    price: Decimal | None = None
+    time_in_force: TimeInForce | None = None
+    position_side: PositionSide | None = None
+    kwargs: Dict[str, Any] | None = None
+    status: OrderStatus = OrderStatus.INITIALIZED
 
 class Order(Struct):
     exchange: ExchangeType

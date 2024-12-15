@@ -5,7 +5,7 @@ from tradebot.constants import AccountType, ExchangeType
 from tradebot.config import Config
 from tradebot.strategy import Strategy
 from tradebot.core.cache import AsyncCache
-from tradebot.core.oms import OrderManagerSystem
+from tradebot.core.oms import OrderManagerSystem, OrderExecutionSystem
 from tradebot.base import ExchangeManager, PublicConnector, PrivateConnector
 from tradebot.exchange.bybit import (
     BybitExchangeManager,
@@ -18,7 +18,7 @@ from tradebot.exchange.okx import OkxExchangeManager
 from tradebot.core.entity import TaskManager
 from tradebot.core.nautilius_core import MessageBus, TraderId, LiveClock
 from tradebot.schema import InstrumentId
-from tradebot.constants import DataType, InstrumentType
+from tradebot.constants import DataType
 
 
 class Engine:
@@ -59,6 +59,11 @@ class Engine:
             cache=self._cache,
             msgbus=self._msgbus,
             task_manager=self._task_manager,
+        )
+        
+        self._oes = OrderExecutionSystem(
+            task_manager=self._task_manager,
+            private_connectors=self._private_connectors,
         )
 
         self._strategy: Strategy = config.strategy
@@ -198,19 +203,19 @@ class Engine:
     ) -> AccountType:
         match instrument_id.exchange:
             case ExchangeType.BYBIT:
-                if instrument_id.type == InstrumentType.SPOT:
+                if instrument_id.is_spot:
                     return (
                         BybitAccountType.SPOT_TESTNET
                         if self._config.basic_config[ExchangeType.BYBIT].testnet
                         else BybitAccountType.SPOT
                     )
-                elif instrument_id.type == InstrumentType.LINEAR:
+                elif instrument_id.is_linear:
                     return (
                         BybitAccountType.LINEAR_TESTNET
                         if self._config.basic_config[ExchangeType.BYBIT].testnet
                         else BybitAccountType.LINEAR
                     )
-                elif instrument_id.type == InstrumentType.INVERSE:
+                elif instrument_id.is_inverse:
                     return (
                         BybitAccountType.INVERSE_TESTNET
                         if self._config.basic_config[ExchangeType.BYBIT].testnet
@@ -221,11 +226,11 @@ class Engine:
                         f"Unsupported instrument type: {instrument_id.type}"
                     )
             case ExchangeType.BINANCE:
-                if instrument_id.type == InstrumentType.SPOT:
+                if instrument_id.is_spot:
                     return BinanceAccountType.SPOT_TESTNET if self._config.basic_config[ExchangeType.BINANCE].testnet else BinanceAccountType.SPOT
-                elif instrument_id.type == InstrumentType.LINEAR:
+                elif instrument_id.is_linear:
                     return BinanceAccountType.USD_M_FUTURE_TESTNET if self._config.basic_config[ExchangeType.BINANCE].testnet else BinanceAccountType.USD_M_FUTURE
-                elif instrument_id.type == InstrumentType.INVERSE:
+                elif instrument_id.is_inverse:
                     return BinanceAccountType.COIN_M_FUTURE_TESTNET if self._config.basic_config[ExchangeType.BINANCE].testnet else BinanceAccountType.COIN_M_FUTURE
                 else:
                     raise ValueError(
@@ -286,6 +291,7 @@ class Engine:
     async def _start(self):
         await self._cache.start()
         await self._oms.start()
+        await self._oes.start()
         await self._start_connectors()
         await self._task_manager.wait()
 

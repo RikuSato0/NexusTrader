@@ -743,6 +743,7 @@ class BinancePrivateConnector(PrivateConnector):
                 filled=Decimal(0),
                 remaining=amount,
             )
+            self._msgbus.publish(topic="order", msg=order)
             return order
     
     async def _execute_cancel_order_request(self, market: BinanceMarket, symbol: str, params: Dict[str, Any]):
@@ -815,4 +816,5 @@ class BinancePrivateConnector(PrivateConnector):
                 id=order_id,
                 status=OrderStatus.FAILED,
             )
+            self._msgbus.publish(topic="order", msg=order)
             return order

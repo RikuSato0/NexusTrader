@@ -309,6 +309,7 @@ class VwapStrategy(Strategy):
         take_order_id_cancel_failed_count = defaultdict(int)    
         make_order_id_cancel_failed_count = defaultdict(int)
         
+        
         reset_pos = False
         while True:
             current_time = int(time.time())
@@ -502,31 +503,24 @@ class VwapStrategy(Strategy):
                                     break
 
             await asyncio.sleep(interval)
-        
+            
+        position = self.fetch_positions()
+        real_pos = position.get(symbol, Decimal(str(0)))
         pos_obj = await self.cache(BybitAccountType.ALL_TESTNET).get_position(symbol)
         
         real_pos_2 = pos_obj.signed_amount
-        # if real_pos_2 != real_pos:
-        #     self.log.error(f"Symbol: {symbol} BUY pos mismatch {real_pos_2} != {real_pos}")
+        if real_pos_2 != real_pos:
+            self.log.error(f"Symbol: {symbol} BUY pos mismatch {real_pos_2} != {real_pos}")
         if side == OrderSide.BUY:
             self.log.debug(
-                    f"Side BUY Symbol: {symbol} pos: {self.current_positions[symbol]} + {pos} -> {real_pos_2}"
+                    f"Side BUY Symbol: {symbol} pos: {self.current_positions[symbol]} + {pos} -> {real_pos}"
             )
             self.current_positions[symbol] += pos
         else:
             self.log.debug(
-                f"Side SELL Symbol: {symbol} pos: {self.current_positions[symbol]} - {pos} -> {real_pos_2}"
+                f"Side SELL Symbol: {symbol} pos: {self.current_positions[symbol]} - {pos} -> {real_pos}"
             )
             self.current_positions[symbol] -= pos
-            
-        if self.current_positions[symbol] != real_pos_2:
-            self.log.error(f"Symbol: {symbol} pos mismatch {self.current_positions[symbol]} != {real_pos_2}")
-        
-        if reset_pos:
-            self.log.error(f"Symbol: {symbol} Reset pos")
-            position = self.fetch_positions()
-            real_pos = position.get(symbol, Decimal(str(0)))
-            self.current_positions[symbol] = real_pos
         average = (cost / float(pos)) if pos > 0 else 0
         side_string = "BUY" if side == OrderSide.BUY else "SELL"
         self.log.debug(f"Symbol: {symbol} Side: {side_string} VWAP completed average: {average}")

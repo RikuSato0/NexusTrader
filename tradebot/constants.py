@@ -377,6 +377,7 @@ class OptionType(Enum):
 
 STATUS_TRANSITIONS: Dict[OrderStatus, List[OrderStatus]] = {
     OrderStatus.PENDING: [
+        OrderStatus.CANCELED,
         OrderStatus.CANCELING,
         OrderStatus.ACCEPTED,
         OrderStatus.PARTIALLY_FILLED,

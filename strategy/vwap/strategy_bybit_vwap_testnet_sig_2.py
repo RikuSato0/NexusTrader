@@ -169,7 +169,6 @@ class VwapStrategy(Strategy):
             elif pos <= 0 and current_pos < 0:
                 reduce_only = True
             else:
-                # pos = Decimal(str(0))
                 reduce_only = False
             amount = pos - current_pos
             self.log.debug(f"target pos: {pos} current pos: {current_pos} side: {side} amount: {amount} reduce_only: {reduce_only}")
@@ -181,7 +180,6 @@ class VwapStrategy(Strategy):
             elif pos >= 0 and current_pos > 0:
                 reduce_only = True
             else:
-                # pos = Decimal(str(0))
                 reduce_only = False
             amount = current_pos - pos
             self.log.debug(f"target pos: {pos} current pos: {current_pos} side: {side} amount: {amount} reduce_only: {reduce_only}")

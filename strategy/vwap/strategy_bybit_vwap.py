@@ -249,6 +249,7 @@ class VwapStrategy(Strategy):
         size_ratio: float = 1 / 3,
         interval: int = 1,
     ):
+        order_id_cancel_failed_count = defaultdict(int)
         self._in_ordering[symbol] = True
         pos = Decimal(str(0))
         on_bid = False
@@ -288,9 +289,12 @@ class VwapStrategy(Strategy):
                                 order_id=order_id,
                             )
                             if not order_cancel.success:
+                                order_id_cancel_failed_count[order_id] += 1
                                 self.log.debug(
                                     f"Symbol: {symbol} Failed to cancel order {order_id}"
                                 )
+                                if order_id_cancel_failed_count[order_id] >= 2:
+                                    pass
                         else:
                             continue
             if not order_id:

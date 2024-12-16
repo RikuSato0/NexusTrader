@@ -152,7 +152,7 @@ class OrderManagerSystem:
                     **order_submit.kwargs,
                 )
                 order.uuid = order_submit.uuid
-                self._msgbus.publish(topic="order", msg=order)
+                self._msgbus.publish(topic="order", msg=order) # INITIALIZED -> CANCELING
             else:
                 self._log.error(f"Order ID not found for UUID: {order_submit.uuid}, The order may already be canceled or filled or not exist")            
             queue.task_done()
@@ -176,7 +176,7 @@ class OrderManagerSystem:
             if order.success:
                 self._order_id_to_uuid[order.id] = order.uuid
                 self._uuid_to_order_id[order.uuid] = order.id
-            self._msgbus.publish(topic="order", msg=order)
+            self._msgbus.publish(topic="order", msg=order) # INITIALIZED -> PENDING
             queue.task_done()
             
 
@@ -184,7 +184,7 @@ class OrderManagerSystem:
         while True:
             try:
                 order = await self._position_msg_queue.get()
-                await self._cache._apply_position(order)
+                self._cache._apply_position(order)
                 self._position_msg_queue.task_done()
             except Exception as e:
                 self._log.error(f"Error in handle_position_event: {e}")

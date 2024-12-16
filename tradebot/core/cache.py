@@ -149,7 +149,7 @@ class AsyncCache:
                 order_set.discard(order_id)
 
     def _check_status_transition(self, order: Order):
-        previous_order = self._mem_orders.get(order.id)
+        previous_order = self._mem_orders.get(order.uuid)
         if not previous_order:
             return True
 
@@ -161,10 +161,10 @@ class AsyncCache:
 
         return True
 
-    async def _apply_position(self, order: Order):
+    def _apply_position(self, order: Order):
         symbol = order.symbol
         if symbol not in self._mem_symbol_positions:
-            position = await self.get_position(symbol)
+            position = self.get_position(symbol)
             if not position:
                 position = Position(
                     symbol=symbol,

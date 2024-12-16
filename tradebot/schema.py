@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import Dict, List, Tuple, Any
 from typing import Optional
 from msgspec import Struct, field
+from tradebot.core.nautilius_core import UUID4
 from tradebot.constants import (
     OrderSide,
     OrderType,
@@ -116,6 +117,7 @@ class IndexPrice(Struct, gc=False):
 
 class OrderSubmit(Struct):
     symbol: str
+    uuid: str = field(default_factory=lambda: UUID4().value)
     order_id: str | int | None = None
     side: OrderSide | None = None
     type: OrderType | None = None
@@ -131,6 +133,7 @@ class Order(Struct):
     symbol: str
     status: OrderStatus
     id: Optional[str] = None
+    uuid: Optional[str] = None
     amount: Optional[Decimal] = None
     filled: Optional[Decimal] = None
     client_order_id: Optional[str] = None

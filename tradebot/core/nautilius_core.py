@@ -1,6 +1,7 @@
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.model.identifiers import TraderId
+from nautilus_trader.core.uuid import UUID4
 
 from nautilus_trader.core.nautilus_pyo3 import HttpClient # noqa
 from nautilus_trader.core.nautilus_pyo3 import HttpMethod # noqa
@@ -13,6 +14,20 @@ from nautilus_trader.core.nautilus_pyo3 import WebSocketConfig # noqa
 
 
 def usage():
+    print(UUID4().value)
+    print(UUID4().value)
+    print(UUID4().value)
+    
+    uuid_to_order_id = {}
+    
+    uuid = UUID4()
+    
+    order_id = "123456"
+    
+    uuid_to_order_id[uuid] = order_id
+    
+    print(uuid_to_order_id)
+    
     clock = LiveClock()
 
     def handler1(msg):

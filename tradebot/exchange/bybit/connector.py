@@ -261,9 +261,6 @@ class BybitPrivateConnector(PrivateConnector):
                 symbol=market.symbol,
                 status=OrderStatus.CANCELING,
             )
-
-            self._msgbus.publish(topic="order", msg=order)
-
             return order
         except Exception as e:
             self._log.error(f"Error canceling order: {e} params: {str(params)}")
@@ -273,7 +270,6 @@ class BybitPrivateConnector(PrivateConnector):
                 symbol=symbol,
                 status=OrderStatus.FAILED,
             )
-            self._msgbus.publish(topic="order", msg=order)
             return order
 
     async def create_order(
@@ -344,7 +340,6 @@ class BybitPrivateConnector(PrivateConnector):
                 remaining=amount,
                 reduce_only=reduce_only,
             )
-            self._msgbus.publish(topic="order", msg=order)
             return order
         except Exception as e:
             self._log.error(f"Error creating order: {e} params: {str(params)}")
@@ -362,7 +357,6 @@ class BybitPrivateConnector(PrivateConnector):
                 filled=Decimal(0),
                 remaining=amount,
             )
-            self._msgbus.publish(topic="order", msg=order)
             return order
 
     def _parse_order_update(self, raw: bytes):

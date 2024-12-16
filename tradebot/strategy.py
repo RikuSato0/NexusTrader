@@ -4,8 +4,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from tradebot.core.log import SpdLog
 from tradebot.base import TaskManager
 from tradebot.core.cache import AsyncCache
-from tradebot.core.oms import OrderExecutionSystem
-from tradebot.core.nautilius_core import MessageBus
+from tradebot.core.oms import OrderManagerSystem
+from tradebot.core.nautilius_core import MessageBus, UUID4
 from tradebot.schema import BookL1, Trade, Kline, Order, MarketData, OrderSubmit
 from tradebot.constants import DataType, OrderSide, OrderType, TimeInForce, PositionSide, AccountType
 
@@ -27,14 +27,14 @@ class Strategy:
         self._initialized = False
 
     def _init_core(
-        self, cache: AsyncCache, msgbus: MessageBus, task_manager: TaskManager, oes: OrderExecutionSystem
+        self, cache: AsyncCache, msgbus: MessageBus, task_manager: TaskManager, oms: OrderManagerSystem
     ):
         if self._initialized:
             return
 
         self.cache = cache
         
-        self._oes = oes
+        self._oms = oms
         self._task_manager = task_manager
         self._msgbus = msgbus
         
@@ -70,7 +70,7 @@ class Strategy:
         position_side: PositionSide | None = None,
         account_type: AccountType | None = None,
         **kwargs,
-    ):
+    ) -> OrderSubmit:
         """
         Submit a new order.
 
@@ -98,9 +98,11 @@ class Strategy:
             position_side=position_side,
             kwargs=kwargs,
         )
-        self._oes._submit_order(order, account_type)
+        self._oms._submit_order(order, account_type)
+        return order
+        
     
-    def cancel_order(self, symbol: str, order_id: str | int, account_type: AccountType | None = None, **kwargs):
+    def cancel_order(self, symbol: str, uuid: str, account_type: AccountType | None = None, **kwargs) -> OrderSubmit:
         """Cancel an existing order.
 
         Args:
@@ -114,10 +116,11 @@ class Strategy:
         """
         order = OrderSubmit(
             symbol=symbol,
-            order_id=order_id,
+            uuid=uuid,
             kwargs=kwargs,
         )
-        self._oes._submit_cancel_order(order, account_type)
+        self._oms._submit_cancel_order(order, account_type)
+        return order
 
     def subscribe_bookl1(self, symbols: List[str]):
         """

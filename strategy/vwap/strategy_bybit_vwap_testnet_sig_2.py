@@ -286,7 +286,7 @@ class VwapStrategy(Strategy):
         amount: Decimal,
         reduce_only: bool,
         interval: int = 1,  # seconds
-        duration: int = 120,  # seconds
+        duration: int = 115,  # seconds
         sigmoid_k: float = 1,
     ):
         self._in_ordering[symbol] = True

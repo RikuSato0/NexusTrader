@@ -33,17 +33,17 @@ class AsyncCache:
         self._r = RedisClient.get_client()
 
         # in-memory save
-        self._mem_orders: Dict[str, Order] = {}  # order_id -> Order
+        self._mem_orders: Dict[str, Order] = {}  # uuid -> Order
 
         self._mem_open_orders: Dict[ExchangeType, Set[str]] = defaultdict(
             set
-        )  # exchange_id -> set(order_id)
+        )  # exchange_id -> set(uuid)
         self._mem_symbol_open_orders: Dict[str, Set[str]] = defaultdict(
             set
-        )  # symbol -> set(order_id)
+        )  # symbol -> set(uuid)
         self._mem_symbol_orders: Dict[str, Set[str]] = defaultdict(
             set
-        )  # symbol -> set(order_id)
+        )  # symbol -> set(uuid)
         self._mem_symbol_positions: Dict[str, Position] = {}  # symbol -> Position
 
         # set params
@@ -100,31 +100,31 @@ class AsyncCache:
 
     async def _sync_to_redis(self):
         self._log.debug("syncing to redis")
-        for order_id, order in self._mem_orders.copy().items():
+        for uuid, order in self._mem_orders.copy().items():
             orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:orders"
-            await self._r_async.hset(orders_key, order_id, self._encode(order))
+            await self._r_async.hset(orders_key, uuid, self._encode(order))
 
-        for exchange, open_order_ids in self._mem_open_orders.copy().items():
+        for exchange, open_order_uuids in self._mem_open_orders.copy().items():
             open_orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{exchange.value}:open_orders"
 
             await self._r_async.delete(open_orders_key)
 
-            if open_order_ids:
-                await self._r_async.sadd(open_orders_key, *open_order_ids)
+            if open_order_uuids:
+                await self._r_async.sadd(open_orders_key, *open_order_uuids)
 
-        for symbol, order_ids in self._mem_symbol_orders.copy().items():
+        for symbol, uuids in self._mem_symbol_orders.copy().items():
             instrument_id = InstrumentId.from_str(symbol)
             key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{instrument_id.exchange.value}:symbol_orders:{symbol}"
             await self._r_async.delete(key)
-            if order_ids:
-                await self._r_async.sadd(key, *order_ids)
+            if uuids:
+                await self._r_async.sadd(key, *uuids)
 
-        for symbol, order_ids in self._mem_symbol_open_orders.copy().items():
+        for symbol, uuids in self._mem_symbol_open_orders.copy().items():
             instrument_id = InstrumentId.from_str(symbol)
             key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{instrument_id.exchange.value}:symbol_open_orders:{symbol}"
             await self._r_async.delete(key)
-            if order_ids:
-                await self._r_async.sadd(key, *order_ids)
+            if uuids:
+                await self._r_async.sadd(key, *uuids)
 
         # Add position sync
         for symbol, position in self._mem_symbol_positions.copy().items():
@@ -137,16 +137,16 @@ class AsyncCache:
 
         # 清理过期orders
         expired_orders = [
-            order_id
-            for order_id, order in self._mem_orders.copy().items()
+            uuid
+            for uuid, order in self._mem_orders.copy().items()
             if order.timestamp < expire_before
         ]
-        for order_id in expired_orders:
-            del self._mem_orders[order_id]
-            self._log.debug(f"removing order {order_id} from memory")
+        for uuid in expired_orders:
+            del self._mem_orders[uuid]
+            self._log.debug(f"removing order {uuid} from memory")
             for symbol, order_set in self._mem_symbol_orders.copy().items():
-                self._log.debug(f"removing order {order_id} from symbol {symbol}")
-                order_set.discard(order_id)
+                self._log.debug(f"removing order {uuid} from symbol {symbol}")
+                order_set.discard(uuid)
 
     def _check_status_transition(self, order: Order):
         previous_order = self._mem_orders.get(order.uuid)
@@ -155,7 +155,7 @@ class AsyncCache:
 
         if order.status not in STATUS_TRANSITIONS[previous_order.status]:
             self._log.error(
-                f"Invalid status transition: {previous_order.status} -> {order.status}"
+                f"Order id: {order.id} Invalid status transition: {previous_order.status} -> {order.status}"
             )
             return False
 
@@ -200,23 +200,23 @@ class AsyncCache:
     def _order_initialized(self, order: Order):
         if not self._check_status_transition(order):
             return
-        self._mem_orders[order.id] = order
-        self._mem_open_orders[order.exchange].add(order.id)
-        self._mem_symbol_orders[order.symbol].add(order.id)
-        self._mem_symbol_open_orders[order.symbol].add(order.id)
+        self._mem_orders[order.uuid] = order
+        self._mem_open_orders[order.exchange].add(order.uuid)
+        self._mem_symbol_orders[order.symbol].add(order.uuid)
+        self._mem_symbol_open_orders[order.symbol].add(order.uuid)
 
     def _order_status_update(self, order: Order):
         if not self._check_status_transition(order):
             return
 
-        self._mem_orders[order.id] = order
+        self._mem_orders[order.uuid] = order
         if order.status in (
             OrderStatus.FILLED,
             OrderStatus.CANCELED,
             OrderStatus.EXPIRED,
         ):
-            self._mem_open_orders[order.exchange].discard(order.id)
-            self._mem_symbol_open_orders[order.symbol].discard(order.id)
+            self._mem_open_orders[order.exchange].discard(order.uuid)
+            self._mem_symbol_open_orders[order.symbol].discard(order.uuid)
 
     def get_order(self, order_id: str) -> Order:
         if order_id in self._mem_orders:

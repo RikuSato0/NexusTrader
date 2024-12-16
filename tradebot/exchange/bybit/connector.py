@@ -295,7 +295,7 @@ class BybitPrivateConnector(PrivateConnector):
         params = {
             "category": category,
             "symbol": symbol,
-            "order_type": BybitEnumParser.to_bybit_order_type(type).value,
+            "orderType": BybitEnumParser.to_bybit_order_type(type).value,
             "side": BybitEnumParser.to_bybit_order_side(side).value,
             "qty": str(amount),
         }

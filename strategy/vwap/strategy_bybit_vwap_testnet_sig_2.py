@@ -306,6 +306,11 @@ class VwapStrategy(Strategy):
         
         cost = 0
         
+        take_order_id_cancel_failed_count = defaultdict(int)    
+        make_order_id_cancel_failed_count = defaultdict(int)
+        
+        bug = False
+        
         while True:
             current_time = int(time.time())
             remaing_time = max(0, end - current_time)
@@ -448,9 +453,14 @@ class VwapStrategy(Strategy):
                                 order_id=make_order_id,
                             )
                             if not make_order_cancel.success:
+                                make_order_id_cancel_failed_count[make_order_id] += 1
                                 self.log.debug(
                                     f"Symbol: {symbol} Failed to cancel make order {make_order_id}"
                                 )
+                                if make_order_id_cancel_failed_count[make_order_id] >= 2:
+                                    self.log.error(f"Symbol: {symbol} Failed to cancel make order {make_order_id} too many times, break")
+                                    bug = True
+                                    break
 
             if take_order_id:
                 take_order: Order = await self.cache(
@@ -483,28 +493,36 @@ class VwapStrategy(Strategy):
                                 order_id=take_order_id,
                             )
                             if not take_order_cancel.success:
+                                take_order_id_cancel_failed_count[take_order_id] += 1
                                 self.log.debug(
                                     f"Symbol: {symbol} Failed to cancel make order {take_order_id}"
                                 )
+                                if take_order_id_cancel_failed_count[take_order_id] >= 2:
+                                    self.log.error(f"Symbol: {symbol} Failed to cancel make order {take_order_id} too many times, break")
+                                    bug = True
+                                    break
 
             await asyncio.sleep(interval)
-        position = self.fetch_positions()
-        real_pos = position.get(symbol, Decimal(str(0)))
+        
+
         pos_obj = await self.cache(BybitAccountType.ALL_TESTNET).get_position(symbol)
         
         real_pos_2 = pos_obj.signed_amount
-        if real_pos_2 != real_pos:
-            self.log.error(f"Symbol: {symbol} BUY pos mismatch {real_pos_2} != {real_pos}")
         if side == OrderSide.BUY:
             self.log.debug(
-                    f"Side BUY Symbol: {symbol} pos: {self.current_positions[symbol]} + {pos} = {real_pos}"
+                    f"Side BUY Symbol: {symbol} pos: {self.current_positions[symbol]} + {pos} = {real_pos_2}"
             )
             self.current_positions[symbol] += pos
         else:
             self.log.debug(
-                f"Side SELL Symbol: {symbol} pos: {self.current_positions[symbol]} - {pos} = {real_pos}"
+                f"Side SELL Symbol: {symbol} pos: {self.current_positions[symbol]} - {pos} = {real_pos_2}"
             )
             self.current_positions[symbol] -= pos
+        if bug:
+            self.log.error(f"Symbol: {symbol} Bug, Reset position")
+            position = self.fetch_positions()
+            real_pos = position.get(symbol, Decimal(str(0)))
+            self.current_positions[symbol] = real_pos
         average = (cost / float(pos)) if pos > 0 else 0
         side_string = "BUY" if side == OrderSide.BUY else "SELL"
         self.log.debug(f"Symbol: {symbol} Side: {side_string} VWAP completed average: {average}")

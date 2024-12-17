@@ -286,7 +286,7 @@ class VwapStrategy(Strategy):
         amount: Decimal,
         reduce_only: bool,
         interval: int = 1,  # seconds
-        duration: int = 115,  # seconds
+        duration: int = 5 * 60,  # seconds
         sigmoid_k: float = 1,
     ):
         self._in_ordering[symbol] = True
@@ -514,26 +514,25 @@ class VwapStrategy(Strategy):
 
             await asyncio.sleep(interval)
             
-        position = self.fetch_positions()
-        real_pos = position.get(symbol, Decimal(str(0)))
+
         pos_obj = await self.cache(BybitAccountType.ALL_TESTNET).get_position(symbol)
-        
         real_pos_2 = pos_obj.signed_amount
-        if real_pos_2 != real_pos:
-            self.log.error(f"Symbol: {symbol} BUY pos mismatch {real_pos_2} != {real_pos}")
             
         if side == OrderSide.BUY:
             self.log.debug(
-                    f"Side BUY Symbol: {symbol} pos: {self.current_positions[symbol]} + {pos} -> {real_pos}"
+                    f"Side BUY Symbol: {symbol} pos: {self.current_positions[symbol]} + {pos} -> {real_pos_2}"
             )
             self.current_positions[symbol] += pos
         else:
             self.log.debug(
-                f"Side SELL Symbol: {symbol} pos: {self.current_positions[symbol]} - {pos} -> {real_pos}"
+                f"Side SELL Symbol: {symbol} pos: {self.current_positions[symbol]} - {pos} -> {real_pos_2}"
             )
             self.current_positions[symbol] -= pos
         
         if reset_pos:
+            position = self.fetch_positions()
+            real_pos = position.get(symbol, Decimal(str(0)))
+            self.log.debug(f"Symbol: {symbol} Reset pos: {real_pos}")
             self.current_positions[symbol] = real_pos
         
         average = (cost / float(pos)) if pos > 0 else 0

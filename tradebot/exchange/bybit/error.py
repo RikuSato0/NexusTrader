@@ -14,3 +14,7 @@ class BybitError(Exception):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(code={self.code}, message='{self.message}')"
+
+
+    def __str__(self) -> str:
+        return f"{type(self).__name__}(code={self.code}, message='{self.message}')"

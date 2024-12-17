@@ -171,7 +171,7 @@ class VwapStrategy(Strategy):
             else:
                 reduce_only = False
             amount = pos - current_pos
-            self.log.debug(f"target pos: {pos} current pos: {current_pos} side: {side} amount: {amount} reduce_only: {reduce_only}")
+            self.log.info(f"target pos: {pos} current pos: {current_pos} side: {side} amount: {amount} reduce_only: {reduce_only}")
             return side, amount, reduce_only
         elif pos - current_pos < 0:
             side = OrderSide.SELL
@@ -182,7 +182,7 @@ class VwapStrategy(Strategy):
             else:
                 reduce_only = False
             amount = current_pos - pos
-            self.log.debug(f"target pos: {pos} current pos: {current_pos} side: {side} amount: {amount} reduce_only: {reduce_only}")
+            self.log.info(f"target pos: {pos} current pos: {current_pos} side: {side} amount: {amount} reduce_only: {reduce_only}")
             return side, amount, reduce_only
 
     async def on_signal(self, positions: Dict[str, Dict]):

@@ -521,6 +521,10 @@ class VwapStrategy(Strategy):
                 f"Side SELL Symbol: {symbol} pos: {self.current_positions[symbol]} - {pos} -> {real_pos}"
             )
             self.current_positions[symbol] -= pos
+        
+        if reset_pos:
+            self.current_positions[symbol] = real_pos
+        
         average = (cost / float(pos)) if pos > 0 else 0
         side_string = "BUY" if side == OrderSide.BUY else "SELL"
         self.log.debug(f"Symbol: {symbol} Side: {side_string} VWAP completed average: {average}")

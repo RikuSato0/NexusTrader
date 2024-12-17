@@ -278,15 +278,16 @@ class AsyncCache:
 
     def order_initialized(self, order: Order):
         if not self._check_status_transition(order):
-            return
+            return False
         self._mem_orders[order.id] = order
         self._mem_open_orders.add(order.id)
         self._mem_symbol_orders[order.symbol].add(order.id)
         self._mem_symbol_open_orders[order.symbol].add(order.id)
+        return True
 
     def order_status_update(self, order: Order):
         if not self._check_status_transition(order):
-            return
+            return False
 
         self._mem_orders[order.id] = order
         if order.status in (
@@ -296,6 +297,7 @@ class AsyncCache:
         ):
             self._mem_open_orders.discard(order.id)
             self._mem_symbol_open_orders[order.symbol].discard(order.id)
+        return True
 
     async def get_order(self, order_id: str) -> Order:
         if order_id in self._mem_orders:

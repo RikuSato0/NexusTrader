@@ -432,8 +432,10 @@ class Listener(WSListener):
                     self.msg_queue.put_nowait(frame.get_payload_as_bytes())
                     return
                 case WSMsgType.CLOSE:
-                    self._log.debug(
-                        f"Received close frame. {str(frame.get_payload_as_bytes())}"
+                    close_code = frame.get_close_code()
+                    close_msg = frame.get_close_message()
+                    self._log.warning(
+                        f"Received close frame. Close code: {close_code}, Close message: {close_msg}"
                     )
                     return
         except Exception as e:
@@ -522,7 +524,6 @@ class WSClient(ABC):
     async def _msg_handler(self, queue: asyncio.Queue):
         while True:
             msg = await queue.get()
-            # TODO: handle different event types of messages
             self._callback(msg)
             queue.task_done()
 
@@ -900,30 +901,31 @@ class OrderManagerSystem:
                 match order.status:
                     case OrderStatus.PENDING:
                         self._log.debug(f"ORDER STATUS PENDING: {str(order)}")
-                        self._cache.order_initialized(order)
+                        valid = self._cache.order_initialized(order)
                     case OrderStatus.CANCELING:
                         self._log.debug(f"ORDER STATUS CANCELING: {str(order)}")
-                        self._cache.order_status_update(order)
+                        valid = self._cache.order_status_update(order)
                     case OrderStatus.ACCEPTED:
                         self._log.debug(f"ORDER STATUS ACCEPTED: {str(order)}")
-                        self._cache.order_status_update(order)
+                        valid = self._cache.order_status_update(order)
                         EventSystem.emit(OrderStatus.ACCEPTED, order)
                     case OrderStatus.PARTIALLY_FILLED:
                         self._log.debug(f"ORDER STATUS PARTIALLY FILLED: {str(order)}")
-                        self._cache.order_status_update(order)
+                        valid = self._cache.order_status_update(order)
                         EventSystem.emit(OrderStatus.PARTIALLY_FILLED, order)
                     case OrderStatus.CANCELED:
                         self._log.debug(f"ORDER STATUS CANCELED: {str(order)}")
-                        self._cache.order_status_update(order)
+                        valid = self._cache.order_status_update(order)
                         EventSystem.emit(OrderStatus.CANCELED, order)
                     case OrderStatus.FILLED:
                         self._log.debug(f"ORDER STATUS FILLED: {str(order)}")
-                        self._cache.order_status_update(order)
+                        valid = self._cache.order_status_update(order)
                         EventSystem.emit(OrderStatus.FILLED, order)
                     case OrderStatus.EXPIRED:
                         self._log.debug(f"ORDER STATUS EXPIRED: {str(order)}")
-                        self._cache.order_status_update(order)
-                await self._cache.apply_position(order)
+                        valid = self._cache.order_status_update(order)
+                if valid:
+                    await self._cache.apply_position(order)
                 self._order_msg_queue.task_done()
             except Exception as e:
                 self._log.error(f"Error in handle_order_event: {e}")

@@ -282,11 +282,6 @@ class VwapStrategy(Strategy):
                         if (on_bid and order.price != book.bid) or (
                             not on_bid and order.price != book.ask
                         ):
-                            # order: Order = await self.cache(
-                            #     BybitAccountType.ALL_TESTNET
-                            # ).get_order(
-                            #     order_id
-                            # )  # if the order is partially filled, we should get the current status of the order, if the cancel is successful, we should get the filled amount and cost
                             order_cancel = await self.cancel_order(
                                 account_type=BybitAccountType.ALL_TESTNET,
                                 symbol=symbol,

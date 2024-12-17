@@ -30,7 +30,8 @@ class BybitWSClient(WSClient):
             url,
             limiter=Limiter(500 / 5 * 60),
             handler=handler,
-            ping_idle_timeout=2,
+            ping_idle_timeout=5,
+            ping_reply_timeout=2,
             specific_ping_msg=orjson.dumps({"op": "ping"}),
             auto_ping_strategy="ping_when_idle",
         )

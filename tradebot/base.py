@@ -450,8 +450,8 @@ class WSClient(ABC):
         handler: Callable[..., Any],
         specific_ping_msg: bytes = None,
         reconnect_interval: int = 0.2,
-        ping_idle_timeout: int = 5,
-        ping_reply_timeout: int = 5,
+        ping_idle_timeout: int = 2,
+        ping_reply_timeout: int = 1,
         auto_ping_strategy: Literal[
             "ping_when_idle", "ping_periodically"
         ] = "ping_when_idle",

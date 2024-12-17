@@ -137,8 +137,10 @@ class Listener(WSListener):
                     self.msg_queue.put_nowait(frame.get_payload_as_bytes())
                     return
                 case WSMsgType.CLOSE:
-                    self._log.debug(
-                        f"Received close frame. {str(frame.get_payload_as_bytes())}"
+                    close_code = frame.get_close_code()
+                    close_msg = frame.get_close_message()
+                    self._log.warning(
+                        f"Received close frame. Close code: {close_code}, Close message: {close_msg}"
                     )
                     return
         except Exception as e:

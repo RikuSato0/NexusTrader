@@ -432,8 +432,10 @@ class Listener(WSListener):
                     self.msg_queue.put_nowait(frame.get_payload_as_bytes())
                     return
                 case WSMsgType.CLOSE:
-                    self._log.debug(
-                        f"Received close frame. {str(frame.get_payload_as_bytes())}"
+                    close_code = frame.get_close_code()
+                    close_msg = frame.get_close_message()
+                    self._log.warning(
+                        f"Received close frame. Close code: {close_code}, Close message: {close_msg}"
                     )
                     return
         except Exception as e:
@@ -448,8 +450,8 @@ class WSClient(ABC):
         handler: Callable[..., Any],
         specific_ping_msg: bytes = None,
         reconnect_interval: int = 0.2,
-        ping_idle_timeout: int = 2,
-        ping_reply_timeout: int = 1,
+        ping_idle_timeout: int = 5,
+        ping_reply_timeout: int = 5,
         auto_ping_strategy: Literal[
             "ping_when_idle", "ping_periodically"
         ] = "ping_when_idle",
@@ -522,7 +524,6 @@ class WSClient(ABC):
     async def _msg_handler(self, queue: asyncio.Queue):
         while True:
             msg = await queue.get()
-            # TODO: handle different event types of messages
             self._callback(msg)
             queue.task_done()
 

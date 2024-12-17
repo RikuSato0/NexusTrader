@@ -12,7 +12,7 @@ from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
 
 class Strategy:
     def __init__(self, tick_size=0.01):
-        self.log = SpdLog.get_logger(name = type(self).__name__, level = "DEBUG", flush = True)
+        self.log = SpdLog.get_logger(name = type(self).__name__, level = "INFO", flush = True)
         self._pulic_connectors: Dict[AccountType, PublicConnector] = {}
         self._private_connectors: Dict[AccountType, PrivateConnector] = {}
         self._clock = Clock(tick_size=tick_size)

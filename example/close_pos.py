@@ -11,7 +11,7 @@ exchange = ccxt.bybit({
     "secret": BYBIT_API_SECRET,
 })
 
-pos = exchange.fetch_positions()
+pos = exchange.fetch_positions(params={"limit": 100})
 print(len(pos))
 for p in pos:
     symbol = p["symbol"]

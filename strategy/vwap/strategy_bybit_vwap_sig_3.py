@@ -519,12 +519,12 @@ class VwapStrategy(Strategy):
         real_pos_2 = pos_obj.signed_amount
             
         if side == OrderSide.BUY:
-            self.log.debug(
+            self.log.info(
                     f"Side BUY Symbol: {symbol} pos: {self.current_positions[symbol]} + {pos} -> {real_pos_2}"
             )
             self.current_positions[symbol] += pos
         else:
-            self.log.debug(
+            self.log.info(
                 f"Side SELL Symbol: {symbol} pos: {self.current_positions[symbol]} - {pos} -> {real_pos_2}"
             )
             self.current_positions[symbol] -= pos
@@ -537,7 +537,7 @@ class VwapStrategy(Strategy):
         
         average = (cost / float(pos)) if pos > 0 else 0
         side_string = "BUY" if side == OrderSide.BUY else "SELL"
-        self.log.debug(f"Symbol: {symbol} Side: {side_string} VWAP completed average: {average}")
+        self.log.info(f"Symbol: {symbol} Side: {side_string} VWAP completed average: {average}")
         self._save_positions(self.current_positions)
         self._in_ordering[symbol] = False
 

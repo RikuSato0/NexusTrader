@@ -382,6 +382,9 @@ class VwapStrategy(Strategy):
                             self.log.debug(
                                 f"[{'CLOSE' if reduce_only else 'OPEN'}] Symbol: {symbol} Make order id: {make_order_id}"
                             )
+                        else:
+                            reset_pos = True
+                            break
 
                     if not take_order_id and self.amount_check(
                         symbol, amount_take, price_take, remaing_amount_take
@@ -401,6 +404,10 @@ class VwapStrategy(Strategy):
                             self.log.debug(
                                 f"[{'CLOSE' if reduce_only else 'OPEN'}] Symbol: {symbol} Take order id: {take_order_id}"
                             )
+                        else:
+                            reset_pos = True
+                            break
+                        
                 elif remaining_interval == 1:
                     if not take_order_id and not make_order_id and self.amount_check(
                         symbol, interval_amount, price_take, remaing_amount
@@ -418,6 +425,9 @@ class VwapStrategy(Strategy):
                             self.log.debug(
                                 f"[{'CLOSE' if reduce_only else 'OPEN'}] Symbol: {symbol} Take order id: {take_order_id}"
                             )       
+                        else:
+                            reset_pos = True
+                            break
             else:
                 self.log.debug(f"Symbol: {symbol} pos: {pos} amount: {amount} Finished")
                 break

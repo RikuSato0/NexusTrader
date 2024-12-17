@@ -559,7 +559,7 @@ async def main():
         config = {
             "apiKey": BYBIT_API_KEY,
             "secret": BYBIT_API_SECRET,
-            "sandbox": True,
+            "sandbox": False,
         }
 
         exchange = BybitExchangeManager(config)

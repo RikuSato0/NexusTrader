@@ -247,6 +247,7 @@ class BinancePublicConnector(PublicConnector):
 
 class BinancePrivateConnector(PrivateConnector):
     _ws_client: BinanceWSClient
+    _account_type: BinanceAccountType
     _market: Dict[str, BinanceMarket]
     _market_id: Dict[str, BinanceMarket]
 
@@ -256,6 +257,7 @@ class BinancePrivateConnector(PrivateConnector):
         exchange: BinanceExchangeManager,
         strategy_id: str = None,
         user_id: str = None,
+        rate_limit: float = None,
     ):
         super().__init__(
             account_type=account_type,
@@ -270,50 +272,47 @@ class BinancePrivateConnector(PrivateConnector):
                 strategy_id=strategy_id,
                 user_id=user_id,
             ),
+            rate_limit=rate_limit,
         )
 
         self._api_client = BinanceApiClient(
             api_key=exchange.api_key,
             secret=exchange.secret,
-            testnet=exchange.is_testnet,
+            testnet=account_type.is_testnet,
         )
 
     @property
-    def account_type(self) -> BinanceAccountType:
-        return self._account_type
-
-    @property
     def market_type(self):
-        if self.account_type.is_spot:
+        if self._account_type.is_spot:
             return "_spot"
-        elif self.account_type.is_linear:
+        elif self._account_type.is_linear:
             return "_linear"
-        elif self.account_type.is_inverse:
+        elif self._account_type.is_inverse:
             return "_inverse"
 
     async def _start_user_data_stream(self):
-        if self.account_type.is_spot:
+        if self._account_type.is_spot:
             res = await self._api_client.post_api_v3_user_data_stream()
-        elif self.account_type.is_margin:
+        elif self._account_type.is_margin:
             res = await self._api_client.post_sapi_v1_user_data_stream()
-        elif self.account_type.is_linear:
+        elif self._account_type.is_linear:
             res = await self._api_client.post_fapi_v1_listen_key()
-        elif self.account_type.is_inverse:
+        elif self._account_type.is_inverse:
             res = await self._api_client.post_dapi_v1_listen_key()
-        elif self.account_type.is_portfolio_margin:
+        elif self._account_type.is_portfolio_margin:
             res = await self._api_client.post_papi_v1_listen_key()
-        return res.get("listenKey", None)
+        return res.listenKey
 
     async def _keep_alive_listen_key(self, listen_key: str):
-        if self.account_type.is_spot:
+        if self._account_type.is_spot:
             await self._api_client.put_api_v3_user_data_stream(listen_key=listen_key)
-        elif self.account_type.is_margin:
+        elif self._account_type.is_margin:
             await self._api_client.put_sapi_v1_user_data_stream(listen_key=listen_key)
-        elif self.account_type.is_linear:
+        elif self._account_type.is_linear:
             await self._api_client.put_fapi_v1_listen_key()
-        elif self.account_type.is_inverse:
+        elif self._account_type.is_inverse:
             await self._api_client.put_dapi_v1_listen_key()
-        elif self.account_type.is_portfolio_margin:
+        elif self._account_type.is_portfolio_margin:
             await self._api_client.put_papi_v1_listen_key()
 
     async def _keep_alive_user_data_stream(

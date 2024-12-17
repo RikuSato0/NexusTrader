@@ -1,7 +1,6 @@
 import asyncio
 import time
 from decimal import Decimal
-from datetime import datetime
 from tradebot.constants import OrderStatus
 from tradebot.exchange.bybit import BybitAccountType
 from tradebot.types import Order, OrderType, OrderSide

@@ -18,14 +18,14 @@ from decimal import Decimal
 from asynciolimiter import Limiter
 from ccxt.base.errors import RequestTimeout
 from aiohttp.client_exceptions import ClientResponseError, ClientError
-from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
+from decimal import ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
 
 
 from tradebot.log import SpdLog
 from tradebot.entity import EventSystem, TaskManager
 from tradebot.constants import OrderStatus
 from tradebot.types import Order, BaseMarket
-from tradebot.entity import Cache, AsyncCache
+from tradebot.entity import AsyncCache
 from tradebot.exceptions import OrderError, ExchangeResponseError
 from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
 from picows import (
@@ -36,7 +36,7 @@ from picows import (
     WSMsgType,
     WSAutoPingStrategy,
 )
-from nautilus_trader.common.component import LiveClock
+from tradebot.core.nautilius_core import LiveClock
 
 
 class ExchangeManager(ABC):
@@ -432,8 +432,10 @@ class Listener(WSListener):
                     self.msg_queue.put_nowait(frame.get_payload_as_bytes())
                     return
                 case WSMsgType.CLOSE:
-                    self._log.debug(
-                        f"Received close frame. {str(frame.get_payload_as_bytes())}"
+                    close_code = frame.get_close_code()
+                    close_msg = frame.get_close_message()
+                    self._log.warning(
+                        f"Received close frame. Close code: {close_code}, Close message: {close_msg}"
                     )
                     return
         except Exception as e:
@@ -456,6 +458,7 @@ class WSClient(ABC):
         enable_auto_ping: bool = True,
         enable_auto_pong: bool = False,
     ):
+        self._clock = LiveClock()
         self._url = url
         self._specific_ping_msg = specific_ping_msg
         self._reconnect_interval = reconnect_interval
@@ -521,7 +524,6 @@ class WSClient(ABC):
     async def _msg_handler(self, queue: asyncio.Queue):
         while True:
             msg = await queue.get()
-            # TODO: handle different event types of messages
             self._callback(msg)
             queue.task_done()
 
@@ -692,7 +694,6 @@ class Clock:
         self._clock = LiveClock()
         self._tick_callbacks: List[Callable[[float], None]] = []
         self._started = False
-        self._log = SpdLog.get_logger(type(self).__name__, level="INFO", flush=True)
 
     @property
     def tick_size(self) -> float:
@@ -780,7 +781,7 @@ class PrivateConnector(ABC):
         rate_limit: float = None,
     ):
         self._log = SpdLog.get_logger(
-            name=type(self).__name__, level="INFO", flush=True
+            name=type(self).__name__, level="DEBUG", flush=True
         )
         self._account_type = account_type
         self._market = market
@@ -790,6 +791,8 @@ class PrivateConnector(ABC):
         self._ws_client = ws_client
         self._clock = LiveClock()
         self._cache = cache
+        self._oms = OrderManagerSystem(cache)
+        
         if rate_limit:
             self._limiter = Limiter(rate_limit)
         else:
@@ -893,32 +896,36 @@ class OrderManagerSystem:
 
     async def handle_order_event(self):
         while True:
-            order = await self._order_msg_queue.get()
-
-            match order.status:
-                case OrderStatus.PENDING:
-                    self._log.debug(f"ORDER STATUS PENDING: {str(order)}")
-                    self._cache.order_initialized(order)
-                case OrderStatus.CANCELING:
-                    self._log.debug(f"ORDER STATUS CANCELING: {str(order)}")
-                    self._cache.order_status_update(order)
-                case OrderStatus.ACCEPTED:
-                    self._log.debug(f"ORDER STATUS ACCEPTED: {str(order)}")
-                    self._cache.order_status_update(order)
-                    EventSystem.emit(OrderStatus.ACCEPTED, order)
-                case OrderStatus.PARTIALLY_FILLED:
-                    self._log.debug(f"ORDER STATUS PARTIALLY FILLED: {str(order)}")
-                    self._cache.order_status_update(order)
-                    EventSystem.emit(OrderStatus.PARTIALLY_FILLED, order)
-                case OrderStatus.CANCELED:
-                    self._log.debug(f"ORDER STATUS CANCELED: {str(order)}")
-                    self._cache.order_status_update(order)
-                    EventSystem.emit(OrderStatus.CANCELED, order)
-                case OrderStatus.FILLED:
-                    self._log.debug(f"ORDER STATUS FILLED: {str(order)}")
-                    self._cache.order_status_update(order)
-                    EventSystem.emit(OrderStatus.FILLED, order)
-                case OrderStatus.EXPIRED:
-                    self._log.debug(f"ORDER STATUS EXPIRED: {str(order)}")
-                    self._cache.order_status_update(order)
-            self._order_msg_queue.task_done()
+            try:
+                order = await self._order_msg_queue.get()
+                match order.status:
+                    case OrderStatus.PENDING:
+                        self._log.debug(f"ORDER STATUS PENDING: {str(order)}")
+                        valid = self._cache.order_initialized(order)
+                    case OrderStatus.CANCELING:
+                        self._log.debug(f"ORDER STATUS CANCELING: {str(order)}")
+                        valid = self._cache.order_status_update(order)
+                    case OrderStatus.ACCEPTED:
+                        self._log.debug(f"ORDER STATUS ACCEPTED: {str(order)}")
+                        valid = self._cache.order_status_update(order)
+                        EventSystem.emit(OrderStatus.ACCEPTED, order)
+                    case OrderStatus.PARTIALLY_FILLED:
+                        self._log.debug(f"ORDER STATUS PARTIALLY FILLED: {str(order)}")
+                        valid = self._cache.order_status_update(order)
+                        EventSystem.emit(OrderStatus.PARTIALLY_FILLED, order)
+                    case OrderStatus.CANCELED:
+                        self._log.debug(f"ORDER STATUS CANCELED: {str(order)}")
+                        valid = self._cache.order_status_update(order)
+                        EventSystem.emit(OrderStatus.CANCELED, order)
+                    case OrderStatus.FILLED:
+                        self._log.debug(f"ORDER STATUS FILLED: {str(order)}")
+                        valid = self._cache.order_status_update(order)
+                        EventSystem.emit(OrderStatus.FILLED, order)
+                    case OrderStatus.EXPIRED:
+                        self._log.debug(f"ORDER STATUS EXPIRED: {str(order)}")
+                        valid = self._cache.order_status_update(order)
+                if valid:
+                    await self._cache.apply_position(order)
+                self._order_msg_queue.task_done()
+            except Exception as e:
+                self._log.error(f"Error in handle_order_event: {e}")

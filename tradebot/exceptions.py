@@ -25,3 +25,15 @@ class ExchangeResponseError(Exception):
     
     def __repr__(self):
         return self.__str__()
+
+class PositionError(Exception):
+    def __init__(self, message: str, position):
+        self.message = message
+        self.position = position
+        super().__init__(message)
+
+    def __str__(self):
+        return f"{self.message}\nPosition: {self.position}"
+    
+    def __repr__(self):
+        return self.__str__()

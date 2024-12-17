@@ -124,19 +124,19 @@ class Strategy:
             for exchange_id, symbol, data_type in self._subscribed_pairs:
                 pair_key = (exchange_id, symbol, data_type)
                 
-                is_ready = False
+                pair_ready = False
                 if data_type == 'bookl1' and self._market_data.bookl1.get(exchange_id, {}).get(symbol):
-                    is_ready = True
+                    pair_ready = True
                 elif data_type == 'trade' and self._market_data.trade.get(exchange_id, {}).get(symbol):
-                    is_ready = True
+                    pair_ready = True
                 elif data_type == 'kline' and self._market_data.kline.get(exchange_id, {}).get(symbol):
-                    is_ready = True
+                    pair_ready = True
                 
-                if is_ready and pair_key not in ready_pairs:
+                if pair_ready and pair_key not in ready_pairs:
                     self.log.debug(f"Market data ready: {exchange_id} {symbol} {data_type}")
                     ready_pairs.add(pair_key)
                 
-                if not is_ready:
+                if not pair_ready:
                     self._ready = False
             
             if self._ready:

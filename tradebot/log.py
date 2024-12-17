@@ -18,7 +18,7 @@ class SpdLog:
     - Allows managing log settings via configuration files or environment variables
     """
 
-    log_dir = Path(".logs")
+    log_dir = Path(".log")
     log_dir_created = False
     loggers = {}
     async_mode = True

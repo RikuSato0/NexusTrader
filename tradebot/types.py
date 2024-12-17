@@ -1,3 +1,4 @@
+import warnings
 from decimal import Decimal
 from collections import defaultdict
 from typing import Any, Dict, List, Tuple
@@ -318,7 +319,7 @@ class Position(Struct):
     unrealized_pnl: float = 0
     realized_pnl: float = 0
     last_order_filled: Dict[str, Decimal] = field(default_factory=dict)
-    
+
     @property
     def amount(self) -> Decimal:
         return abs(self.signed_amount)
@@ -326,7 +327,7 @@ class Position(Struct):
     @property
     def is_open(self) -> bool:
         return self.amount != 0
-    
+
     @property
     def is_closed(self) -> bool:
         return not self.is_open
@@ -354,54 +355,85 @@ class Position(Struct):
             self.last_order_filled[order.id] = order.filled
         return fill_delta
 
+    def _calculate_pnl(self, current_price: float, amount: Decimal) -> float:
+        """Calculate PNL based on position side and current price"""
+        if self.side == PositionSide.LONG:
+            return float(amount) * (current_price - self.entry_price)
+        elif self.side == PositionSide.SHORT:
+            return float(amount) * (self.entry_price - current_price)
+        return 0.0
+
     def apply(self, order: Order):
         if order.position_side == PositionSide.FLAT:
-            if order.reduce_only:
-                self._close_position(order)
+            fill_delta = self._calculate_fill_delta(order)
+            
+            if (self.signed_amount > 0 and order.side == OrderSide.SELL) or (
+                self.signed_amount < 0 and order.side == OrderSide.BUY
+            ):
+                close_amount = min(abs(self.signed_amount), fill_delta) # 平仓数量最大不超过当前持仓数量
+                remaining_amount = fill_delta - close_amount # 剩余数量
+                self._close_position(order, close_amount)
+                if remaining_amount > 0:
+                    self._open_position(order, remaining_amount)
             else:
-                self._open_position(order)
+                self._open_position(order, fill_delta)
         else:
             pass
 
-    def _open_position(self, order: Order):
+    def _close_position(self, order: Order, close_amount: Decimal):
+        price = order.average or order.price
+
+        if order.side == OrderSide.BUY:
+            if self.side != PositionSide.SHORT:
+                warnings.warn(f"Cannot close short position with {self.side}")
+            self.realized_pnl += self._calculate_pnl(price, close_amount)
+            self.signed_amount += close_amount
+        elif order.side == OrderSide.SELL:
+            if self.side != PositionSide.LONG:
+                warnings.warn(f"Cannot close long position with {self.side}")
+            self.realized_pnl += self._calculate_pnl(price, close_amount)
+            self.signed_amount -= close_amount
+
+        self.unrealized_pnl = self._calculate_pnl(price, self.amount)
+
+        if self.signed_amount == 0:
+            self.side = None
+            self.entry_price = 0
+            self.unrealized_pnl = 0
+
+    def _open_position(self, order: Order, open_amount: Decimal):
         if order.side == OrderSide.BUY:
             if not self.side:
                 self.side = PositionSide.LONG
             else:
                 if self.side != PositionSide.LONG:
-                    raise RuntimeError(f"Cannot open long position with {self.side}")
-            fill_delta = self._calculate_fill_delta(order)
-            """
-            self.signed_amount = 0, fill_delta = 0.01, entry_price = 0
-            10 * -2 + 8 * -2 / -4 = 9
-            """
-            tmp_amount = self.signed_amount + fill_delta
+                    warnings.warn(f"Cannot open long position with {self.side}")
+                
+            tmp_amount = self.signed_amount + open_amount
             price = order.average or order.price
-            self.entry_price = (self.entry_price * self.signed_amount + price * fill_delta) / tmp_amount
+            self.entry_price = (
+                (self.entry_price * float(self.signed_amount) + price * float(open_amount))
+                / float(tmp_amount)
+                if tmp_amount != 0
+                else 0
+            )
             self.signed_amount = tmp_amount
-        else:
+            
+        elif order.side == OrderSide.SELL:
             if not self.side:
                 self.side = PositionSide.SHORT
             else:
                 if self.side != PositionSide.SHORT:
-                    raise RuntimeError(f"Cannot open short position with {self.side}")
-            fill_delta = self._calculate_fill_delta(order)
-            tmp_amount = self.signed_amount - fill_delta
+                    warnings.warn(f"Cannot open short position with {self.side}")
+                
+            tmp_amount = self.signed_amount - open_amount
             price = order.average or order.price
-            self.entry_price = (self.entry_price * self.signed_amount - price * fill_delta) / tmp_amount
+            self.entry_price = (
+                (self.entry_price * float(self.signed_amount) - price * float(open_amount))
+                / float(tmp_amount)
+                if tmp_amount != 0
+                else 0
+            )
             self.signed_amount = tmp_amount
             
-    def _close_position(self, order: Order):
-        if order.side == OrderSide.BUY:
-            # > order (OrderSide.BUY, reduce_only=True) -> close short position, so side must be short
-            if self.side != PositionSide.SHORT:
-                raise RuntimeError(f"Cannot close short position with {self.side}")
-            self.signed_amount += self._calculate_fill_delta(order)
-        else:
-            # > order (OrderSide.SELL, reduce_only=True) -> close long position, so side must be long
-            if self.side != PositionSide.LONG:
-                raise RuntimeError(f"Cannot close long position with {self.side}")
-            self.signed_amount -= self._calculate_fill_delta(order)
-        
-        if self.signed_amount == 0:
-            self.side = None
+        self.unrealized_pnl = self._calculate_pnl(price, self.amount)

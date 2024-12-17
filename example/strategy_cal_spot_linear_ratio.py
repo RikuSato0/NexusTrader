@@ -1,6 +1,5 @@
 import asyncio
-from tradebot.types import Trade
-from tradebot.strategy import Strategy
+from tradebot.core import Strategy
 from tradebot.exchange.binance import (
     BinanceAccountType,
     BinanceExchangeManager,

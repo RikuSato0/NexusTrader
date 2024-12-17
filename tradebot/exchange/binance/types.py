@@ -4,6 +4,10 @@ from tradebot.types import Order, BaseMarket
 from tradebot.constants import OrderSide, TimeInForce
 from tradebot.exchange.binance.constants import BinanceOrderStatus, BinanceOrderType, BinancePositionSide
 
+class BinanceListenKey(msgspec.Struct):
+    listenKey: str 
+    
+    
 class BinanceUserTrade(msgspec.Struct, frozen=True):
     """
     HTTP response from Binance Spot/Margin `GET /api/v3/myTrades` HTTP response from

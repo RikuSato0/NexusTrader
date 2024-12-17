@@ -1,5 +1,11 @@
 # TradeBotPro
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/source/_static/logo-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/source/_static/logo-light.png">
+  <img alt="TradeBotPro Logo" src="docs/source/_static/logo-light.png">
+</picture>
+
 TradeBotPro is a flexible and powerful trading bot framework designed to interact with various cryptocurrency exchanges. It provides a robust architecture for managing exchange connections, order placements, and real-time data streaming via WebSockets.
 
 ## Features
@@ -131,3 +137,22 @@ Contributions to TradeBotPro are welcome! Please refer to our [contribution guid
 ## License
 
 TradeBotPro is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Documentation
+
+Documentation is available at [Read the Docs](https://your-project-name.readthedocs.io/).
+
+### Building Docs Locally
+
+1. Install documentation dependencies:
+   ```bash
+   pip install -r docs/requirements.txt
+   ```
+
+2. Build the documentation:
+   ```bash
+   cd docs
+   make html
+   ```
+
+The generated documentation will be in `docs/build/html`.

@@ -8,8 +8,6 @@ from asynciolimiter import Limiter
 from tradebot.base import WSClient
 from tradebot.exchange.bybit.constants import BybitAccountType
 
-from nautilus_trader.common.component import LiveClock
-
 
 class BybitWSClient(WSClient):
     def __init__(
@@ -22,7 +20,6 @@ class BybitWSClient(WSClient):
         self._account_type = account_type
         self._api_key = api_key
         self._secret = secret
-        self._clock = LiveClock()
         self._authed = False
         if self.is_private:
             url = account_type.ws_private_url
@@ -33,7 +30,8 @@ class BybitWSClient(WSClient):
             url,
             limiter=Limiter(500 / 5 * 60),
             handler=handler,
-            ping_idle_timeout=2,
+            ping_idle_timeout=5,
+            ping_reply_timeout=2,
             specific_ping_msg=orjson.dumps({"op": "ping"}),
             auto_ping_strategy="ping_when_idle",
         )

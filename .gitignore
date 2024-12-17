@@ -1,6 +1,7 @@
 __pycache__/
 .context/
 .logs/
+.log/
 .pytest_cache/
 .vscode/
 *_log.py
@@ -11,11 +12,13 @@ binance_markets.json
 bybit_markets.json
 build/
 venv/
-*.svg
 *.c
 *.so
 result.json
-strategy_bybit_vwap.py
-strategy_bybit_twap.py
-strategy/
 clear.sh
+*.key
+.idea/
+.DS_Store
+md_source/
+nautilus_trader/
+*.pkl

@@ -1,6 +1,6 @@
 import asyncio
 from tradebot.types import Trade
-from tradebot.strategy import Strategy
+from tradebot.core import Strategy
 from tradebot.exchange.okx import OkxAccountType, OkxExchangeManager
 from tradebot.exchange.okx.connector import OkxPublicConnector
 

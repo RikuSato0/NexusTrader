@@ -2,7 +2,7 @@ import asyncio
 from tradebot.constants import CONFIG
 from tradebot.types import Order
 from tradebot.constants import OrderSide, OrderType, OrderStatus
-from tradebot.strategy import Strategy
+from tradebot.core import Strategy
 from decimal import Decimal
 from tradebot.exchange.bybit import (
     BybitPublicConnector,

@@ -36,7 +36,7 @@ class BybitSignal:
         self.socket.connect("ipc:///tmp/zmq_data")
         self.socket.setsockopt(zmq.SUBSCRIBE, b"")
         self.market = market
-        self.mutiplier = Decimal(str(0.5))
+        self.mutiplier = Decimal(str(0.6))
         self.valid_symbols = market.keys()
         self.strategy = None
         self.first_subscribed = True

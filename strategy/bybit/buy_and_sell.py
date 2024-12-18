@@ -5,7 +5,7 @@ from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfi
 from tradebot.strategy import Strategy
 from tradebot.constants import ExchangeType, OrderSide, OrderType
 from tradebot.exchange.bybit import BybitAccountType
-from tradebot.schema import BookL1, Order
+from tradebot.schema import Order, OrderSubmit
 from tradebot.engine import Engine
 
 BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]
@@ -44,14 +44,14 @@ class Demo(Strategy):
                 bid = self.price_to_precision("BTCUSDT-PERP.BYBIT", bid)
                 ask = self.price_to_precision("BTCUSDT-PERP.BYBIT", ask)
                 
-                order = self.create_order(
+                order: OrderSubmit = self.create_order(
                     symbol="BTCUSDT-PERP.BYBIT",
                     side=OrderSide.BUY,
                     type=OrderType.LIMIT,
                     amount=Decimal("0.001"),
                     price=bid,
                 )
-                print(order.uuid)
+                print("order uuid", order.uuid)
                 self.uuid = order.uuid
                 self.signal = False
 

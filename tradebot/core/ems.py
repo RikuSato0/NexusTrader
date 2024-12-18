@@ -10,7 +10,7 @@ from tradebot.core.log import SpdLog
 from tradebot.core.registry import OrderRegistry
 from tradebot.exchange.binance import BinanceAccountType
 from tradebot.exchange.bybit import BybitAccountType
-
+from tradebot.constants import SubmitType
 
 class ExecutionManagementSystem:
     BINANCE_SPOT_PRIORITY = [
@@ -160,11 +160,12 @@ class ExecutionManagementSystem:
     async def _handle_submit_order(
         self, account_type: AccountType, queue: asyncio.Queue[OrderSubmit]
     ):
+        self._log.debug(f"Handling orders for account type: {account_type}")
         while True:
             order_submit = await queue.get()
-            if order_submit.uuid:  # cancel order
+            if order_submit.submit_type == SubmitType.CANCEL:
                 await self._handle_cancel_order(order_submit, account_type)
-            else:
+            elif order_submit.submit_type == SubmitType.CREATE:
                 await self._handle_create_order(order_submit, account_type)
             queue.task_done()
 

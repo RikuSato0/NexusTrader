@@ -13,6 +13,7 @@ from tradebot.constants import (
     PositionSide,
     InstrumentType,
     ExchangeType,
+    SubmitType,
 )
 
 
@@ -117,6 +118,7 @@ class IndexPrice(Struct, gc=False):
 
 class OrderSubmit(Struct):
     symbol: str
+    submit_type: SubmitType
     uuid: str = field(default_factory=lambda: UUID4().value)
     order_id: str | int | None = None
     side: OrderSide | None = None

@@ -166,6 +166,9 @@ UrlType = Union[
     Url.Bybit.Option,
 ]
 
+class SubmitType(Enum):
+    CREATE = 0
+    CANCEL = 1
 
 class EventType(Enum):
     BOOKL1 = 0

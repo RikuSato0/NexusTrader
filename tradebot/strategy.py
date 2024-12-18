@@ -7,7 +7,7 @@ from tradebot.core.cache import AsyncCache
 from tradebot.core.ems import ExecutionManagementSystem
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.schema import BookL1, Trade, Kline, Order, MarketData, OrderSubmit
-from tradebot.constants import DataType, OrderSide, OrderType, TimeInForce, PositionSide, AccountType
+from tradebot.constants import DataType, OrderSide, OrderType, TimeInForce, PositionSide, AccountType, SubmitType
 
 
 class Strategy:
@@ -91,6 +91,7 @@ class Strategy:
         """
         order = OrderSubmit(
             symbol=symbol,
+            submit_type=SubmitType.CREATE,
             side=side,
             type=type,
             amount=amount,
@@ -117,6 +118,7 @@ class Strategy:
         """
         order = OrderSubmit(
             symbol=symbol,
+            submit_type=SubmitType.CANCEL,
             uuid=uuid,
             kwargs=kwargs,
         )

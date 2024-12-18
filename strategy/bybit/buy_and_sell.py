@@ -24,6 +24,18 @@ class Demo(Strategy):
         self.signal = True
         self.uuid = None
     
+    def on_pending_order(self, order: Order):
+        print(order)
+    
+    def on_accepted_order(self, order: Order):
+        print(order)
+    
+    def on_partially_filled_order(self, order: Order):
+        print(order)
+    
+    def on_filled_order(self, order: Order):
+        print(order)
+    
     def algo(self):
         bookl1 = self.cache.bookl1("BTCUSDT-PERP.BYBIT")
         if bookl1:
@@ -37,9 +49,7 @@ class Demo(Strategy):
                 print(order.uuid)
                 self.uuid = order.uuid
                 self.signal = False
-            if self.uuid:
-                order = self.cache.get_order(self.uuid)
-                print(order)
+
 
 config = Config(
     strategy_id="buy_and_sell",

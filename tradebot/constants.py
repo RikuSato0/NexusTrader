@@ -3,6 +3,8 @@ import sys
 from configparser import ConfigParser
 from typing import Literal, Union, Dict, List
 from enum import Enum
+from dynaconf import Dynaconf
+
 
 def is_sphinx_build():
     return 'sphinx' in sys.modules
@@ -16,6 +18,13 @@ if not os.path.exists(".keys/config.cfg") and not is_sphinx_build():
 
 KEYS = ConfigParser()
 KEYS.read(".keys/config.cfg")
+
+
+
+settings = Dynaconf(
+    envvar_prefix="DYNACONF",
+    settings_files=['.keys/settings.toml', '.keys/.secrets.toml'],
+)
 
 
 def get_redis_config(in_docker: bool = False):
@@ -423,5 +432,3 @@ class DataType(Enum):
     MARK_PRICE = "mark_price"
     FUNDING_RATE = "funding_rate"
     INDEX_PRICE = "index_price"
-
-

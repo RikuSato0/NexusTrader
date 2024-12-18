@@ -1,2 +1,5 @@
 config.cfg
 *.pem
+
+# Ignore dynaconf secret files
+.secrets.*

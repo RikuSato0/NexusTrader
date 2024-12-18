@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from tradebot.constants import KEYS
+from tradebot.constants import settings
 from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
 from tradebot.strategy import Strategy
 from tradebot.constants import ExchangeType, OrderSide, OrderType
@@ -8,8 +8,10 @@ from tradebot.exchange.bybit import BybitAccountType
 from tradebot.schema import BookL1, Order, OrderSubmit
 from tradebot.engine import Engine
 
-BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]
-BYBIT_SECRET = KEYS["bybit_testnet_2"]["SECRET"]
+
+
+BYBIT_API_KEY = settings.BYBIT.ACCOUNT1.api_key
+BYBIT_SECRET = settings.BYBIT.ACCOUNT1.secret
 
 
 
@@ -20,26 +22,10 @@ class Demo(Strategy):
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
         self.subscribe_trade(symbols=["BTCUSDT-PERP.BYBIT"])
         self.signal = True
-        
-        self.tick_2_order = {}
-        
-        self.side = OrderSide.BUY
-    
-    def on_pending_order(self, order: Order):
-        lat = order.timestamp - self.tick_2_order[order.uuid]
-        print(f"latency: {lat}ms")
+
     
     def on_bookl1(self, bookl1: BookL1):
-        order = self.create_order(
-            symbol="BTCUSDT-PERP.BYBIT",
-            side=self.side,
-            type=OrderType.MARKET,
-            amount=Decimal("0.001"),
-        )
-        
-        self.tick_2_order[order.uuid] = bookl1.timestamp
-        
-        self.side = OrderSide.SELL if self.side == OrderSide.BUY else OrderSide.BUY
+        print(bookl1)
 
 config = Config(
     strategy_id="buy_and_sell",

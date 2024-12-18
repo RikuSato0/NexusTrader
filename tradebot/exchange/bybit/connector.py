@@ -268,7 +268,7 @@ class BybitPrivateConnector(PrivateConnector):
                 exchange=self._exchange_id,
                 timestamp=self._clock.timestamp_ms(),
                 symbol=symbol,
-                status=OrderStatus.FAILED,
+                status=OrderStatus.CANCEL_FAILED,
             )
             return order
 

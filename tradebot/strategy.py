@@ -49,6 +49,7 @@ class Strategy:
         self._msgbus.register(endpoint="canceling", handler=self.on_canceling_order)
         self._msgbus.register(endpoint="canceled", handler=self.on_canceled_order)
         self._msgbus.register(endpoint="failed", handler=self.on_failed_order)
+        self._msgbus.register(endpoint="cancel_failed", handler=self.on_cancel_failed_order)
         self._initialized = True
     
     def schedule(self, func: Callable, trigger: Literal['interval', 'cron'] = 'interval', **kwargs):
@@ -181,5 +182,8 @@ class Strategy:
         pass
 
     def on_failed_order(self, order: Order):
+        pass
+
+    def on_cancel_failed_order(self, order: Order):
         pass
     

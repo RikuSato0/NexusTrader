@@ -124,10 +124,11 @@ class ExecutionManagementSystem:
             )
             order.uuid = order_submit.uuid
             if order.success:
-                pass
+                self._cache._order_status_update(order) # SOME STATUS -> CANCELING
+                self._msgbus.send(endpoint="canceling", msg=order)
             else:
-                #TODO: handle order cancel failed
-                pass
+                # self._cache._order_status_update(order) # SOME STATUS -> FAILED
+                self._msgbus.send(endpoint="cancel_failed", msg=order)
 
         else:
             self._log.error(
@@ -150,9 +151,11 @@ class ExecutionManagementSystem:
         order.uuid = order_submit.uuid
         if order.success:
             self._registry.register_order(order)
+            self._cache._order_initialized(order) # INITIALIZED -> PENDING
+            self._msgbus.send(endpoint="pending", msg=order)
         else:
-            #TODO: handle order create failed
-            pass
+            self._cache._order_status_update(order) # INITIALIZED -> FAILED
+            self._msgbus.send(endpoint="failed", msg=order)
 
     async def _handle_submit_order(
         self, account_type: AccountType, queue: asyncio.Queue[OrderSubmit]

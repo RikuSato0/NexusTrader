@@ -179,6 +179,7 @@ class OrderStatus(Enum):
     # LOCAL
     INITIALIZED = "INITIALIZED"
     FAILED = "FAILED"
+    CANCEL_FAILED = "CANCEL_FAILED"
 
     # IN-FLOW
     PENDING = "PENDING"

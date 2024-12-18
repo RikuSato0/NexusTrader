@@ -5,7 +5,7 @@ from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfi
 from tradebot.strategy import Strategy
 from tradebot.constants import ExchangeType, OrderSide, OrderType
 from tradebot.exchange.bybit import BybitAccountType
-from tradebot.schema import Order, OrderSubmit
+from tradebot.schema import BookL1, Order, OrderSubmit
 from tradebot.engine import Engine
 
 BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]
@@ -19,42 +19,27 @@ class Demo(Strategy):
         super().__init__()
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
         self.subscribe_trade(symbols=["BTCUSDT-PERP.BYBIT"])
-        
-        self.schedule(self.algo, seconds=0.1)
         self.signal = True
-        self.uuid = None
+        
+        self.tick_2_order = {}
+        
+        self.side = OrderSide.BUY
     
     def on_pending_order(self, order: Order):
-        print(order)
+        lat = order.timestamp - self.tick_2_order[order.uuid]
+        print(f"latency: {lat}ms")
     
-    def on_accepted_order(self, order: Order):
-        print(order)
-    
-    def on_partially_filled_order(self, order: Order):
-        print(order)
-    
-    def on_filled_order(self, order: Order):
-        print(order)
-    
-    def algo(self):
-        bookl1 = self.cache.bookl1("BTCUSDT-PERP.BYBIT")
-        if bookl1:
-            if self.signal:
-                bid, ask = bookl1.bid, bookl1.ask
-                bid = self.price_to_precision("BTCUSDT-PERP.BYBIT", bid)
-                ask = self.price_to_precision("BTCUSDT-PERP.BYBIT", ask)
-                
-                order: OrderSubmit = self.create_order(
-                    symbol="BTCUSDT-PERP.BYBIT",
-                    side=OrderSide.BUY,
-                    type=OrderType.LIMIT,
-                    amount=Decimal("0.001"),
-                    price=bid,
-                )
-                print("order uuid", order.uuid)
-                self.uuid = order.uuid
-                self.signal = False
-
+    def on_bookl1(self, bookl1: BookL1):
+        order = self.create_order(
+            symbol="BTCUSDT-PERP.BYBIT",
+            side=self.side,
+            type=OrderType.MARKET,
+            amount=Decimal("0.001"),
+        )
+        
+        self.tick_2_order[order.uuid] = bookl1.timestamp
+        
+        self.side = OrderSide.SELL if self.side == OrderSide.BUY else OrderSide.BUY
 
 config = Config(
     strategy_id="buy_and_sell",

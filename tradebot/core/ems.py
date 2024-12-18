@@ -163,6 +163,7 @@ class ExecutionManagementSystem:
         self._log.debug(f"Handling orders for account type: {account_type}")
         while True:
             order_submit = await queue.get()
+            self._log.debug(f"[ORDER SUBMIT]: {order_submit}")
             if order_submit.submit_type == SubmitType.CANCEL:
                 await self._handle_cancel_order(order_submit, account_type)
             elif order_submit.submit_type == SubmitType.CREATE:

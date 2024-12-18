@@ -20,7 +20,7 @@ class Demo(Strategy):
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
         self.subscribe_trade(symbols=["BTCUSDT-PERP.BYBIT"])
         
-        self.schedule(self.algo, seconds=1)
+        self.schedule(self.algo, seconds=0.1)
         self.signal = True
         self.uuid = None
     
@@ -40,11 +40,16 @@ class Demo(Strategy):
         bookl1 = self.cache.bookl1("BTCUSDT-PERP.BYBIT")
         if bookl1:
             if self.signal:
+                bid, ask = bookl1.bid, bookl1.ask
+                bid = self.price_to_precision("BTCUSDT-PERP.BYBIT", bid)
+                ask = self.price_to_precision("BTCUSDT-PERP.BYBIT", ask)
+                
                 order = self.create_order(
                     symbol="BTCUSDT-PERP.BYBIT",
                     side=OrderSide.BUY,
-                    type=OrderType.MARKET,
+                    type=OrderType.LIMIT,
                     amount=Decimal("0.001"),
+                    price=bid,
                 )
                 print(order.uuid)
                 self.uuid = order.uuid

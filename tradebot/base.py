@@ -101,6 +101,59 @@ class ExchangeManager(ABC):
             if market.future and market.active:
                 symbols.append(symbol)
         return symbols
+    
+    def amount_to_precision(
+        self,
+        symbol: str,
+        amount: float,
+        mode: Literal["round", "ceil", "floor"] = "round",
+    ) -> Decimal:
+        market = self.market[symbol]
+        amount: Decimal = Decimal(str(amount))
+        precision = market.precision.amount
+        
+        if precision >= 1:
+            exp = Decimal(int(precision))
+            precision_decimal = Decimal('1')  
+        else:
+            exp = Decimal('1')
+            precision_decimal = Decimal(str(precision))
+        
+        if mode == 'round':
+            amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_HALF_UP) * exp
+        elif mode == 'ceil':
+            amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_CEILING) * exp
+        elif mode == 'floor':
+            amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_FLOOR) * exp
+    
+        return amount
+
+    def price_to_precision(
+        self,
+        symbol: str,
+        price: float,
+        mode: Literal["round", "ceil", "floor"] = "round",
+    ) -> Decimal:
+        market = self.market[symbol]
+        price: Decimal = Decimal(str(price))
+
+        decimal = market.precision.price
+        
+        if decimal >= 1:
+            exp = Decimal(int(decimal))
+            precision_decimal = Decimal('1')  
+        else:
+            exp = Decimal('1')
+            precision_decimal = Decimal(str(decimal))
+        
+        if mode == 'round':
+            price = (price / exp).quantize(precision_decimal, rounding=ROUND_HALF_UP) * exp
+        elif mode == 'ceil':
+            price = (price / exp).quantize(precision_decimal, rounding=ROUND_CEILING) * exp
+        elif mode == 'floor':
+            price = (price / exp).quantize(precision_decimal, rounding=ROUND_FLOOR) * exp
+
+        return price
 
 
 
@@ -381,58 +434,7 @@ class PrivateConnector(ABC):
         self._ws_client.disconnect()
         await self._api_client.close_session()
 
-    def amount_to_precision(
-        self,
-        symbol: str,
-        amount: float,
-        mode: Literal["round", "ceil", "floor"] = "round",
-    ) -> Decimal:
-        market = self._market[symbol]
-        amount: Decimal = Decimal(str(amount))
-        precision = market.precision.amount
-        
-        if precision >= 1:
-            exp = Decimal(int(precision))
-            precision_decimal = Decimal('1')  
-        else:
-            exp = Decimal('1')
-            precision_decimal = Decimal(str(precision))
-        
-        if mode == 'round':
-            amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_HALF_UP) * exp
-        elif mode == 'ceil':
-            amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_CEILING) * exp
-        elif mode == 'floor':
-            amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_FLOOR) * exp
-    
-        return amount
 
-    def price_to_precision(
-        self,
-        symbol: str,
-        price: float,
-        mode: Literal["round", "ceil", "floor"] = "round",
-    ) -> Decimal:
-        market = self._market[symbol]
-        price: Decimal = Decimal(str(price))
-
-        decimal = market.precision.price
-        
-        if decimal >= 1:
-            exp = Decimal(int(decimal))
-            precision_decimal = Decimal('1')  
-        else:
-            exp = Decimal('1')
-            precision_decimal = Decimal(str(decimal))
-        
-        if mode == 'round':
-            price = (price / exp).quantize(precision_decimal, rounding=ROUND_HALF_UP) * exp
-        elif mode == 'ceil':
-            price = (price / exp).quantize(precision_decimal, rounding=ROUND_CEILING) * exp
-        elif mode == 'floor':
-            price = (price / exp).quantize(precision_decimal, rounding=ROUND_FLOOR) * exp
-
-        return price
 
 
 

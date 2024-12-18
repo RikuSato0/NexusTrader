@@ -86,6 +86,7 @@ class Engine:
             msgbus=self._msgbus,
             task_manager=self._task_manager,
             ems=self._ems,
+            exchanges=self._exchanges,
         )
 
         self._subscriptions: Dict[DataType, Dict[str, str] | Set[str]] = (

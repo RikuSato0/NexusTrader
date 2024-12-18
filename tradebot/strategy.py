@@ -2,12 +2,13 @@ from typing import Dict, List, Set, Callable, Literal
 from decimal import Decimal
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from tradebot.core.log import SpdLog
-from tradebot.base import TaskManager
+from tradebot.base import ExchangeManager
+from tradebot.core.entity import TaskManager
 from tradebot.core.cache import AsyncCache
 from tradebot.core.ems import ExecutionManagementSystem
 from tradebot.core.nautilius_core import MessageBus
-from tradebot.schema import BookL1, Trade, Kline, Order, MarketData, OrderSubmit
-from tradebot.constants import DataType, OrderSide, OrderType, TimeInForce, PositionSide, AccountType, SubmitType
+from tradebot.schema import BookL1, Trade, Kline, Order, MarketData, OrderSubmit, InstrumentId
+from tradebot.constants import DataType, OrderSide, OrderType, TimeInForce, PositionSide, AccountType, SubmitType, ExchangeType
 
 
 class Strategy:
@@ -27,7 +28,7 @@ class Strategy:
         self._initialized = False
 
     def _init_core(
-        self, cache: AsyncCache, msgbus: MessageBus, task_manager: TaskManager, ems: ExecutionManagementSystem
+        self, exchanges: Dict[ExchangeType, ExchangeManager], cache: AsyncCache, msgbus: MessageBus, task_manager: TaskManager, ems: ExecutionManagementSystem
     ):
         if self._initialized:
             return
@@ -38,6 +39,7 @@ class Strategy:
         self._task_manager = task_manager
         self._msgbus = msgbus
         
+        self._exchanges = exchanges
         self._msgbus.subscribe(topic="trade", handler=self.on_trade)
         self._msgbus.subscribe(topic="bookl1", handler=self.on_bookl1)
         self._msgbus.subscribe(topic="kline", handler=self.on_kline)
@@ -59,6 +61,26 @@ class Strategy:
         """
         
         self._scheduler.add_job(func, trigger=trigger, **kwargs)
+    
+    def amount_to_precision(
+        self,
+        symbol: str,
+        amount: float,
+        mode: Literal["round", "ceil", "floor"] = "round",
+    ) -> Decimal:
+        instrument_id = InstrumentId.from_str(symbol)
+        exchange = self._exchanges[instrument_id.exchange]
+        return exchange.amount_to_precision(instrument_id.symbol, amount, mode)
+    
+    def price_to_precision(
+        self,
+        symbol: str,
+        price: float,
+        mode: Literal["round", "ceil", "floor"] = "round",
+    ) -> Decimal:
+        instrument_id = InstrumentId.from_str(symbol)
+        exchange = self._exchanges[instrument_id.exchange]
+        return exchange.price_to_precision(instrument_id.symbol, price, mode)
 
     def create_order(
         self,
@@ -67,7 +89,7 @@ class Strategy:
         type: OrderType,
         amount: Decimal,
         price: Decimal | None = None,
-        time_in_force: TimeInForce | None = None,
+        time_in_force: TimeInForce | None = TimeInForce.GTC,
         position_side: PositionSide | None = None,
         account_type: AccountType | None = None,
         **kwargs,

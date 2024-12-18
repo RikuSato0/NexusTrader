@@ -218,15 +218,15 @@ class AsyncCache:
             self._mem_open_orders[order.exchange].discard(order.uuid)
             self._mem_symbol_open_orders[order.symbol].discard(order.uuid)
 
-    def get_order(self, order_id: str) -> Order:
-        if order_id in self._mem_orders:
-            return self._mem_orders[order_id]
+    def get_order(self, uuid: str) -> Order:
+        if uuid in self._mem_orders:
+            return self._mem_orders[uuid]
 
         orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:orders"
-        raw_order = self._r.hget(orders_key, order_id)
+        raw_order = self._r.hget(orders_key, uuid)
         if raw_order:
             order = self._decode(raw_order, Order)
-            self._mem_orders[order_id] = order
+            self._mem_orders[uuid] = order
             return order
         return None
 
@@ -237,9 +237,9 @@ class AsyncCache:
         if not in_mem:
             instrument_id = InstrumentId.from_str(symbol)
             key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{instrument_id.exchange.value}:symbol_orders:{symbol}"
-            redis_orders = self._r.smembers(key)
+            redis_orders: Set[bytes] = self._r.smembers(key)
             redis_orders = (
-                {order_id.decode() for order_id in redis_orders}
+                {uuid.decode() for uuid in redis_orders}
                 if redis_orders
                 else set()
             )

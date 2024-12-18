@@ -1,20 +1,15 @@
-import zmq
 from tradebot.constants import KEYS
-from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig, ZeroMQSignalConfig
+from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
 from tradebot.strategy import Strategy
 from tradebot.constants import ExchangeType
 from tradebot.exchange.bybit import BybitAccountType
 from tradebot.schema import BookL1, Order
 from tradebot.engine import Engine
-from zmq.asyncio import Context
 
 BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]
 BYBIT_SECRET = KEYS["bybit_testnet_2"]["SECRET"]
 
-context = Context()
-socket = context.socket(zmq.SUB)
-socket.connect("ipc:///tmp/zmq_data_test")
-socket.setsockopt(zmq.SUBSCRIBE, b"")
+
 
 
 class Demo(Strategy):
@@ -22,13 +17,13 @@ class Demo(Strategy):
         super().__init__()
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
         self.subscribe_trade(symbols=["BTCUSDT-PERP.BYBIT"])
+        
+        self.schedule(self.algo, seconds=1)
     
-    def on_bookl1(self, bookl1: BookL1):
-        print(bookl1)
-
-    
-    async def on_custom_signal(self, signal: bytes):
-        print(signal)
+    def algo(self):
+        bookl1 = self.cache.bookl1("BTCUSDT-PERP.BYBIT")
+        if bookl1:
+            print(bookl1)
     
 
 config = Config(
@@ -58,10 +53,7 @@ config = Config(
                 account_type=BybitAccountType.ALL_TESTNET,
             )
         ]
-    },
-    zero_mq_signal_config=ZeroMQSignalConfig(
-        socket=socket,
-    )
+    }
 )
 
 engine = Engine(config)

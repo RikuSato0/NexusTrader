@@ -4,8 +4,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from tradebot.core.log import SpdLog
 from tradebot.base import TaskManager
 from tradebot.core.cache import AsyncCache
-from tradebot.core.oms import OrderManagerSystem
-from tradebot.core.nautilius_core import MessageBus, UUID4
+from tradebot.core.ems import ExecutionManagementSystem
+from tradebot.core.nautilius_core import MessageBus
 from tradebot.schema import BookL1, Trade, Kline, Order, MarketData, OrderSubmit
 from tradebot.constants import DataType, OrderSide, OrderType, TimeInForce, PositionSide, AccountType
 
@@ -27,14 +27,14 @@ class Strategy:
         self._initialized = False
 
     def _init_core(
-        self, cache: AsyncCache, msgbus: MessageBus, task_manager: TaskManager, oms: OrderManagerSystem
+        self, cache: AsyncCache, msgbus: MessageBus, task_manager: TaskManager, ems: ExecutionManagementSystem
     ):
         if self._initialized:
             return
 
         self.cache = cache
         
-        self._oms = oms
+        self._ems = ems
         self._task_manager = task_manager
         self._msgbus = msgbus
         
@@ -98,7 +98,7 @@ class Strategy:
             position_side=position_side,
             kwargs=kwargs,
         )
-        self._oms._submit_order(order, account_type)
+        self._ems._submit_order(order, account_type)
         return order
         
     
@@ -119,7 +119,7 @@ class Strategy:
             uuid=uuid,
             kwargs=kwargs,
         )
-        self._oms._submit_cancel_order(order, account_type)
+        self._ems._submit_order(order, account_type)
         return order
 
     def subscribe_bookl1(self, symbols: List[str]):

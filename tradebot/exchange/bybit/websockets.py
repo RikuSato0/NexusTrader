@@ -33,7 +33,8 @@ class BybitWSClient(WSClient):
             limiter=AsyncLimiter(max_rate=500, time_period=5 * 60),
             handler=handler,
             task_manager=task_manager,
-            ping_idle_timeout=2,
+            ping_idle_timeout=5,
+            ping_reply_timeout=2,
             specific_ping_msg=orjson.dumps({"op": "ping"}),
             auto_ping_strategy="ping_when_idle",
         )

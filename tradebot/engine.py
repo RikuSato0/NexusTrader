@@ -5,7 +5,9 @@ from tradebot.constants import AccountType, ExchangeType
 from tradebot.config import Config
 from tradebot.strategy import Strategy
 from tradebot.core.cache import AsyncCache
-from tradebot.core.oms import OrderManagerSystem, OrderExecutionSystem
+from tradebot.core.oms import OrderManagementSystem
+from tradebot.core.ems import ExecutionManagementSystem
+from tradebot.core.registry import OrderRegistry
 from tradebot.base import ExchangeManager, PublicConnector, PrivateConnector
 from tradebot.exchange.bybit import (
     BybitExchangeManager,
@@ -31,7 +33,7 @@ class Engine:
     def set_loop_policy():
         if platform.system() != "Windows":
             import uvloop
-
+            
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
     def __init__(self, config: Config):
@@ -48,6 +50,8 @@ class Engine:
 
         trader_id = f"{self._config.strategy_id}-{self._config.user_id}"
 
+        self._custom_signal_recv = None
+        
         self._msgbus = MessageBus(
             trader_id=TraderId(trader_id),
             clock=LiveClock(),
@@ -61,15 +65,19 @@ class Engine:
             expire_time=config.cache_expire_time,
         )
 
-        self._oms = OrderManagerSystem(
+        self._registry = OrderRegistry()
+        self._oms = OrderManagementSystem(
             cache=self._cache,
             msgbus=self._msgbus,
             task_manager=self._task_manager,
+            registry=self._registry,
         )
-
-        self._oes = OrderExecutionSystem(
+        
+        self._ems = ExecutionManagementSystem(
+            cache=self._cache,
+            msgbus=self._msgbus,
             task_manager=self._task_manager,
-            private_connectors=self._private_connectors,
+            registry=self._registry,
         )
 
         self._strategy: Strategy = config.strategy
@@ -77,7 +85,7 @@ class Engine:
             cache=self._cache,
             msgbus=self._msgbus,
             task_manager=self._task_manager,
-            oes=self._oes,
+            ems=self._ems,
         )
 
         self._subscriptions: Dict[DataType, Dict[str, str] | Set[str]] = (
@@ -218,11 +226,15 @@ class Engine:
             self._custom_signal_recv = ZeroMQSignalRecv(
                 zmq_config, self._strategy.on_custom_signal, self._task_manager
             )
+    
+    def _build_ems(self):
+        self._ems._build(self._private_connectors)
 
     def _build(self):
         self._build_exchanges()
         self._build_public_connectors()
         self._build_private_connectors()
+        self._build_ems()
         self._build_custom_signal_recv()
         self._is_built = True
 
@@ -331,7 +343,7 @@ class Engine:
     async def _start(self):
         await self._cache.start()
         await self._oms.start()
-        await self._oes.start()
+        await self._ems.start()
         await self._start_connectors()
         if self._custom_signal_recv:
             await self._custom_signal_recv.start()

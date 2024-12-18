@@ -17,7 +17,7 @@ from tradebot.constants import (
 )
 from tradebot.core.entity import EventSystem
 from tradebot.base import PublicConnector, PrivateConnector
-from tradebot.core.oms import OrderManagerSystem
+from tradebot.core.oms import OrderManagementSystem
 from tradebot.exchange.okx.rest_api import OkxApiClient
 from tradebot.schema import Order, OrderSide, OrderType
 from tradebot.exchange.okx.constants import (
@@ -220,7 +220,7 @@ class OkxPrivateConnector(PrivateConnector):
             passphrase=exchange.passphrase,
             account_type=account_type,
         )
-        self._oms = OrderManagerSystem(
+        self._oms = OrderManagementSystem(
             cache=self._cache,
         )
 

@@ -394,7 +394,7 @@ class BybitPrivateConnector(PrivateConnector):
                 position_side=BybitEnumParser.parse_position_side(data.positionIdx),
             )
 
-            self._msgbus.publish(topic="order", msg=order)
+            self._msgbus.publish(topic="bybit.order", msg=order)
 
     async def disconnect(self):
         await super().disconnect()

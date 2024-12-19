@@ -7,6 +7,8 @@ from tradebot.exchange.bybit.connector import (
 from tradebot.exchange.bybit.exchange import BybitExchangeManager
 from tradebot.exchange.bybit.rest_api import BybitApiClient
 from tradebot.exchange.bybit.ems import BybitExecutionManagementSystem
+from tradebot.exchange.bybit.oms import BybitOrderManagementSystem
+
 __all__ = [
     "BybitAccountType",
     "BybitWSClient",
@@ -15,4 +17,5 @@ __all__ = [
     "BybitApiClient",
     "BybitPrivateConnector",
     "BybitExecutionManagementSystem",
+    "BybitOrderManagementSystem",
 ]

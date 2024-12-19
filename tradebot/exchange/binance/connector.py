@@ -511,7 +511,7 @@ class BinancePrivateConnector(PrivateConnector):
             position_side=BinanceEnumParser.parse_position_side(event_data.ps),
         )
         # order status can be "new", "partially_filled", "filled", "canceled", "expired", "failed"
-        self._msgbus.publish(topic="order", msg=order)
+        self._msgbus.publish(topic="binance.order", msg=order)
 
     def _parse_execution_report(self, raw: bytes) -> Order:
         """
@@ -605,7 +605,7 @@ class BinancePrivateConnector(PrivateConnector):
             cost=float(event_data.Y),
         )
 
-        self._msgbus.publish(topic="order", msg=order)
+        self._msgbus.publish(topic="binance.order", msg=order)
 
     async def _execute_order_request(
         self, market: BinanceMarket, symbol: str, params: Dict[str, Any]
@@ -725,7 +725,6 @@ class BinancePrivateConnector(PrivateConnector):
                 reduce_only=res.reduceOnly if res.reduceOnly else None,
                 position_side=BinanceEnumParser.parse_position_side(res.positionSide) if res.positionSide else None,
             )
-            self._msgbus.publish(topic="order", msg=order)
             return order
         except Exception as e:
             self._log.error(f"Error creating order: {e} params: {str(params)}")
@@ -743,7 +742,6 @@ class BinancePrivateConnector(PrivateConnector):
                 filled=Decimal(0),
                 remaining=amount,
             )
-            self._msgbus.publish(topic="order", msg=order)
             return order
     
     async def _execute_cancel_order_request(self, market: BinanceMarket, symbol: str, params: Dict[str, Any]):
@@ -805,7 +803,6 @@ class BinancePrivateConnector(PrivateConnector):
                 reduce_only=res.reduceOnly,
                 position_side=BinanceEnumParser.parse_position_side(res.positionSide) if res.positionSide else None,
             )
-            self._msgbus.publish(topic="order", msg=order)
             return order
         except Exception as e:
             self._log.error(f"Error canceling order: {e} params: {str(params)}")
@@ -816,5 +813,4 @@ class BinancePrivateConnector(PrivateConnector):
                 id=order_id,
                 status=OrderStatus.FAILED,
             )
-            self._msgbus.publish(topic="order", msg=order)
             return order

@@ -113,6 +113,7 @@ class Strategy:
         """
         order = OrderSubmit(
             symbol=symbol,
+            instrument_id=InstrumentId.from_str(symbol),
             submit_type=SubmitType.CREATE,
             side=side,
             type=type,
@@ -140,6 +141,7 @@ class Strategy:
         """
         order = OrderSubmit(
             symbol=symbol,
+            instrument_id=InstrumentId.from_str(symbol),
             submit_type=SubmitType.CANCEL,
             uuid=uuid,
             kwargs=kwargs,

@@ -118,6 +118,7 @@ class IndexPrice(Struct, gc=False):
 
 class OrderSubmit(Struct):
     symbol: str
+    instrument_id: InstrumentId
     submit_type: SubmitType
     uuid: str = field(default_factory=lambda: UUID4().value)
     order_id: str | int | None = None

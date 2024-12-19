@@ -22,8 +22,18 @@ class Demo(Strategy):
         self.subscribe_trade(symbols=["BTCUSDT-PERP.BYBIT"])
         self.signal = True
     
+    def on_failed_order(self, order: Order):
+        print(order)
+    
     def on_bookl1(self, bookl1: BookL1):
-        print(bookl1)
+        if self.signal:
+            self.create_order(
+                symbol="BTCUSDT-PERP.BYBIT",
+                side=OrderSide.BUY,
+                type=OrderType.MARKET,
+                amount=Decimal("0.001"),
+            )
+            self.signal = False
 
 config = Config(
     strategy_id="buy_and_sell",

@@ -30,6 +30,10 @@ from picows import (
     WSAutoPingStrategy,
 )
 from tradebot.core.nautilius_core import LiveClock, MessageBus
+from tradebot.core.cache import AsyncCache
+from tradebot.core.registry import OrderRegistry
+from tradebot.constants import AccountType, SubmitType
+from tradebot.schema import OrderSubmit
 
 
 class ExchangeManager(ABC):
@@ -69,7 +73,7 @@ class ExchangeManager(ABC):
     @abstractmethod
     def load_markets(self):
         pass
-    
+
     @property
     def linear(self):
         symbols = []
@@ -77,7 +81,7 @@ class ExchangeManager(ABC):
             if market.linear and market.active and not market.future:
                 symbols.append(symbol)
         return symbols
-    
+
     @property
     def inverse(self):
         symbols = []
@@ -85,7 +89,7 @@ class ExchangeManager(ABC):
             if market.inverse and market.active and not market.future:
                 symbols.append(symbol)
         return symbols
-    
+
     @property
     def spot(self):
         symbols = []
@@ -93,7 +97,7 @@ class ExchangeManager(ABC):
             if market.spot and market.active:
                 symbols.append(symbol)
         return symbols
-    
+
     @property
     def future(self):
         symbols = []
@@ -101,7 +105,7 @@ class ExchangeManager(ABC):
             if market.future and market.active:
                 symbols.append(symbol)
         return symbols
-    
+
     def amount_to_precision(
         self,
         symbol: str,
@@ -111,21 +115,27 @@ class ExchangeManager(ABC):
         market = self.market[symbol]
         amount: Decimal = Decimal(str(amount))
         precision = market.precision.amount
-        
+
         if precision >= 1:
             exp = Decimal(int(precision))
-            precision_decimal = Decimal('1')  
+            precision_decimal = Decimal("1")
         else:
-            exp = Decimal('1')
+            exp = Decimal("1")
             precision_decimal = Decimal(str(precision))
-        
-        if mode == 'round':
-            amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_HALF_UP) * exp
-        elif mode == 'ceil':
-            amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_CEILING) * exp
-        elif mode == 'floor':
-            amount = (amount / exp).quantize(precision_decimal, rounding=ROUND_FLOOR) * exp
-    
+
+        if mode == "round":
+            amount = (amount / exp).quantize(
+                precision_decimal, rounding=ROUND_HALF_UP
+            ) * exp
+        elif mode == "ceil":
+            amount = (amount / exp).quantize(
+                precision_decimal, rounding=ROUND_CEILING
+            ) * exp
+        elif mode == "floor":
+            amount = (amount / exp).quantize(
+                precision_decimal, rounding=ROUND_FLOOR
+            ) * exp
+
         return amount
 
     def price_to_precision(
@@ -138,23 +148,28 @@ class ExchangeManager(ABC):
         price: Decimal = Decimal(str(price))
 
         decimal = market.precision.price
-        
+
         if decimal >= 1:
             exp = Decimal(int(decimal))
-            precision_decimal = Decimal('1')  
+            precision_decimal = Decimal("1")
         else:
-            exp = Decimal('1')
+            exp = Decimal("1")
             precision_decimal = Decimal(str(decimal))
-        
-        if mode == 'round':
-            price = (price / exp).quantize(precision_decimal, rounding=ROUND_HALF_UP) * exp
-        elif mode == 'ceil':
-            price = (price / exp).quantize(precision_decimal, rounding=ROUND_CEILING) * exp
-        elif mode == 'floor':
-            price = (price / exp).quantize(precision_decimal, rounding=ROUND_FLOOR) * exp
+
+        if mode == "round":
+            price = (price / exp).quantize(
+                precision_decimal, rounding=ROUND_HALF_UP
+            ) * exp
+        elif mode == "ceil":
+            price = (price / exp).quantize(
+                precision_decimal, rounding=ROUND_CEILING
+            ) * exp
+        elif mode == "floor":
+            price = (price / exp).quantize(
+                precision_decimal, rounding=ROUND_FLOOR
+            ) * exp
 
         return price
-
 
 
 class Listener(WSListener):
@@ -295,6 +310,7 @@ class WSClient(ABC):
     async def _resubscribe(self):
         pass
 
+
 class ApiClient(ABC):
     def __init__(
         self,
@@ -309,7 +325,7 @@ class ApiClient(ABC):
         self._ssl_context = ssl.create_default_context(cafile=certifi.where())
         self._session: Optional[aiohttp.ClientSession] = None
         self._clock = LiveClock()
-        
+
     async def _init_session(self):
         if self._session is None:
             timeout = aiohttp.ClientTimeout(total=self._timeout)
@@ -328,9 +344,6 @@ class ApiClient(ABC):
     @abstractmethod
     def raise_error(self, raw: bytes, status: int, headers: Dict[str, Any]):
         raise NotImplementedError("Subclasses must implement this method.")
-
-
-
 
 
 class PublicConnector(ABC):
@@ -353,7 +366,7 @@ class PublicConnector(ABC):
         self._ws_client = ws_client
         self._msgbus = msgbus
         self._clock = LiveClock()
-        
+
     @property
     def account_type(self):
         return self._account_type
@@ -371,7 +384,7 @@ class PublicConnector(ABC):
         pass
 
     async def disconnect(self):
-        self._ws_client.disconnect() # not needed to await
+        self._ws_client.disconnect()  # not needed to await
 
 
 class PrivateConnector(ABC):
@@ -397,13 +410,12 @@ class PrivateConnector(ABC):
         self._api_client = api_client
         self._clock = LiveClock()
         self._msgbus: MessageBus = msgbus
-        
+
         if rate_limit:
             self._limiter = AsyncLimiter(rate_limit.max_rate, rate_limit.time_period)
         else:
             self._limiter = None
-        
-        
+
     @property
     def account_type(self):
         return self._account_type
@@ -425,7 +437,7 @@ class PrivateConnector(ABC):
     @abstractmethod
     async def cancel_order(self, symbol: str, order_id: str, **kwargs) -> Order:
         pass
-    
+
     @abstractmethod
     async def connect(self):
         pass
@@ -435,7 +447,107 @@ class PrivateConnector(ABC):
         await self._api_client.close_session()
 
 
+class ExecutionManagementSystem(ABC):
+    def __init__(
+        self,
+        cache: AsyncCache,
+        msgbus: MessageBus,
+        task_manager: TaskManager,
+        registry: OrderRegistry,
+    ):
+        self._log = SpdLog.get_logger(
+            name=type(self).__name__, level="DEBUG", flush=True
+        )
 
+        self._cache = cache
+        self._msgbus = msgbus
+        self._task_manager = task_manager
+        self._registry = registry
 
+        self._order_submit_queues: Dict[AccountType, asyncio.Queue[OrderSubmit]] = {}
+        self._private_connectors: Dict[AccountType, PrivateConnector] | None = None
 
+    def _build(self, private_connectors: Dict[AccountType, PrivateConnector]):
+        self._private_connectors = private_connectors
+        self._build_order_submit_queues()
+        self._set_account_type()
 
+    @abstractmethod
+    def _build_order_submit_queues(self):
+        pass
+
+    @abstractmethod
+    def _set_account_type(self):
+        pass
+
+    @abstractmethod
+    def _submit_order(
+        self, order: OrderSubmit, account_type: AccountType | None = None
+    ):
+        pass
+
+    async def _cancel_order(
+        self, order_submit: OrderSubmit, account_type: AccountType
+    ):
+        order_id = self._registry.get_order_id(order_submit.uuid)
+        if order_id:
+            order: Order = await self._private_connectors[account_type].cancel_order(
+                symbol=order_submit.symbol,
+                order_id=order_id,
+                **order_submit.kwargs,
+            )
+            order.uuid = order_submit.uuid
+            if order.success:
+                self._cache._order_status_update(order)  # SOME STATUS -> CANCELING
+                self._msgbus.send(endpoint="canceling", msg=order)
+            else:
+                # self._cache._order_status_update(order) # SOME STATUS -> FAILED
+                self._msgbus.send(endpoint="cancel_failed", msg=order)
+
+        else:
+            self._log.error(
+                f"Order ID not found for UUID: {order_submit.uuid}, The order may already be canceled or filled or not exist"
+            )
+
+    async def _create_order(
+        self, order_submit: OrderSubmit, account_type: AccountType
+    ):
+        order: Order = await self._private_connectors[account_type].create_order(
+            symbol=order_submit.symbol,
+            side=order_submit.side,
+            type=order_submit.type,
+            amount=order_submit.amount,
+            price=order_submit.price,
+            time_in_force=order_submit.time_in_force,
+            position_side=order_submit.position_side,
+            **order_submit.kwargs,
+        )
+        order.uuid = order_submit.uuid
+        if order.success:
+            self._registry.register_order(order)
+            self._cache._order_initialized(order)  # INITIALIZED -> PENDING
+            self._msgbus.send(endpoint="pending", msg=order)
+        else:
+            self._cache._order_status_update(order)  # INITIALIZED -> FAILED
+            self._msgbus.send(endpoint="failed", msg=order)
+
+    async def _handle_submit_order(
+        self, account_type: AccountType, queue: asyncio.Queue[OrderSubmit]
+    ):
+        self._log.debug(f"Handling orders for account type: {account_type}")
+        while True:
+            order_submit = await queue.get()
+            self._log.debug(f"[ORDER SUBMIT]: {order_submit}")
+            if order_submit.submit_type == SubmitType.CANCEL:
+                await self._cancel_order(order_submit, account_type)
+            elif order_submit.submit_type == SubmitType.CREATE:
+                await self._create_order(order_submit, account_type)
+            queue.task_done()
+
+    async def start(self):
+        for account_type in self._order_submit_queues.keys():
+            self._task_manager.create_task(
+                self._handle_submit_order(
+                    account_type, self._order_submit_queues[account_type]
+                )
+            )

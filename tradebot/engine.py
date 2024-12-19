@@ -6,20 +6,26 @@ from tradebot.config import Config
 from tradebot.strategy import Strategy
 from tradebot.core.cache import AsyncCache
 from tradebot.core.oms import OrderManagementSystem
-from tradebot.core.ems import ExecutionManagementSystem
 from tradebot.core.registry import OrderRegistry
-from tradebot.base import ExchangeManager, PublicConnector, PrivateConnector
+from tradebot.base import (
+    ExchangeManager,
+    PublicConnector,
+    PrivateConnector,
+    ExecutionManagementSystem,
+)
 from tradebot.exchange.bybit import (
     BybitExchangeManager,
     BybitPrivateConnector,
     BybitPublicConnector,
     BybitAccountType,
+    BybitExecutionManagementSystem,
 )
 from tradebot.exchange.binance import (
     BinanceExchangeManager,
     BinanceAccountType,
     BinancePublicConnector,
     BinancePrivateConnector,
+    BinanceExecutionManagementSystem,
 )
 from tradebot.exchange.okx import OkxExchangeManager
 from tradebot.core.entity import TaskManager, ZeroMQSignalRecv
@@ -33,7 +39,7 @@ class Engine:
     def set_loop_policy():
         if platform.system() != "Windows":
             import uvloop
-            
+
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
     def __init__(self, config: Config):
@@ -51,7 +57,7 @@ class Engine:
         trader_id = f"{self._config.strategy_id}-{self._config.user_id}"
 
         self._custom_signal_recv = None
-        
+
         self._msgbus = MessageBus(
             trader_id=TraderId(trader_id),
             clock=LiveClock(),
@@ -72,13 +78,8 @@ class Engine:
             task_manager=self._task_manager,
             registry=self._registry,
         )
-        
-        self._ems = ExecutionManagementSystem(
-            cache=self._cache,
-            msgbus=self._msgbus,
-            task_manager=self._task_manager,
-            registry=self._registry,
-        )
+
+        self._ems: Dict[ExchangeType, ExecutionManagementSystem] = {}
 
         self._strategy: Strategy = config.strategy
         self._strategy._init_core(
@@ -227,9 +228,29 @@ class Engine:
             self._custom_signal_recv = ZeroMQSignalRecv(
                 zmq_config, self._strategy.on_custom_signal, self._task_manager
             )
-    
+
     def _build_ems(self):
-        self._ems._build(self._private_connectors)
+        for exchange_id in self._exchanges.keys():
+            match exchange_id:
+                case ExchangeType.BYBIT:
+                    self._ems[exchange_id] = BybitExecutionManagementSystem(
+                        cache=self._cache,
+                        msgbus=self._msgbus,
+                        task_manager=self._task_manager,
+                        registry=self._registry,
+                    )
+                    self._ems[exchange_id]._build(self._private_connectors)
+                case ExchangeType.BINANCE:
+                    self._ems[exchange_id] = BinanceExecutionManagementSystem(
+                        cache=self._cache,
+                        msgbus=self._msgbus,
+                        task_manager=self._task_manager,
+                        registry=self._registry,
+                    )
+                    self._ems[exchange_id]._build(self._private_connectors)
+                case ExchangeType.OKX:
+                    # TODO: implement OKX EMS
+                    pass
 
     def _build(self):
         self._build_exchanges()
@@ -340,11 +361,15 @@ class Engine:
 
         for connector in self._private_connectors.values():
             await connector.connect()
+    
+    async def _start_ems(self):
+        for ems in self._ems.values():
+            await ems.start()
 
     async def _start(self):
         await self._cache.start()
         await self._oms.start()
-        await self._ems.start()
+        await self._start_ems()
         await self._start_connectors()
         if self._custom_signal_recv:
             await self._custom_signal_recv.start()

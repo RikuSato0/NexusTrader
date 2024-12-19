@@ -28,7 +28,7 @@ class Strategy:
         self._initialized = False
 
     def _init_core(
-        self, exchanges: Dict[ExchangeType, ExchangeManager], cache: AsyncCache, msgbus: MessageBus, task_manager: TaskManager, ems: ExecutionManagementSystem
+        self, exchanges: Dict[ExchangeType, ExchangeManager], cache: AsyncCache, msgbus: MessageBus, task_manager: TaskManager, ems: Dict[ExchangeType, ExecutionManagementSystem]
     ):
         if self._initialized:
             return
@@ -123,7 +123,7 @@ class Strategy:
             position_side=position_side,
             kwargs=kwargs,
         )
-        self._ems._submit_order(order, account_type)
+        self._ems[order.instrument_id.exchange]._submit_order(order, account_type)
         return order
         
     
@@ -146,7 +146,7 @@ class Strategy:
             uuid=uuid,
             kwargs=kwargs,
         )
-        self._ems._submit_order(order, account_type)
+        self._ems[order.instrument_id.exchange]._submit_order(order, account_type)
         return order
 
     def subscribe_bookl1(self, symbols: List[str]):

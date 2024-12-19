@@ -6,6 +6,8 @@ from tradebot.exchange.binance.connector import (
 )
 from tradebot.exchange.binance.rest_api_v2 import BinanceHttpClient
 from tradebot.exchange.binance.rest_api import BinanceApiClient
+from tradebot.exchange.binance.ems import BinanceExecutionManagementSystem
+
 __all__ = [
     "BinanceAccountType",
     "BinanceExchangeManager",
@@ -13,4 +15,5 @@ __all__ = [
     "BinancePrivateConnector",
     "BinanceHttpClient",
     "BinanceApiClient",
+    "BinanceExecutionManagementSystem",
 ]

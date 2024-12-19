@@ -5,13 +5,13 @@ from tradebot.constants import AccountType, ExchangeType
 from tradebot.config import Config
 from tradebot.strategy import Strategy
 from tradebot.core.cache import AsyncCache
-from tradebot.core.oms import OrderManagementSystem
 from tradebot.core.registry import OrderRegistry
 from tradebot.base import (
     ExchangeManager,
     PublicConnector,
     PrivateConnector,
     ExecutionManagementSystem,
+    OrderManagementSystem,
 )
 from tradebot.exchange.bybit import (
     BybitExchangeManager,
@@ -19,6 +19,7 @@ from tradebot.exchange.bybit import (
     BybitPublicConnector,
     BybitAccountType,
     BybitExecutionManagementSystem,
+    BybitOrderManagementSystem,
 )
 from tradebot.exchange.binance import (
     BinanceExchangeManager,
@@ -26,6 +27,7 @@ from tradebot.exchange.binance import (
     BinancePublicConnector,
     BinancePrivateConnector,
     BinanceExecutionManagementSystem,
+    BinanceOrderManagementSystem,
 )
 from tradebot.exchange.okx import OkxExchangeManager
 from tradebot.core.entity import TaskManager, ZeroMQSignalRecv
@@ -72,13 +74,8 @@ class Engine:
         )
 
         self._registry = OrderRegistry()
-        self._oms = OrderManagementSystem(
-            cache=self._cache,
-            msgbus=self._msgbus,
-            task_manager=self._task_manager,
-            registry=self._registry,
-        )
-
+        
+        self._oms: Dict[ExchangeType, OrderManagementSystem] = {}
         self._ems: Dict[ExchangeType, ExecutionManagementSystem] = {}
 
         self._strategy: Strategy = config.strategy
@@ -251,12 +248,35 @@ class Engine:
                 case ExchangeType.OKX:
                     # TODO: implement OKX EMS
                     pass
+    
+    def _build_oms(self):
+        for exchange_id in self._exchanges.keys():
+            match exchange_id:
+                case ExchangeType.BYBIT:
+                    self._oms[exchange_id] = BybitOrderManagementSystem(
+                        cache=self._cache,
+                        msgbus=self._msgbus,
+                        task_manager=self._task_manager,
+                        registry=self._registry,
+                    )
+                case ExchangeType.BINANCE:
+                    self._oms[exchange_id] = BinanceOrderManagementSystem(
+                        cache=self._cache,
+                        msgbus=self._msgbus,
+                        task_manager=self._task_manager,
+                        registry=self._registry,
+                    )
+                case ExchangeType.OKX:
+                    # TODO: implement OKX OMS
+                    pass
+    
 
     def _build(self):
         self._build_exchanges()
         self._build_public_connectors()
         self._build_private_connectors()
         self._build_ems()
+        self._build_oms()
         self._build_custom_signal_recv()
         self._is_built = True
 
@@ -365,10 +385,14 @@ class Engine:
     async def _start_ems(self):
         for ems in self._ems.values():
             await ems.start()
+    
+    async def _start_oms(self):
+        for oms in self._oms.values():
+            await oms.start()
 
     async def _start(self):
         await self._cache.start()
-        await self._oms.start()
+        await self._start_oms()
         await self._start_ems()
         await self._start_connectors()
         if self._custom_signal_recv:

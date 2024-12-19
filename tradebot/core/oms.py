@@ -6,16 +6,9 @@ from tradebot.core.registry import OrderRegistry
 from tradebot.core.log import SpdLog
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager
-from tradebot.exchange.binance import BinanceAccountType
 
 
 class OrderManagementSystem:
-    BINANCE_SPOT_PRIORITY = [
-        BinanceAccountType.ISOLATED_MARGIN,
-        BinanceAccountType.MARGIN,
-        BinanceAccountType.SPOT_TESTNET,
-        BinanceAccountType.SPOT,
-    ]
 
     def __init__(
         self,

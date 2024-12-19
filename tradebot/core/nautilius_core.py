@@ -32,6 +32,7 @@ def usage():
 
     def handler1(msg):
         print(f"Received message: {msg}")
+        
     def handler2(msg):
         print(f"Received message: {msg}")
 
@@ -43,11 +44,13 @@ def usage():
         clock=clock,
     )
 
-    msgbus.subscribe(topic = "order", handler=handler1)
-    msgbus.subscribe(topic = "order", handler=handler2)
-    msgbus.subscribe(topic = "order", handler=handler3)
+    msgbus.subscribe(topic = "BINANCE.order", handler=handler1)
+    msgbus.subscribe(topic = "BYBIT.order", handler=handler2)
+    msgbus.subscribe(topic = "OKX.order", handler=handler3)
 
-    msgbus.publish(topic="order", msg=clock.timestamp_ns())
+    msgbus.publish(topic="BINANCE.order", msg=clock.timestamp_ns())
+    msgbus.publish(topic="BYBIT.order", msg=clock.timestamp_ns())
+    msgbus.publish(topic="OKX.order", msg=clock.timestamp_ns())
     
     
     msgbus.register(endpoint="pos", handler=handler1)

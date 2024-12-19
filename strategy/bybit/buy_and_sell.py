@@ -15,14 +15,12 @@ BYBIT_SECRET = settings.BYBIT.ACCOUNT1.secret
 
 
 
-
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
         self.subscribe_trade(symbols=["BTCUSDT-PERP.BYBIT"])
         self.signal = True
-
     
     def on_bookl1(self, bookl1: BookL1):
         print(bookl1)

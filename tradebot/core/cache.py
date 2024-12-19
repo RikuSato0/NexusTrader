@@ -19,8 +19,8 @@ class AsyncCache:
         user_id: str,
         msgbus: MessageBus,
         task_manager: TaskManager,
-        sync_interval: int = 60,
-        expire_time: int = 3600,
+        sync_interval: int = 60, # seconds
+        expire_time: int = 3600, # seconds
     ):
         self.strategy_id = strategy_id
         self.user_id = user_id
@@ -31,8 +31,11 @@ class AsyncCache:
         self._clock = LiveClock()
         self._r_async = RedisClient.get_async_client()
         self._r = RedisClient.get_client()
+        
+        
 
         # in-memory save
+        self._mem_closed_orders: Dict[str, bool] = {} # uuid -> bool
         self._mem_orders: Dict[str, Order] = {}  # uuid -> Order
 
         self._mem_open_orders: Dict[ExchangeType, Set[str]] = defaultdict(
@@ -143,6 +146,7 @@ class AsyncCache:
         ]
         for uuid in expired_orders:
             del self._mem_orders[uuid]
+            self._mem_closed_orders.pop(uuid, None)
             self._log.debug(f"removing order {uuid} from memory")
             for symbol, order_set in self._mem_symbol_orders.copy().items():
                 self._log.debug(f"removing order {uuid} from symbol {symbol}")
@@ -163,6 +167,12 @@ class AsyncCache:
 
     def _apply_position(self, order: Order):
         symbol = order.symbol
+        
+        # Check if order is already closed
+        if self._mem_closed_orders.get(order.uuid, False):
+            self._log.debug(f"Order {order.uuid} is already closed, skipping position update")
+            return
+        
         if symbol not in self._mem_symbol_positions:
             position = self.get_position(symbol)
             if not position:
@@ -172,6 +182,10 @@ class AsyncCache:
                     strategy_id=self.strategy_id,
                 )
             self._mem_symbol_positions[symbol] = position
+        
+        if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
+            self._mem_closed_orders[order.uuid] = True
+        
         if order.status in (
             OrderStatus.FILLED,
             OrderStatus.PARTIALLY_FILLED,

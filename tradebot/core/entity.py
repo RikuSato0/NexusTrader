@@ -25,16 +25,20 @@ class RateLimit:
 
 
 class TaskManager:
-    def __init__(self, loop: asyncio.AbstractEventLoop):
+    def __init__(self, loop: asyncio.AbstractEventLoop, enable_signal_handlers: bool = True):
         self._log = SpdLog.get_logger(type(self).__name__, level="DEBUG", flush=True)
         self._tasks: List[asyncio.Task] = []
         self._shutdown_event = asyncio.Event()
         self._loop = loop
-        self._setup_signal_handlers()
+        if enable_signal_handlers:
+            self._setup_signal_handlers()
 
     def _setup_signal_handlers(self):
-        for sig in (signal.SIGINT, signal.SIGTERM):
-            self._loop.add_signal_handler(sig, lambda: self.create_task(self._shutdown()))
+        try:
+            for sig in (signal.SIGINT, signal.SIGTERM):
+                self._loop.add_signal_handler(sig, lambda: self.create_task(self._shutdown()))
+        except NotImplementedError:
+            self._log.warning("Signal handlers not supported on this platform")
 
     async def _shutdown(self):
         self._shutdown_event.set()

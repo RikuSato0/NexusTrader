@@ -1,7 +1,7 @@
 import orjson
 import asyncio
 from tradebot.exchange.binance import BinanceAccountType
-from tradebot.exchange.binance.websockets import BinanceWebSocketClient
+from tradebot.exchange.binance.websockets import BinanceWSClient
 
 
 def msg_handler(raw):
@@ -10,7 +10,7 @@ def msg_handler(raw):
 
 async def main():
     loop = asyncio.get_event_loop()
-    client = BinanceWebSocketClient(
+    client = BinanceWSClient(
         account_type=BinanceAccountType.SPOT,
         handler=msg_handler,
         loop=loop,

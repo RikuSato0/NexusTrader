@@ -3,8 +3,7 @@ from pprint import pprint
 from tradebot.constants import KEYS
 from tradebot.base import ExchangeManager
 from tradebot.exchange.binance.constants import BinanceAccountType
-from tradebot.exchange.binance.rest_api import BinanceRestApi
-from tradebot.exceptions import OrderError
+from tradebot.exchange.binance.rest_api import BinanceApiClient
 
 
 BINANCE_API_KEY = KEYS["binance_future_testnet"]["API_KEY"]
@@ -37,7 +36,7 @@ async def main():
 
         exchange = ExchangeManager(config)
 
-        rest_api = BinanceRestApi(
+        rest_api = BinanceApiClient(
             account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
             api_key=BINANCE_API_KEY,
             secret=BINANCE_API_SECRET,
@@ -122,7 +121,7 @@ async def main():
 
         # pprint(res)
 
-    except OrderError as e:
+    except Exception as e:
         print(e)
     finally:
         await rest_api.close_session()

@@ -15,18 +15,6 @@ class BinanceExchangeManager(ExchangeManager):
         config = config or {}
         config["exchange_id"] = config.get("exchange_id", "binance")
         super().__init__(config)
-    
-    def parse_symbol(self, bm: BinanceMarket) -> str:
-        if bm.spot:
-            return f"{bm.base}{bm.quote}.BINANCE"
-        elif bm.future:
-            symbol = bm.symbol
-            expiry_suffix = symbol.split("-")[-1]
-            return f"{bm.base}{bm.quote}-{expiry_suffix}.BINANCE"
-        elif bm.linear:
-            return f"{bm.base}{bm.quote}-PERP.BINANCE"
-        elif bm.inverse:
-            return f"{bm.base}{bm.quote}-PERP.BINANCE"
             
     def load_markets(self):
         market = self.api.load_markets()
@@ -36,7 +24,7 @@ class BinanceExchangeManager(ExchangeManager):
                 mkt = msgspec.json.decode(mkt_json, type=BinanceMarket)
                 
                 if mkt.spot or mkt.future or mkt.linear or mkt.inverse:
-                    symbol = self.parse_symbol(mkt)
+                    symbol = self._parse_symbol(mkt, exchange_suffix="BINANCE")
                     mkt.symbol = symbol
                     self.market[symbol] = mkt
                     if mkt.type.value == "spot":

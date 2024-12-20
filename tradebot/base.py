@@ -69,6 +69,18 @@ class ExchangeManager(ABC):
             self.config.get("sandbox", False)
         )  # Set sandbox mode if demo trade is enabled
         return api
+    
+    def _parse_symbol(self, mkt: BaseMarket, exchange_suffix: str) -> str:
+        if mkt.spot:
+            return f"{mkt.base}{mkt.quote}.{exchange_suffix}"
+        elif mkt.future:
+            symbol = mkt.symbol
+            expiry_suffix = symbol.split("-")[-1]
+            return f"{mkt.base}{mkt.quote}-{expiry_suffix}.{exchange_suffix}"
+        elif mkt.linear:
+            return f"{mkt.base}{mkt.quote}-PERP.{exchange_suffix}"
+        elif mkt.inverse:
+            return f"{mkt.base}{mkt.quote}-PERP.{exchange_suffix}"
 
     @abstractmethod
     def load_markets(self):

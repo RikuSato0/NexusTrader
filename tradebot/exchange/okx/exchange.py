@@ -8,21 +8,28 @@ from tradebot.exchange.okx.types import OkxMarket
 
 class OkxExchangeManager(ExchangeManager):
     api: ccxt.okx
-    market: Dict[str, OkxMarket]
-    market_id: Dict[str, OkxMarket]
+    market: Dict[str, OkxMarket] # symbol -> okx market
+    market_id: Dict[str, str] # symbol -> exchange symbol id
 
     def __init__(self, config: Dict[str, Any] = None):
         config = config or {}
         config["exchange_id"] = config.get("exchange_id", "okx")
         super().__init__(config)
         self.passphrase = config.get("password", None)
-
+    
     def load_markets(self):
         market = self.api.load_markets()
-        for k, v in market.items():
-            v_json = orjson.dumps(v)
-            v = msgspec.json.decode(v_json, type=OkxMarket)
-
-            self.market[k] = v
-            for _, v in self.market.items():
-                self.market_id[v.id] = v
+        for symbol, mkt in market.items():
+            try:
+                mkt_json = orjson.dumps(mkt)
+                mkt = msgspec.json.decode(mkt_json, type=OkxMarket)
+                
+                if mkt.spot or mkt.future or mkt.linear or mkt.inverse:
+                    symbol = self._parse_symbol(mkt, exchange_suffix="OKX")
+                    mkt.symbol = symbol
+                    self.market[symbol] = mkt
+                    self.market_id[mkt.id] = symbol # since okx symbol id is identical, no need to distinguish spot, linear, inverse
+                
+            except Exception as e:
+                print(f"Error: {e}, {symbol}, {mkt}")
+                continue

@@ -117,11 +117,7 @@ class OkxApiClient(ApiClient):
         return signature
 
     def _get_timestamp(self) -> str:
-        return (
-            datetime.now(timezone.utc)
-            .isoformat(timespec="milliseconds")
-            .replace("+00:00", "Z")
-        )
+        return self._clock.utc_now().isoformat(timespec='milliseconds').replace("+00:00", "Z")
 
     async def _get_headers(
         self, ts: str, method: str, request_path: str, payload: Dict[str, Any] = None
@@ -148,6 +144,8 @@ class OkxApiClient(ApiClient):
         payload: Dict[str, Any] = None,
         signed: bool = False,
     ) -> bytes:
+        
+        await self._init_session()
         url = f"{self._base_url}{endpoint}"
         request_path = endpoint
         headers = self._headers

@@ -2,7 +2,7 @@ import asyncio
 import time
 from tradebot.constants import KEYS
 from tradebot.exchange.okx.rest_api import OkxApiClient
-
+from tradebot.exchange.okx.constants import OkxAccountType
 OKX_API_KEY = KEYS["okex_demo"]["API_KEY"]
 OKX_API_SECRET = KEYS["okex_demo"]["SECRET"]
 OKX_PASSPHRASE = KEYS["okex_demo"]["PASSPHRASE"]
@@ -12,28 +12,15 @@ async def main():
         api_key=OKX_API_KEY,
         secret=OKX_API_SECRET,
         passphrase=OKX_PASSPHRASE,
-        testnet=True,
+        account_type=OkxAccountType.DEMO,
     )
     
-    start = int(time.time() * 1000)
     res = await rest_api.post_v5_order_create(
         instId='BTC-USDT-SWAP',
         tdMode='cross',
         side='buy',
         ordType='market',
         sz='0.1',
-    )
-    print(res)
-    
-    start = int(time.time() * 1000)
-    res = await rest_api.post_v5_order_cancel(
-        instId='BTC-USDT-SWAP',
-        tdMode='cross',
-        side='sell',
-        ordType='market',
-        sz='0.1',
-        reduceOnly=True
-        
     )
     print(res)
     

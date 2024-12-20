@@ -1,5 +1,6 @@
 import asyncio
-from tradebot.exchange.okx import OkxExchangeManager, OkxWSManager, OkxAccountType
+from tradebot.exchange.okx.websockets import OkxWSClient
+from tradebot.exchange.okx import OkxExchangeManager, OkxAccountType
 
 
 async def main():
@@ -9,10 +10,10 @@ async def main():
         
         market, market_id = exchange.market, exchange.market_id
         
-        ws_manager = OkxWSManager(
-            OkxAccountType.LIVE,
-            market,
-            market_id,
+        ws_manager = OkxWSClient(
+            account_type=OkxAccountType.LIVE,
+            market=market,
+            market_id=market_id,
         )
         
         await ws_manager.connect()

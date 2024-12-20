@@ -31,6 +31,8 @@ def usage():
     print(uuid_to_order_id)
     
     clock = LiveClock()
+    
+    print(clock.utc_now().isoformat(timespec='milliseconds').replace('+00:00', 'Z')) 
 
     def handler1(msg):
         print(f"Received message: {msg} - handler1")

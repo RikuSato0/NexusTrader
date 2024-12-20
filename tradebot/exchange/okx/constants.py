@@ -24,6 +24,12 @@ class OkxAccountType(AccountType):
         return self == OkxAccountType.DEMO
 
 
+class OkxRestUrl(Enum):
+    LIVE = "https://www.okx.com"
+    AWS = "https://aws.okx.com"
+    DEMO = "https://www.okx.com"
+
+
 STREAM_URLS = {
     OkxAccountType.LIVE: "wss://ws.okx.com:8443/ws",
     OkxAccountType.AWS: "wss://wsaws.okx.com:8443/ws",

@@ -3,7 +3,7 @@ from tradebot.base import ExchangeManager
 import ccxt
 import orjson
 import msgspec
-from tradebot.exchange.okx.types import OkxMarket
+from tradebot.exchange.okx.schema import OkxMarket
 
 
 class OkxExchangeManager(ExchangeManager):

@@ -8,7 +8,7 @@ from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.websockets_v2 import OkxWSClient as OkxWSClientV2
 from tradebot.exchange.okx.exchange import OkxExchangeManager
 from tradebot.schema import Trade, BookL1, Kline
-from tradebot.exchange.okx.types import OkxMarket
+from tradebot.exchange.okx.schema import OkxMarket
 from tradebot.constants import (
     EventType,
     OrderStatus,

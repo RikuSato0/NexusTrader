@@ -10,7 +10,7 @@ from nautilus_trader.core.nautilus_pyo3 import HttpResponse # noqa
 from nautilus_trader.core.nautilus_pyo3 import WebSocketClient # noqa
 from nautilus_trader.core.nautilus_pyo3 import WebSocketClientError # noqa
 from nautilus_trader.core.nautilus_pyo3 import WebSocketConfig # noqa
-
+from nautilus_trader.core.nautilus_pyo3 import hmac_signature, rsa_signature, ed25519_signature # noqa
 
 
 

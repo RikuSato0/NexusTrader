@@ -6,7 +6,7 @@ from tradebot.schema import BaseMarket
 ################################################################################
 
 
-class OKXPlaceOrderData(msgspec.Struct):
+class OkxPlaceOrderData(msgspec.Struct):
     ordId: str
     clOrdId: str
     tag: str
@@ -15,10 +15,10 @@ class OKXPlaceOrderData(msgspec.Struct):
     sMsg: str  # rejection or success message of event execution
 
 
-class OKXPlaceOrderResponse(msgspec.Struct):
+class OkxPlaceOrderResponse(msgspec.Struct):
     code: str
     msg: str
-    data: list[OKXPlaceOrderData]
+    data: list[OkxPlaceOrderData]
     inTime: str  # milliseconds when request hit REST gateway
     outTime: str  # milliseconds when response leaves REST gateway
 
@@ -26,7 +26,12 @@ class OKXPlaceOrderResponse(msgspec.Struct):
 ################################################################################
 # Cancel order: POST /api/v5/trade/cancel-order
 ################################################################################
-class OKXCancelOrderData(msgspec.Struct):
+
+class OkxGeneralResponse(msgspec.Struct):
+    code: str
+    msg: str
+
+class OkxCancelOrderData(msgspec.Struct):
     ordId: str
     clOrdId: str
     ts: str  # milliseconds when OKX finished order request processing
@@ -34,10 +39,10 @@ class OKXCancelOrderData(msgspec.Struct):
     sMsg: str  # rejection or success message of event execution
 
 
-class OKXCancelOrderResponse(msgspec.Struct):
+class OkxCancelOrderResponse(msgspec.Struct):
     code: str
     msg: str
-    data: list[OKXCancelOrderData]
+    data: list[OkxCancelOrderData]
     inTime: str  # milliseconds when request hit REST gateway
     outTime: str  # milliseconds when response leaves REST gateway
 

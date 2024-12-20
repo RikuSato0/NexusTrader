@@ -605,12 +605,12 @@ class BinanceMarketInfo(msgspec.Struct):
     symbol: str = None
     status: str = None
     baseAsset: str = None
-    baseAssetPrecision: str = None
+    baseAssetPrecision: str | int = None
     quoteAsset: str = None
-    quotePrecision: str = None
-    quoteAssetPrecision: str = None
-    baseCommissionPrecision: str = None
-    quoteCommissionPrecision: str = None
+    quotePrecision: str | int = None
+    quoteAssetPrecision: str | int = None
+    baseCommissionPrecision: str | int = None
+    quoteCommissionPrecision: str | int = None
     orderTypes: List[BinanceOrderType] = None
     icebergAllowed: bool = None
     ocoAllowed: bool = None

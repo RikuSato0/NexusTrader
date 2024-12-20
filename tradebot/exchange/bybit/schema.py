@@ -427,7 +427,7 @@ class BybitMarketInfo(msgspec.Struct):
     priceScale: str | None = None
     leverageFilter: BybitLeverageFilter = None
     unifiedMarginTrade: bool | None = None
-    fundingInterval: str | None = None
+    fundingInterval: str | int | None = None
     copyTrading: str | None = None
     upperFundingRate: str | None = None
     lowerFundingRate: str | None = None

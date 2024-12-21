@@ -43,21 +43,12 @@ class OkxApiClient(ApiClient):
             "User-Agent": "TradingBot/1.0",
         }
 
-    # def raise_error(self, raw: bytes, http_status: int, headers: Dict[str, Any]):
-    #     res = self._general_response_decoder.decode(raw)
-    #     if res.code != "0":
-    #         raise OKXHttpError(res.code, res.msg, headers)
-    #     elif 400 <= http_status < 500:
-    #         raise OKXHttpError(http_status, res.msg, headers)
-    #     elif http_status >= 500:
-    #         raise OKXHttpError(http_status, res.msg, headers)
-
     async def post_api_v5_trade_order(
         self,
-        instId: str,
-        tdMode: str,
+        inst_id: str,
+        td_mode: str,
         side: str,
-        ordType: str,
+        ord_type: str,
         sz: str,
         **kwargs,
     ) -> OkxPlaceOrderResponse:
@@ -69,10 +60,10 @@ class OkxApiClient(ApiClient):
         """
         endpoint = "/api/v5/trade/order"
         payload = {
-            "instId": instId,
-            "tdMode": tdMode,
+            "instId": inst_id,
+            "tdMode": td_mode,
             "side": side,
-            "ordType": ordType,
+            "ordType": ord_type,
             "sz": sz,
             **kwargs,
         }
@@ -80,18 +71,18 @@ class OkxApiClient(ApiClient):
         return self._place_order_decoder.decode(raw)
 
     async def post_api_v5_trade_cancel_order(
-        self, instId: str, ordId: str = None, clOrdId: str = None
+        self, inst_id: str, ord_id: str | None = None, cl_ord_id: str | None = None
     ) -> OkxCancelOrderResponse:
         """
         Cancel an existing order
         https://www.okx.com/docs-v5/en/#order-book-trading-trade-post-cancel-order
         """
         endpoint = "/api/v5/trade/cancel-order"
-        payload = {"instId": instId}
-        if ordId:
-            payload["ordId"] = ordId
-        if clOrdId:
-            payload["clOrdId"] = clOrdId
+        payload = {"instId": inst_id}
+        if ord_id:
+            payload["ordId"] = ord_id
+        if cl_ord_id:
+            payload["clOrdId"] = cl_ord_id
 
         raw = await self._fetch("POST", endpoint, payload=payload, signed=True)
         return self._cancel_order_decoder.decode(raw)

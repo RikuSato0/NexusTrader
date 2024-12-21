@@ -16,12 +16,12 @@ async def main():
         )
         
         res = await rest_api.post_api_v5_trade_order(
-            instId='BTC-USDT-SWAP',
-            tdMode='cross',
+            inst_id='BTC-USDT-SWAP',
+            td_mode='cross',
             side='buy',
-            ordType='market',
+            ord_type='market',
             sz='0.1',
-            posSide='long',
+            pos_side='long',
         )
         print(res)
     except Exception as e:

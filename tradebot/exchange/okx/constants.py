@@ -22,6 +22,10 @@ class OkxAccountType(AccountType):
     @property
     def is_testnet(self):
         return self == OkxAccountType.DEMO
+    
+    @property
+    def stream_url(self):
+        return STREAM_URLS[self]
 
 
 class OkxRestUrl(Enum):

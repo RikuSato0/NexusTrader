@@ -42,7 +42,8 @@ class OkxWSClient(WSClient):
             limiter=AsyncLimiter(max_rate=rate_limit.max_rate, time_period=rate_limit.time_period),
             handler=handler,
             task_manager=task_manager,
-            ping_idle_timeout=4,
+            specific_ping_msg=b"ping",
+            ping_idle_timeout=5,
             ping_reply_timeout=2,
         )
 
@@ -103,8 +104,6 @@ class OkxWSClient(WSClient):
                 "op": "subscribe",
                 "args": [params],
             }
-            if id:
-                payload["id"] = id
             
             self._subscriptions[subscription_id] = payload
             await self._send(payload)

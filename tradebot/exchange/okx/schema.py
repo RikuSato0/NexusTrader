@@ -1,6 +1,93 @@
 import msgspec
 from tradebot.schema import BaseMarket
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class OkxWsArgMsg(msgspec.Struct):
+    channel: str | None = None
+    instType: str | None = None
+    instId: str | None = None
+    uid: str | None = None
+
+class OkxWsGeneralMsg(msgspec.Struct):
+    event: str | None = None
+    msg: str | None = None
+    code: str | None = None
+    connId: str | None = None
+    channel: str | None = None
+    arg: OkxWsArgMsg | None = None
+    
+    @property
+    def is_event_msg(self) -> bool:
+        return self.event is not None
+
+class OkxWsBboTbtData(msgspec.Struct):
+    ts: str
+    seqId: int
+    asks: list[list[str]]
+    bids: list[list[str]]
+
+class OkxWsBboTbtMsg(msgspec.Struct):
+    """
+    {
+        "arg": {
+            "channel": "bbo-tbt",
+            "instId": "BCH-USDT-SWAP"
+        },
+        "data": [
+            {
+            "asks": [
+                [
+                "111.06","55154","0","2"
+                ]
+            ],
+            "bids": [
+                [
+                "111.05","57745","0","2"
+                ]
+            ],
+            "ts": "1670324386802",
+            "seqId": 363996337
+            }
+        ]
+    }
+    """
+    arg: OkxWsArgMsg
+    data: list[OkxWsBboTbtData]
+
+class OkxWsCandleMsg(msgspec.Struct):
+    arg: OkxWsArgMsg
+    data: list[list[str]]
+
+class OkxWsTradeData(msgspec.Struct):
+    instId: str
+    tradeId: str
+    px: str
+    sz: str
+    side: str
+    ts: str
+    count: str
+
+class OkxWsTradeMsg(msgspec.Struct):
+    arg: OkxWsArgMsg
+    data: list[OkxWsTradeData]
+
 ################################################################################
 # Place Order: POST /api/v5/trade/order
 ################################################################################

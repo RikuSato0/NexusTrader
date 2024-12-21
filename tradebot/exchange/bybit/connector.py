@@ -59,7 +59,6 @@ class BybitPublicConnector(PublicConnector):
             ),
             msgbus=msgbus,
         )
-        self._ws_client: BybitWSClient = self._ws_client
         self._ws_msg_trade_decoder = msgspec.json.Decoder(BybitWsTradeMsg)
         self._ws_msg_orderbook_decoder = msgspec.json.Decoder(BybitWsOrderbookDepthMsg)
         self._ws_msg_general_decoder = msgspec.json.Decoder(BybitWsMessageGeneral)

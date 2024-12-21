@@ -1,27 +1,25 @@
-from typing import cast
 import orjson
 import msgspec
 from decimal import Decimal
 from tradebot.exchange.okx import OkxAccountType
 from tradebot.core.cache import AsyncCache
 from tradebot.exchange.okx.websockets import OkxWSClient
-from tradebot.exchange.okx.websockets_v2 import OkxWSClient as OkxWSClientV2
 from tradebot.exchange.okx.exchange import OkxExchangeManager
-from tradebot.schema import Trade, BookL1, Kline
-from tradebot.exchange.okx.schema import OkxMarket
+from tradebot.exchange.okx.schema import OkxWsGeneralMsg
+from tradebot.schema import Trade, BookL1, Kline, Order
+from tradebot.exchange.okx.schema import OkxMarket, OkxWsBboTbtMsg, OkxWsCandleMsg, OkxWsTradeMsg
 from tradebot.constants import (
-    EventType,
     OrderStatus,
     TimeInForce,
     PositionSide,
 )
-from tradebot.core.entity import EventSystem
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.base import OrderManagementSystem
+from tradebot.core.nautilius_core import MessageBus
+from tradebot.core.entity import TaskManager
 from tradebot.exchange.okx.rest_api import OkxApiClient
-from tradebot.schema import Order, OrderSide, OrderType
+from tradebot.constants import OrderSide, OrderType
 from tradebot.exchange.okx.constants import (
-    OKXWsGeneralMsg,
     OKXWsEventMsg,
     OKXWsPushDataMsg,
     OKXWsAccountPushDataMsg,
@@ -34,57 +32,74 @@ from tradebot.exchange.okx.constants import (
 
 
 class OkxPublicConnector(PublicConnector):
+    _ws_client: OkxWSClient
+    _account_type: OkxAccountType
+    
+    
     def __init__(
         self,
         account_type: OkxAccountType,
         exchange: OkxExchangeManager,
+        msgbus: MessageBus,
+        task_manager: TaskManager,
     ):
         super().__init__(
             account_type=account_type,
             market=exchange.market,
             market_id=exchange.market_id,
             exchange_id=exchange.exchange_id,
-            ws_client=OkxWSClientV2(
+            ws_client=OkxWSClient(
                 account_type=account_type,
                 handler=self._ws_msg_handler,
+                task_manager=task_manager,
             ),
+            msgbus=msgbus,
         )
-        self.ws_client = cast(OkxWSClientV2, self.ws_client)
+        
+        self._ws_msg_general_decoder = msgspec.json.Decoder(OkxWsGeneralMsg)
+        self._ws_msg_bbo_tbt_decoder = msgspec.json.Decoder(OkxWsBboTbtMsg)
+        self._ws_msg_candle_decoder = msgspec.json.Decoder(OkxWsCandleMsg)
+        self._ws_msg_trade_decoder = msgspec.json.Decoder(OkxWsTradeMsg)
 
     async def subscribe_trade(self, symbol: str):
         market = self._market.get(symbol, None)
-        symbol = market["id"] if market else symbol
-        await self.ws_client.subscribe_trade(symbol)
+        if not market:
+            raise ValueError(f"Symbol {symbol} not found in market")
+        await self._ws_client.subscribe_trade(market.id)
 
     async def subscribe_bookl1(self, symbol: str):
         market = self._market.get(symbol, None)
-        symbol = market["id"] if market else symbol
-        await self.ws_client.subscribe_order_book(symbol, channel="bbo-tbt")
+        if not market:
+            raise ValueError(f"Symbol {symbol} not found in market")
+        await self._ws_client.subscribe_order_book(market.id, channel="bbo-tbt")
 
     async def subscribe_kline(self, symbol: str, interval: str):
         market = self._market.get(symbol, None)
-        symbol = market["id"] if market else symbol
-        await self.ws_client.subscribe_candlesticks(symbol, interval)
+        if not market:
+            raise ValueError(f"Symbol {symbol} not found in market")
+        await self._ws_client.subscribe_candlesticks(market.id, interval)
 
-    def _ws_msg_handler(self, msg):
-        msg = orjson.loads(msg)
-        if "event" in msg:
-            if msg["event"] == "error":
-                self._log.error(str(msg))
-            elif msg["event"] == "subscribe":
-                self._log.info(
-                    f"Subscribed to {msg['arg']['channel']}.{msg['arg']['instId']}"
-                )
-        elif "arg" in msg:
-            channel: str = msg["arg"]["channel"]
-            if channel == "bbo-tbt":
-                self._parse_bbo_tbt(msg)
-            elif channel == "trades":
-                self._parse_trade(msg)
-            elif channel.startswith("candle"):
-                self._parse_kline(msg)
+    def _ws_msg_handler(self, raw: bytes):
+        try:
+            if raw == b"pong":
+                self._ws_client._transport.notify_user_specific_pong_received()
+                self._log.debug(f"Pong received:{str(raw)}")
+                return
+            ws_msg: OkxWsGeneralMsg = self._ws_msg_general_decoder.decode(raw)
+            if ws_msg.is_event_msg:
+                return
+            else:
+                channel: str = ws_msg.arg.channel
+                if channel == "bbo-tbt":
+                    self._handle_bbo_tbt(raw)
+                elif channel == "trades":
+                    self._handle_trade(raw)
+                elif channel.startswith("candle"):
+                    self._handle_kline(raw)
+        except msgspec.DecodeError:
+            self._log.error(f"Error decoding message: {str(raw)}")
 
-    def _parse_kline(self, msg):
+    def _handle_kline(self, raw: bytes):
         """
         {
             "arg": {
@@ -106,14 +121,15 @@ class OkxPublicConnector(PublicConnector):
             ]
             }
         """
-        data = msg["data"][0]
-        id = msg["arg"]["instId"]
-        market = self._market_id[id]
+        msg: OkxWsCandleMsg = self._ws_msg_candle_decoder.decode(raw)
+        data = msg.data[0]
+        id = msg.arg.instId
+        symbol = self._market_id[id]
 
         kline = Kline(
             exchange=self._exchange_id,
-            symbol=market["symbol"],
-            interval=msg["arg"]["channel"],
+            symbol=symbol,
+            interval=msg.arg.channel,
             open=float(data[1]),
             high=float(data[2]),
             low=float(data[3]),
@@ -122,9 +138,9 @@ class OkxPublicConnector(PublicConnector):
             timestamp=int(data[0]),
         )
 
-        EventSystem.emit(EventType.KLINE, kline)
+        self._msgbus.publish(topic="kline", msg=kline)
 
-    def _parse_trade(self, msg):
+    def _handle_trade(self, raw: bytes):
         """
         {
             "arg": {
@@ -143,20 +159,20 @@ class OkxPublicConnector(PublicConnector):
             ]
         }
         """
-        data = msg["data"][0]
-        id = msg["arg"]["instId"]
-        market = self._market_id[id]
+        msg: OkxWsTradeMsg = self._ws_msg_trade_decoder.decode(raw)
+        id = msg.arg.instId
+        symbol = self._market_id[id]
+        for d in msg.data:
+            trade = Trade(
+                exchange=self._exchange_id,
+                symbol=symbol,
+                price=float(d.px),
+                size=float(d.sz),
+                timestamp=int(d.ts),
+            )
+            self._msgbus.publish(topic="trade", msg=trade)
 
-        trade = Trade(
-            exchange=self._exchange_id,
-            symbol=market["symbol"],
-            price=float(data["px"]),
-            size=float(data["sz"]),
-            timestamp=int(data["ts"]),
-        )
-        EventSystem.emit(EventType.TRADE, trade)
-
-    def _parse_bbo_tbt(self, msg):
+    def _handle_bbo_tbt(self, raw: bytes):
         """
         {
             'arg': {
@@ -171,20 +187,22 @@ class OkxPublicConnector(PublicConnector):
             }]
         }
         """
-        data = msg["data"][0]
-        id = msg["arg"]["instId"]
-        market = self._market_id[id]
+        msg: OkxWsBboTbtMsg = self._ws_msg_bbo_tbt_decoder.decode(raw)
+        
+        id = msg.arg.instId
+        symbol = self._market_id[id]
 
-        bookl1 = BookL1(
-            exchange=self._exchange_id,
-            symbol=market["symbol"],
-            bid=float(data["bids"][0][0]),
-            ask=float(data["asks"][0][0]),
-            bid_size=float(data["bids"][0][1]),
-            ask_size=float(data["asks"][0][1]),
-            timestamp=int(data["ts"]),
-        )
-        EventSystem.emit(EventType.BOOKL1, bookl1)
+        for d in msg.data:
+            bookl1 = BookL1(
+                exchange=self._exchange_id,
+                symbol=symbol,
+                bid=float(d.bids[0][0]),
+                ask=float(d.asks[0][0]),
+                bid_size=float(d.bids[0][1]),
+                ask_size=float(d.asks[0][1]),
+                timestamp=int(d.ts),
+            )
+            self._msgbus.publish(topic="bookl1", msg=bookl1)
 
 
 class OkxPrivateConnector(PrivateConnector):
@@ -224,7 +242,7 @@ class OkxPrivateConnector(PrivateConnector):
             cache=self._cache,
         )
 
-        self._decoder_ws_general_msg = msgspec.json.Decoder(OKXWsGeneralMsg)
+        self._decoder_ws_general_msg = msgspec.json.Decoder(OkxWsGeneralMsg)
         self._decoder_ws_event_msg = msgspec.json.Decoder(OKXWsEventMsg)
         self._decoder_ws_push_data_msg = msgspec.json.Decoder(OKXWsPushDataMsg)
         self._decoder_ws_orders_msg = msgspec.json.Decoder(OKXWsOrdersPushDataMsg)

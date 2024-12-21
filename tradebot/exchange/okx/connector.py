@@ -256,6 +256,9 @@ class OkxPrivateConnector(PrivateConnector):
 
         self._decoder_ws_general_msg = msgspec.json.Decoder(OkxWsGeneralMsg)
         self._decoder_ws_order_msg = msgspec.json.Decoder(OkxWsOrderMsg, strict=False)
+    
+    async def connect(self):
+        await self._ws_client.subscribe_orders()
 
     def _handle_event_msg(self, msg: OkxWsGeneralMsg):
         if msg.event == "error":
@@ -289,14 +292,14 @@ class OkxPrivateConnector(PrivateConnector):
 
     def _handle_orders(self, raw: bytes):
         msg: OkxWsOrderMsg = self._decoder_ws_order_msg.decode(raw)
-        id = msg.arg.instId
-        symbol = self._market_id[id]
-
+        self._log.debug(f"Order update: {str(msg)}")
         for data in msg.data:
             price = float(data.avgPx) if data.avgPx else float(data.px)
+            symbol = self._market_id[data.instId]
             order = Order(
                 exchange=self._exchange_id,
                 symbol=symbol,
+                status=OkxEnumParser.parse_order_status(data.state),
                 id=data.ordId,
                 amount=Decimal(data.sz),
                 filled=Decimal(data.accFillSz),

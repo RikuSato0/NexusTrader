@@ -20,12 +20,30 @@ class Demo(Strategy):
     def __init__(self):
         super().__init__()
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.OKX"])
-        self.subscribe_trade(symbols=["BTCUSDT-PERP.OKX"])
         self.signal = True
     
+    def on_failed_order(self, order: Order):
+        print(order)
+    
+    def on_pending_order(self, order: Order):
+        print(order)
+    
+    def on_accepted_order(self, order: Order):
+        print(order)
+    
+    def on_filled_order(self, order: Order):
+        print(order)
+    
     def on_bookl1(self, bookl1: BookL1):
-        print(bookl1)
-
+        if self.signal:
+            self.create_order(
+                symbol="BTCUSDT-PERP.OKX",
+                side=OrderSide.BUY,
+                type=OrderType.MARKET,
+                amount=Decimal("0.1"),
+            )
+            self.signal = False
+        
 
 config = Config(
     strategy_id="buy_and_sell",

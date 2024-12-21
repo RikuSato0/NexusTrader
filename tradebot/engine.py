@@ -389,7 +389,8 @@ class Engine:
                         f"Unsupported instrument type: {instrument_id.type}"
                     )
             case ExchangeType.OKX:
-                pass
+                account_types = self._config.public_conn_config[ExchangeType.OKX]
+                return account_types[0].account_type
 
     async def _start_connectors(self):
         for data_type, sub in self._subscriptions.items():

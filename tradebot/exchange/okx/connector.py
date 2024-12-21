@@ -254,10 +254,6 @@ class OkxPrivateConnector(PrivateConnector):
             rate_limit=rate_limit,
         )
 
-        self._oms = OrderManagementSystem(
-            cache=self._cache,
-        )
-
         self._decoder_ws_general_msg = msgspec.json.Decoder(OkxWsGeneralMsg)
         self._decoder_ws_order_msg = msgspec.json.Decoder(OkxWsOrderMsg, strict=False)
 

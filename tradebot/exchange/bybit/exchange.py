@@ -37,6 +37,3 @@ class BybitExchangeManager(ExchangeManager):
             except Exception as e:
                 print(f"Error: {e}, {symbol}, {mkt}")
                 continue
-
-exchange = BybitExchangeManager()
-exchange.load_markets()

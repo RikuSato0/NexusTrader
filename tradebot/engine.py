@@ -29,7 +29,14 @@ from tradebot.exchange.binance import (
     BinanceExecutionManagementSystem,
     BinanceOrderManagementSystem,
 )
-from tradebot.exchange.okx import OkxExchangeManager
+from tradebot.exchange.okx import (
+    OkxExchangeManager,
+    OkxAccountType,
+    OkxPublicConnector,
+    OkxPrivateConnector,
+    OkxExecutionManagementSystem,
+    OkxOrderManagementSystem,
+)
 from tradebot.core.entity import TaskManager, ZeroMQSignalRecv
 from tradebot.core.nautilius_core import MessageBus, TraderId, LiveClock
 from tradebot.schema import InstrumentId
@@ -74,7 +81,7 @@ class Engine:
         )
 
         self._registry = OrderRegistry()
-        
+
         self._oms: Dict[ExchangeType, OrderManagementSystem] = {}
         self._ems: Dict[ExchangeType, ExecutionManagementSystem] = {}
 
@@ -92,6 +99,8 @@ class Engine:
         )
 
     def _build_public_connectors(self):
+        okx_public_conn_count = 0
+
         for exchange_id, public_conn_configs in self._config.public_conn_config.items():
             for config in public_conn_configs:
                 if exchange_id == ExchangeType.BYBIT:
@@ -152,9 +161,33 @@ class Engine:
                     self._public_connectors[account_type] = public_connector
 
                 elif exchange_id == ExchangeType.OKX:
-                    pass
+                    exchange: OkxExchangeManager = self._exchanges[exchange_id]
+                    account_type: OkxAccountType = config.account_type
+
+                    if okx_public_conn_count > 1:
+                        raise ValueError(
+                            "Only one public connector is supported for OKX, please remove the extra public connector config."
+                        )
+
+                    if (
+                        self._config.basic_config[exchange_id].testnet
+                        != account_type.is_testnet
+                    ):
+                        raise ValueError(
+                            f"The `testnet` setting of {exchange_id} is not consistent with the public connector's account type `{account_type}`."
+                        )
+
+                    public_connector = OkxPublicConnector(
+                        account_type=account_type,
+                        exchange=exchange,
+                        msgbus=self._msgbus,
+                        task_manager=self._task_manager,
+                    )
+                    self._public_connectors[account_type] = public_connector
+                    okx_public_conn_count += 1
 
     def _build_private_connectors(self):
+        okx_private_conn_count = 0
         for (
             exchange_id,
             private_conn_configs,
@@ -195,7 +228,24 @@ class Engine:
                     self._private_connectors[account_type] = private_connector
 
                 elif exchange_id == ExchangeType.OKX:
-                    pass
+                    exchange: OkxExchangeManager = self._exchanges[exchange_id]
+                    account_type: OkxAccountType = config.account_type
+
+                    if okx_private_conn_count > 1:
+                        raise ValueError(
+                            "Only one private connector is supported for OKX, please remove the extra private connector config."
+                        )
+
+                    private_connector = OkxPrivateConnector(
+                        exchange=exchange,
+                        account_type=account_type,
+                        msgbus=self._msgbus,
+                        rate_limit=config.rate_limit,
+                        task_manager=self._task_manager,
+                    )
+
+                    self._private_connectors[account_type] = private_connector
+                    okx_private_conn_count += 1
 
     def _build_exchanges(self):
         for exchange_id, basic_config in self._config.basic_config.items():
@@ -246,9 +296,14 @@ class Engine:
                     )
                     self._ems[exchange_id]._build(self._private_connectors)
                 case ExchangeType.OKX:
-                    # TODO: implement OKX EMS
-                    pass
-    
+                    self._ems[exchange_id] = OkxExecutionManagementSystem(
+                        cache=self._cache,
+                        msgbus=self._msgbus,
+                        task_manager=self._task_manager,
+                        registry=self._registry,
+                    )
+                    self._ems[exchange_id]._build(self._private_connectors)
+
     def _build_oms(self):
         for exchange_id in self._exchanges.keys():
             match exchange_id:
@@ -267,9 +322,12 @@ class Engine:
                         registry=self._registry,
                     )
                 case ExchangeType.OKX:
-                    # TODO: implement OKX OMS
-                    pass
-    
+                    self._oms[exchange_id] = OkxOrderManagementSystem(
+                        cache=self._cache,
+                        msgbus=self._msgbus,
+                        task_manager=self._task_manager,
+                        registry=self._registry,
+                    )
 
     def _build(self):
         self._build_exchanges()
@@ -381,11 +439,11 @@ class Engine:
 
         for connector in self._private_connectors.values():
             await connector.connect()
-    
+
     async def _start_ems(self):
         for ems in self._ems.values():
             await ems.start()
-    
+
     async def _start_oms(self):
         for oms in self._oms.values():
             await oms.start()

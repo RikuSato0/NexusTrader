@@ -1,29 +1,22 @@
 import msgspec
 from tradebot.schema import BaseMarket
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+from tradebot.exchange.okx.constants import (
+    OkxInstrumentType,
+    OkxInstrumentFamily,
+    OkxOrderType,
+    OkxOrderSide,
+    OkxPositionSide,
+    OkxTdMode,
+)
 
 
 class OkxWsArgMsg(msgspec.Struct):
     channel: str | None = None
-    instType: str | None = None
+    instType: OkxInstrumentType | None = None
+    instFamily: OkxInstrumentFamily | None = None
     instId: str | None = None
     uid: str | None = None
+
 
 class OkxWsGeneralMsg(msgspec.Struct):
     event: str | None = None
@@ -32,16 +25,18 @@ class OkxWsGeneralMsg(msgspec.Struct):
     connId: str | None = None
     channel: str | None = None
     arg: OkxWsArgMsg | None = None
-    
+
     @property
     def is_event_msg(self) -> bool:
         return self.event is not None
+
 
 class OkxWsBboTbtData(msgspec.Struct):
     ts: str
     seqId: int
     asks: list[list[str]]
     bids: list[list[str]]
+
 
 class OkxWsBboTbtMsg(msgspec.Struct):
     """
@@ -68,12 +63,15 @@ class OkxWsBboTbtMsg(msgspec.Struct):
         ]
     }
     """
+
     arg: OkxWsArgMsg
     data: list[OkxWsBboTbtData]
+
 
 class OkxWsCandleMsg(msgspec.Struct):
     arg: OkxWsArgMsg
     data: list[list[str]]
+
 
 class OkxWsTradeData(msgspec.Struct):
     instId: str
@@ -84,9 +82,36 @@ class OkxWsTradeData(msgspec.Struct):
     ts: str
     count: str
 
+
 class OkxWsTradeMsg(msgspec.Struct):
     arg: OkxWsArgMsg
     data: list[OkxWsTradeData]
+
+
+class OkxWsOrderData(msgspec.Struct):
+    instType: OkxInstrumentType
+    instId: str
+    tgtCcy: str
+    ccy: str
+    ordId: str
+    clOrdId: str
+    tag: str
+    px: str
+    pxUsd: str
+    pxVol: str
+    pxType: str
+    sz: str
+    notionalUsd: str
+    ordType: OkxOrderType
+    side: OkxOrderSide
+    posSide: OkxPositionSide
+    tdMode: OkxTdMode
+
+
+class OkxWsOrderMsg(msgspec.Struct):
+    arg: OkxWsArgMsg
+    data: list[OkxWsOrderData]
+
 
 ################################################################################
 # Place Order: POST /api/v5/trade/order
@@ -114,9 +139,11 @@ class OkxPlaceOrderResponse(msgspec.Struct):
 # Cancel order: POST /api/v5/trade/cancel-order
 ################################################################################
 
+
 class OkxGeneralResponse(msgspec.Struct):
     code: str
     msg: str
+
 
 class OkxCancelOrderData(msgspec.Struct):
     ordId: str
@@ -241,6 +268,7 @@ class OkxMarketInfo(msgspec.Struct):
         "uly": "BTC-USDT"
     },
     """
+
     alias: str | None = None  # Alias (this_week, next_week, etc)
     auctionEndTime: str | None = None  # Auction end time
     baseCcy: str | None = None  # Base currency

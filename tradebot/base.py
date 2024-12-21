@@ -252,7 +252,7 @@ class WSClient(ABC):
         self._ping_reply_timeout = ping_reply_timeout
         self._enable_auto_pong = enable_auto_pong
         self._enable_auto_ping = enable_auto_ping
-        self._listener = None
+        self._listener: Listener = None
         self._transport = None
         self._subscriptions = {}
         self._limiter = limiter
@@ -310,7 +310,6 @@ class WSClient(ABC):
     async def _msg_handler(self, queue: asyncio.Queue):
         while True:
             msg = await queue.get()
-            # TODO: handle different event types of messages
             self._callback(msg)
             queue.task_done()
 

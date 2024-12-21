@@ -1,5 +1,4 @@
 from enum import Enum, unique
-import msgspec
 from tradebot.constants import (
     AccountType,
     OrderStatus,
@@ -9,6 +8,19 @@ from tradebot.constants import (
     OrderType,
 )
 
+
+class OkxInstrumentType(Enum):
+    SPOT = "SPOT"
+    MARGIN = "MARGIN"
+    SWAP = "SWAP"
+    FUTURES = "FUTURES"
+    OPTION = "OPTION"
+    ANY = "ANY"
+
+class OkxInstrumentFamily(Enum):
+    FUTURES = "FUTURES"
+    SWAP = "SWAP"
+    OPTION = "OPTION"
 
 class OkxAccountType(AccountType):
     LIVE = 0
@@ -46,29 +58,6 @@ REST_URLS = {
     OkxAccountType.DEMO: "https://www.okx.com",
 }
 
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsAccountPushDataMsg
-# from nautilus_trader.adapters.okx.schemas.ws import OKXWsPositionsPushDataMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsFillsPushDataMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsOrdersPushDataMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsGeneralMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsOrderbookPushDataMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsPushDataMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsPositionsData
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsEventMsg
-
-
-class OKXWsPositionsArg(msgspec.Struct, kw_only=True):
-    channel: str
-    uid: str
-    instType: str
-    instFamily: str | None = None
-    instId: str | None = None
-
-
-class OKXWsPositionsPushDataMsg(msgspec.Struct):
-    arg: OKXWsPositionsArg
-    data: list[OKXWsPositionsData]
-
 
 @unique
 class TdMode(Enum):
@@ -83,7 +72,6 @@ class OkxPositionSide(Enum):
     LONG = "long"
     SHORT = "short"
     NET = "net"
-
 
 @unique
 class OkxOrderSide(Enum):

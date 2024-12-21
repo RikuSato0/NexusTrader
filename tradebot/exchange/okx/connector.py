@@ -1,13 +1,17 @@
-import orjson
 import msgspec
+from typing import Dict
 from decimal import Decimal
 from tradebot.exchange.okx import OkxAccountType
-from tradebot.core.cache import AsyncCache
 from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.exchange import OkxExchangeManager
 from tradebot.exchange.okx.schema import OkxWsGeneralMsg
 from tradebot.schema import Trade, BookL1, Kline, Order
-from tradebot.exchange.okx.schema import OkxMarket, OkxWsBboTbtMsg, OkxWsCandleMsg, OkxWsTradeMsg
+from tradebot.exchange.okx.schema import (
+    OkxMarket,
+    OkxWsBboTbtMsg,
+    OkxWsCandleMsg,
+    OkxWsTradeMsg,
+)
 from tradebot.constants import (
     OrderStatus,
     TimeInForce,
@@ -16,16 +20,10 @@ from tradebot.constants import (
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.base import OrderManagementSystem
 from tradebot.core.nautilius_core import MessageBus
-from tradebot.core.entity import TaskManager
+from tradebot.core.entity import TaskManager, RateLimit
 from tradebot.exchange.okx.rest_api import OkxApiClient
 from tradebot.constants import OrderSide, OrderType
 from tradebot.exchange.okx.constants import (
-    OKXWsEventMsg,
-    OKXWsPushDataMsg,
-    OKXWsAccountPushDataMsg,
-    OKXWsFillsPushDataMsg,
-    OKXWsOrdersPushDataMsg,
-    OKXWsPositionsPushDataMsg,
     TdMode,
     OkxEnumParser,
 )
@@ -34,8 +32,7 @@ from tradebot.exchange.okx.constants import (
 class OkxPublicConnector(PublicConnector):
     _ws_client: OkxWSClient
     _account_type: OkxAccountType
-    
-    
+
     def __init__(
         self,
         account_type: OkxAccountType,
@@ -55,7 +52,7 @@ class OkxPublicConnector(PublicConnector):
             ),
             msgbus=msgbus,
         )
-        
+
         self._ws_msg_general_decoder = msgspec.json.Decoder(OkxWsGeneralMsg)
         self._ws_msg_bbo_tbt_decoder = msgspec.json.Decoder(OkxWsBboTbtMsg)
         self._ws_msg_candle_decoder = msgspec.json.Decoder(OkxWsCandleMsg)
@@ -80,14 +77,14 @@ class OkxPublicConnector(PublicConnector):
         await self._ws_client.subscribe_candlesticks(market.id, interval)
 
     def _ws_msg_handler(self, raw: bytes):
+        if raw == b"pong":
+            self._ws_client._transport.notify_user_specific_pong_received()
+            self._log.debug(f"Pong received:{str(raw)}")
+            return
         try:
-            if raw == b"pong":
-                self._ws_client._transport.notify_user_specific_pong_received()
-                self._log.debug(f"Pong received:{str(raw)}")
-                return
             ws_msg: OkxWsGeneralMsg = self._ws_msg_general_decoder.decode(raw)
             if ws_msg.is_event_msg:
-                return
+                self._handle_event_msg(ws_msg)
             else:
                 channel: str = ws_msg.arg.channel
                 if channel == "bbo-tbt":
@@ -98,6 +95,14 @@ class OkxPublicConnector(PublicConnector):
                     self._handle_kline(raw)
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
+
+    def _handle_event_msg(self, ws_msg: OkxWsGeneralMsg):
+        if ws_msg.event == "error":
+            self._log.error(f"Error code: {ws_msg.code}, message: {ws_msg.msg}")
+        elif ws_msg.event == "login":
+            self._log.debug("Login success")
+        elif ws_msg.event == "subscribe":
+            self._log.debug(f"Subscribed to {ws_msg.arg.channel}")
 
     def _handle_kline(self, raw: bytes):
         """
@@ -122,23 +127,23 @@ class OkxPublicConnector(PublicConnector):
             }
         """
         msg: OkxWsCandleMsg = self._ws_msg_candle_decoder.decode(raw)
-        data = msg.data[0]
+
         id = msg.arg.instId
         symbol = self._market_id[id]
 
-        kline = Kline(
-            exchange=self._exchange_id,
-            symbol=symbol,
-            interval=msg.arg.channel,
-            open=float(data[1]),
-            high=float(data[2]),
-            low=float(data[3]),
-            close=float(data[4]),
-            volume=float(data[5]),
-            timestamp=int(data[0]),
-        )
-
-        self._msgbus.publish(topic="kline", msg=kline)
+        for d in msg.data:
+            kline = Kline(
+                exchange=self._exchange_id,
+                symbol=symbol,
+                interval=msg.arg.channel,
+                open=float(d[1]),
+                high=float(d[2]),
+                low=float(d[3]),
+                close=float(d[4]),
+                volume=float(d[5]),
+                timestamp=int(d[0]),
+            )
+            self._msgbus.publish(topic="kline", msg=kline)
 
     def _handle_trade(self, raw: bytes):
         """
@@ -188,7 +193,7 @@ class OkxPublicConnector(PublicConnector):
         }
         """
         msg: OkxWsBboTbtMsg = self._ws_msg_bbo_tbt_decoder.decode(raw)
-        
+
         id = msg.arg.instId
         symbol = self._market_id[id]
 
@@ -206,13 +211,24 @@ class OkxPublicConnector(PublicConnector):
 
 
 class OkxPrivateConnector(PrivateConnector):
+    _ws_client: OkxWSClient
+    _account_type: OkxAccountType
+    _market: Dict[str, OkxMarket]
+    _market_id: Dict[str, str]
+
     def __init__(
         self,
-        account_type: OkxAccountType,
         exchange: OkxExchangeManager,
-        strategy_id: str = None,
-        user_id: str = None,
+        account_type: OkxAccountType,
+        msgbus: MessageBus,
+        task_manager: TaskManager,
+        rate_limit: RateLimit | None = None,
     ):
+        if not exchange.api_key or not exchange.secret or not exchange.passphrase:
+            raise ValueError(
+                "API key, secret, and passphrase are required for private endpoints"
+            )
+
         super().__init__(
             account_type=account_type,
             market=exchange.market,
@@ -221,106 +237,76 @@ class OkxPrivateConnector(PrivateConnector):
             ws_client=OkxWSClient(
                 account_type=account_type,
                 handler=self._ws_msg_handler,
+                task_manager=task_manager,
                 api_key=exchange.api_key,
                 secret=exchange.secret,
                 passphrase=exchange.passphrase,
             ),
-            cache=AsyncCache(
-                account_type="OKX",
-                strategy_id=strategy_id,
-                user_id=user_id,
+            api_client=OkxApiClient(
+                api_key=exchange.api_key,
+                secret=exchange.secret,
+                passphrase=exchange.passphrase,
+                testnet=account_type.is_testnet,
             ),
+            msgbus=msgbus,
+            rate_limit=rate_limit,
         )
 
-        self._api_client = OkxApiClient(
-            api_key=exchange.api_key,
-            secret=exchange.secret,
-            passphrase=exchange.passphrase,
-            account_type=account_type,
-        )
         self._oms = OrderManagementSystem(
             cache=self._cache,
         )
 
         self._decoder_ws_general_msg = msgspec.json.Decoder(OkxWsGeneralMsg)
-        self._decoder_ws_event_msg = msgspec.json.Decoder(OKXWsEventMsg)
-        self._decoder_ws_push_data_msg = msgspec.json.Decoder(OKXWsPushDataMsg)
-        self._decoder_ws_orders_msg = msgspec.json.Decoder(OKXWsOrdersPushDataMsg)
-        self._decoder_ws_account_msg = msgspec.json.Decoder(OKXWsAccountPushDataMsg)
-        self._decoder_ws_fills_msg = msgspec.json.Decoder(OKXWsFillsPushDataMsg)
-        self._decoder_ws_positions_msg = msgspec.json.Decoder(OKXWsPositionsPushDataMsg)
-
-    @property
-    def ws_client(self) -> OkxWSClient:
-        return self._ws_client
+    
+    def _handle_event_msg(self, msg: OkxWsGeneralMsg):
+        if msg.event == "error":
+            self._log.error(msg)
+        elif msg.event == "login":
+            self._log.info("Login success")
+        elif msg.event == "subscribe":
+            self._log.info(f"Subscribed to {msg.arg.channel}")
 
     def _ws_msg_handler(self, raw: bytes):
-        msg = self._decoder_ws_general_msg.decode(raw)
+        if raw == b"pong":
+            self._ws_client._transport.notify_user_specific_pong_received()
+            self._log.debug(f"Pong received: {str(raw)}")
+            return
+        try:
+            ws_msg: OkxWsGeneralMsg = self._decoder_ws_general_msg.decode(raw)
+            if ws_msg.is_event_msg:
+                self._handle_event_msg(ws_msg)
+            else:
+                channel = ws_msg.arg.channel
+                if channel == "orders":
+                    self._handle_orders(raw)
+                elif channel == "positions":
+                    self._handle_positions(raw)
+                elif channel == "account":
+                    self._handle_account(raw)
+                elif channel == "fills":
+                    self._handle_fills(raw)
+        except msgspec.ValidationError:
+            self._log.error(f"Error decoding message: {str(raw)}")
+    
+    def _handle_orders(self, raw: bytes):
+        pass
+    
+    def _handle_positions(self, raw: bytes):
+        # TODO: update positions from fills
+        pass
+    
+    def _handle_account(self, raw: bytes):
+        # TODO: update account from fills
+        pass
 
-        if msg.is_event_msg:
-            msg = self._decoder_ws_event_msg.decode(raw)
-            if msg.event == "error":
-                self._log.error(msg)
-            elif msg.event == "login":
-                self._log.info("Login success")
-            elif msg.event == "subscribe":
-                self._log.info(f"Subscribed to {msg.arg.channel}")
-            elif msg.event == "channel-conn-count":
-                self._log.info(
-                    f"Channel {msg.channel} connection count: {msg.connCount}"
-                )
+    def _handle_fills(self, raw: bytes):
+        # TODO: update account from fills
+        pass
 
-        elif msg.is_push_data_msg:
-            push_data = self._decoder_ws_push_data_msg.decode(raw)
-            channel = push_data.arg.channel
-            if channel == "account":
-                self._parse_account(raw)
-            elif channel == "fills":
-                self._parse_fills(raw)
-            elif channel == "orders":
-                self._parse_orders(raw)
-            elif channel == "positions":
-                self._parse_positions(raw)
-
-    def _parse_orders(self, raw: bytes):
-        orders_push_data: OKXWsOrdersPushDataMsg = self._decoder_ws_orders_msg.decode(
-            raw
-        )
-        print(orjson.loads(raw))
-        # print(orders_push_data.data)
-        # self._log.info(str(orders_push_data.data))
-        return orders_push_data.data
-
-    def _parse_positions(self, raw: bytes):
-        """nautilus updates positions from fills."""
-        positions_push_data: OKXWsPositionsPushDataMsg = (
-            self._decoder_ws_positions_msg.decode(raw)
-        )
-        print(orjson.loads(raw))
-        # print(positions_push_data.data)
-        # self._log.info(str(positions_push_data.data))
-        return positions_push_data.data
-
-    def _parse_account(self, raw: bytes):
-        account_push_data: OKXWsAccountPushDataMsg = (
-            self._decoder_ws_account_msg.decode(raw)
-        )
-        print(orjson.loads(raw))
-        # print(account_push_data.data)
-        # self._log.info(str(account_push_data.data))
-        return account_push_data.data
-
-    def _parse_fills(self, raw: bytes):
-        fills_push_data: OKXWsFillsPushDataMsg = self._decoder_ws_fills_msg.decode(raw)
-        # TODO
-        return fills_push_data.data
 
     async def connect(self):
         await super().connect()
-        await self.ws_client.subscribe_orders()
-        await self.ws_client.subscribe_positions()
-        # await self.ws_client.subscrbe_fills()  # vip5 or above only
-        await self.ws_client.subscribe_account()
+        await self._ws_client.subscribe_orders()
 
     def _get_td_mode(self, market: OkxMarket):
         return TdMode.CASH if market.spot else TdMode.CROSS  # ?

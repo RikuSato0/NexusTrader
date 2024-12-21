@@ -1,4 +1,5 @@
 import msgspec
+from typing import List
 from tradebot.schema import BaseMarket
 from tradebot.exchange.okx.constants import (
     OkxInstrumentType,
@@ -7,6 +8,7 @@ from tradebot.exchange.okx.constants import (
     OkxOrderSide,
     OkxPositionSide,
     OkxTdMode,
+    OkxOrderStatus,
 )
 
 
@@ -87,7 +89,6 @@ class OkxWsTradeMsg(msgspec.Struct):
     arg: OkxWsArgMsg
     data: list[OkxWsTradeData]
 
-
 class OkxWsOrderData(msgspec.Struct):
     instType: OkxInstrumentType
     instId: str
@@ -106,11 +107,58 @@ class OkxWsOrderData(msgspec.Struct):
     side: OkxOrderSide
     posSide: OkxPositionSide
     tdMode: OkxTdMode
-
-
+    fillPx: str # last fill price
+    tradeId: str # last trade id
+    fillSz: str  # last filled quantity
+    fillPnl: str  # last filled profit and loss
+    fillTime: str  # last filled time
+    fillFee: str  # last filled fee
+    fillFeeCcy: str  # last filled fee currency
+    fillPxVol: str  # last filled price volume
+    fillPxUsd: str  # last filled price in USD
+    fillMarkVol: str  # last filled mark volume
+    fillFwdPx: str  # last filled forward price
+    fillMarkPx: str  # last filled mark price
+    execType: str  # last execution type
+    accFillSz: str  # accumulated filled quantity
+    fillNotionalUsd: str  # accumulated filled notional in USD
+    avgPx: str  # average price
+    state: OkxOrderStatus
+    lever: str  # leverage
+    attachAlgoClOrdId: str  # attached algo order id
+    tpTriggerPx: str  # take profit trigger price
+    tpTriggerPxType: str  # take profit trigger price type
+    tpOrdPx: str  # take profit order price
+    slTriggerPx: str  # stop loss trigger price
+    slTriggerPxType: str  # stop loss trigger price type
+    slOrdPx: str  # stop loss order price
+    stpMode: str  # stop loss mode
+    feeCcy: str  # fee currency
+    fee: str  # fee
+    rebateCcy: str  # rebate currency
+    rebate: str  # rebate
+    pnl: str
+    source: str
+    cancelSource: str
+    amendSource: str
+    category: str
+    isTpLimit: bool
+    uTime: int
+    cTime: int
+    reqId: str
+    amendResult: str
+    reduceOnly: bool
+    quickMgnType: str
+    algoClOrdId: str
+    algoId: str
+    lastPx: str  # last price
+    code: str
+    msg: str
+    
+    
 class OkxWsOrderMsg(msgspec.Struct):
     arg: OkxWsArgMsg
-    data: list[OkxWsOrderData]
+    data: List[OkxWsOrderData]
 
 
 ################################################################################

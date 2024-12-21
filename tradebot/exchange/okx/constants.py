@@ -60,7 +60,7 @@ REST_URLS = {
 
 
 @unique
-class TdMode(Enum):
+class OkxTdMode(Enum):
     CASH = "cash"  # 现货
     CROSS = "cross"  # 全仓
     ISOLATED = "isolated"  # 逐仓
@@ -146,7 +146,7 @@ class OkxEnumParser:
         return cls._okx_order_side_map[side]
 
     @classmethod
-    def parse_okx_order_type(cls, ordType: OkxOrderType) -> OrderType:
+    def parse_order_type(cls, ordType: OkxOrderType) -> OrderType:
         # TODO add parameters in future to enable parsing of all other nautilus OrderType's
         match ordType:
             case OkxOrderType.MARKET:
@@ -165,7 +165,7 @@ class OkxEnumParser:
                 )
 
     @classmethod
-    def parse_okx_time_in_force(cls, ordType: OkxOrderType) -> TimeInForce:
+    def parse_time_in_force(cls, ordType: OkxOrderType) -> TimeInForce:
         match ordType:
             case OkxOrderType.MARKET:
                 return TimeInForce.GTC

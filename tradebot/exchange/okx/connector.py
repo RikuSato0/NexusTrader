@@ -11,6 +11,7 @@ from tradebot.exchange.okx.schema import (
     OkxWsBboTbtMsg,
     OkxWsCandleMsg,
     OkxWsTradeMsg,
+    OkxWsOrderMsg,
 )
 from tradebot.constants import (
     OrderStatus,
@@ -24,7 +25,7 @@ from tradebot.core.entity import TaskManager, RateLimit
 from tradebot.exchange.okx.rest_api import OkxApiClient
 from tradebot.constants import OrderSide, OrderType
 from tradebot.exchange.okx.constants import (
-    TdMode,
+    OkxTdMode,
     OkxEnumParser,
 )
 
@@ -212,6 +213,7 @@ class OkxPublicConnector(PublicConnector):
 
 class OkxPrivateConnector(PrivateConnector):
     _ws_client: OkxWSClient
+    _api_client: OkxApiClient
     _account_type: OkxAccountType
     _market: Dict[str, OkxMarket]
     _market_id: Dict[str, str]
@@ -257,7 +259,8 @@ class OkxPrivateConnector(PrivateConnector):
         )
 
         self._decoder_ws_general_msg = msgspec.json.Decoder(OkxWsGeneralMsg)
-    
+        self._decoder_ws_order_msg = msgspec.json.Decoder(OkxWsOrderMsg, strict=False)
+
     def _handle_event_msg(self, msg: OkxWsGeneralMsg):
         if msg.event == "error":
             self._log.error(msg)
@@ -287,14 +290,44 @@ class OkxPrivateConnector(PrivateConnector):
                     self._handle_fills(raw)
         except msgspec.ValidationError:
             self._log.error(f"Error decoding message: {str(raw)}")
-    
+
     def _handle_orders(self, raw: bytes):
-        pass
-    
+        msg: OkxWsOrderMsg = self._decoder_ws_order_msg.decode(raw)
+        id = msg.arg.instId
+        symbol = self._market_id[id]
+
+        for data in msg.data:
+            price = float(data.avgPx) if data.avgPx else float(data.px)
+            order = Order(
+                exchange=self._exchange_id,
+                symbol=symbol,
+                id=data.ordId,
+                amount=Decimal(data.sz),
+                filled=Decimal(data.accFillSz),
+                client_order_id=data.clOrdId,
+                timestamp=data.uTime,
+                type=OkxEnumParser.parse_order_type(data.ordType),
+                side=OkxEnumParser.parse_order_side(data.side),
+                time_in_force=OkxEnumParser.parse_time_in_force(data.ordType),
+                price=float(data.px) if data.px else None,
+                average=float(data.avgPx) if data.avgPx else None,
+                last_filled_price=float(data.fillPx) if data.fillPx else None,
+                last_filled=Decimal(data.fillSz) if data.fillSz else Decimal(0),
+                remaining=Decimal(data.sz) - Decimal(data.accFillSz),
+                fee=abs(float(data.fee)),
+                fee_currency=data.feeCcy,
+                cost=price * float(data.fillSz),
+                cum_cost=price * float(data.accFillSz),
+                reduce_only=data.reduceOnly,
+                position_side=OkxEnumParser.parse_position_side(data.posSide),
+            )
+
+            self._msgbus.publish(topic="okx.order", msg=order)
+
     def _handle_positions(self, raw: bytes):
         # TODO: update positions from fills
         pass
-    
+
     def _handle_account(self, raw: bytes):
         # TODO: update account from fills
         pass
@@ -303,13 +336,12 @@ class OkxPrivateConnector(PrivateConnector):
         # TODO: update account from fills
         pass
 
-
     async def connect(self):
         await super().connect()
         await self._ws_client.subscribe_orders()
 
     def _get_td_mode(self, market: OkxMarket):
-        return TdMode.CASH if market.spot else TdMode.CROSS  # ?
+        return OkxTdMode.CASH if market.spot else OkxTdMode.CROSS
 
     async def create_order(
         self,
@@ -322,16 +354,23 @@ class OkxPrivateConnector(PrivateConnector):
         position_side: PositionSide = None,
         **kwargs,
     ):
+        if self._limiter:
+            await self._limiter.acquire()
+
         market = self._market.get(symbol)
         if not market:
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
         symbol = market.id
 
+        td_mode = kwargs.pop("td_mode", None)
+        if not td_mode:
+            td_mode = self._get_td_mode(market)
+
         params = {
-            "instId": symbol,
-            "tdMode": self._get_td_mode(market).value,
+            "inst_id": symbol,
+            "td_mode": td_mode.value,
             "side": OkxEnumParser.to_okx_order_side(side).value,
-            "ordType": OkxEnumParser.to_okx_order_type(type, time_in_force).value,
+            "ord_type": OkxEnumParser.to_okx_order_type(type, time_in_force).value,
             "sz": str(amount),
         }
 
@@ -346,8 +385,8 @@ class OkxPrivateConnector(PrivateConnector):
         params.update(kwargs)
 
         try:
-            _res = await self._api_client.post_v5_order_create(**params)
-            res = _res.data[0]
+            res = await self._api_client.post_api_v5_trade_order(**params)
+            res = res.data[0]
             order = Order(
                 exchange=self._exchange_id,
                 id=res.ordId,
@@ -357,14 +396,13 @@ class OkxPrivateConnector(PrivateConnector):
                 type=type,
                 side=side,
                 amount=amount,
-                price=float(price),
+                price=float(price) if price else None,
                 time_in_force=time_in_force,
                 position_side=position_side,
                 status=OrderStatus.PENDING,
                 filled=Decimal(0),
                 remaining=amount,
             )
-            self._oms.add_order_msg(order)
             return order
         except Exception as e:
             self._log.error(f"Error creating order: {e} params: {str(params)}")
@@ -375,7 +413,7 @@ class OkxPrivateConnector(PrivateConnector):
                 type=type,
                 side=side,
                 amount=amount,
-                price=float(price),
+                price=float(price) if price else None,
                 time_in_force=time_in_force,
                 position_side=position_side,
                 status=OrderStatus.FAILED,
@@ -385,16 +423,19 @@ class OkxPrivateConnector(PrivateConnector):
             return order
 
     async def cancel_order(self, symbol: str, order_id: str, **kwargs):
+        if self._limiter:
+            await self._limiter.acquire()
+
         market = self._market.get(symbol)
         if not market:
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
-        exchange_symbol = market.id
+        symbol = market.id
 
-        params = {"instId": exchange_symbol, "ordId": order_id, **kwargs}
+        params = {"instId": symbol, "ordId": order_id, **kwargs}
 
         try:
-            _res = await self._api_client.post_v5_order_cancel(**params)
-            res = _res.data[0]
+            res = await self._api_client.post_api_v5_trade_cancel_order(**params)
+            res = res.data[0]
             order = Order(
                 exchange=self._exchange_id,
                 id=res.ordId,
@@ -403,7 +444,6 @@ class OkxPrivateConnector(PrivateConnector):
                 symbol=symbol,
                 status=OrderStatus.CANCELING,
             )
-            self._oms.add_order_msg(order)
             return order
         except Exception as e:
             self._log.error(f"Error canceling order: {e} params: {str(params)}")
@@ -411,7 +451,7 @@ class OkxPrivateConnector(PrivateConnector):
                 exchange=self._exchange_id,
                 timestamp=self._clock.timestamp_ms(),
                 symbol=symbol,
-                status=OrderStatus.FAILED,
+                status=OrderStatus.CANCEL_FAILED,
             )
             return order
 

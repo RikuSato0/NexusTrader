@@ -6,6 +6,7 @@ from tradebot.config import Config
 from tradebot.strategy import Strategy
 from tradebot.core.cache import AsyncCache
 from tradebot.core.registry import OrderRegistry
+from tradebot.error import EngineBuildError
 from tradebot.base import (
     ExchangeManager,
     PublicConnector,
@@ -98,31 +99,76 @@ class Engine:
             self._strategy._subscriptions
         )
 
-    def _build_public_connectors(self):
+    def _public_connector_check(self):
         okx_public_conn_count = 0
 
+        for account_type in self._public_connectors.keys():
+            if isinstance(account_type, BybitAccountType):
+                if (
+                    account_type == BybitAccountType.ALL
+                    or account_type == BybitAccountType.ALL_TESTNET
+                ):
+                    raise EngineBuildError(
+                        f"{account_type} is not supported for public connector."
+                    )
+                bybit_basic_config = self._config.basic_config.get(ExchangeType.BYBIT)
+                if not bybit_basic_config:
+                    raise EngineBuildError(
+                        f"Basic config for {ExchangeType.BYBIT} is not set. Please add `{ExchangeType.BYBIT}` in `basic_config`."
+                    )
+
+                else:
+                    if bybit_basic_config.testnet != account_type.is_testnet:
+                        raise EngineBuildError(
+                            f"The `testnet` setting of {ExchangeType.BYBIT} is not consistent with the public connector's account type `{account_type}`."
+                        )
+            elif isinstance(account_type, BinanceAccountType):
+                if (
+                    account_type.is_isolated_margin_or_margin
+                    or account_type.is_portfolio_margin
+                ):
+                    raise EngineBuildError(
+                        f"{account_type} is not supported for public connector."
+                    )
+                binance_basic_config = self._config.basic_config.get(
+                    ExchangeType.BINANCE
+                )
+                if not binance_basic_config:
+                    raise EngineBuildError(
+                        f"Basic config for {ExchangeType.BINANCE} is not set. Please add `{ExchangeType.BINANCE}` in `basic_config`."
+                    )
+                else:
+                    if binance_basic_config.testnet != account_type.is_testnet:
+                        raise EngineBuildError(
+                            f"The `testnet` setting of {ExchangeType.BINANCE} is not consistent with the public connector's account type `{account_type}`."
+                        )
+
+            elif isinstance(account_type, OkxAccountType):
+                if okx_public_conn_count > 1:
+                    raise EngineBuildError(
+                        "Only one public connector is supported for OKX, please remove the extra public connector config."
+                    )
+                okx_basic_config = self._config.basic_config.get(ExchangeType.OKX)
+                if not okx_basic_config:
+                    raise EngineBuildError(
+                        f"Basic config for {ExchangeType.OKX} is not set. Please add `{ExchangeType.OKX}` in `basic_config`."
+                    )
+                else:
+                    if okx_basic_config.testnet != account_type.is_testnet:
+                        raise EngineBuildError(
+                            f"The `testnet` setting of {ExchangeType.OKX} is not consistent with the public connector's account type `{account_type}`."
+                        )
+
+                okx_public_conn_count += 1
+            else:
+                raise EngineBuildError(f"Unsupported account type: {account_type}")
+
+    def _build_public_connectors(self):
         for exchange_id, public_conn_configs in self._config.public_conn_config.items():
             for config in public_conn_configs:
                 if exchange_id == ExchangeType.BYBIT:
                     exchange: BybitExchangeManager = self._exchanges[exchange_id]
                     account_type: BybitAccountType = config.account_type
-
-                    if (
-                        account_type == BybitAccountType.ALL
-                        or account_type == BybitAccountType.ALL_TESTNET
-                    ):
-                        raise ValueError(
-                            f"BybitAccountType.{account_type.value} is not supported for public connector."
-                        )
-
-                    if (
-                        self._config.basic_config[exchange_id].testnet
-                        != account_type.is_testnet
-                    ):
-                        raise ValueError(
-                            f"The `testnet` setting of {exchange_id} is not consistent with the public connector's account type `{account_type}`."
-                        )
-
                     public_connector = BybitPublicConnector(
                         account_type=account_type,
                         exchange=exchange,
@@ -134,23 +180,6 @@ class Engine:
                 elif exchange_id == ExchangeType.BINANCE:
                     exchange: BinanceExchangeManager = self._exchanges[exchange_id]
                     account_type: BinanceAccountType = config.account_type
-
-                    if (
-                        account_type.is_isolated_margin_or_margin
-                        or account_type.is_portfolio_margin
-                    ):
-                        raise ValueError(
-                            f"BinanceAccountType.{account_type.value} is not supported for public connector."
-                        )
-
-                    if (
-                        self._config.basic_config[exchange_id].testnet
-                        != account_type.is_testnet
-                    ):
-                        raise ValueError(
-                            f"The `testnet` setting of {exchange_id} is not consistent with the public connector's account type `{account_type}`."
-                        )
-
                     public_connector = BinancePublicConnector(
                         account_type=account_type,
                         exchange=exchange,
@@ -163,20 +192,6 @@ class Engine:
                 elif exchange_id == ExchangeType.OKX:
                     exchange: OkxExchangeManager = self._exchanges[exchange_id]
                     account_type: OkxAccountType = config.account_type
-
-                    if okx_public_conn_count > 1:
-                        raise ValueError(
-                            "Only one public connector is supported for OKX, please remove the extra public connector config."
-                        )
-
-                    if (
-                        self._config.basic_config[exchange_id].testnet
-                        != account_type.is_testnet
-                    ):
-                        raise ValueError(
-                            f"The `testnet` setting of {exchange_id} is not consistent with the public connector's account type `{account_type}`."
-                        )
-
                     public_connector = OkxPublicConnector(
                         account_type=account_type,
                         exchange=exchange,
@@ -184,7 +199,7 @@ class Engine:
                         task_manager=self._task_manager,
                     )
                     self._public_connectors[account_type] = public_connector
-                    okx_public_conn_count += 1
+        self._public_connector_check()
 
     def _build_private_connectors(self):
         okx_private_conn_count = 0
@@ -268,7 +283,7 @@ class Engine:
         zmq_config = self._config.zero_mq_signal_config
         if zmq_config:
             if not hasattr(self._strategy, "on_custom_signal"):
-                raise ValueError(
+                raise EngineBuildError(
                     "Please add `on_custom_signal` method to the strategy."
                 )
 
@@ -395,7 +410,7 @@ class Engine:
     async def _start_connectors(self):
         for connector in self._private_connectors.values():
             await connector.connect()
-            
+
         for data_type, sub in self._subscriptions.items():
             match data_type:
                 case DataType.BOOKL1:
@@ -440,8 +455,6 @@ class Engine:
                     pass  # TODO: implement
                 case DataType.INDEX_PRICE:
                     pass  # TODO: implement
-
-
 
     async def _start_ems(self):
         for ems in self._ems.values():

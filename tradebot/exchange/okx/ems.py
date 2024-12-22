@@ -30,6 +30,7 @@ class OkxExecutionManagementSystem(ExecutionManagementSystem):
         for account_type in self._private_connectors.keys():
             if isinstance(account_type, OkxAccountType):
                 self._order_submit_queues[account_type] = asyncio.Queue()
+                break
 
     def _set_account_type(self):
         account_types = self._private_connectors.keys()

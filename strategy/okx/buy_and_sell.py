@@ -31,6 +31,9 @@ class Demo(Strategy):
     def on_accepted_order(self, order: Order):
         print(order)
     
+    def on_partially_filled_order(self, order: Order):
+        print(order)
+    
     def on_filled_order(self, order: Order):
         print(order)
     
@@ -46,7 +49,7 @@ class Demo(Strategy):
         
 
 config = Config(
-    strategy_id="buy_and_sell",
+    strategy_id="okx_buy_and_sell",
     user_id="user_test",
     strategy=Demo(),
     basic_config={

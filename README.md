@@ -27,22 +27,66 @@ TradeBotPro is a flexible and powerful trading bot framework designed to interac
 
 ## Compare with other frameworks
 
-| Framework | Websocket Package | Data Serialization | 
-|-----------|-------|-------|
-| TradeBotPro | picows | msgspec |
-| [crypto-feed](https://github.com/bmoscon/cryptofeed) | [websockets](https://websockets.readthedocs.io/en/stable/) | [yapic.json](https://pypi.org/project/yapic.json/) |
-| [ccxt](https://github.com/bmoscon/cryptofeed) | [aiohttp](https://docs.aiohttp.org/en/stable/client_reference.html) | json |  
-| [binance-futures-connector](https://github.com/binance/binance-futures-connector-python) | [websocket-clienr](https://websocket-client.readthedocs.io/en/latest/examples.html) | json |
-| [python-okx](https://github.com/okxapi/python-okx) | websockets | json |
-| [unicorn-binance-websocket-api](https://github.com/LUCIT-Systems-and-Development/unicorn-binance-websocket-api) | websockets | [ujson](https://pypi.org/project/ujson/) |
+| Framework | Websocket Package | Data Serialization | Strategy Support |
+|-----------|-------|-------|-------|
+| TradeBotPro | picows | msgspec | ✅ |
+| [HummingBot](https://github.com/hummingbot/hummingbot?tab=readme-ov-file) | aiohttp | ujson | ✅ |
+| [Freqtrade](https://github.com/freqtrade/freqtrade) | websockets | [orjson](https://github.com/ijl/orjson) | ✅ |
+| [crypto-feed](https://github.com/bmoscon/cryptofeed) | [websockets](https://websockets.readthedocs.io/en/stable/) | [yapic.json](https://pypi.org/project/yapic.json/) | ❌ |
+| [ccxt](https://github.com/bmoscon/cryptofeed) | [aiohttp](https://docs.aiohttp.org/en/stable/client_reference.html) | json | ❌ |
+| [binance-futures-connector](https://github.com/binance/binance-futures-connector-python) | [websocket-clienr](https://websocket-client.readthedocs.io/en/latest/examples.html) | json | ❌ |
+| [python-okx](https://github.com/okxapi/python-okx) | websockets | json | ❌ |
+| [unicorn-binance-websocket-api](https://github.com/LUCIT-Systems-and-Development/unicorn-binance-websocket-api) | websockets | [ujson](https://pypi.org/project/ujson/) | ❌ |
 
+## Multi-Mode Support
 
-## Installation
+TradeBotPro supports multiple modes of operation to cater to different trading strategies and requirements. Each mode allows for flexibility in how trading logic is executed based on market conditions or specific triggers.
 
-To install TradeBotPro, use pip:
+### Event-Driven Mode
 
+In this mode, trading logic is executed in response to real-time market events. The methods `on_bookl1`, `on_trade`, and `on_kline` are triggered whenever relevant data is updated, allowing for immediate reaction to market changes.
+
+```python
+class Demo(Strategy):
+    def __init__(self):
+        super().__init__()
+        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BINANCE"])
+    
+    def on_bookl1(self, bookl1: BookL1):
+        # implement the trading logic Here
+        pass
 ```
-pip install tradebotpro
+
+### Timer Mode
+
+This mode allows you to schedule trading logic to run at specific intervals. You can use the `schedule` method to define when your trading algorithm should execute, making it suitable for strategies that require periodic checks or actions.
+
+```python
+class Demo2(Strategy):
+    def __init__(self):
+        super().__init__()
+        self.schedule(self.algo, trigger="interval", seconds=1)
+    
+    def algo(self):
+        # run every 1 second
+        # implement the trading logic Here
+        pass
+```
+
+### Custom Signal Mode
+
+In this mode, trading logic is executed based on custom signals. You can define your own signals and use the `on_custom_signal` method to trigger trading actions when these signals are received. This is particularly useful for integrating with external systems or custom event sources.
+
+```python
+class Demo3(Strategy):
+    def __init__(self):
+        super().__init__()
+        self.signal = True
+    
+    def on_custom_signal(self, signal: object):
+        # implement the trading logic Here,
+        # signal can be any object, it is up to you to define the signal
+        pass
 ```
 
 ## Quick Start

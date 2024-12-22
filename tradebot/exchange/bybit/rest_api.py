@@ -11,6 +11,7 @@ from decimal import Decimal
 from tradebot.base import ApiClient
 from tradebot.exchange.bybit.constants import BybitBaseUrl
 from tradebot.exchange.bybit.error import BybitError
+from tradebot.core.nautilius_core import hmac_signature
 from tradebot.exchange.bybit.schema import (
     BybitResponse,
     BybitOrderResponse,
@@ -81,7 +82,13 @@ class BybitApiClient(ApiClient):
         )
         signature = hash.hexdigest()
         return [signature, timestamp]
-
+    
+    def _generate_signature_v2(self, payload: str) -> List[str]:
+        timestamp = str(self._clock.timestamp_ms())
+        param = f"{timestamp}{self._api_key}{self._recv_window}{payload}"
+        signature = hmac_signature(self._secret, param) # return hex digest string
+        return [signature, timestamp]
+    
     async def _fetch(
         self,
         method: str,
@@ -103,7 +110,7 @@ class BybitApiClient(ApiClient):
 
         headers = self._headers
         if signed:
-            signature, timestamp = self._generate_signature(payload_str)
+            signature, timestamp = self._generate_signature_v2(payload_str)
             headers = {
                 **headers,
                 "X-BAPI-TIMESTAMP": timestamp,

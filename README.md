@@ -91,100 +91,134 @@ class Demo3(Strategy):
 
 ## Quick Start
 
-Here's a basic example of how to use TradeBotPro:
+Here's a basic example of how to use TradeBotPro, demonstrating a simple buy and sell strategy on OKX.
 
 ```python
-import asyncio
-from tradebot.exchange import BinanceExchangeManager, BinanceOrderManager
-from tradebot.constants import KEYS
+from decimal import Decimal
 
-async def main():
-    config = {
-        'exchange_id': 'binance',
-        'sandbox': True,
-        'apiKey': KEYS['binance_future_testnet']['API_KEY'],
-        'secret': KEYS['binance_future_testnet']['SECRET'],
-        'enableRateLimit': False,
+from tradebot.constants import settings
+from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
+from tradebot.strategy import Strategy
+from tradebot.constants import ExchangeType, OrderSide, OrderType
+from tradebot.exchange.okx import OkxAccountType
+from tradebot.schema import BookL1, Order
+from tradebot.engine import Engine
+
+# Retrieve API credentials from settings
+OKX_API_KEY = settings.OKX.DEMO_1.api_key
+OKX_SECRET = settings.OKX.DEMO_1.secret
+OKX_PASSPHRASE = settings.OKX.DEMO_1.passphrase
+
+class Demo(Strategy):
+    def __init__(self):
+        super().__init__()
+        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.OKX"])  # Subscribe to the order book for the specified symbol
+        self.signal = True  # Initialize signal to control order execution
+    
+    def on_failed_order(self, order: Order):
+        print(order)  # Log failed orders
+    
+    def on_pending_order(self, order: Order):
+        print(order)  # Log pending orders
+    
+    def on_accepted_order(self, order: Order):
+        print(order)  # Log accepted orders
+    
+    def on_partially_filled_order(self, order: Order):
+        print(order)  # Log partially filled orders
+    
+    def on_filled_order(self, order: Order):
+        print(order)  # Log filled orders
+    
+    def on_bookl1(self, bookl1: BookL1):
+        if self.signal:  # Check if the signal is active
+            # Create a market buy order
+            self.create_order(
+                symbol="BTCUSDT-PERP.OKX",
+                side=OrderSide.BUY,
+                type=OrderType.MARKET,
+                amount=Decimal("0.1"),
+            )
+            # Create a market sell order
+            self.create_order(
+                symbol="BTCUSDT-PERP.OKX",
+                side=OrderSide.SELL,
+                type=OrderType.MARKET,
+                amount=Decimal("0.1"),
+            )
+            self.signal = False  # Deactivate the signal after placing orders
+        
+
+# Configuration for the trading strategy
+config = Config(
+    strategy_id="okx_buy_and_sell",
+    user_id="user_test",
+    strategy=Demo(),
+    basic_config={
+        ExchangeType.OKX: BasicConfig(
+            api_key=OKX_API_KEY,
+            secret=OKX_SECRET,
+            passphrase=OKX_PASSPHRASE,
+            testnet=True,  # Use testnet for safe trading
+        )
+    },
+    public_conn_config={
+        ExchangeType.OKX: [
+            PublicConnectorConfig(
+                account_type=OkxAccountType.DEMO,  # Specify demo account type
+            )
+        ]
+    },
+    private_conn_config={
+        ExchangeType.OKX: [
+            PrivateConnectorConfig(
+                account_type=OkxAccountType.DEMO,  # Specify demo account type
+            )
+        ]
     }
-    
-    exchange = BinanceExchangeManager(config)
-    await exchange.load_markets()
-    order_manager = BinanceOrderManager(exchange)
-    
-    res = await order_manager.place_limit_order(
-        symbol='BTC/USDT:USDT',
-        side='buy',
-        price=59695,
-        amount=0.01,
-        positionSide='LONG',
-    )
-    
-    print(res)
+)
+
+# Initialize the trading engine with the configuration
+engine = Engine(config)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        engine.start()  # Start the trading engine
+    finally:
+        engine.dispose()  # Ensure resources are cleaned up
+
 ```
-
-## Core Components
-
-### ExchangeManager
-
-The `ExchangeManager` class handles the initialization and management of exchange connections. It's responsible for loading markets and providing a unified interface for interacting with different exchanges.
-
-### OrderManager
-
-The `OrderManager` class manages order-related operations such as placing and canceling orders. It provides methods for creating limit and market orders, as well as canceling existing orders.
-
-### WebsocketManager
-
-The `WebsocketManager` class handles WebSocket connections for real-time data streaming. It provides methods for subscribing to various data streams such as order book updates, trades, and user data.
-
-## Supported Exchanges
-
-TradeBotPro currently supports the following exchanges:
-
-1. Binance
-2. Bybit
-3. OKX
-
-Each exchange has its own implementation of the core components, allowing for exchange-specific features and optimizations.
-
-## Advanced Usage
-
-### Subscribing to WebSocket Streams
-
-Here's an example of how to subscribe to a WebSocket stream:
+This example illustrates how easy it is to switch between different exchanges and strategies by modifying the `config` class. For instance, to switch to Binance, you can adjust the configuration as follows, and change the symbol to `BTCUSDT-PERP.BINANCE`.
 
 ```python
-import asyncio
-from tradebot.exchange import BinanceWebsocketManager
-from tradebot.constants import Url
+from tradebot.exchange.binance import BinanceAccountType
 
-async def callback(msg):
-    print(msg)
-
-async def main():
-    ws_manager = BinanceWebsocketManager(Url.Binance.Spot)
-    await ws_manager.subscribe_kline("BTCUSDT", interval='1s', callback=callback)
-    
-    while True:
-        await asyncio.sleep(1)
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-### Error Handling
-
-TradeBotPro provides custom exceptions for better error handling. For example, the `OrderResponseError` is raised when there's an issue with an order operation:
-
-```python
-from tradebot.exceptions import OrderResponseError
-
-try:
-    res = await order_manager.place_limit_order(...)
-except OrderResponseError as e:
-    print(f"Error placing order: {e}")
+config = Config(
+    strategy_id="buy_and_sell_binance",
+    user_id="user_test",
+    strategy=Demo(),
+    basic_config={
+        ExchangeType.BINANCE: BasicConfig(
+            api_key=BINANCE_API_KEY,
+            secret=BINANCE_SECRET,
+            testnet=True,  # Use testnet for safe trading
+        )
+    },
+    public_conn_config={
+        ExchangeType.BINANCE: [
+            PublicConnectorConfig(
+                account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,  # Specify account type for Binance
+            )
+        ]
+    },
+    private_conn_config={
+        ExchangeType.BINANCE: [
+            PrivateConnectorConfig(
+                account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,  # Specify account type for Binance
+            )
+        ]
+    }
+)
 ```
 
 ## Contributing
@@ -198,18 +232,3 @@ TradeBotPro is licensed under the MIT License. See the [LICENSE](LICENSE) file f
 ## Documentation
 
 Documentation is available at [Read the Docs](https://your-project-name.readthedocs.io/).
-
-### Building Docs Locally
-
-1. Install documentation dependencies:
-   ```bash
-   pip install -r docs/requirements.txt
-   ```
-
-2. Build the documentation:
-   ```bash
-   cd docs
-   make html
-   ```
-
-The generated documentation will be in `docs/build/html`.

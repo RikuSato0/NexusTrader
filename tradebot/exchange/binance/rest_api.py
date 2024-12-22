@@ -13,6 +13,7 @@ from tradebot.base import ApiClient
 from tradebot.exchange.binance.schema import BinanceOrder, BinanceListenKey
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.exchange.binance.error import BinanceClientError, BinanceServerError
+from tradebot.core.nautilius_core import hmac_signature
 
 class BinanceApiClient(ApiClient):
     def __init__(
@@ -41,7 +42,11 @@ class BinanceApiClient(ApiClient):
             self._secret.encode("utf-8"), query.encode("utf-8"), hashlib.sha256
         ).hexdigest()
         return signature
-
+    
+    def _generate_signature_v2(self, query: str) -> str:
+        signature = hmac_signature(self._secret, query)
+        return signature
+    
     async def _fetch(
         self,
         method: str,
@@ -58,7 +63,7 @@ class BinanceApiClient(ApiClient):
         payload = urlencode(payload)
 
         if signed:
-            signature = self._generate_signature(payload)
+            signature = self._generate_signature_v2(payload)
             payload += f"&signature={signature}"
 
         url += f"?{payload}"

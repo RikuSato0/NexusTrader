@@ -363,22 +363,29 @@ class Engine:
     ) -> AccountType:
         match instrument_id.exchange:
             case ExchangeType.BYBIT:
+                bybit_basic_config = self._config.basic_config.get(ExchangeType.BYBIT)
+                if not bybit_basic_config:
+                    raise EngineBuildError(f"Basic config for {ExchangeType.BYBIT} is not set. Please add `{ExchangeType.BYBIT}` in `basic_config`.")
+                
+                is_testnet = bybit_basic_config.testnet
+                
+                
                 if instrument_id.is_spot:
                     return (
                         BybitAccountType.SPOT_TESTNET
-                        if self._config.basic_config[ExchangeType.BYBIT].testnet
+                        if is_testnet
                         else BybitAccountType.SPOT
                     )
                 elif instrument_id.is_linear:
                     return (
                         BybitAccountType.LINEAR_TESTNET
-                        if self._config.basic_config[ExchangeType.BYBIT].testnet
+                        if is_testnet
                         else BybitAccountType.LINEAR
                     )
                 elif instrument_id.is_inverse:
                     return (
                         BybitAccountType.INVERSE_TESTNET
-                        if self._config.basic_config[ExchangeType.BYBIT].testnet
+                        if is_testnet
                         else BybitAccountType.INVERSE
                     )
                 else:
@@ -386,22 +393,28 @@ class Engine:
                         f"Unsupported instrument type: {instrument_id.type}"
                     )
             case ExchangeType.BINANCE:
+                binance_basic_config = self._config.basic_config.get(ExchangeType.BINANCE)
+                if not binance_basic_config:
+                    raise EngineBuildError(f"Basic config for {ExchangeType.BINANCE} is not set. Please add `{ExchangeType.BINANCE}` in `basic_config`.")
+                
+                is_testnet = binance_basic_config.testnet
+
                 if instrument_id.is_spot:
                     return (
                         BinanceAccountType.SPOT_TESTNET
-                        if self._config.basic_config[ExchangeType.BINANCE].testnet
+                        if is_testnet
                         else BinanceAccountType.SPOT
                     )
                 elif instrument_id.is_linear:
                     return (
                         BinanceAccountType.USD_M_FUTURE_TESTNET
-                        if self._config.basic_config[ExchangeType.BINANCE].testnet
+                        if is_testnet
                         else BinanceAccountType.USD_M_FUTURE
                     )
                 elif instrument_id.is_inverse:
                     return (
                         BinanceAccountType.COIN_M_FUTURE_TESTNET
-                        if self._config.basic_config[ExchangeType.BINANCE].testnet
+                        if is_testnet
                         else BinanceAccountType.COIN_M_FUTURE
                     )
                 else:
@@ -409,7 +422,10 @@ class Engine:
                         f"Unsupported instrument type: {instrument_id.type}"
                     )
             case ExchangeType.OKX:
-                account_types = self._config.public_conn_config[ExchangeType.OKX]
+                account_types = self._config.public_conn_config.get(ExchangeType.OKX)
+                if not account_types:
+                    raise EngineBuildError(f"Public connector config for {ExchangeType.OKX} is not set. Please add `{ExchangeType.OKX}` in `public_conn_config`.")
+                
                 return account_types[0].account_type
 
     async def _start_connectors(self):

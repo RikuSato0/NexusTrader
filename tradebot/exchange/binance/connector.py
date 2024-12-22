@@ -506,7 +506,6 @@ class BinancePrivateConnector(PrivateConnector):
             fee_currency=event_data.N,
             cum_cost=cum_cost,
             cost=cost,
-            last_trade_timestamp=event_data.T,
             reduce_only=event_data.R,
             position_side=BinanceEnumParser.parse_position_side(event_data.ps),
         )

@@ -1,3 +1,4 @@
+import asyncio
 from tradebot.constants import AccountType
 from tradebot.schema import OrderSubmit, InstrumentId
 from tradebot.core.cache import AsyncCache
@@ -64,6 +65,11 @@ class BinanceExecutionManagementSystem(ExecutionManagementSystem):
             return self._binance_linear_account_type
         elif instrument_id.is_inverse:
             return self._binance_inverse_account_type
+        
+    def _build_order_submit_queues(self):
+        for account_type in self._private_connectors.keys():
+            if isinstance(account_type, BinanceAccountType):
+                self._order_submit_queues[account_type] = asyncio.Queue()
 
     def _submit_order(
         self, order: OrderSubmit, account_type: AccountType | None = None

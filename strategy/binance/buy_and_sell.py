@@ -4,21 +4,21 @@ from tradebot.constants import settings
 from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
 from tradebot.strategy import Strategy
 from tradebot.constants import ExchangeType, OrderSide, OrderType
-from tradebot.exchange.bybit import BybitAccountType
+from tradebot.exchange.binance import BinanceAccountType
 from tradebot.schema import BookL1, Order
 from tradebot.engine import Engine
 
 
 
-BYBIT_API_KEY = settings.BYBIT.ACCOUNT1.api_key
-BYBIT_SECRET = settings.BYBIT.ACCOUNT1.secret
+BINANCE_API_KEY = settings.BINANCE.FUTURE.TESTNET_1.api_key
+BINANCE_SECRET = settings.BINANCE.FUTURE.TESTNET_1.secret
 
 
 
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
+        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BINANCE"])
         self.signal = True
     
     def on_failed_order(self, order: Order):
@@ -36,44 +36,41 @@ class Demo(Strategy):
     def on_bookl1(self, bookl1: BookL1):
         if self.signal:
             self.create_order(
-                symbol="BTCUSDT-PERP.BYBIT",
+                symbol="BTCUSDT-PERP.BINANCE",
                 side=OrderSide.BUY,
                 type=OrderType.MARKET,
-                amount=Decimal("0.001"),
+                amount=Decimal("0.01"),
             )
             self.create_order(
-                symbol="BTCUSDT-PERP.BYBIT",
+                symbol="BTCUSDT-PERP.BINANCE",
                 side=OrderSide.SELL,
                 type=OrderType.MARKET,
-                amount=Decimal("0.001"),
+                amount=Decimal("0.01"),
             )
             self.signal = False
 
 config = Config(
-    strategy_id="bybit_buy_and_sell",
+    strategy_id="buy_and_sell_binance",
     user_id="user_test",
     strategy=Demo(),
     basic_config={
-        ExchangeType.BYBIT: BasicConfig(
-            api_key=BYBIT_API_KEY,
-            secret=BYBIT_SECRET,
+        ExchangeType.BINANCE: BasicConfig(
+            api_key=BINANCE_API_KEY,
+            secret=BINANCE_SECRET,
             testnet=True,
         )
     },
     public_conn_config={
-        ExchangeType.BYBIT: [
+        ExchangeType.BINANCE: [
             PublicConnectorConfig(
-                account_type=BybitAccountType.LINEAR_TESTNET,
-            ),
-            PublicConnectorConfig(
-                account_type=BybitAccountType.SPOT_TESTNET,
-            ),
+                account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
+            )
         ]
     },
     private_conn_config={
-        ExchangeType.BYBIT: [
+        ExchangeType.BINANCE: [
             PrivateConnectorConfig(
-                account_type=BybitAccountType.ALL_TESTNET,
+                account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
             )
         ]
     }

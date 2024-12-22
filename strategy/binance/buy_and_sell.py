@@ -5,7 +5,7 @@ from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfi
 from tradebot.strategy import Strategy
 from tradebot.constants import ExchangeType, OrderSide, OrderType
 from tradebot.exchange.binance import BinanceAccountType
-from tradebot.schema import BookL1, Order, OrderSubmit
+from tradebot.schema import BookL1, Order
 from tradebot.engine import Engine
 
 
@@ -38,6 +38,12 @@ class Demo(Strategy):
             self.create_order(
                 symbol="BTCUSDT-PERP.BINANCE",
                 side=OrderSide.BUY,
+                type=OrderType.MARKET,
+                amount=Decimal("0.01"),
+            )
+            self.create_order(
+                symbol="BTCUSDT-PERP.BINANCE",
+                side=OrderSide.SELL,
                 type=OrderType.MARKET,
                 amount=Decimal("0.01"),
             )

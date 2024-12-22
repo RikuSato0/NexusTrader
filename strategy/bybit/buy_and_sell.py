@@ -5,7 +5,7 @@ from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfi
 from tradebot.strategy import Strategy
 from tradebot.constants import ExchangeType, OrderSide, OrderType
 from tradebot.exchange.bybit import BybitAccountType
-from tradebot.schema import BookL1, Order, OrderSubmit
+from tradebot.schema import BookL1, Order
 from tradebot.engine import Engine
 
 
@@ -41,10 +41,16 @@ class Demo(Strategy):
                 type=OrderType.MARKET,
                 amount=Decimal("0.001"),
             )
+            self.create_order(
+                symbol="BTCUSDT-PERP.BYBIT",
+                side=OrderSide.SELL,
+                type=OrderType.MARKET,
+                amount=Decimal("0.001"),
+            )
             self.signal = False
 
 config = Config(
-    strategy_id="buy_and_sell",
+    strategy_id="bybit_buy_and_sell",
     user_id="user_test",
     strategy=Demo(),
     basic_config={

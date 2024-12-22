@@ -333,10 +333,6 @@ class OkxPrivateConnector(PrivateConnector):
         # TODO: update account from fills
         pass
 
-    async def connect(self):
-        await super().connect()
-        await self._ws_client.subscribe_orders()
-
     def _get_td_mode(self, market: OkxMarket):
         return OkxTdMode.CASH if market.spot else OkxTdMode.CROSS
 

@@ -208,6 +208,11 @@ class Engine:
             private_conn_configs,
         ) in self._config.private_conn_config.items():
             if exchange_id == ExchangeType.BYBIT:
+                if not private_conn_configs:
+                    raise EngineBuildError(
+                        f"Private connector config for {ExchangeType.BYBIT} is not set. Please add `{ExchangeType.BYBIT}` in `private_conn_config`."
+                    )
+                
                 config = private_conn_configs[0]
                 exchange: BybitExchangeManager = self._exchanges[exchange_id]
 

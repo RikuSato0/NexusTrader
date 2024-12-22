@@ -19,7 +19,6 @@ from tradebot.constants import (
     PositionSide,
 )
 from tradebot.base import PublicConnector, PrivateConnector
-from tradebot.base import OrderManagementSystem
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager, RateLimit
 from tradebot.exchange.okx.rest_api import OkxApiClient
@@ -320,7 +319,6 @@ class OkxPrivateConnector(PrivateConnector):
                 reduce_only=data.reduceOnly,
                 position_side=OkxEnumParser.parse_position_side(data.posSide),
             )
-
             self._msgbus.publish(topic="okx.order", msg=order)
 
     def _handle_positions(self, raw: bytes):

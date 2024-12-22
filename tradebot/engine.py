@@ -393,6 +393,9 @@ class Engine:
                 return account_types[0].account_type
 
     async def _start_connectors(self):
+        for connector in self._private_connectors.values():
+            await connector.connect()
+            
         for data_type, sub in self._subscriptions.items():
             match data_type:
                 case DataType.BOOKL1:
@@ -438,8 +441,7 @@ class Engine:
                 case DataType.INDEX_PRICE:
                     pass  # TODO: implement
 
-        for connector in self._private_connectors.values():
-            await connector.connect()
+
 
     async def _start_ems(self):
         for ems in self._ems.values():

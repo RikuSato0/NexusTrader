@@ -15,10 +15,10 @@ class OrderRegistry:
 
     def register_order(self, order: Order) -> None:
         """Register a new order ID to UUID mapping"""
-        self._log.debug(f"[ORDER REGISTER]: linked order id {order.id} with uuid {order.uuid}")
         self._order_id_to_uuid[order.id] = order.uuid
         self._uuid_to_order_id[order.uuid] = order.id
         self._uuid_init_events[order.id].set() # the order id is linked to the order submit uuid
+        self._log.debug(f"[ORDER REGISTER]: linked order id {order.id} with uuid {order.uuid}")
 
     def get_order_id(self, uuid: str) -> Optional[str]:
         """Get order ID by UUID"""

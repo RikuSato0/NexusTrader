@@ -160,7 +160,7 @@ class OkxApiClient(ApiClient):
             headers = await self._get_headers(timestamp, method, request_path, payload)
 
         try:
-            self._log.info(
+            self._log.debug(
                 f"Request {method} Url: {url} Headers: {headers} Payload: {payload_json}"
             )
 

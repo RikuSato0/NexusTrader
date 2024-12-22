@@ -25,6 +25,15 @@ class Demo(Strategy):
     def on_failed_order(self, order: Order):
         print(order)
     
+    def on_pending_order(self, order: Order):
+        print(order)
+    
+    def on_accepted_order(self, order: Order):
+        print(order)
+    
+    def on_filled_order(self, order: Order):
+        print(order)
+    
     def on_bookl1(self, bookl1: BookL1):
         if self.signal:
             self.create_order(

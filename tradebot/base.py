@@ -613,7 +613,6 @@ class OrderManagementSystem(ABC):
                 if not uuid:
                     await self._registry.wait_for_order_id(order.id)
                     uuid = self._registry.get_uuid(order.id)
-                
                 order.uuid = uuid
                 
                 match order.status:

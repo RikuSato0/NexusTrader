@@ -7,3 +7,7 @@ class TradebotError(Exception):
 class EngineBuildError(TradebotError):
     def __init__(self, message: str):
         super().__init__(message)
+
+class SubscriptionError(TradebotError):
+    def __init__(self, message: str):
+        super().__init__(message)

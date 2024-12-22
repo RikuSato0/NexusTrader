@@ -6,7 +6,7 @@ from tradebot.config import Config
 from tradebot.strategy import Strategy
 from tradebot.core.cache import AsyncCache
 from tradebot.core.registry import OrderRegistry
-from tradebot.error import EngineBuildError
+from tradebot.error import EngineBuildError, SubscriptionError
 from tradebot.base import (
     ExchangeManager,
     PublicConnector,
@@ -426,7 +426,7 @@ class Engine:
                         )
                         connector = self._public_connectors.get(account_type, None)
                         if connector is None:
-                            raise ValueError(
+                            raise SubscriptionError(
                                 f"Please add `{account_type}` public connector to the `config.public_conn_config`."
                             )
                         await connector.subscribe_bookl1(instrument_id.symbol)
@@ -438,7 +438,7 @@ class Engine:
                         )
                         connector = self._public_connectors.get(account_type, None)
                         if connector is None:
-                            raise ValueError(
+                            raise SubscriptionError(
                                 f"Please add `{account_type}` public connector to the `config.public_conn_config`."
                             )
                         await connector.subscribe_trade(instrument_id.symbol)
@@ -450,7 +450,7 @@ class Engine:
                         )
                         connector = self._public_connectors.get(account_type, None)
                         if connector is None:
-                            raise ValueError(
+                            raise SubscriptionError(
                                 f"Please add `{account_type}` public connector to the `config.public_conn_config`."
                             )
                         await connector.subscribe_kline(instrument_id.symbol, interval)

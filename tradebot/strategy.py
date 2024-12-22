@@ -7,7 +7,7 @@ from tradebot.core.entity import TaskManager
 from tradebot.core.cache import AsyncCache
 from tradebot.base import ExecutionManagementSystem
 from tradebot.core.nautilius_core import MessageBus
-from tradebot.schema import BookL1, Trade, Kline, Order, MarketData, OrderSubmit, InstrumentId
+from tradebot.schema import BookL1, Trade, Kline, Order, MarketData, OrderSubmit, InstrumentId, BaseMarket
 from tradebot.constants import DataType, OrderSide, OrderType, TimeInForce, PositionSide, AccountType, SubmitType, ExchangeType
 
 
@@ -61,6 +61,11 @@ class Strategy:
         """
         
         self._scheduler.add_job(func, trigger=trigger, **kwargs)
+    
+    def market(self, symbol: str) -> BaseMarket:
+        instrument_id = InstrumentId.from_str(symbol)
+        exchange = self._exchanges[instrument_id.exchange]
+        return exchange.market[instrument_id.symbol]
     
     def amount_to_precision(
         self,

@@ -18,16 +18,6 @@ class BinanceBusinessUnit(Enum):
     CM = "CM"
 
 
-class BinanceFuturesPositionSide(Enum):
-    """
-    Represents a Binance Futures position side.
-    """
-
-    BOTH = "BOTH"
-    LONG = "LONG"
-    SHORT = "SHORT"
-
-
 class BinanceFuturesWorkingType(Enum):
     """
     Represents a Binance Futures working type.

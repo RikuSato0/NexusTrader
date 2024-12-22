@@ -13,7 +13,6 @@ from tradebot.exchange.binance.constants import (
     BinanceTimeInForce,
     BinanceExecutionType,
     BinanceFuturesWorkingType,
-    BinanceFuturesPositionSide,
     BinanceBusinessUnit,
 )
 
@@ -90,7 +89,7 @@ class BinanceFuturesOrderData(msgspec.Struct, kw_only=True):
     R: bool  # Is reduce only
     wt: BinanceFuturesWorkingType
     ot: BinanceOrderType
-    ps: BinanceFuturesPositionSide
+    ps: BinancePositionSide
     cp: bool | None = None  # If Close-All, pushed with conditional order
     AP: str | None = (
         None  # Activation Price, only pushed with TRAILING_STOP_MARKET order

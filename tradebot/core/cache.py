@@ -5,7 +5,15 @@ from typing import Dict, Set, Type
 from collections import defaultdict
 
 
-from tradebot.schema import Order, Position, ExchangeType, InstrumentId, Kline, BookL1, Trade
+from tradebot.schema import (
+    Order,
+    Position,
+    ExchangeType,
+    InstrumentId,
+    Kline,
+    BookL1,
+    Trade,
+)
 from tradebot.constants import OrderStatus, STATUS_TRANSITIONS
 from tradebot.core.entity import TaskManager, RedisClient
 from tradebot.core.log import SpdLog
@@ -19,8 +27,8 @@ class AsyncCache:
         user_id: str,
         msgbus: MessageBus,
         task_manager: TaskManager,
-        sync_interval: int = 60, # seconds
-        expire_time: int = 3600, # seconds
+        sync_interval: int = 60,  # seconds
+        expire_time: int = 3600,  # seconds
     ):
         self.strategy_id = strategy_id
         self.user_id = user_id
@@ -31,11 +39,9 @@ class AsyncCache:
         self._clock = LiveClock()
         self._r_async = RedisClient.get_async_client()
         self._r = RedisClient.get_client()
-        
-        
 
         # in-memory save
-        self._mem_closed_orders: Dict[str, bool] = {} # uuid -> bool
+        self._mem_closed_orders: Dict[str, bool] = {}  # uuid -> bool
         self._mem_orders: Dict[str, Order] = {}  # uuid -> Order
 
         self._mem_open_orders: Dict[ExchangeType, Set[str]] = defaultdict(
@@ -55,34 +61,17 @@ class AsyncCache:
 
         self._shutdown_event = asyncio.Event()
         self._task_manager = task_manager
-        
+
         self._kline_cache: Dict[str, Kline] = {}
         self._bookl1_cache: Dict[str, BookL1] = {}
         self._trade_cache: Dict[str, Trade] = {}
-        
+
         self._msgbus = msgbus
         self._msgbus.subscribe(topic="kline", handler=self._update_kline_cache)
         self._msgbus.subscribe(topic="bookl1", handler=self._update_bookl1_cache)
         self._msgbus.subscribe(topic="trade", handler=self._update_trade_cache)
 
-    
-    def _update_kline_cache(self, kline: Kline):
-        self._kline_cache[kline.symbol] = kline
-    
-    def _update_bookl1_cache(self, bookl1: BookL1):
-        self._bookl1_cache[bookl1.symbol] = bookl1
-    
-    def _update_trade_cache(self, trade: Trade):
-        self._trade_cache[trade.symbol] = trade
-    
-    def kline(self, symbol: str) -> Kline | None:
-        return self._kline_cache.get(symbol, None)
-    
-    def bookl1(self, symbol: str) -> BookL1 | None:
-        return self._bookl1_cache.get(symbol, None)
-    
-    def trade(self, symbol: str) -> Trade | None:
-        return self._trade_cache.get(symbol, None)
+    ################# # base functions ####################
 
     def _encode(self, obj: Order | Position) -> bytes:
         return msgspec.json.encode(obj)
@@ -152,6 +141,33 @@ class AsyncCache:
                 self._log.debug(f"removing order {uuid} from symbol {symbol}")
                 order_set.discard(uuid)
 
+    async def close(self):
+        self._shutdown_event.set()
+        await self._sync_to_redis()
+        await self._r_async.aclose()
+
+    ################ # cache public data  ###################
+
+    def _update_kline_cache(self, kline: Kline):
+        self._kline_cache[kline.symbol] = kline
+
+    def _update_bookl1_cache(self, bookl1: BookL1):
+        self._bookl1_cache[bookl1.symbol] = bookl1
+
+    def _update_trade_cache(self, trade: Trade):
+        self._trade_cache[trade.symbol] = trade
+
+    def kline(self, symbol: str) -> Kline | None:
+        return self._kline_cache.get(symbol, None)
+
+    def bookl1(self, symbol: str) -> BookL1 | None:
+        return self._bookl1_cache.get(symbol, None)
+
+    def trade(self, symbol: str) -> Trade | None:
+        return self._trade_cache.get(symbol, None)
+
+    ################ # cache private data  ###################
+
     def _check_status_transition(self, order: Order):
         previous_order = self._mem_orders.get(order.uuid)
         if not previous_order:
@@ -167,12 +183,14 @@ class AsyncCache:
 
     def _apply_position(self, order: Order):
         symbol = order.symbol
-        
+
         # Check if order is already closed
         if self._mem_closed_orders.get(order.uuid, False):
-            self._log.debug(f"Order {order.uuid} is already closed, skipping position update")
+            self._log.debug(
+                f"Order {order.uuid} is already closed, skipping position update"
+            )
             return
-        
+
         if symbol not in self._mem_symbol_positions:
             position = self.get_position(symbol)
             if not position:
@@ -182,10 +200,10 @@ class AsyncCache:
                     strategy_id=self.strategy_id,
                 )
             self._mem_symbol_positions[symbol] = position
-        
+
         if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
             self._mem_closed_orders[order.uuid] = True
-        
+
         if order.status in (
             OrderStatus.FILLED,
             OrderStatus.PARTIALLY_FILLED,
@@ -253,9 +271,7 @@ class AsyncCache:
             key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{instrument_id.exchange.value}:symbol_orders:{symbol}"
             redis_orders: Set[bytes] = self._r.smembers(key)
             redis_orders = (
-                {uuid.decode() for uuid in redis_orders}
-                if redis_orders
-                else set()
+                {uuid.decode() for uuid in redis_orders} if redis_orders else set()
             )
             return memory_orders.union(redis_orders)
         return memory_orders
@@ -269,8 +285,3 @@ class AsyncCache:
             return self._mem_open_orders[exchange]
         else:
             raise ValueError("Either `symbol` or `exchange` must be specified")
-
-    async def close(self):
-        self._shutdown_event.set()
-        await self._sync_to_redis()
-        await self._r_async.aclose()

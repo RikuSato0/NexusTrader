@@ -7,8 +7,26 @@ from tradebot.core.entity import TaskManager
 from tradebot.core.cache import AsyncCache
 from tradebot.base import ExecutionManagementSystem
 from tradebot.core.nautilius_core import MessageBus
-from tradebot.schema import BookL1, Trade, Kline, Order, MarketData, OrderSubmit, InstrumentId, BaseMarket
-from tradebot.constants import DataType, OrderSide, OrderType, TimeInForce, PositionSide, AccountType, SubmitType, ExchangeType
+from tradebot.schema import (
+    BookL1,
+    Trade,
+    Kline,
+    Order,
+    MarketData,
+    OrderSubmit,
+    InstrumentId,
+    BaseMarket,
+)
+from tradebot.constants import (
+    DataType,
+    OrderSide,
+    OrderType,
+    TimeInForce,
+    PositionSide,
+    AccountType,
+    SubmitType,
+    ExchangeType,
+)
 
 
 class Strategy:
@@ -28,45 +46,59 @@ class Strategy:
         self._initialized = False
 
     def _init_core(
-        self, exchanges: Dict[ExchangeType, ExchangeManager], cache: AsyncCache, msgbus: MessageBus, task_manager: TaskManager, ems: Dict[ExchangeType, ExecutionManagementSystem]
+        self,
+        exchanges: Dict[ExchangeType, ExchangeManager],
+        cache: AsyncCache,
+        msgbus: MessageBus,
+        task_manager: TaskManager,
+        ems: Dict[ExchangeType, ExecutionManagementSystem],
     ):
         if self._initialized:
             return
 
         self.cache = cache
-        
+
         self._ems = ems
         self._task_manager = task_manager
         self._msgbus = msgbus
-        
+
         self._exchanges = exchanges
         self._msgbus.subscribe(topic="trade", handler=self.on_trade)
         self._msgbus.subscribe(topic="bookl1", handler=self.on_bookl1)
         self._msgbus.subscribe(topic="kline", handler=self.on_kline)
-        
+
         self._msgbus.register(endpoint="pending", handler=self.on_pending_order)
         self._msgbus.register(endpoint="accepted", handler=self.on_accepted_order)
-        self._msgbus.register(endpoint="partially_filled", handler=self.on_partially_filled_order)
+        self._msgbus.register(
+            endpoint="partially_filled", handler=self.on_partially_filled_order
+        )
         self._msgbus.register(endpoint="filled", handler=self.on_filled_order)
         self._msgbus.register(endpoint="canceling", handler=self.on_canceling_order)
         self._msgbus.register(endpoint="canceled", handler=self.on_canceled_order)
         self._msgbus.register(endpoint="failed", handler=self.on_failed_order)
-        self._msgbus.register(endpoint="cancel_failed", handler=self.on_cancel_failed_order)
+        self._msgbus.register(
+            endpoint="cancel_failed", handler=self.on_cancel_failed_order
+        )
         self._initialized = True
-    
-    def schedule(self, func: Callable, trigger: Literal['interval', 'cron'] = 'interval', **kwargs):
+
+    def schedule(
+        self,
+        func: Callable,
+        trigger: Literal["interval", "cron"] = "interval",
+        **kwargs,
+    ):
         """
         cron: run at a specific time second, minute, hour, day, month, year
         interval: run at a specific interval  seconds, minutes, hours, days, weeks, months, years
         """
-        
+
         self._scheduler.add_job(func, trigger=trigger, **kwargs)
-    
+
     def market(self, symbol: str) -> BaseMarket:
         instrument_id = InstrumentId.from_str(symbol)
         exchange = self._exchanges[instrument_id.exchange]
         return exchange.market[instrument_id.symbol]
-    
+
     def amount_to_precision(
         self,
         symbol: str,
@@ -74,9 +106,9 @@ class Strategy:
         mode: Literal["round", "ceil", "floor"] = "round",
     ) -> Decimal:
         instrument_id = InstrumentId.from_str(symbol)
-        exchange = self._exchanges[instrument_id.exchange]
-        return exchange.amount_to_precision(instrument_id.symbol, amount, mode)
-    
+        ems = self._ems[instrument_id.exchange]
+        return ems._amount_to_precision(instrument_id.symbol, amount, mode)
+
     def price_to_precision(
         self,
         symbol: str,
@@ -84,8 +116,8 @@ class Strategy:
         mode: Literal["round", "ceil", "floor"] = "round",
     ) -> Decimal:
         instrument_id = InstrumentId.from_str(symbol)
-        exchange = self._exchanges[instrument_id.exchange]
-        return exchange.price_to_precision(instrument_id.symbol, price, mode)
+        ems = self._ems[instrument_id.exchange]
+        return ems._price_to_precision(instrument_id.symbol, price, mode)
 
     def create_order(
         self,
@@ -98,7 +130,7 @@ class Strategy:
         position_side: PositionSide | None = None,
         account_type: AccountType | None = None,
         **kwargs,
-    ) -> OrderSubmit:
+    ) -> str:
         """
         Submit a new order.
 
@@ -129,10 +161,11 @@ class Strategy:
             kwargs=kwargs,
         )
         self._ems[order.instrument_id.exchange]._submit_order(order, account_type)
-        return order
-        
-    
-    def cancel_order(self, symbol: str, uuid: str, account_type: AccountType | None = None, **kwargs) -> OrderSubmit:
+        return order.uuid
+
+    def cancel_order(
+        self, symbol: str, uuid: str, account_type: AccountType | None = None, **kwargs
+    ) -> str:
         """Cancel an existing order.
 
         Args:
@@ -152,7 +185,33 @@ class Strategy:
             kwargs=kwargs,
         )
         self._ems[order.instrument_id.exchange]._submit_order(order, account_type)
-        return order
+        return order.uuid
+
+    def twap_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        amount: Decimal,
+        duration: int,
+        wait: int,
+        position_side: PositionSide | None = None,
+        account_type: AccountType | None = None,
+        **kwargs,
+    ) -> str:
+        order = OrderSubmit(
+            symbol=symbol,
+            instrument_id=InstrumentId.from_str(symbol),
+            submit_type=SubmitType.TWAP,
+            type=OrderType.MARKET,
+            side=side,
+            amount=amount,
+            duration=duration,
+            wait=wait,
+            position_side=position_side,
+            kwargs=kwargs,
+        )
+        self._ems[order.instrument_id.exchange]._submit_order(order, account_type)
+        return order.uuid
 
     def subscribe_bookl1(self, symbols: List[str]):
         """
@@ -193,7 +252,7 @@ class Strategy:
 
     def on_kline(self, kline: Kline):
         pass
-    
+
     def on_pending_order(self, order: Order):
         pass
 
@@ -205,7 +264,7 @@ class Strategy:
 
     def on_filled_order(self, order: Order):
         pass
-    
+
     def on_canceling_order(self, order: Order):
         pass
 
@@ -217,4 +276,3 @@ class Strategy:
 
     def on_cancel_failed_order(self, order: Order):
         pass
-    

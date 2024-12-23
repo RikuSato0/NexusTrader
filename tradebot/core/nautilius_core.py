@@ -36,39 +36,26 @@ def usage():
     print(clock.utc_now().isoformat(timespec='milliseconds').replace('+00:00', 'Z')) 
 
     def handler1(msg):
-        print(f"Received message: {msg} - handler1")
+        print(f"[{clock.timestamp_ns()}] Received message: {msg} - handler1")
         
         
     def handler2(msg):
-        print(f"Received message: {msg} - handler2")
+        print(f"[{clock.timestamp_ns()}] Received message: {msg} - handler2")
 
     def handler3(msg):
-        print(f"Received message: {msg} - handler3")
+        print(f"[{clock.timestamp_ns()}] Received message: {msg} - handler3")
 
     msgbus = MessageBus(
         trader_id=TraderId("TESTER-001"),
         clock=clock,
     )
 
-    msgbus.subscribe(topic = "BINANCE.order", handler=handler1)
-    msgbus.subscribe(topic = "BYBIT.order", handler=handler2)
-    msgbus.subscribe(topic = "OKX.order", handler=handler3)
+    msgbus.subscribe(topic = "order", handler=handler1)
+    msgbus.subscribe(topic = "order", handler=handler2)
+    msgbus.subscribe(topic = "order", handler=handler3)
 
-    msgbus.publish(topic="BINANCE.order", msg=clock.timestamp_ns())
-    msgbus.publish(topic="BYBIT.order", msg=clock.timestamp_ns())
-    msgbus.publish(topic="OKX.order", msg=clock.timestamp_ns())
-    
-    
-    msgbus.register(endpoint="pos", handler=handler1)
-    msgbus.register(endpoint="pos1", handler=handler2)
-    msgbus.register(endpoint="pos2", handler=handler3)
-    
+    msgbus.publish(topic="order", msg="hello")
 
-    
-    msgbus.send(endpoint="pos", msg=clock.timestamp_ns())
-    msgbus.send(endpoint="pos1", msg=clock.timestamp_ns())
-    msgbus.send(endpoint="pos2", msg=clock.timestamp_ns())
-    
     print("done")
     
     

@@ -44,11 +44,18 @@ class TaskManager:
         self._shutdown_event.set()
         self._log.debug("Shutdown signal received, cleaning up...")
 
-    def create_task(self, coro: asyncio.coroutines) -> asyncio.Task:
-        task = asyncio.create_task(coro)
+    def create_task(self, coro: asyncio.coroutines, name: str = None) -> asyncio.Task:
+        task = asyncio.create_task(coro, name=name)
         self._tasks.append(task)
         task.add_done_callback(self._handle_task_done)
         return task
+    
+    def cancel_task(self, name: str) -> bool:
+        for task in self._tasks:  
+            if task.get_name() == name:
+                task.cancel()
+                return True
+        return False
 
     def _handle_task_done(self, task: asyncio.Task):
         try:

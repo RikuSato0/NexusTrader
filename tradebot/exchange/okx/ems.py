@@ -1,4 +1,5 @@
 import asyncio
+from typing import Dict
 from tradebot.constants import AccountType
 from tradebot.schema import OrderSubmit
 from tradebot.core.cache import AsyncCache
@@ -6,10 +7,13 @@ from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager
 from tradebot.core.registry import OrderRegistry
 from tradebot.exchange.okx import OkxAccountType
+from tradebot.exchange.okx.schema import OkxMarket
 from tradebot.base import ExecutionManagementSystem
 
 
 class OkxExecutionManagementSystem(ExecutionManagementSystem):
+    _market: Dict[str, OkxMarket]
+
     OKX_ACCOUNT_TYPE_PRIORITY = [
         OkxAccountType.DEMO,
         OkxAccountType.AWS,
@@ -18,12 +22,19 @@ class OkxExecutionManagementSystem(ExecutionManagementSystem):
     
     def __init__(
         self,
+        market: Dict[str, OkxMarket],
         cache: AsyncCache,
         msgbus: MessageBus,
         task_manager: TaskManager,
         registry: OrderRegistry,
     ):
-        super().__init__(cache, msgbus, task_manager, registry)
+        super().__init__(
+            market=market,
+            cache=cache,
+            msgbus=msgbus,
+            task_manager=task_manager,
+            registry=registry,
+        )
         self._okx_account_type: OkxAccountType = None
 
     def _build_order_submit_queues(self):

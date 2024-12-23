@@ -8,7 +8,7 @@ import aiohttp
 
 import ccxt
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
 from typing import Callable, Literal
 from decimal import Decimal
 
@@ -117,72 +117,6 @@ class ExchangeManager(ABC):
             if market.future and market.active:
                 symbols.append(symbol)
         return symbols
-
-    def amount_to_precision(
-        self,
-        symbol: str,
-        amount: float,
-        mode: Literal["round", "ceil", "floor"] = "round",
-    ) -> Decimal:
-        market = self.market[symbol]
-        amount: Decimal = Decimal(str(amount))
-        precision = market.precision.amount
-
-        if precision >= 1:
-            exp = Decimal(int(precision))
-            precision_decimal = Decimal("1")
-        else:
-            exp = Decimal("1")
-            precision_decimal = Decimal(str(precision))
-
-        if mode == "round":
-            amount = (amount / exp).quantize(
-                precision_decimal, rounding=ROUND_HALF_UP
-            ) * exp
-        elif mode == "ceil":
-            amount = (amount / exp).quantize(
-                precision_decimal, rounding=ROUND_CEILING
-            ) * exp
-        elif mode == "floor":
-            amount = (amount / exp).quantize(
-                precision_decimal, rounding=ROUND_FLOOR
-            ) * exp
-
-        return amount
-
-    def price_to_precision(
-        self,
-        symbol: str,
-        price: float,
-        mode: Literal["round", "ceil", "floor"] = "round",
-    ) -> Decimal:
-        market = self.market[symbol]
-        price: Decimal = Decimal(str(price))
-
-        decimal = market.precision.price
-
-        if decimal >= 1:
-            exp = Decimal(int(decimal))
-            precision_decimal = Decimal("1")
-        else:
-            exp = Decimal("1")
-            precision_decimal = Decimal(str(decimal))
-
-        if mode == "round":
-            price = (price / exp).quantize(
-                precision_decimal, rounding=ROUND_HALF_UP
-            ) * exp
-        elif mode == "ceil":
-            price = (price / exp).quantize(
-                precision_decimal, rounding=ROUND_CEILING
-            ) * exp
-        elif mode == "floor":
-            price = (price / exp).quantize(
-                precision_decimal, rounding=ROUND_FLOOR
-            ) * exp
-
-        return price
-
 
 class Listener(WSListener):
     def __init__(self, logger, specific_ping_msg=None, *args, **kwargs):
@@ -461,6 +395,7 @@ class PrivateConnector(ABC):
 class ExecutionManagementSystem(ABC):
     def __init__(
         self,
+        market: Dict[str, BaseMarket],
         cache: AsyncCache,
         msgbus: MessageBus,
         task_manager: TaskManager,
@@ -470,6 +405,7 @@ class ExecutionManagementSystem(ABC):
             name=type(self).__name__, level="DEBUG", flush=True
         )
 
+        self._market = market
         self._cache = cache
         self._msgbus = msgbus
         self._task_manager = task_manager
@@ -482,7 +418,72 @@ class ExecutionManagementSystem(ABC):
         self._private_connectors = private_connectors
         self._build_order_submit_queues()
         self._set_account_type()
+    
+    def _amount_to_precision(
+        self,
+        symbol: str,
+        amount: float,
+        mode: Literal["round", "ceil", "floor"] = "round",
+    ) -> Decimal:
+        market = self._market[symbol]
+        amount: Decimal = Decimal(str(amount))
+        precision = market.precision.amount
 
+        if precision >= 1:
+            exp = Decimal(int(precision))
+            precision_decimal = Decimal("1")
+        else:
+            exp = Decimal("1")
+            precision_decimal = Decimal(str(precision))
+
+        if mode == "round":
+            amount = (amount / exp).quantize(
+                precision_decimal, rounding=ROUND_HALF_UP
+            ) * exp
+        elif mode == "ceil":
+            amount = (amount / exp).quantize(
+                precision_decimal, rounding=ROUND_CEILING
+            ) * exp
+        elif mode == "floor":
+            amount = (amount / exp).quantize(
+                precision_decimal, rounding=ROUND_FLOOR
+            ) * exp
+
+        return amount
+
+    def _price_to_precision(
+        self,
+        symbol: str,
+        price: float,
+        mode: Literal["round", "ceil", "floor"] = "round",
+    ) -> Decimal:
+        market = self._market[symbol]
+        price: Decimal = Decimal(str(price))
+
+        decimal = market.precision.price
+
+        if decimal >= 1:
+            exp = Decimal(int(decimal))
+            precision_decimal = Decimal("1")
+        else:
+            exp = Decimal("1")
+            precision_decimal = Decimal(str(decimal))
+
+        if mode == "round":
+            price = (price / exp).quantize(
+                precision_decimal, rounding=ROUND_HALF_UP
+            ) * exp
+        elif mode == "ceil":
+            price = (price / exp).quantize(
+                precision_decimal, rounding=ROUND_CEILING
+            ) * exp
+        elif mode == "floor":
+            price = (price / exp).quantize(
+                precision_decimal, rounding=ROUND_FLOOR
+            ) * exp
+
+        return price
+    
     @abstractmethod
     def _build_order_submit_queues(self):
         pass
@@ -541,7 +542,30 @@ class ExecutionManagementSystem(ABC):
         else:
             self._cache._order_status_update(order)  # INITIALIZED -> FAILED
             self._msgbus.send(endpoint="failed", msg=order)
+    
+    @abstractmethod
+    def _calculate_twap_orders(self, order_submit: OrderSubmit) -> Tuple[List[Decimal], float]:
+        """
+        Calculate the amount list and wait time for the twap order
+        
+        eg:
+        amount_list = [10, 10, 10]
+        wait = 10
+        """
+        pass
+    
+    async def _twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
+        amount_list, wait = self._calculate_twap_orders(order_submit)
+        for amount in amount_list:
+            order_submit.amount = amount
+            order_submit.submit_type = SubmitType.CREATE
+            await self._create_order(order_submit, account_type)
+            await asyncio.sleep(wait)
 
+    async def _create_twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
+        self._task_manager.create_task(self._twap_order(order_submit, account_type))
+        
+    
     async def _handle_submit_order(
         self, account_type: AccountType, queue: asyncio.Queue[OrderSubmit]
     ):
@@ -553,6 +577,8 @@ class ExecutionManagementSystem(ABC):
                 await self._cancel_order(order_submit, account_type)
             elif order_submit.submit_type == SubmitType.CREATE:
                 await self._create_order(order_submit, account_type)
+            elif order_submit.submit_type == SubmitType.TWAP:
+                await self._create_twap_order(order_submit, account_type)
             queue.task_done()
 
     async def start(self):

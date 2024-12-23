@@ -374,6 +374,12 @@ class OkxPrivateConnector(PrivateConnector):
 
         if position_side:
             params["posSide"] = OkxEnumParser.to_okx_position_side(position_side).value
+        
+        reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop(
+            "reduce_only", False
+        )
+        if reduce_only:
+            params["reduceOnly"] = True
 
         params.update(kwargs)
 

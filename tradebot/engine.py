@@ -300,7 +300,9 @@ class Engine:
         for exchange_id in self._exchanges.keys():
             match exchange_id:
                 case ExchangeType.BYBIT:
+                    exchange: BybitExchangeManager = self._exchanges[exchange_id]
                     self._ems[exchange_id] = BybitExecutionManagementSystem(
+                        market=exchange.market,
                         cache=self._cache,
                         msgbus=self._msgbus,
                         task_manager=self._task_manager,
@@ -308,7 +310,9 @@ class Engine:
                     )
                     self._ems[exchange_id]._build(self._private_connectors)
                 case ExchangeType.BINANCE:
+                    exchange: BinanceExchangeManager = self._exchanges[exchange_id]
                     self._ems[exchange_id] = BinanceExecutionManagementSystem(
+                        market=exchange.market,
                         cache=self._cache,
                         msgbus=self._msgbus,
                         task_manager=self._task_manager,
@@ -316,7 +320,9 @@ class Engine:
                     )
                     self._ems[exchange_id]._build(self._private_connectors)
                 case ExchangeType.OKX:
+                    exchange: OkxExchangeManager = self._exchanges[exchange_id]
                     self._ems[exchange_id] = OkxExecutionManagementSystem(
+                        market=exchange.market,
                         cache=self._cache,
                         msgbus=self._msgbus,
                         task_manager=self._task_manager,

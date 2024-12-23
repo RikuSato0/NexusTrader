@@ -1,4 +1,7 @@
 import asyncio
+import warnings
+from typing import Dict, List, Tuple
+from decimal import Decimal
 from tradebot.constants import AccountType
 from tradebot.schema import OrderSubmit
 from tradebot.core.cache import AsyncCache
@@ -6,18 +9,28 @@ from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager
 from tradebot.core.registry import OrderRegistry
 from tradebot.exchange.bybit import BybitAccountType
+from tradebot.exchange.bybit.schema import BybitMarket
 from tradebot.base import ExecutionManagementSystem
 
 
 class BybitExecutionManagementSystem(ExecutionManagementSystem):
+    _market: Dict[str, BybitMarket]
+
     def __init__(
         self,
+        market: Dict[str, BybitMarket],
         cache: AsyncCache,
         msgbus: MessageBus,
         task_manager: TaskManager,
         registry: OrderRegistry,
     ):
-        super().__init__(cache, msgbus, task_manager, registry)
+        super().__init__(
+            market=market,
+            cache=cache,
+            msgbus=msgbus,
+            task_manager=task_manager,
+            registry=registry,
+        )
         self._bybit_account_type: BybitAccountType = None
 
     def _build_order_submit_queues(self):
@@ -39,3 +52,40 @@ class BybitExecutionManagementSystem(ExecutionManagementSystem):
         if not account_type:
             account_type = self._bybit_account_type
         self._order_submit_queues[account_type].put_nowait(order)
+        
+    def _calculate_twap_orders(self, order_submit: OrderSubmit) -> Tuple[List[Decimal], float]:
+        amount_list = []
+        symbol = order_submit.instrument_id.symbol
+        total_amount = order_submit.amount
+        wait = order_submit.wait
+        duration = order_submit.duration
+        
+        book = self._cache.bookl1(symbol)
+        min_order_amount = 20 / (book.bid + book.ask)        
+        
+        interval = duration // wait
+        if total_amount < min_order_amount:
+            warnings.warn(f"Amount {total_amount} is less than min order amount {min_order_amount}. No need to split orders.")
+            wait = 0
+            return [min_order_amount], wait
+        
+        base_amount = total_amount / interval
+        
+        while base_amount < min_order_amount and interval > 1:
+            interval -= 1
+            base_amount = total_amount / interval
+        
+        remaining = Decimal(str(total_amount))
+        
+        for _ in range(interval - 1):
+            base_amount = self._amount_to_precision(symbol, base_amount)
+            amount_list.append(base_amount)
+            remaining -= base_amount
+        
+        if float(remaining) >= min_order_amount:
+            amount_list.append(remaining)
+        elif len(amount_list) > 0:
+            amount_list[-1] += remaining
+        
+        wait = duration / len(amount_list)
+        return amount_list, wait

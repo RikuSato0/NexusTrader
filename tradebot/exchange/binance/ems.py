@@ -1,4 +1,5 @@
 import asyncio
+from typing import Dict
 from tradebot.constants import AccountType
 from tradebot.schema import OrderSubmit, InstrumentId
 from tradebot.core.cache import AsyncCache
@@ -6,10 +7,13 @@ from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager
 from tradebot.core.registry import OrderRegistry
 from tradebot.exchange.binance import BinanceAccountType
+from tradebot.exchange.binance.schema import BinanceMarket
 from tradebot.base import ExecutionManagementSystem
 
 
 class BinanceExecutionManagementSystem(ExecutionManagementSystem):
+    _market: Dict[str, BinanceMarket]
+    
     BINANCE_SPOT_PRIORITY = [
         BinanceAccountType.ISOLATED_MARGIN,
         BinanceAccountType.MARGIN,
@@ -19,12 +23,19 @@ class BinanceExecutionManagementSystem(ExecutionManagementSystem):
 
     def __init__(
         self,
+        market: Dict[str, BinanceMarket],
         cache: AsyncCache,
         msgbus: MessageBus,
         task_manager: TaskManager,
         registry: OrderRegistry,
     ):
-        super().__init__(cache, msgbus, task_manager, registry)
+        super().__init__(
+            market=market,
+            cache=cache,
+            msgbus=msgbus,
+            task_manager=task_manager,
+            registry=registry,
+        )
         self._binance_spot_account_type: BinanceAccountType = None
         self._binance_linear_account_type: BinanceAccountType = None
         self._binance_inverse_account_type: BinanceAccountType = None
@@ -65,7 +76,7 @@ class BinanceExecutionManagementSystem(ExecutionManagementSystem):
             return self._binance_linear_account_type
         elif instrument_id.is_inverse:
             return self._binance_inverse_account_type
-        
+
     def _build_order_submit_queues(self):
         for account_type in self._private_connectors.keys():
             if isinstance(account_type, BinanceAccountType):

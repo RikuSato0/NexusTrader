@@ -126,7 +126,7 @@ class OrderSubmit(Struct):
     type: OrderType | None = None
     amount: Decimal | None = None
     price: Decimal | None = None
-    time_in_force: TimeInForce | None = None
+    time_in_force: TimeInForce | None = TimeInForce.GTC
     position_side: PositionSide | None = None
     duration: int | None = None
     wait: int | None = None

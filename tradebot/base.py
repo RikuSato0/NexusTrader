@@ -559,7 +559,7 @@ class ExecutionManagementSystem(ABC):
         for amount in amount_list:
             order_submit.amount = amount
             order_submit.submit_type = SubmitType.CREATE
-            await self._create_order(order_submit, account_type)
+            self._submit_order(order_submit, account_type)
             await asyncio.sleep(wait)
 
     async def _create_twap_order(self, order_submit: OrderSubmit, account_type: AccountType):

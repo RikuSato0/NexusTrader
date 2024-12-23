@@ -21,15 +21,15 @@ class InstrumentId(Struct):
     symbol: str
     exchange: ExchangeType
     type: InstrumentType
-    
+
     @property
     def is_spot(self) -> bool:
         return self.type == InstrumentType.SPOT
-    
+
     @property
     def is_linear(self) -> bool:
         return self.type == InstrumentType.LINEAR
-    
+
     @property
     def is_inverse(self) -> bool:
         return self.type == InstrumentType.INVERSE
@@ -116,6 +116,7 @@ class IndexPrice(Struct, gc=False):
     price: float
     timestamp: int
 
+
 class OrderSubmit(Struct):
     symbol: str
     instrument_id: InstrumentId
@@ -132,6 +133,7 @@ class OrderSubmit(Struct):
     wait: int | None = None
     kwargs: Dict[str, Any] | None = None
     status: OrderStatus = OrderStatus.INITIALIZED
+
 
 class Order(Struct):
     exchange: ExchangeType
@@ -424,7 +426,6 @@ class Position(Struct):
         calculate the fill delta of the order, since filled in order is cumulative,
         we need to calculate the delta of the order
         """
-
         previous_fill = self._last_order_filled.get(order.uuid, Decimal("0"))
         current_fill = order.filled
         fill_delta = current_fill - previous_fill
@@ -436,9 +437,9 @@ class Position(Struct):
 
     def _calculate_pnl(self, current_price: float, amount: Decimal) -> float:
         """Calculate PNL based on position side and current price"""
-        if self.side == PositionSide.LONG:
+        if self.is_long:
             return float(amount) * (current_price - self.entry_price)
-        elif self.side == PositionSide.SHORT:
+        elif self.is_short:
             return float(amount) * (self.entry_price - current_price)
         return 0.0
 
@@ -465,16 +466,15 @@ class Position(Struct):
         price = order.average or order.price
 
         if order.side == OrderSide.BUY:
-            if self.side != PositionSide.SHORT:
+            if not self.is_short:
                 warnings.warn(f"Cannot close short position with {self.side}")
-            self.realized_pnl += self._calculate_pnl(price, close_amount)
             self.signed_amount += close_amount
         elif order.side == OrderSide.SELL:
-            if self.side != PositionSide.LONG:
+            if not self.is_long:
                 warnings.warn(f"Cannot close long position with {self.side}")
-            self.realized_pnl += self._calculate_pnl(price, close_amount)
             self.signed_amount -= close_amount
 
+        self.realized_pnl += self._calculate_pnl(price, close_amount)
         self.unrealized_pnl = self._calculate_pnl(price, self.amount)
 
         if self.signed_amount == 0:
@@ -487,7 +487,7 @@ class Position(Struct):
             if not self.side:
                 self.side = PositionSide.LONG
             else:
-                if self.side != PositionSide.LONG:
+                if not self.is_long:
                     warnings.warn(f"Cannot open long position with {self.side}")
 
             tmp_amount = self.signed_amount + open_amount
@@ -507,7 +507,7 @@ class Position(Struct):
             if not self.side:
                 self.side = PositionSide.SHORT
             else:
-                if self.side != PositionSide.SHORT:
+                if not self.is_short:
                     warnings.warn(f"Cannot open short position with {self.side}")
 
             tmp_amount = self.signed_amount - open_amount

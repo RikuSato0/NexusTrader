@@ -1,8 +1,9 @@
 import pytest
 import time
+from decimal import Decimal
 from copy import copy
 from tradebot.schema import Order, ExchangeType, BookL1, Kline, Trade, Position
-from tradebot.constants import OrderStatus, OrderSide, OrderType
+from tradebot.constants import OrderStatus, OrderSide, OrderType, PositionSide
 from tradebot.core.cache import AsyncCache
 
 
@@ -69,7 +70,7 @@ async def test_market_data_cache(async_cache: AsyncCache):
     assert async_cache.bookl1("BTC/USDT") == bookl1
 
 
-################ # test cache private data  ###################
+################ # test cache private order data  ###################
 
 
 async def test_order_management(async_cache: AsyncCache, sample_order: Order):
@@ -111,86 +112,158 @@ async def test_cache_cleanup(async_cache: AsyncCache, sample_order: Order):
     assert async_cache.get_order(expired_order.uuid) is None
 
 
-@pytest.fixture
-def position_order():
-    return Order(
-        id="test-order-1",
-        uuid="test-uuid-1",
+################ # test cache private position data  ###################
+
+
+def create_position_orders():
+    # Long position orders
+    long_open_order = Order(
         exchange=ExchangeType.BINANCE,
         symbol="BTCUSDT.BINANCE",
-        side=OrderSide.BUY,
+        status=OrderStatus.FILLED,
+        id="123",
+        uuid="uuid-123",
+        amount=Decimal("1.0"),
+        filled=Decimal("1.0"),
         type=OrderType.LIMIT,
-        status=OrderStatus.PENDING,
+        side=OrderSide.BUY,
         price=50000.0,
-        amount=1.0,
-        timestamp=1000,
+        average=50000.0,
+        remaining=Decimal("0"),
+        position_side=PositionSide.FLAT,
     )
 
-
-@pytest.fixture
-def filled_order(position_order: Order) -> Order:
-    filled = copy(position_order)
-    filled.status = OrderStatus.FILLED
-    filled.filled = filled.amount
-    return filled
-
-
-async def test_apply_position(async_cache: AsyncCache, filled_order: Order):
-    # Test position creation and update with filled order
-    async_cache._apply_position(filled_order)
-
-    position: Position = async_cache.get_position(filled_order.symbol)
-    assert position is not None
-    assert position.symbol == filled_order.symbol
-    assert position.exchange == filled_order.exchange
-    # For a BUY order, position size should be positive
-    assert position.amount == filled_order.filled
-
-    # Test with SELL order
-    sell_order = copy(filled_order)
-    sell_order.uuid = "test-uuid-2"
-    sell_order.side = OrderSide.SELL
-    async_cache._apply_position(sell_order)
-
-    position = async_cache.get_position(sell_order.symbol)
-    # After buying and selling same amount, position should be zero
-    assert position.amount == 0
-
-
-@pytest.fixture
-def position():
-    return Position(
-        symbol="BTC/USDT",
+    long_close_order = Order(
         exchange=ExchangeType.BINANCE,
-        strategy_id="test-strategy",
+        symbol="BTCUSDT.BINANCE",
+        status=OrderStatus.FILLED,
+        id="124",
+        uuid="uuid-124",
+        amount=Decimal("1.0"),
+        filled=Decimal("1.0"),
+        type=OrderType.LIMIT,
+        side=OrderSide.SELL,
+        price=51000.0,
+        average=51000.0,
+        remaining=Decimal("0"),
+        position_side=PositionSide.FLAT,
     )
 
+    # Short position orders
+    short_open_order = Order(
+        exchange=ExchangeType.BINANCE,
+        symbol="BTCUSDT.BINANCE",
+        status=OrderStatus.FILLED,
+        id="125",
+        uuid="uuid-125",
+        amount=Decimal("1.0"),
+        filled=Decimal("1.0"),
+        type=OrderType.LIMIT,
+        side=OrderSide.SELL,
+        price=52000.0,
+        average=52000.0,
+        remaining=Decimal("0"),
+        position_side=PositionSide.FLAT,
+    )
 
-async def test_get_position(async_cache: AsyncCache, position: Position):
-    # Test getting non-existent position
-    assert async_cache.get_position("NON/EXISTENT") is None
+    short_close_order = Order(
+        exchange=ExchangeType.BINANCE,
+        symbol="BTCUSDT.BINANCE",
+        status=OrderStatus.FILLED,
+        id="126",
+        uuid="uuid-126",
+        amount=Decimal("1.0"),
+        filled=Decimal("1.0"),
+        type=OrderType.LIMIT,
+        side=OrderSide.BUY,
+        price=51500.0,
+        average=51500.0,
+        remaining=Decimal("0"),
+        position_side=PositionSide.FLAT,
+    )
 
-    # Test getting position after applying order
-    symbol = "BTC/USDT"
-    async_cache._mem_symbol_positions[symbol] = position
+    # Partially filled order
+    partial_order = Order(
+        exchange=ExchangeType.BINANCE,
+        symbol="BTCUSDT.BINANCE",
+        status=OrderStatus.PARTIALLY_FILLED,
+        id="127",
+        uuid="uuid-127",
+        amount=Decimal("2.0"),
+        filled=Decimal("1.0"),
+        type=OrderType.LIMIT,
+        side=OrderSide.BUY,
+        price=50000.0,
+        average=50000.0,
+        remaining=Decimal("1.0"),
+        position_side=PositionSide.FLAT,
+    )
 
-    retrieved_position = async_cache.get_position(symbol)
-    assert retrieved_position is not None
-    assert retrieved_position.symbol == symbol
-    assert retrieved_position.exchange == ExchangeType.BINANCE
-    assert retrieved_position.strategy_id == "test-strategy"
+    return {
+        "long_open": long_open_order,
+        "long_close": long_close_order,
+        "short_open": short_open_order,
+        "short_close": short_close_order,
+        "partial": partial_order,
+    }
 
 
-async def test_apply_position_with_closed_orders(
+async def test_apply_position(async_cache: AsyncCache):
+    test_orders = create_position_orders()
+
+    # Test long position
+    long_open = test_orders["long_open"]
+    async_cache._apply_position(long_open)
+
+    position: Position = async_cache.get_position(long_open.symbol)
+    assert position is not None
+    assert position.symbol == long_open.symbol
+    assert position.exchange == long_open.exchange
+    # For a BUY order, position size should be positive
+    assert position.signed_amount == long_open.filled
+
+    # Test closing long position
+    long_close = test_orders["long_close"]
+    async_cache._apply_position(long_close)
+
+    position = async_cache.get_position(long_close.symbol)
+    # After buying and selling same amount, position should be zero
+    assert position.signed_amount == 0
+
+    # Test short position
+    short_open = test_orders["short_open"]
+    async_cache._apply_position(short_open)
+
+    position = async_cache.get_position(short_open.symbol)
+    assert position is not None
+    # For a SELL order, position size should be negative
+    assert position.signed_amount == -short_open.filled
+
+    # Test closing short position
+    short_close = test_orders["short_close"]
+    async_cache._apply_position(short_close)
+
+    position = async_cache.get_position(short_close.symbol)
+    # After shorting and buying back same amount, position should be zero
+    assert position.signed_amount == 0
+
+
+@pytest.fixture
+def filled_order() -> Order:
+    return create_position_orders()["long_open"]
+
+
+async def test_apply_position_with_twice_filled_orders(
     async_cache: AsyncCache, filled_order: Order
 ):
+    """test for bybit, filled order trigger twice occasionally"""
     # First application should update position
     async_cache._apply_position(filled_order)
     initial_position = async_cache.get_position(filled_order.symbol)
-    initial_size = initial_position.size
+    initial_size = initial_position.signed_amount
 
     # Second application of same order should not affect position
     async_cache._apply_position(filled_order)
     position = async_cache.get_position(filled_order.symbol)
-    assert position.size == initial_size
+    assert position.signed_amount == initial_size
     assert async_cache._mem_closed_orders.get(filled_order.uuid) is True

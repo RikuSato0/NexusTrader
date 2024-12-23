@@ -55,13 +55,14 @@ class BybitExecutionManagementSystem(ExecutionManagementSystem):
         
     def _calculate_twap_orders(self, order_submit: OrderSubmit) -> Tuple[List[Decimal], float]:
         amount_list = []
-        symbol = order_submit.instrument_id.symbol
+        symbol = order_submit.symbol
+        market = self._market[symbol]
         total_amount = float(order_submit.amount)
         wait = order_submit.wait
         duration = order_submit.duration
         
         book = self._cache.bookl1(symbol)
-        min_order_amount = 20 / (book.bid + book.ask)        
+        min_order_amount = max(20 / (book.bid + book.ask), market.limits.amount.min)       
         
         interval = duration // wait
         if total_amount < min_order_amount:

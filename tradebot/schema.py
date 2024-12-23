@@ -128,6 +128,8 @@ class OrderSubmit(Struct):
     price: Decimal | None = None
     time_in_force: TimeInForce | None = None
     position_side: PositionSide | None = None
+    duration: int | None = None
+    wait: int | None = None
     kwargs: Dict[str, Any] | None = None
     status: OrderStatus = OrderStatus.INITIALIZED
 
@@ -395,7 +397,7 @@ class Position(Struct):
     entry_price: float = 0
     unrealized_pnl: float = 0
     realized_pnl: float = 0
-    last_order_filled: Dict[str, Decimal] = field(default_factory=dict)
+    _last_order_filled: Dict[str, Decimal] = field(default_factory=dict)
 
     @property
     def amount(self) -> Decimal:
@@ -423,13 +425,13 @@ class Position(Struct):
         we need to calculate the delta of the order
         """
 
-        previous_fill = self.last_order_filled.get(order.id, Decimal("0"))
+        previous_fill = self._last_order_filled.get(order.uuid, Decimal("0"))
         current_fill = order.filled
         fill_delta = current_fill - previous_fill
         if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
-            self.last_order_filled.pop(order.id, None)
+            self._last_order_filled.pop(order.uuid, None)
         else:
-            self.last_order_filled[order.id] = order.filled
+            self._last_order_filled[order.uuid] = order.filled
         return fill_delta
 
     def _calculate_pnl(self, current_price: float, amount: Decimal) -> float:

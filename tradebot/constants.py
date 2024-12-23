@@ -178,6 +178,8 @@ UrlType = Union[
 class SubmitType(Enum):
     CREATE = 0
     CANCEL = 1
+    TWAP = 2
+    VWAP = 3
 
 class EventType(Enum):
     BOOKL1 = 0

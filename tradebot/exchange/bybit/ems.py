@@ -56,7 +56,7 @@ class BybitExecutionManagementSystem(ExecutionManagementSystem):
     def _calculate_twap_orders(self, order_submit: OrderSubmit) -> Tuple[List[Decimal], float]:
         amount_list = []
         symbol = order_submit.instrument_id.symbol
-        total_amount = order_submit.amount
+        total_amount = float(order_submit.amount)
         wait = order_submit.wait
         duration = order_submit.duration
         
@@ -67,7 +67,7 @@ class BybitExecutionManagementSystem(ExecutionManagementSystem):
         if total_amount < min_order_amount:
             warnings.warn(f"Amount {total_amount} is less than min order amount {min_order_amount}. No need to split orders.")
             wait = 0
-            return [min_order_amount], wait
+            return [self._amount_to_precision(symbol, min_order_amount)], wait
         
         base_amount = total_amount / interval
         
@@ -75,17 +75,16 @@ class BybitExecutionManagementSystem(ExecutionManagementSystem):
             interval -= 1
             base_amount = total_amount / interval
         
-        remaining = Decimal(str(total_amount))
+        base_amount = self._amount_to_precision(symbol, base_amount)
         
-        for _ in range(interval - 1):
-            base_amount = self._amount_to_precision(symbol, base_amount)
-            amount_list.append(base_amount)
-            remaining -= base_amount
+        interval = total_amount // float(base_amount)
+        remaining = total_amount - interval * float(base_amount)
         
-        if float(remaining) >= min_order_amount:
-            amount_list.append(remaining)
-        elif len(amount_list) > 0:
-            amount_list[-1] += remaining
+        if remaining < min_order_amount:
+            amount_list = [base_amount] * interval 
+            amount_list[-1] += Decimal(str(remaining))
+        else:
+            amount_list = [base_amount] * interval + [Decimal(str(remaining))]
         
         wait = duration / len(amount_list)
         return amount_list, wait

@@ -557,8 +557,16 @@ class ExecutionManagementSystem(ABC):
     async def _twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
         amount_list, wait = self._calculate_twap_orders(order_submit)
         for amount in amount_list:
-            order_submit.amount = amount
-            order_submit.submit_type = SubmitType.CREATE
+            order_submit = OrderSubmit(
+                symbol=order_submit.symbol,
+                instrument_id=order_submit.instrument_id,
+                submit_type=SubmitType.CREATE,
+                type=OrderType.MARKET,
+                side=order_submit.side,
+                amount=amount,
+                position_side=order_submit.position_side,
+                kwargs=order_submit.kwargs,
+            )
             self._submit_order(order_submit, account_type)
             await asyncio.sleep(wait)
 

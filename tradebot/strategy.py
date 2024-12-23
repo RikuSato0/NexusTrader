@@ -202,7 +202,6 @@ class Strategy:
             symbol=symbol,
             instrument_id=InstrumentId.from_str(symbol),
             submit_type=SubmitType.TWAP,
-            type=OrderType.MARKET,
             side=side,
             amount=amount,
             duration=duration,

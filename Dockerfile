@@ -20,3 +20,5 @@ WORKDIR /app/tradebot-pro
 RUN touch .keys/config.cfg 
     
 RUN pip install --no-cache-dir -r requirements.txt
+
+## todo: chown ubuntu:ubuntu .keys/master.key .keys/redis.key

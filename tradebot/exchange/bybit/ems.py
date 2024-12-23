@@ -77,7 +77,7 @@ class BybitExecutionManagementSystem(ExecutionManagementSystem):
         
         base_amount = self._amount_to_precision(symbol, base_amount)
         
-        interval = total_amount // float(base_amount)
+        interval = int(total_amount // float(base_amount))
         remaining = total_amount - interval * float(base_amount)
         
         if remaining < min_order_amount:

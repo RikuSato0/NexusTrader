@@ -286,8 +286,8 @@ class OkxPrivateConnector(PrivateConnector):
                     self._handle_account(raw)
                 elif channel == "fills":
                     self._handle_fills(raw)
-        except msgspec.ValidationError:
-            self._log.error(f"Error decoding message: {str(raw)}")
+        except msgspec.DecodeError as e:
+            self._log.error(f"Error decoding message: {str(raw)} {e}")
 
     def _handle_orders(self, raw: bytes):
         msg: OkxWsOrderMsg = self._decoder_ws_order_msg.decode(raw)
@@ -408,7 +408,7 @@ class OkxPrivateConnector(PrivateConnector):
             order = Order(
                 exchange=self._exchange_id,
                 timestamp=self._clock.timestamp_ms(),
-                symbol=symbol,
+                symbol=market.symbol,
                 type=type,
                 side=side,
                 amount=amount,

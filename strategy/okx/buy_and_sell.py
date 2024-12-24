@@ -19,7 +19,7 @@ OKX_PASSPHRASE = settings.OKX.DEMO_1.passphrase
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.OKX"])
+        self.subscribe_bookl1(symbols=["BTCUSDT.OKX"])
         self.signal = True
     
     def on_failed_order(self, order: Order):
@@ -40,16 +40,16 @@ class Demo(Strategy):
     def on_bookl1(self, bookl1: BookL1):
         if self.signal:
             self.create_order(
-                symbol="BTCUSDT-PERP.OKX",
+                symbol="BTCUSDT.OKX",
                 side=OrderSide.BUY,
                 type=OrderType.MARKET,
-                amount=Decimal("0.1"),
+                amount=Decimal("0.01"),
             )
             self.create_order(
-                symbol="BTCUSDT-PERP.OKX",
+                symbol="BTCUSDT.OKX",
                 side=OrderSide.SELL,
                 type=OrderType.MARKET,
-                amount=Decimal("0.1"),
+                amount=Decimal("0.01"),
             )
             self.signal = False
         

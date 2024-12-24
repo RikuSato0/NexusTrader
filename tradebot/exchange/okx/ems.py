@@ -1,5 +1,6 @@
 import asyncio
-from typing import Dict
+from decimal import Decimal
+from typing import Dict, List, Tuple
 from tradebot.constants import AccountType
 from tradebot.schema import OrderSubmit
 from tradebot.core.cache import AsyncCache
@@ -56,3 +57,6 @@ class OkxExecutionManagementSystem(ExecutionManagementSystem):
         if not account_type:
             account_type = self._okx_account_type
         self._order_submit_queues[account_type].put_nowait(order)
+
+    def _calculate_twap_orders(self, order_submit: OrderSubmit) -> Tuple[List[Decimal], float]:
+        pass

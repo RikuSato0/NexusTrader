@@ -72,6 +72,7 @@ class OkxPositionSide(Enum):
     LONG = "long"
     SHORT = "short"
     NET = "net"
+    NONE = ""
 
 @unique
 class OkxOrderSide(Enum):
@@ -120,6 +121,7 @@ class OkxEnumParser:
         OkxPositionSide.NET: PositionSide.FLAT,
         OkxPositionSide.LONG: PositionSide.LONG,
         OkxPositionSide.SHORT: PositionSide.SHORT,
+        OkxPositionSide.NONE: None,
     }
 
     _okx_order_side_map = {
@@ -129,7 +131,11 @@ class OkxEnumParser:
 
     # Add reverse mapping dictionaries
     _order_status_to_okx_map = {v: k for k, v in _okx_order_status_map.items()}
-    _position_side_to_okx_map = {v: k for k, v in _okx_position_side_map.items()}
+    _position_side_to_okx_map = {
+        PositionSide.FLAT: OkxPositionSide.NET,
+        PositionSide.LONG: OkxPositionSide.LONG,
+        PositionSide.SHORT: OkxPositionSide.SHORT,
+    }
     _order_side_to_okx_map = {v: k for k, v in _okx_order_side_map.items()}
 
     # Add reverse parsing methods

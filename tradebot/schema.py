@@ -445,7 +445,10 @@ class Position(Struct):
 
     def apply(self, order: Order):
         if order.position_side == PositionSide.FLAT:
-            fill_delta = self._calculate_fill_delta(order)
+            if not order.last_filled:
+                fill_delta = self._calculate_fill_delta(order)
+            else:
+                fill_delta = order.last_filled
 
             if (self.signed_amount > 0 and order.side == OrderSide.SELL) or (
                 self.signed_amount < 0 and order.side == OrderSide.BUY

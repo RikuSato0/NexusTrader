@@ -386,9 +386,9 @@ class BybitPrivateConnector(PrivateConnector):
                 amount=Decimal(data.qty),
                 filled=Decimal(data.cumExecQty),
                 remaining=Decimal(data.leavesQty),
-                fee=float(data.cumExecFee),
+                fee=Decimal(data.cumExecFee),
                 fee_currency=data.feeCurrency,
-                cum_cost=float(data.cumExecValue),
+                cum_cost=Decimal(data.cumExecValue),
                 reduce_only=data.reduceOnly,
                 position_side=BybitEnumParser.parse_position_side(data.positionIdx),
             )

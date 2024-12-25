@@ -193,6 +193,15 @@ class OkxGeneralResponse(msgspec.Struct):
     msg: str
 
 
+class OkxErrorData(msgspec.Struct):
+    sCode: str
+    sMsg: str
+
+class OkxErrorResponse(msgspec.Struct):
+    code: str
+    data: list[OkxErrorData]
+    msg: str
+
 class OkxCancelOrderData(msgspec.Struct):
     ordId: str
     clOrdId: str

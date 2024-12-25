@@ -153,10 +153,10 @@ class Order(Struct):
     last_filled_price: Optional[float] = None
     last_filled: Optional[Decimal] = None
     remaining: Optional[Decimal] = None
-    fee: Optional[float] = None
+    fee: Optional[Decimal] = None
     fee_currency: Optional[str] = None
-    cost: Optional[float] = None
-    cum_cost: Optional[float] = None
+    cost: Optional[Decimal] = None
+    cum_cost: Optional[Decimal] = None
     reduce_only: Optional[bool] = None
     position_side: Optional[PositionSide] = None
 

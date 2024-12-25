@@ -476,14 +476,14 @@ class BinancePrivateConnector(PrivateConnector):
 
         # we use the last filled quantity to calculate the cost, instead of the accumulated filled quantity
         if (type := event_data.o) == BinanceOrderType.MARKET:
-            cost = float(event_data.l) * float(event_data.ap)
-            cum_cost = float(event_data.z) * float(event_data.ap)
+            cost = Decimal(event_data.l) * Decimal(event_data.ap)
+            cum_cost = Decimal(event_data.z) * Decimal(event_data.ap)
         elif type == BinanceOrderType.LIMIT:
-            price = float(event_data.ap) or float(
+            price = Decimal(event_data.ap) or Decimal(
                 event_data.p
             )  # if average price is 0 or empty, use price
-            cost = float(event_data.l) * price
-            cum_cost = float(event_data.z) * price
+            cost = Decimal(event_data.l) * price
+            cum_cost = Decimal(event_data.z) * price
 
         order = Order(
             exchange=self._exchange_id,
@@ -502,7 +502,7 @@ class BinancePrivateConnector(PrivateConnector):
             last_filled_price=float(event_data.L),
             last_filled=float(event_data.l),
             remaining=Decimal(event_data.q) - Decimal(event_data.z),
-            fee=float(event_data.n),
+            fee=Decimal(event_data.n),
             fee_currency=event_data.N,
             cum_cost=cum_cost,
             cost=cost,
@@ -598,10 +598,10 @@ class BinancePrivateConnector(PrivateConnector):
             last_filled_price=float(event_data.L),
             last_filled=float(event_data.l),
             remaining=Decimal(event_data.q) - Decimal(event_data.z),
-            fee=float(event_data.n),
+            fee=Decimal(event_data.n),
             fee_currency=event_data.N,
-            cum_cost=float(event_data.Z),
-            cost=float(event_data.Y),
+            cum_cost=Decimal(event_data.Z),
+            cost=Decimal(event_data.Y),
         )
 
         self._msgbus.publish(topic="binance.order", msg=order)

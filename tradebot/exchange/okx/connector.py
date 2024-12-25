@@ -293,7 +293,6 @@ class OkxPrivateConnector(PrivateConnector):
         msg: OkxWsOrderMsg = self._decoder_ws_order_msg.decode(raw)
         self._log.debug(f"Order update: {str(msg)}")
         for data in msg.data:
-            price = float(data.avgPx) if data.avgPx else float(data.px)
             symbol = self._market_id[data.instId]
             order = Order(
                 exchange=self._exchange_id,
@@ -312,10 +311,10 @@ class OkxPrivateConnector(PrivateConnector):
                 last_filled_price=float(data.fillPx) if data.fillPx else None,
                 last_filled=Decimal(data.fillSz) if data.fillSz else Decimal(0),
                 remaining=Decimal(data.sz) - Decimal(data.accFillSz),
-                fee=abs(float(data.fee)),
+                fee=Decimal(data.fee),
                 fee_currency=data.feeCcy,
-                cost=price * float(data.fillSz),
-                cum_cost=price * float(data.accFillSz),
+                cost=Decimal(data.avgPx) * Decimal(data.fillSz),
+                cum_cost=Decimal(data.avgPx) * Decimal(data.accFillSz),
                 reduce_only=data.reduceOnly,
                 position_side=OkxEnumParser.parse_position_side(data.posSide),
             )
@@ -371,6 +370,9 @@ class OkxPrivateConnector(PrivateConnector):
             if not price:
                 raise ValueError("Price is required for limit order")
             params["px"] = str(price)
+        else:
+            if market.spot:
+                params["tgtCcy"] = "base_ccy"
 
         if position_side:
             params["posSide"] = OkxEnumParser.to_okx_position_side(position_side).value

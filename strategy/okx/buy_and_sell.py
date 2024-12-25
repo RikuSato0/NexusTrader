@@ -38,19 +38,21 @@ class Demo(Strategy):
         print(order)
     
     def on_bookl1(self, bookl1: BookL1):
+        
         if self.signal:
             self.create_order(
                 symbol="BTCUSDT.OKX",
                 side=OrderSide.BUY,
-                type=OrderType.MARKET,
+                type=OrderType.LIMIT,
+                price=self.price_to_precision("BTCUSDT.OKX", bookl1.bid),
                 amount=Decimal("0.01"),
             )
-            self.create_order(
-                symbol="BTCUSDT.OKX",
-                side=OrderSide.SELL,
-                type=OrderType.MARKET,
-                amount=Decimal("0.01"),
-            )
+            # self.create_order(
+            #     symbol="BTCUSDT.OKX",
+            #     side=OrderSide.SELL,
+            #     type=OrderType.MARKET,
+            #     amount=Decimal("0.01"),
+            # )
             self.signal = False
         
 

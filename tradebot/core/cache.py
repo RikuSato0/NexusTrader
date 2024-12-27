@@ -57,7 +57,8 @@ class AsyncCache:
         self._mem_symbol_orders: Dict[str, Set[str]] = defaultdict(
             set
         )  # symbol -> set(uuid)
-        self._mem_symbol_positions: Dict[str, SpotPosition | FuturePosition] = {}  # symbol -> Position
+        self._mem_spot_positions: Dict[str, SpotPosition] = {}  # symbol -> Position
+        self._mem_future_positions: Dict[str, FuturePosition] = {}  # symbol -> Position
 
         # set params
         self._sync_interval = sync_interval  # sync interval
@@ -123,7 +124,11 @@ class AsyncCache:
                 await self._r_async.sadd(key, *uuids)
 
         # Add position sync
-        for symbol, position in self._mem_symbol_positions.copy().items():
+        for symbol, position in self._mem_spot_positions.copy().items():
+            key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{position.exchange.value}:symbol_positions:{symbol}"
+            await self._r_async.set(key, self._encode(position))
+        
+        for symbol, position in self._mem_future_positions.copy().items():
             key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{position.exchange.value}:symbol_positions:{symbol}"
             await self._r_async.set(key, self._encode(position))
 
@@ -185,7 +190,7 @@ class AsyncCache:
 
         return True
 
-    def _apply_position(self, order: Order):
+    def _apply_spot_position(self, order: Order):
         symbol = order.symbol
 
         # Check if order is already closed
@@ -195,14 +200,14 @@ class AsyncCache:
             )
             return
 
-        if symbol not in self._mem_symbol_positions:
+        if symbol not in self._mem_spot_positions:
             position = self.get_position(symbol)
             if not position:
                 position = SpotPosition(
                     symbol=symbol,
                     exchange=order.exchange,
                 )
-            self._mem_symbol_positions[symbol] = position
+            self._mem_spot_positions[symbol] = position
 
         if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
             self._mem_closed_orders[order.uuid] = True # set the order to closed, so it will not be applied again
@@ -215,21 +220,30 @@ class AsyncCache:
             self._log.debug(
                 f"POSITION UPDATED: status {order.status} order_id {order.id} side {order.side} filled: {order.filled} amount: {order.amount}"
             )
-            self._mem_symbol_positions[symbol]._apply(order)
+            self._mem_spot_positions[symbol]._apply(order)
+    
+    def _apply_future_position(self, position: FuturePosition):
+        self._mem_future_positions[position.symbol] = position
 
     def get_position(self, symbol: str) -> Position:
         # First try memory
-        if position := self._mem_symbol_positions.get(symbol):
-            return position
-
-        # Then try Redis
         instrument_id = InstrumentId.from_str(symbol)
+        if instrument_id.is_spot:
+            if position := self._mem_spot_positions.get(symbol, None):
+                return position
+        else:
+            if position := self._mem_future_positions.get(symbol, None):
+                return position
+        # Then try Redis
         key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{instrument_id.exchange.value}:symbol_positions:{symbol}"
         if position_data := self._r.get(key):
-            position = self._decode(position_data, Position)
-            self._mem_symbol_positions[symbol] = position  # Cache in memory
+            if instrument_id.is_spot:
+                position = self._decode(position_data, SpotPosition)
+                self._mem_spot_positions[symbol] = position  # Cache in memory
+            else:
+                position = self._decode(position_data, FuturePosition)
+                self._mem_future_positions[symbol] = position  # Cache in memory
             return position
-
         return None
 
     def _order_initialized(self, order: Order):

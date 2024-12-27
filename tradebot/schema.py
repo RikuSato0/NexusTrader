@@ -438,20 +438,39 @@ class Position(Struct):
         else:
             pass
 
-    def _close_position(self, order: Order, close_amount: Decimal):
-        price = order.average or order.price
+    def _update_position(
+        self, current_price: float, amount: Decimal, buy_sell: OrderSide
+    ):
+        amount_change = amount if buy_sell == OrderSide.BUY else -amount
 
+        # 1. update entry price
+        self.entry_price = (
+            (
+                self.entry_price * float(self.signed_amount)
+                + current_price * float(amount_change)
+            )
+            / float(self.signed_amount + amount_change)
+            if self.signed_amount + amount_change != 0
+            else 0
+        )
+
+        # 2. update signed amount
+        self.signed_amount += amount_change
+
+        # 3. update unrealized pnl
+        self.unrealized_pnl = self._calculate_pnl(current_price, self.amount)
+
+    def _close_position(self, order: Order, close_amount: Decimal):
         if order.side == OrderSide.BUY:
             if not self.is_short:
                 warnings.warn(f"Cannot close short position with {self.side}")
-            self.signed_amount += close_amount
         elif order.side == OrderSide.SELL:
             if not self.is_long:
                 warnings.warn(f"Cannot close long position with {self.side}")
-            self.signed_amount -= close_amount
 
+        price = order.average or order.price
+        self._update_position(price, close_amount, order.side)
         self.realized_pnl += self._calculate_pnl(price, close_amount)
-        self.unrealized_pnl = self._calculate_pnl(price, self.amount)
 
         if self.signed_amount == 0:
             self.side = None
@@ -466,19 +485,6 @@ class Position(Struct):
                 if not self.is_long:
                     warnings.warn(f"Cannot open long position with {self.side}")
 
-            tmp_amount = self.signed_amount + open_amount
-            price = order.average or order.price
-            self.entry_price = (
-                (
-                    self.entry_price * float(self.signed_amount)
-                    + price * float(open_amount)
-                )
-                / float(tmp_amount)
-                if tmp_amount != 0
-                else 0
-            )
-            self.signed_amount = tmp_amount
-
         elif order.side == OrderSide.SELL:
             if not self.side:
                 self.side = PositionSide.SHORT
@@ -486,17 +492,5 @@ class Position(Struct):
                 if not self.is_short:
                     warnings.warn(f"Cannot open short position with {self.side}")
 
-            tmp_amount = self.signed_amount - open_amount
-            price = order.average or order.price
-            self.entry_price = (
-                (
-                    self.entry_price * float(self.signed_amount)
-                    - price * float(open_amount)
-                )
-                / float(tmp_amount)
-                if tmp_amount != 0
-                else 0
-            )
-            self.signed_amount = tmp_amount
-
-        self.unrealized_pnl = self._calculate_pnl(price, self.amount)
+        price = order.average or order.price
+        self._update_position(price, open_amount, order.side)

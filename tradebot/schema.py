@@ -313,37 +313,6 @@ class BaseMarket(Struct):
     # feeSide: str  # not supported by okx exchanges
 
 
-class MarketData(Struct):
-    bookl1: Dict[str, Dict[str, BookL1]] = defaultdict(dict)
-    bookl2: Dict[str, Dict[str, BookL2]] = defaultdict(dict)
-    trade: Dict[str, Dict[str, Trade]] = defaultdict(dict)
-    kline: Dict[str, Dict[str, Kline]] = defaultdict(dict)
-    mark_price: Dict[str, Dict[str, MarkPrice]] = defaultdict(dict)
-    funding_rate: Dict[str, Dict[str, FundingRate]] = defaultdict(dict)
-    index_price: Dict[str, Dict[str, IndexPrice]] = defaultdict(dict)
-
-    def update_bookl1(self, bookl1: BookL1):
-        self.bookl1[bookl1.exchange][bookl1.symbol] = bookl1
-
-    def update_bookl2(self, bookl2: BookL2):
-        self.bookl2[bookl2.exchange][bookl2.symbol] = bookl2
-
-    def update_trade(self, trade: Trade):
-        self.trade[trade.exchange][trade.symbol] = trade
-
-    def update_kline(self, kline: Kline):
-        self.kline[kline.exchange][kline.symbol] = kline
-
-    def update_mark_price(self, mark_price: MarkPrice):
-        self.mark_price[mark_price.exchange][mark_price.symbol] = mark_price
-
-    def update_funding_rate(self, funding_rate: FundingRate):
-        self.funding_rate[funding_rate.exchange][funding_rate.symbol] = funding_rate
-
-    def update_index_price(self, index_price: IndexPrice):
-        self.index_price[index_price.exchange][index_price.symbol] = index_price
-
-
 """
 class Position(Struct):
 

@@ -120,7 +120,7 @@ class BybitWSClient(WSClient):
         for _, payload in self._subscriptions.items():
             await self._send(payload)
 
-    async def subscribe_order(self, topic: str):
+    async def subscribe_order(self, topic: str = "order"):
         """
         ### Topics:
         
@@ -132,5 +132,26 @@ class BybitWSClient(WSClient):
         - order.linear
         - order.inverse
         - order.option
+        """
+        await self._subscribe(topic, auth=True)
+    
+    async def subscribe_position(self, topic: str = "position"):
+        """
+        ### Topics:
+        
+        #### All in one:
+        - position
+        
+        Categorical topics:
+        - position.linear
+        - position.inverse
+        - position.option
+        """
+        await self._subscribe(topic, auth=True)
+    
+    async def subscribe_wallet(self, topic: str = "wallet"):
+        """
+        ### Topics:
+        - wallet
         """
         await self._subscribe(topic, auth=True)

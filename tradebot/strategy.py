@@ -12,7 +12,6 @@ from tradebot.schema import (
     Trade,
     Kline,
     Order,
-    MarketData,
     OrderSubmit,
     InstrumentId,
     BaseMarket,
@@ -41,7 +40,6 @@ class Strategy:
             DataType.KLINE: {},
         }
 
-        self._market_data: MarketData = MarketData()
         self._scheduler = AsyncIOScheduler()
         self._initialized = False
 

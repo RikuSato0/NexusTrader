@@ -206,7 +206,9 @@ class BybitPrivateConnector(PrivateConnector):
         self._ws_msg_order_update_decoder = msgspec.json.Decoder(BybitWsOrderMsg)
 
     async def connect(self):
-        await self._ws_client.subscribe_order(topic="order")
+        await self._ws_client.subscribe_order()
+        await self._ws_client.subscribe_position()
+        await self._ws_client.subscribe_wallet()
 
     def _ws_msg_handler(self, raw: bytes):
         try:
@@ -220,6 +222,10 @@ class BybitPrivateConnector(PrivateConnector):
                 return
             if "order" in ws_msg.topic:
                 self._parse_order_update(raw)
+            elif "position" in ws_msg.topic:
+                self._parse_position_update(raw)
+            elif "wallet" == ws_msg.topic:
+                self._parse_wallet_update(raw)       
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
 

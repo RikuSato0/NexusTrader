@@ -581,9 +581,112 @@ class BybitWalletBalance(msgspec.Struct):
     def parse_to_balance(self) -> list[Balance]:
         return [coin.parse_to_balance() for coin in self.coin]
 
-
 class BybitWalletBalanceResponse(msgspec.Struct):
     retCode: int
     retMsg: str
     result: BybitListResult[BybitWalletBalance]
     time: int
+
+class BybitWsAccountWalletCoin(msgspec.Struct):
+    coin: str
+    equity: str
+    usdValue: str
+    walletBalance: str
+    availableToWithdraw: str
+    availableToBorrow: str
+    borrowAmount: str
+    accruedInterest: str
+    totalOrderIM: str
+    totalPositionIM: str
+    totalPositionMM: str
+    unrealisedPnl: str
+    cumRealisedPnl: str
+    bonus: str
+    collateralSwitch: bool
+    marginCollateral: bool
+    locked: str
+    spotHedgingQty: str
+
+    def parse_to_balance(self) -> Balance:
+        total = Decimal(self.walletBalance)
+        locked = Decimal(self.locked)  # TODO: Locked only valid for Spot
+        free = total - locked
+        return Balance(
+            asset=self.coin,
+            locked=locked,
+            free=free,
+        )
+
+class BybitWsAccountWallet(msgspec.Struct):
+    accountIMRate: str
+    accountMMRate: str
+    totalEquity: str
+    totalWalletBalance: str
+    totalMarginBalance: str
+    totalAvailableBalance: str
+    totalPerpUPL: str
+    totalInitialMargin: str
+    totalMaintenanceMargin: str
+    coin: list[BybitWsAccountWalletCoin]
+    accountLTV: str
+    accountType: str
+
+    def parse_to_balances(self) -> list[Balance]:
+        return [coin.parse_to_balance() for coin in self.coin]
+
+
+
+class BybitWsAccountWalletMsg(msgspec.Struct):
+    topic: str
+    id: str
+    creationTime: int
+    data: list[BybitWsAccountWallet]
+
+
+class BybitWsPosition(msgspec.Struct):
+    category: BybitProductType
+    symbol: str
+    side: BybitPositionSide
+    size: str
+    positionIdx: int
+    tradeMode: int
+    positionValue: str
+    riskId: int
+    riskLimitValue: str
+    entryPrice: str
+    markPrice: str
+    leverage: str
+    positionBalance: str
+    autoAddMargin: int
+    positionIM: str
+    positionMM: str
+    liqPrice: str
+    bustPrice: str
+    tpslMode: str
+    takeProfit: str
+    stopLoss: str
+    trailingStop: str
+    unrealisedPnl: str
+    curRealisedPnl: str
+    sessionAvgPrice: str
+    delta: str
+    gamma: str
+    vega: str
+    theta: str
+    cumRealisedPnl: str
+    positionStatus: str
+    adlRankIndicator: int
+    isReduceOnly: bool
+    mmrSysUpdatedTime: str
+    leverageSysUpdatedTime: str
+    createdTime: str
+    updatedTime: str
+    seq: int
+
+
+
+class BybitWsPositionMsg(msgspec.Struct):
+    topic: str
+    id: str
+    creationTime: int
+    data: list[BybitWsPosition]

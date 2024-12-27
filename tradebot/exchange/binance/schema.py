@@ -1,6 +1,7 @@
 import msgspec
+from decimal import Decimal
 from typing import Any, Dict, List
-from tradebot.schema import Order, BaseMarket
+from tradebot.schema import BaseMarket, Balance
 from tradebot.constants import OrderSide, TimeInForce
 from tradebot.exchange.binance.constants import (
     BinanceOrderStatus,
@@ -16,6 +17,105 @@ from tradebot.exchange.binance.constants import (
     BinanceBusinessUnit,
 )
 
+
+class BinanceFuturesBalanceInfo(msgspec.Struct, frozen=True):
+    """
+    HTTP response 'inner struct' from Binance Futures GET /fapi/v2/account (HMAC
+    SHA256).
+    """
+
+    asset: str  # asset name
+    walletBalance: str  # wallet balance
+    unrealizedProfit: str  # unrealized profit
+    marginBalance: str  # margin balance
+    maintMargin: str  # maintenance margin required
+    initialMargin: str  # total initial margin required with current mark price
+    positionInitialMargin: str  # initial margin required for positions with current mark price
+    openOrderInitialMargin: str  # initial margin required for open orders with current mark price
+    crossWalletBalance: str  # crossed wallet balance
+    crossUnPnl: str  # unrealized profit of crossed positions
+    availableBalance: str  # available balance
+    maxWithdrawAmount: str  # maximum amount for transfer out
+    # whether the asset can be used as margin in Multi - Assets mode
+    marginAvailable: bool | None = None
+    updateTime: int | None = None  # last update time
+    
+    def parse_to_balance(self) -> Balance:
+        free = Decimal(self.availableBalance)
+        locked = Decimal(self.marginBalance) - free
+        return Balance(
+            asset=self.asset,
+            free=free,
+            locked=locked,
+        )
+
+class BinanceFuturesAccountInfo(msgspec.Struct, kw_only=True):
+    """
+    HTTP response from Binance Futures GET /fapi/v2/account (HMAC SHA256).
+    """
+
+    feeTier: int  # account commission tier
+    canTrade: bool  # if can trade
+    canDeposit: bool  # if can transfer in asset
+    canWithdraw: bool  # if can transfer out asset
+    updateTime: int
+    totalInitialMargin: str | None = (
+        None  # total initial margin required with current mark price (useless with isolated positions), only for USDT
+    )
+    totalMaintMargin: str | None = None  # total maintenance margin required, only for USDT asset
+    totalWalletBalance: str | None = None  # total wallet balance, only for USDT asset
+    totalUnrealizedProfit: str | None = None  # total unrealized profit, only for USDT asset
+    totalMarginBalance: str | None = None  # total margin balance, only for USDT asset
+    # initial margin required for positions with current mark price, only for USDT asset
+    totalPositionInitialMargin: str | None = None
+    # initial margin required for open orders with current mark price, only for USDT asset
+    totalOpenOrderInitialMargin: str | None = None
+    totalCrossWalletBalance: str | None = None  # crossed wallet balance, only for USDT asset
+    # unrealized profit of crossed positions, only for USDT asset
+    totalCrossUnPnl: str | None = None
+    availableBalance: str | None = None  # available balance, only for USDT asset
+    maxWithdrawAmount: str | None = None  # maximum amount for transfer out, only for USDT asset
+    assets: list[BinanceFuturesBalanceInfo]
+
+    def parse_to_balances(self) -> List[Balance]:
+        return [balance.parse_to_balance() for balance in self.assets]
+
+class BinanceSpotBalanceInfo(msgspec.Struct):
+    """
+    HTTP response 'inner struct' from Binance Spot/Margin GET /api/v3/account (HMAC
+    SHA256).
+    """
+
+    asset: str
+    free: str
+    locked: str
+
+    def parse_to_balance(self) -> Balance:
+        return Balance(
+            asset=self.asset,
+            free=Decimal(self.free),
+            locked=Decimal(self.locked),
+        )
+
+class BinanceSpotAccountInfo(msgspec.Struct, frozen=True):
+    """
+    HTTP response from Binance Spot/Margin GET /api/v3/account (HMAC SHA256).
+    """
+
+    makerCommission: int
+    takerCommission: int
+    buyerCommission: int
+    sellerCommission: int
+    canTrade: bool
+    canWithdraw: bool
+    canDeposit: bool
+    updateTime: int
+    accountType: str
+    balances: list[BinanceSpotBalanceInfo]
+    permissions: list[str]
+
+    def parse_to_balances(self) -> List[Balance]:
+        return [balance.parse_to_balance() for balance in self.balances]
 
 class BinanceSpotOrderUpdateMsg(msgspec.Struct, kw_only=True):
     """

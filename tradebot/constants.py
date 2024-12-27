@@ -189,6 +189,13 @@ class EventType(Enum):
     FUNDING_RATE = 4
     INDEX_PRICE = 5
 
+
+class AlgoOrderStatus(Enum):
+    PENDING = "PENDING"
+    CANCELING = "CANCELING"
+    FINISHED = "FINISHED"
+    CANCELED = "CANCELED"
+
 class OrderStatus(Enum):
     # LOCAL
     INITIALIZED = "INITIALIZED"

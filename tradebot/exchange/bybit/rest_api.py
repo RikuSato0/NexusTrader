@@ -18,6 +18,7 @@ from tradebot.exchange.bybit.schema import (
     BybitPositionResponse,
     BybitOrderHistoryResponse,
     BybitOpenOrdersResponse,
+    BybitWalletBalanceResponse,
 )
 
 
@@ -71,6 +72,9 @@ class BybitApiClient(ApiClient):
         )
         self._open_orders_response_decoder = msgspec.json.Decoder(
             BybitOpenOrdersResponse
+        )
+        self._wallet_balance_response_decoder = msgspec.json.Decoder(
+            BybitWalletBalanceResponse
         )
 
     def _generate_signature(self, payload: str) -> List[str]:
@@ -227,6 +231,17 @@ class BybitApiClient(ApiClient):
         }
         raw = await self._fetch("GET", self._base_url, endpoint, payload, signed=True)
         return self._order_history_response_decoder.decode(raw)
+    
+    async def get_v5_account_wallet_balance(self, account_type: str, **kwargs):
+        endpoint = "/v5/account/wallet-balance"
+        payload = {
+            "accountType": account_type,
+            **kwargs,
+        }
+        raw = await self._fetch("GET", self._base_url, endpoint, payload, signed=True)
+        return self._wallet_balance_response_decoder.decode(raw)
+    
+    
 
     def raise_error(self, raw: bytes, status: int, headers: Dict[str, Any]):
         pass

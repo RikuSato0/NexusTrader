@@ -1,7 +1,8 @@
 import msgspec
+from decimal import Decimal
 from typing import Final
 from typing import Dict, Any, Generic, TypeVar
-from tradebot.schema import BaseMarket
+from tradebot.schema import BaseMarket, Balance
 from tradebot.exchange.bybit.constants import (
     BybitProductType,
     BybitOrderSide,
@@ -528,3 +529,61 @@ class BybitMarket(BaseMarket):
     info: BybitMarketInfo
     feeSide: str
 
+class BybitCoinBalance(msgspec.Struct):
+    availableToBorrow: str
+    bonus: str
+    accruedInterest: str
+    availableToWithdraw: str
+    totalOrderIM: str
+    equity: str
+    usdValue: str
+    borrowAmount: str
+    # Sum of maintenance margin for all positions.
+    totalPositionMM: str
+    # Sum of initial margin of all positions + Pre-occupied liquidation fee.
+    totalPositionIM: str
+    walletBalance: str
+    # Unrealised P&L
+    unrealisedPnl: str
+    # Cumulative Realised P&L
+    cumRealisedPnl: str
+    locked: str
+    # Whether it can be used as a margin collateral currency (platform)
+    collateralSwitch: bool
+    # Whether the collateral is turned on by the user
+    marginCollateral: bool
+    coin: str
+
+    def parse_to_balance(self) -> Balance:
+        locked = Decimal(self.locked)
+        free = Decimal(self.walletBalance) - locked
+        return Balance(
+            asset=self.coin,
+            locked=locked,
+            free=free,
+        )
+
+
+class BybitWalletBalance(msgspec.Struct):
+    totalEquity: str
+    accountIMRate: str
+    totalMarginBalance: str
+    totalInitialMargin: str
+    accountType: str
+    totalAvailableBalance: str
+    accountMMRate: str
+    totalPerpUPL: str
+    totalWalletBalance: str
+    accountLTV: str
+    totalMaintenanceMargin: str
+    coin: list[BybitCoinBalance]
+
+    def parse_to_balance(self) -> list[Balance]:
+        return [coin.parse_to_balance() for coin in self.coin]
+
+
+class BybitWalletBalanceResponse(msgspec.Struct):
+    retCode: int
+    retMsg: str
+    result: BybitListResult[BybitWalletBalance]
+    time: int

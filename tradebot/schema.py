@@ -14,6 +14,7 @@ from tradebot.constants import (
     InstrumentType,
     ExchangeType,
     SubmitType,
+    AlgoOrderStatus,
 )
 
 
@@ -164,8 +165,12 @@ class Order(Struct):
     def success(self) -> bool:
         return self.status != OrderStatus.FAILED
 
+class AlgoOrder(Struct):
+    uuid: str
+    status: AlgoOrderStatus
+    orders: List[Order]
 
-class Asset(Struct):
+class Balance(Struct):
     """
     Buy BTC/USDT: amount = 0.01, cost: 600
 
@@ -187,65 +192,33 @@ class Asset(Struct):
     OrderStatus.PARTIALLY_FILLED: BTC(free: 0.01, locked: 0.005) USDT(free: 350, locked: 0) BTC.update_locked(-0.005) USDT.update_free(150)
     OrderStatus.FILLED: BTC(free: 0.01, locked: 0.0) USDT(free: 500, locked: 0) BTC.update_locked(-0.005) USDT.update_free(150)
     """
-
+    asset: str
     free: Decimal = field(default=Decimal("0.0"))
-    borrowed: Decimal = field(default=Decimal("0.0"))
     locked: Decimal = field(default=Decimal("0.0"))
 
     @property
     def total(self) -> Decimal:
         return self.free + self.locked
 
-    def _update_free(self, amount: Decimal):
-        """
-        if amount > 0, then it is a buying action
-        if amount < 0, then it is a selling action
-        """
-        self.free += amount
-
-    def _update_borrowed(self, amount: Decimal):
-        """
-        if amount > 0, then it is a borrowing action
-        if amount < 0, then it is a repayment action
-        """
-        self.borrowed += amount
-        self.free += amount
-
-    def _update_locked(self, amount: Decimal):
-        """
-        if amount > 0, then it is a new order action
-        if amount < 0, then it is a cancellation/filled/partially filled action
-        """
-        self.locked += amount
-
-    def _set_value(self, free: Decimal, borrowed: Decimal, locked: Decimal):
-        if free is not None:
-            self.free = free
-        if borrowed is not None:
-            self.borrowed = borrowed
-        if locked is not None:
-            self.locked = locked
-
-
-class Balance(Struct):
-    assets: Dict[str, Asset] = field(
-        default_factory=lambda: defaultdict(lambda: Asset())
-    )
-
-    def _update_asset_free(self, asset: str, amount: Decimal):
-        self.assets[asset]._update_free(amount)
-
-    def _update_asset_locked(self, asset: str, amount: Decimal):
-        self.assets[asset]._update_locked(amount)
-
-    def _update_asset_borrowed(self, asset: str, amount: Decimal):
-        self.assets[asset]._update_borrowed(amount)
-
-    def _set_asset_value(
-        self, asset: str, free: Decimal, borrowed: Decimal, locked: Decimal
-    ):
-        self.assets[asset]._set_value(free, borrowed, locked)
-
+class AccountBalance(Struct):
+    
+    balances: Dict[str, Balance] = field(default_factory=dict)
+    
+    def _apply(self, balances: List[Balance]):
+        for balance in balances:
+            self.balances[balance.asset] = balance
+    
+    @property
+    def balance_total(self) -> Dict[str, Decimal]:
+        return {asset: balance.total for asset, balance in self.balances.items()}
+    
+    @property
+    def balance_free(self) -> Dict[str, Decimal]:
+        return {asset: balance.free for asset, balance in self.balances.items()}
+    
+    @property
+    def balance_locked(self) -> Dict[str, Decimal]:
+        return {asset: balance.locked for asset, balance in self.balances.items()}
 
 class Precision(Struct):
     """

@@ -11,7 +11,7 @@ from tradebot.core.registry import OrderRegistry
 from tradebot.exchange.bybit import BybitAccountType
 from tradebot.exchange.bybit.schema import BybitMarket
 from tradebot.base import ExecutionManagementSystem
-
+from tradebot.schema import BaseMarket
 
 class BybitExecutionManagementSystem(ExecutionManagementSystem):
     _market: Dict[str, BybitMarket]

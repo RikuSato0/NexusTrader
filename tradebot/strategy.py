@@ -6,7 +6,7 @@ from tradebot.base import ExchangeManager
 from tradebot.core.entity import TaskManager
 from tradebot.core.cache import AsyncCache
 from tradebot.base import ExecutionManagementSystem
-from tradebot.core.nautilius_core import MessageBus
+from tradebot.core.nautilius_core import MessageBus, UUID4
 from tradebot.schema import (
     BookL1,
     Trade,
@@ -201,6 +201,7 @@ class Strategy:
         order = OrderSubmit(
             symbol=symbol,
             instrument_id=InstrumentId.from_str(symbol),
+            uuid=f"ALGO-{UUID4().value}",
             submit_type=SubmitType.TWAP,
             side=side,
             amount=amount,

@@ -410,7 +410,9 @@ class BybitPrivateConnector(PrivateConnector):
                 position_side=BybitEnumParser.parse_position_side(data.positionIdx),
             )
 
-            self._msgbus.publish(topic="bybit.order", msg=order)
+            self._msgbus.send(endpoint="bybit.order", msg=order)
+            if category == BybitProductType.SPOT:
+                self._msgbus.send(endpoint="bybit.spot.position", msg=order)
     
     def _parse_position_update(self, raw: bytes):
         position_msg = self._ws_msg_position_decoder.decode(raw)
@@ -443,7 +445,7 @@ class BybitPrivateConnector(PrivateConnector):
                 realized_pnl=float(data.cumRealisedPnl),
             )
             
-            # self._msgbus.publish(topic="bybit.position", msg=position)
+            self._msgbus.send(endpoint="bybit.future.position", msg=position)
         
     def _parse_wallet_update(self, raw: bytes):
         wallet_msg = self._ws_msg_wallet_decoder.decode(raw)

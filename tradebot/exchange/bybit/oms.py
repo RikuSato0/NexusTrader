@@ -14,7 +14,8 @@ class BybitOrderManagementSystem(OrderManagementSystem):
         registry: OrderRegistry,
     ):
         super().__init__(cache, msgbus, task_manager, registry)
-        self._msgbus.subscribe(topic="bybit.order", handler=self._add_order_msg)
-        self._msgbus.subscribe(topic="bybit.position", handler=self._add_position_msg)
+        self._msgbus.register(endpoint="bybit.order", handler=self._add_order_msg)
+        self._msgbus.register(endpoint="bybit.spot.position", handler=self._handle_spot_position_event)
+        self._msgbus.register(endpoint="bybit.future.position", handler=self._handle_future_position_event)
 
     #TODO: some rest-api check logic

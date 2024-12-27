@@ -33,7 +33,7 @@ from tradebot.core.nautilius_core import LiveClock, MessageBus
 from tradebot.core.cache import AsyncCache
 from tradebot.core.registry import OrderRegistry
 from tradebot.constants import AccountType, SubmitType, OrderStatus
-from tradebot.schema import OrderSubmit, AccountBalance
+from tradebot.schema import OrderSubmit, AccountBalance, FuturePosition
 
 
 class ExchangeManager(ABC):
@@ -621,7 +621,6 @@ class OrderManagementSystem(ABC):
         self._registry = registry
 
         self._order_msg_queue: asyncio.Queue[Order] = asyncio.Queue()
-        self._position_msg_queue: asyncio.Queue[Order] = asyncio.Queue()
 
         # Set up message bus subscriptions
         # self._msgbus.subscribe(topic="order", handler=self._add_order_msg)
@@ -631,17 +630,11 @@ class OrderManagementSystem(ABC):
     def _add_order_msg(self, order: Order):
         self._order_msg_queue.put_nowait(order)
 
-    def _add_position_msg(self, order: Order):
-        self._position_msg_queue.put_nowait(order)
-
-    async def _handle_position_event(self):
-        while True:
-            try:
-                order = await self._position_msg_queue.get()
-                self._cache._apply_position(order)
-                self._position_msg_queue.task_done()
-            except Exception as e:
-                self._log.error(f"Error in handle_position_event: {e}")
+    def _handle_spot_position_event(self, order: Order):
+        self._cache._apply_spot_position(order)
+        
+    def _handle_future_position_event(self, position: FuturePosition):
+        self._cache._apply_future_position(position)
 
     async def _handle_order_event(self):
         while True:
@@ -686,4 +679,3 @@ class OrderManagementSystem(ABC):
 
         # Start order and position event handlers
         self._task_manager.create_task(self._handle_order_event())
-        self._task_manager.create_task(self._handle_position_event())

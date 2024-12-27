@@ -5,7 +5,7 @@ from collections import defaultdict
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager, RateLimit
-from tradebot.schema import BookL1, Order, Trade
+from tradebot.schema import BookL1, Order, Trade, FuturePosition
 from tradebot.constants import (
     OrderSide,
     OrderStatus,
@@ -20,6 +20,8 @@ from tradebot.exchange.bybit.schema import (
     BybitOrderBook,
     BybitMarket,
     BybitWsTradeMsg,
+    BybitWsPositionMsg,
+    BybitWsAccountWalletMsg,
 )
 from tradebot.exchange.bybit.rest_api import BybitApiClient
 from tradebot.exchange.bybit.websockets import BybitWSClient
@@ -204,8 +206,11 @@ class BybitPrivateConnector(PrivateConnector):
 
         self._ws_msg_general_decoder = msgspec.json.Decoder(BybitWsMessageGeneral)
         self._ws_msg_order_update_decoder = msgspec.json.Decoder(BybitWsOrderMsg)
+        self._ws_msg_position_decoder = msgspec.json.Decoder(BybitWsPositionMsg)
+        self._ws_msg_wallet_decoder = msgspec.json.Decoder(BybitWsAccountWalletMsg)
 
     async def connect(self):
+        await super().connect()
         await self._ws_client.subscribe_order()
         await self._ws_client.subscribe_position()
         await self._ws_client.subscribe_wallet()
@@ -400,7 +405,48 @@ class BybitPrivateConnector(PrivateConnector):
             )
 
             self._msgbus.publish(topic="bybit.order", msg=order)
-
+    
+    def _parse_position_update(self, raw: bytes):
+        position_msg = self._ws_msg_position_decoder.decode(raw)
+        self._log.debug(f"Position update: {str(position_msg)}")
+        
+        for data in position_msg.data:
+            category = data.category
+            if category == BybitProductType.LINEAR: # only linear/inverse/ position is supported
+                id = data.symbol + "_linear"
+            elif category == BybitProductType.INVERSE:
+                id = data.symbol + "_inverse"
+            symbol = self._market_id[id]
+            
+            side = data.side.parse_to_position_side()
+            if side == PositionSide.LONG:
+                signed_amount = Decimal(data.size)
+            elif side == PositionSide.SHORT:
+                signed_amount = -Decimal(data.size)
+            else:
+                side = None
+                signed_amount = Decimal(0)
+            
+            position = FuturePosition(
+                symbol=symbol,
+                exchange=self._exchange_id,
+                side=side,
+                signed_amount=signed_amount,
+                entry_price=float(data.entryPrice),
+                unrealized_pnl=float(data.unrealisedPnl),
+                realized_pnl=float(data.cumRealisedPnl),
+            )
+            
+            # self._msgbus.publish(topic="bybit.position", msg=position)
+        
+    def _parse_wallet_update(self, raw: bytes):
+        wallet_msg = self._ws_msg_wallet_decoder.decode(raw)
+        self._log.debug(f"Wallet update: {str(wallet_msg)}")
+        
+        for data in wallet_msg.data:
+            balances = data.parse_to_balances()
+            self._account_balance._apply(balances)
+        
     async def disconnect(self):
         await super().disconnect()
         await self._api_client.close_session()

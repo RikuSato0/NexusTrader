@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 from tradebot.schema import BaseMarket, Balance
 from tradebot.constants import OrderSide, TimeInForce
 from tradebot.exchange.binance.constants import (
+    BinanceAccountEventReasonType,
     BinanceOrderStatus,
     BinanceOrderType,
     BinancePositionSide,
@@ -1075,3 +1076,93 @@ class BinanceMarket(BaseMarket):
 
     info: BinanceMarketInfo
     feeSide: str
+
+
+class BinanceAccountBalanceData(msgspec.Struct):
+    a: str
+    wb: str
+    cw: str
+    bc: str
+
+class BinanceAccountPositionData(msgspec.Struct, kw_only=True):
+    s: str
+    pa: str # position amount
+    ep: str # entry price
+    bep: str # breakeven price
+    cr: str # (Pre-fee) Accumulated Realized
+    up: str # Unrealized PnL
+    mt: str | None = None # margin type (if isolated position)
+    iw: str | None = None # isolated wallet (if isolated position)
+    ps: BinancePositionSide
+
+class BinanceAccountUpdateData(msgspec.Struct, kw_only=True):
+    m: BinanceAccountEventReasonType
+    B: list[BinanceAccountBalanceData]
+    P: list[BinanceAccountPositionData]
+
+class BinanceAccountUpdateMsg(msgspec.Struct, kw_only=True):
+    """
+    {
+        "e": "ACCOUNT_UPDATE",				// Event Type
+        "E": 1564745798939,            		// Event Time
+        "T": 1564745798938 ,           		// Transaction
+        "a":                          		// Update Data
+            {
+            "m":"ORDER",						// Event reason type
+            "B":[                     		// Balances
+                {
+                "a":"USDT",           		// Asset
+                "wb":"122624.12345678",    	// Wallet Balance
+                "cw":"100.12345678",			// Cross Wallet Balance
+                "bc":"50.12345678"			// Balance Change except PnL and Commission
+                },
+                {
+                "a":"BUSD",           
+                "wb":"1.00000000",
+                "cw":"0.00000000",         
+                "bc":"-49.12345678"
+                }
+            ],
+            "P":[
+                {
+                "s":"BTCUSDT",          	// Symbol
+                "pa":"0",               	// Position Amount
+                "ep":"0.00000",            // Entry Price
+                "bep":"0",                // breakeven price 
+                "cr":"200",             	// (Pre-fee) Accumulated Realized
+                "up":"0",						// Unrealized PnL
+                "mt":"isolated",				// Margin Type
+                "iw":"0.00000000",			// Isolated Wallet (if isolated position)
+                "ps":"BOTH"					// Position Side
+                }，
+                {
+                    "s":"BTCUSDT",
+                    "pa":"20",
+                    "ep":"6563.66500",
+                    "bep":"0",                // breakeven price
+                    "cr":"0",
+                    "up":"2850.21200",
+                    "mt":"isolated",
+                    "iw":"13200.70726908",
+                    "ps":"LONG"
+                },
+                {
+                    "s":"BTCUSDT",
+                    "pa":"-10",
+                    "ep":"6563.86000",
+                    "bep":"6563.6",          // breakeven price
+                    "cr":"-45.04000000",
+                    "up":"-1423.15600",
+                    "mt":"isolated",
+                    "iw":"6570.42511771",
+                    "ps":"SHORT"
+                }
+            ]
+            }
+        }
+    """
+    e: BinanceUserDataStreamWsEventType
+    E: int
+    T: int
+    fs: BinanceBusinessUnit | None = None
+    a: BinanceAccountUpdateData

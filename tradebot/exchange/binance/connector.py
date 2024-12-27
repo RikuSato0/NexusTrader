@@ -397,6 +397,7 @@ class BinancePrivateConnector(PrivateConnector):
                     break
 
     async def connect(self):
+        await super().connect()
         listen_key = await self._start_user_data_stream()
 
         if listen_key:

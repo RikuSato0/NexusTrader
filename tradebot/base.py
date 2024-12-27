@@ -33,7 +33,7 @@ from tradebot.core.nautilius_core import LiveClock, MessageBus
 from tradebot.core.cache import AsyncCache
 from tradebot.core.registry import OrderRegistry
 from tradebot.constants import AccountType, SubmitType, OrderStatus
-from tradebot.schema import OrderSubmit
+from tradebot.schema import OrderSubmit, AccountBalance
 
 
 class ExchangeManager(ABC):
@@ -355,6 +355,7 @@ class PrivateConnector(ABC):
         self._api_client = api_client
         self._clock = LiveClock()
         self._msgbus: MessageBus = msgbus
+        self._account_balance: AccountBalance = AccountBalance()
 
         if rate_limit:
             self._limiter = AsyncLimiter(rate_limit.max_rate, rate_limit.time_period)
@@ -364,6 +365,11 @@ class PrivateConnector(ABC):
     @property
     def account_type(self):
         return self._account_type
+    
+    @abstractmethod
+    async def _init_account_balance(self):
+        pass
+    
 
     @abstractmethod
     async def create_order(
@@ -385,7 +391,7 @@ class PrivateConnector(ABC):
 
     @abstractmethod
     async def connect(self):
-        pass
+        await self._init_account_balance()
 
     async def disconnect(self):
         self._ws_client.disconnect()

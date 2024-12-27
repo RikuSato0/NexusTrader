@@ -643,7 +643,7 @@ class BybitWsAccountWalletMsg(msgspec.Struct):
     data: list[BybitWsAccountWallet]
 
 
-class BybitWsPosition(msgspec.Struct):
+class BybitWsPosition(msgspec.Struct, kw_only=True):
     category: BybitProductType
     symbol: str
     side: BybitPositionSide
@@ -669,10 +669,10 @@ class BybitWsPosition(msgspec.Struct):
     unrealisedPnl: str
     curRealisedPnl: str
     sessionAvgPrice: str
-    delta: str
-    gamma: str
-    vega: str
-    theta: str
+    delta: str | None = None
+    gamma: str | None = None
+    vega: str | None = None
+    theta: str | None = None
     cumRealisedPnl: str
     positionStatus: str
     adlRankIndicator: int

@@ -257,6 +257,7 @@ class OkxPrivateConnector(PrivateConnector):
         self._decoder_ws_order_msg = msgspec.json.Decoder(OkxWsOrderMsg, strict=False)
     
     async def connect(self):
+        await super().connect()
         await self._ws_client.subscribe_orders()
 
     def _handle_event_msg(self, msg: OkxWsGeneralMsg):

@@ -232,7 +232,7 @@ class BybitApiClient(ApiClient):
         raw = await self._fetch("GET", self._base_url, endpoint, payload, signed=True)
         return self._order_history_response_decoder.decode(raw)
     
-    async def get_v5_account_wallet_balance(self, account_type: str, **kwargs):
+    async def get_v5_account_wallet_balance(self, account_type: str, **kwargs) -> BybitWalletBalanceResponse:
         endpoint = "/v5/account/wallet-balance"
         payload = {
             "accountType": account_type,

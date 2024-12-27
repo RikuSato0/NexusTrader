@@ -22,6 +22,7 @@ from tradebot.exchange.bybit.schema import (
     BybitWsTradeMsg,
     BybitWsPositionMsg,
     BybitWsAccountWalletMsg,
+    BybitWalletBalanceResponse,
 )
 from tradebot.exchange.bybit.rest_api import BybitApiClient
 from tradebot.exchange.bybit.websockets import BybitWSClient
@@ -281,7 +282,12 @@ class BybitPrivateConnector(PrivateConnector):
                 status=OrderStatus.CANCEL_FAILED,
             )
             return order
-
+    
+    async def _init_account_balance(self):
+        res: BybitWalletBalanceResponse = await self._api_client.get_v5_account_wallet_balance(account_type="UNIFIED")
+        for result in res.result:
+            self._account_balance._apply(result.parse_to_balances())
+        
     async def create_order(
         self,
         symbol: str,

@@ -1,4 +1,3 @@
-import warnings
 from decimal import Decimal
 from typing import Dict, List, Tuple, Any
 from typing import Optional
@@ -164,10 +163,12 @@ class Order(Struct):
     def success(self) -> bool:
         return self.status != OrderStatus.FAILED
 
+
 class AlgoOrder(Struct):
     uuid: str
     status: AlgoOrderStatus
     orders: List[Order]
+
 
 class Balance(Struct):
     """
@@ -191,6 +192,7 @@ class Balance(Struct):
     OrderStatus.PARTIALLY_FILLED: BTC(free: 0.01, locked: 0.005) USDT(free: 350, locked: 0) BTC.update_locked(-0.005) USDT.update_free(150)
     OrderStatus.FILLED: BTC(free: 0.01, locked: 0.0) USDT(free: 500, locked: 0) BTC.update_locked(-0.005) USDT.update_free(150)
     """
+
     asset: str
     free: Decimal = field(default=Decimal("0.0"))
     locked: Decimal = field(default=Decimal("0.0"))
@@ -199,25 +201,26 @@ class Balance(Struct):
     def total(self) -> Decimal:
         return self.free + self.locked
 
+
 class AccountBalance(Struct):
-    
     balances: Dict[str, Balance] = field(default_factory=dict)
-    
+
     def _apply(self, balances: List[Balance]):
         for balance in balances:
             self.balances[balance.asset] = balance
-    
+
     @property
     def balance_total(self) -> Dict[str, Decimal]:
         return {asset: balance.total for asset, balance in self.balances.items()}
-    
+
     @property
     def balance_free(self) -> Dict[str, Decimal]:
         return {asset: balance.free for asset, balance in self.balances.items()}
-    
+
     @property
     def balance_locked(self) -> Dict[str, Decimal]:
         return {asset: balance.locked for asset, balance in self.balances.items()}
+
 
 class Precision(Struct):
     """
@@ -335,22 +338,51 @@ class Position(Struct):
     symbol: str
     exchange: ExchangeType
     signed_amount: Decimal = Decimal("0")
-    entry_price: float = 0
-
 
 
 class SpotPosition(Position):
-    pass
+    @property
+    def amount(self) -> Decimal:
+        return abs(self.signed_amount)
+
+    _last_order_filled: Dict[str, Decimal] = field(default_factory=dict)
+
+    def _calculate_fill_delta(self, order: Order) -> Decimal:
+        """
+        calculate the fill delta of the order, since filled in order is cumulative,
+        we need to calculate the delta of the order
+        """
+        previous_fill = self._last_order_filled.get(order.uuid, Decimal("0"))
+        current_fill = order.filled
+        fill_delta = current_fill - previous_fill
+        if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
+            self._last_order_filled.pop(order.uuid, None)
+        else:
+            self._last_order_filled[order.uuid] = order.filled
+        return fill_delta
+
+    def _apply(self, order: Order):
+        if not order.last_filled:
+            fill_delta = self._calculate_fill_delta(order)
+        else:
+            fill_delta = order.last_filled
+
+        if order.side == OrderSide.BUY:
+            self.signed_amount += fill_delta
+        elif order.side == OrderSide.SELL:
+            self.signed_amount -= fill_delta
+
 
 class FuturePosition(Position):
+    entry_price: float = 0
     side: Optional[PositionSide] = None
     unrealized_pnl: float = 0
     realized_pnl: float = 0
-    
+
     @property
     def amount(self, contract_size: Decimal = Decimal("1")) -> Decimal:
         return abs(self.signed_amount) * contract_size
-    
+
     @property
     def is_open(self) -> bool:
         return self.amount != 0
@@ -358,14 +390,15 @@ class FuturePosition(Position):
     @property
     def is_closed(self) -> bool:
         return not self.is_open
-    
+
     @property
     def is_long(self) -> bool:
         return self.side == PositionSide.LONG
-    
+
     @property
     def is_short(self) -> bool:
         return self.side == PositionSide.SHORT
+
 
 # class Position(Struct):
 #     symbol: str

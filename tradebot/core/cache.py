@@ -8,6 +8,8 @@ from collections import defaultdict
 from tradebot.schema import (
     Order,
     Position,
+    SpotPosition,
+    FuturePosition,
     ExchangeType,
     InstrumentId,
     Kline,
@@ -55,7 +57,7 @@ class AsyncCache:
         self._mem_symbol_orders: Dict[str, Set[str]] = defaultdict(
             set
         )  # symbol -> set(uuid)
-        self._mem_symbol_positions: Dict[str, Position] = {}  # symbol -> Position
+        self._mem_symbol_positions: Dict[str, SpotPosition | FuturePosition] = {}  # symbol -> Position
 
         # set params
         self._sync_interval = sync_interval  # sync interval
@@ -196,15 +198,14 @@ class AsyncCache:
         if symbol not in self._mem_symbol_positions:
             position = self.get_position(symbol)
             if not position:
-                position = Position(
+                position = SpotPosition(
                     symbol=symbol,
                     exchange=order.exchange,
-                    strategy_id=self.strategy_id,
                 )
             self._mem_symbol_positions[symbol] = position
 
         if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
-            self._mem_closed_orders[order.uuid] = True
+            self._mem_closed_orders[order.uuid] = True # set the order to closed, so it will not be applied again
 
         if order.status in (
             OrderStatus.FILLED,
@@ -212,9 +213,9 @@ class AsyncCache:
             OrderStatus.CANCELED,
         ):
             self._log.debug(
-                f"POSITION UPDATED: status {order.status} order_id {order.id} side {order.side} filled: {order.filled} amount: {order.amount} reduceOnly: {order.reduce_only}"
+                f"POSITION UPDATED: status {order.status} order_id {order.id} side {order.side} filled: {order.filled} amount: {order.amount}"
             )
-            self._mem_symbol_positions[symbol].apply(order)
+            self._mem_symbol_positions[symbol]._apply(order)
 
     def get_position(self, symbol: str) -> Position:
         # First try memory

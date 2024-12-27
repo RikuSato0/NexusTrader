@@ -1,7 +1,7 @@
 import msgspec
 from decimal import Decimal
 from typing import Final
-from typing import Dict, Any, Generic, TypeVar
+from typing import Dict, Any, Generic, TypeVar, List
 from tradebot.schema import BaseMarket, Balance
 from tradebot.exchange.bybit.constants import (
     BybitProductType,
@@ -578,13 +578,13 @@ class BybitWalletBalance(msgspec.Struct):
     totalMaintenanceMargin: str
     coin: list[BybitCoinBalance]
 
-    def parse_to_balance(self) -> list[Balance]:
+    def parse_to_balances(self) -> list[Balance]:
         return [coin.parse_to_balance() for coin in self.coin]
 
 class BybitWalletBalanceResponse(msgspec.Struct):
     retCode: int
     retMsg: str
-    result: BybitListResult[BybitWalletBalance]
+    result: List[BybitWalletBalance]
     time: int
 
 class BybitWsAccountWalletCoin(msgspec.Struct):

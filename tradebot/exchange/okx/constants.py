@@ -74,6 +74,15 @@ class OkxPositionSide(Enum):
     NET = "net"
     NONE = ""
 
+    def parse_to_position_side(self) -> PositionSide:
+        if self == self.NET:
+            return PositionSide.FLAT
+        elif self == self.LONG:
+            return PositionSide.LONG
+        elif self == self.SHORT:
+            return PositionSide.SHORT
+        raise RuntimeError(f"Invalid position side: {self}")
+
 @unique
 class OkxOrderSide(Enum):
     BUY = "buy"

@@ -1,6 +1,10 @@
 import msgspec
 from typing import List
 from tradebot.schema import BaseMarket
+from decimal import Decimal
+from msgspec import Struct
+
+from tradebot.schema import Balance
 from tradebot.exchange.okx.constants import (
     OkxInstrumentType,
     OkxInstrumentFamily,
@@ -89,6 +93,7 @@ class OkxWsTradeMsg(msgspec.Struct):
     arg: OkxWsArgMsg
     data: list[OkxWsTradeData]
 
+
 class OkxWsOrderData(msgspec.Struct):
     instType: OkxInstrumentType
     instId: str
@@ -107,8 +112,8 @@ class OkxWsOrderData(msgspec.Struct):
     side: OkxOrderSide
     posSide: OkxPositionSide
     tdMode: OkxTdMode
-    fillPx: str # last fill price
-    tradeId: str # last trade id
+    fillPx: str  # last fill price
+    tradeId: str  # last trade id
     fillSz: str  # last filled quantity
     fillPnl: str  # last filled profit and loss
     fillTime: str  # last filled time
@@ -154,8 +159,8 @@ class OkxWsOrderData(msgspec.Struct):
     lastPx: str  # last price
     code: str
     msg: str
-    
-    
+
+
 class OkxWsOrderMsg(msgspec.Struct):
     arg: OkxWsArgMsg
     data: List[OkxWsOrderData]
@@ -197,10 +202,12 @@ class OkxErrorData(msgspec.Struct):
     sCode: str
     sMsg: str
 
+
 class OkxErrorResponse(msgspec.Struct):
     code: str
     data: list[OkxErrorData]
     msg: str
+
 
 class OkxCancelOrderData(msgspec.Struct):
     ordId: str
@@ -461,3 +468,158 @@ class OkxMarket(BaseMarket):
     """
 
     info: OkxMarketInfo
+
+
+class OkxPositionCloseOrderAlgo(Struct):
+    algoId: str | None = None
+    slTriggerPx: str | None = None
+    slTriggerPxType: str | None = None
+    tpTriggerPx: str | None = None
+    tpTriggerPxType: str | None = None
+    closeFraction: str | None = None
+
+
+class OkxPosition(Struct, kw_only=True):
+    adl: str
+    availPos: str
+    avgPx: str
+    baseBal: str | None = None
+    baseBorrowed: str | None = None
+    baseInterest: str | None = None
+    bePx: str
+    bizRefId: str | None = None
+    bizRefType: str | None = None
+    cTime: str
+    ccy: str
+    clSpotInUseAmt: str | None = None
+    closeOrderAlgo: List[OkxPositionCloseOrderAlgo] = []
+    deltaBS: str | None = None
+    deltaPA: str | None = None
+    fee: str
+    fundingFee: str
+    gammaBS: str | None = None
+    gammaPA: str | None = None
+    idxPx: str
+    imr: str | None = None
+    instId: str
+    instType: str
+    interest: str | None = None
+    last: str
+    lever: str
+    liab: str | None = None
+    liabCcy: str | None = None
+    liqPenalty: str
+    liqPx: str
+    margin: str
+    markPx: str
+    maxSpotInUseAmt: str | None = None
+    mgnMode: str
+    mgnRatio: str
+    mmr: str
+    notionalUsd: str
+    optVal: str | None = None
+    pTime: str
+    pendingCloseOrdLiabVal: str | None = None
+    pnl: str
+    pos: str
+    posCcy: str | None = None
+    posId: str
+    posSide: OkxPositionSide
+    quoteBal: str | None = None
+    quoteBorrowed: str | None = None
+    quoteInterest: str | None = None
+    realizedPnl: str
+    spotInUseAmt: str | None = None
+    spotInUseCcy: str | None = None
+    thetaBS: str | None = None
+    thetaPA: str | None = None
+    tradeId: str
+    uTime: str
+    upl: str
+    uplLastPx: str
+    uplRatio: str
+    uplRatioLastPx: str
+    usdPx: str
+    vegaBS: str | None = None
+    vegaPA: str | None = None
+
+
+class OkxAccountDetail(Struct, kw_only=True):
+    accAvgPx: str | None = None
+    availBal: str
+    availEq: str
+    borrowFroz: str | None = None
+    cashBal: str
+    ccy: str
+    clSpotInUseAmt: str | None = None
+    coinUsdPrice: str
+    crossLiab: str | None = None
+    disEq: str
+    eq: str
+    eqUsd: str
+    fixedBal: str
+    frozenBal: str
+    imr: str
+    interest: str | None = None
+    isoEq: str
+    isoLiab: str | None = None
+    isoUpl: str
+    liab: str | None = None
+    maxLoan: str | None = None
+    maxSpotInUseAmt: str | None = None
+    mgnRatio: str | None = None
+    mmr: str
+    notionalLever: str
+    openAvgPx: str | None = None
+    ordFrozen: str
+    rewardBal: str
+    smtSyncEq: str
+    spotBal: str | None = None
+    spotCopyTradingEq: str
+    spotInUseAmt: str | None = None
+    spotIsoBal: str
+    spotUpl: str | None = None
+    spotUplRatio: str | None = None
+    stgyEq: str
+    totalPnl: str | None = None
+    totalPnlRatio: str | None = None
+    twap: str
+    uTime: str
+    upl: str
+    uplLiab: str | None = None
+
+    def parse_to_balance(self) -> Balance:
+        """Convert OKX account detail to standard Balance object"""
+        return Balance(
+            asset=self.ccy,
+            free=Decimal(self.availBal),
+            locked=Decimal(self.frozenBal),
+        )
+
+
+class OkxAccount(Struct):
+    adjEq: str | None = None
+    borrowFroz: str | None = None
+    details: List[OkxAccountDetail] | None = None
+    imr: str | None = None
+    isoEq: str | None = None
+    mgnRatio: str | None = None
+    mmr: str | None = None
+    notionalUsd: str | None = None
+    ordFroz: str | None = None
+    totalEq: str | None = None
+    uTime: str | None = None
+    upl: str | None = None
+
+    def parse_to_balance(self) -> list[Balance]:
+        return [detail.parse_to_balance() for detail in self.details]
+
+
+class OkxWsPositionMsg(Struct):
+    arg: dict
+    data: List[OkxPosition]
+
+
+class OkxWsAccountMsg(Struct):
+    arg: dict
+    data: List[OkxAccount]

@@ -6,13 +6,15 @@ from tradebot.exchange.okx import OkxAccountType
 from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.exchange import OkxExchangeManager
 from tradebot.exchange.okx.schema import OkxWsGeneralMsg
-from tradebot.schema import Trade, BookL1, Kline, Order
+from tradebot.schema import Trade, BookL1, Kline, Order, FuturePosition
 from tradebot.exchange.okx.schema import (
     OkxMarket,
     OkxWsBboTbtMsg,
     OkxWsCandleMsg,
     OkxWsTradeMsg,
     OkxWsOrderMsg,
+    OkxWsPositionMsg,
+    OkxWsAccountMsg,
 )
 from tradebot.constants import (
     OrderStatus,
@@ -256,13 +258,15 @@ class OkxPrivateConnector(PrivateConnector):
 
         self._decoder_ws_general_msg = msgspec.json.Decoder(OkxWsGeneralMsg)
         self._decoder_ws_order_msg = msgspec.json.Decoder(OkxWsOrderMsg, strict=False)
+        self._decoder_ws_position_msg = msgspec.json.Decoder(OkxWsPositionMsg, strict=False)
+        self._decoder_ws_account_msg = msgspec.json.Decoder(OkxWsAccountMsg, strict=False)
     
     async def connect(self):
         await super().connect()
         await self._ws_client.subscribe_orders()
-        # await self._ws_client.subscribe_positions()
-        # await self._ws_client.subscribe_account()
-        await self._ws_client.subscribe_account_position()
+        await self._ws_client.subscribe_positions()
+        await self._ws_client.subscribe_account()
+        # await self._ws_client.subscribe_account_position()
         # await self._ws_client.subscribe_fills()
 
     async def _init_account_balance(self):
@@ -332,20 +336,46 @@ class OkxPrivateConnector(PrivateConnector):
             self._msgbus.publish(topic="okx.order", msg=order)
 
     def _handle_positions(self, raw: bytes):
-        print(f"receive position: {json.loads(raw)}")
-        pass
+        position_msg = self._decoder_ws_position_msg.decode(raw)
+        self._log.debug(f"Position update: {str(position_msg)}")
+        
+        for data in position_msg.data:
+            symbol = self._market_id[data.instId]
+            
+            side = data.posSide.parse_to_position_side()
+            if side == PositionSide.LONG:
+                signed_amount = Decimal(data.pos)
+            elif side == PositionSide.SHORT:
+                signed_amount = -Decimal(data.pos)
+            else:
+                side = None
+                signed_amount = Decimal(0)
+            
+            position = FuturePosition(
+                symbol=symbol,
+                exchange=self._exchange_id,
+                side=side,
+                signed_amount=signed_amount,
+                entry_price=float(data.avgPx),
+                unrealized_pnl=float(data.upl),
+                realized_pnl=float(data.realizedPnl),
+            )
+            
+            self._msgbus.send(endpoint="okx.future.position", msg=position)
 
     def _handle_account(self, raw: bytes):
-        # TODO: update account from fills
-        print(f"receive account: {json.loads(raw)}")
-        pass
+        account_msg: OkxWsAccountMsg = self._decoder_ws_account_msg.decode(raw)
+        self._log.debug(f"Account update: {str(account_msg)}")
+        
+        for data in account_msg.data:
+            balances = data.parse_to_balance()
+            self._account_balance._apply(balances)
 
     def _handle_fills(self, raw: bytes):
         # TODO: update account from fills
         pass
 
     def _handle_account_position(self, raw: bytes):
-        print(f"receive account position: {json.loads(raw)}")
         pass
 
     def _get_td_mode(self, market: OkxMarket):

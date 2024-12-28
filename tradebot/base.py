@@ -69,7 +69,7 @@ class ExchangeManager(ABC):
             self.config.get("sandbox", False)
         )  # Set sandbox mode if demo trade is enabled
         return api
-    
+
     def _parse_symbol(self, mkt: BaseMarket, exchange_suffix: str) -> str:
         if mkt.spot:
             return f"{mkt.base}{mkt.quote}.{exchange_suffix}"
@@ -117,6 +117,7 @@ class ExchangeManager(ABC):
             if market.future and market.active:
                 symbols.append(symbol)
         return symbols
+
 
 class Listener(WSListener):
     def __init__(self, logger, specific_ping_msg=None, *args, **kwargs):
@@ -365,11 +366,10 @@ class PrivateConnector(ABC):
     @property
     def account_type(self):
         return self._account_type
-    
+
     @abstractmethod
     async def _init_account_balance(self):
         pass
-    
 
     @abstractmethod
     async def create_order(
@@ -424,7 +424,7 @@ class ExecutionManagementSystem(ABC):
         self._private_connectors = private_connectors
         self._build_order_submit_queues()
         self._set_account_type()
-    
+
     def _amount_to_precision(
         self,
         symbol: str,
@@ -489,7 +489,7 @@ class ExecutionManagementSystem(ABC):
             ) * exp
 
         return price
-    
+
     @abstractmethod
     def _build_order_submit_queues(self):
         pass
@@ -504,9 +504,7 @@ class ExecutionManagementSystem(ABC):
     ):
         pass
 
-    async def _cancel_order(
-        self, order_submit: OrderSubmit, account_type: AccountType
-    ):
+    async def _cancel_order(self, order_submit: OrderSubmit, account_type: AccountType):
         order_id = self._registry.get_order_id(order_submit.uuid)
         if order_id:
             order: Order = await self._private_connectors[account_type].cancel_order(
@@ -527,9 +525,7 @@ class ExecutionManagementSystem(ABC):
                 f"Order ID not found for UUID: {order_submit.uuid}, The order may already be canceled or filled or not exist"
             )
 
-    async def _create_order(
-        self, order_submit: OrderSubmit, account_type: AccountType
-    ):
+    async def _create_order(self, order_submit: OrderSubmit, account_type: AccountType):
         order: Order = await self._private_connectors[account_type].create_order(
             symbol=order_submit.symbol,
             side=order_submit.side,
@@ -548,18 +544,20 @@ class ExecutionManagementSystem(ABC):
         else:
             self._cache._order_status_update(order)  # INITIALIZED -> FAILED
             self._msgbus.send(endpoint="failed", msg=order)
-    
+
     @abstractmethod
-    def _calculate_twap_orders(self, order_submit: OrderSubmit) -> Tuple[List[Decimal], float]:
+    def _calculate_twap_orders(
+        self, order_submit: OrderSubmit
+    ) -> Tuple[List[Decimal], float]:
         """
         Calculate the amount list and wait time for the twap order
-        
+
         eg:
         amount_list = [10, 10, 10]
         wait = 10
         """
         pass
-    
+
     async def _twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
         amount_list, wait = self._calculate_twap_orders(order_submit)
         for amount in amount_list:
@@ -576,10 +574,11 @@ class ExecutionManagementSystem(ABC):
             self._submit_order(order_submit, account_type)
             await asyncio.sleep(wait)
 
-    async def _create_twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
+    async def _create_twap_order(
+        self, order_submit: OrderSubmit, account_type: AccountType
+    ):
         self._task_manager.create_task(self._twap_order(order_submit, account_type))
-        
-    
+
     async def _handle_submit_order(
         self, account_type: AccountType, queue: asyncio.Queue[OrderSubmit]
     ):
@@ -603,8 +602,8 @@ class ExecutionManagementSystem(ABC):
                 )
             )
 
-class OrderManagementSystem(ABC):
 
+class OrderManagementSystem(ABC):
     def __init__(
         self,
         cache: AsyncCache,
@@ -621,22 +620,13 @@ class OrderManagementSystem(ABC):
         self._registry = registry
 
         self._order_msg_queue: asyncio.Queue[Order] = asyncio.Queue()
-        self._position_msg_queue: asyncio.Queue[Order] = asyncio.Queue()
-
-        # Set up message bus subscriptions
-        # self._msgbus.subscribe(topic="order", handler=self._add_order_msg)
-        # self._msgbus.subscribe(topic="order", handler=self._add_position_msg)
-        
 
     def _add_order_msg(self, order: Order):
         self._order_msg_queue.put_nowait(order)
 
-    def _add_position_msg(self, position):  # todo 
-        self._position_msg_queue.put_nowait(position)
-
     def _handle_spot_position_event(self, order: Order):
         self._cache._apply_spot_position(order)
-        
+
     def _handle_future_position_event(self, position: FuturePosition):
         self._cache._apply_future_position(position)
 
@@ -644,14 +634,14 @@ class OrderManagementSystem(ABC):
         while True:
             try:
                 order = await self._order_msg_queue.get()
-                
+
                 # handle the ACCEPTED, PARTIALLY_FILLED, CANCELED, FILLED, EXPIRED arived early than the order submit uuid
                 uuid = self._registry.get_uuid(order.id)
                 if not uuid:
                     await self._registry.wait_for_order_id(order.id)
                     uuid = self._registry.get_uuid(order.id)
                 order.uuid = uuid
-                
+
                 match order.status:
                     case OrderStatus.ACCEPTED:
                         self._log.debug(f"ORDER STATUS ACCEPTED: {str(order)}")

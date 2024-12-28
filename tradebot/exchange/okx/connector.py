@@ -298,10 +298,6 @@ class OkxPrivateConnector(PrivateConnector):
                     self._handle_positions(raw)
                 elif channel == "account":
                     self._handle_account(raw)
-                elif channel == "fills":
-                    self._handle_fills(raw)
-                elif channel == "balance_and_position":
-                    self._handle_account_position(raw)
         except msgspec.DecodeError as e:
             self._log.error(f"Error decoding message: {str(raw)} {e}")
 
@@ -350,18 +346,26 @@ class OkxPrivateConnector(PrivateConnector):
                 signed_amount = Decimal(data.pos)
             elif side == PositionSide.SHORT:
                 signed_amount = -Decimal(data.pos)
+            elif side == PositionSide.FLAT:
+                # one way mode, posSide always is 'net' from OKX ws msg, and pos amount is signed
+                signed_amount = Decimal(data.pos)
+                if signed_amount > 0:
+                    side = PositionSide.LONG
+                elif signed_amount < 0:
+                    side = PositionSide.SHORT
+                else:
+                    side = None
             else:
-                side = None
-                signed_amount = Decimal(0)
+                self._log.warning(f"Invalid position side: {side}")
             
             position = FuturePosition(
                 symbol=symbol,
                 exchange=self._exchange_id,
                 side=side,
                 signed_amount=signed_amount,
-                entry_price=float(data.avgPx),
-                unrealized_pnl=float(data.upl),
-                realized_pnl=float(data.realizedPnl),
+                entry_price=float(data.avgPx) if data.avgPx else 0,
+                unrealized_pnl=float(data.upl) if data.upl else 0,
+                realized_pnl=float(data.realizedPnl) if data.realizedPnl else 0,
             )
             
             self._msgbus.send(endpoint="okx.future.position", msg=position)

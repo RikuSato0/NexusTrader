@@ -1,4 +1,5 @@
 import msgspec
+import json
 from typing import Dict
 from decimal import Decimal
 from tradebot.exchange.okx import OkxAccountType
@@ -56,7 +57,7 @@ class OkxPublicConnector(PublicConnector):
         self._ws_msg_general_decoder = msgspec.json.Decoder(OkxWsGeneralMsg)
         self._ws_msg_bbo_tbt_decoder = msgspec.json.Decoder(OkxWsBboTbtMsg)
         self._ws_msg_candle_decoder = msgspec.json.Decoder(OkxWsCandleMsg)
-        self._ws_msg_trade_decoder = msgspec.json.Decoder(OkxWsTradeMsg)
+        self._ws_msg_trade_decoder = msgspec.json.Decoder(OkxWsTradeMsg) 
 
     async def subscribe_trade(self, symbol: str):
         market = self._market.get(symbol, None)
@@ -259,6 +260,13 @@ class OkxPrivateConnector(PrivateConnector):
     async def connect(self):
         await super().connect()
         await self._ws_client.subscribe_orders()
+        # await self._ws_client.subscribe_positions()
+        # await self._ws_client.subscribe_account()
+        await self._ws_client.subscribe_account_position()
+        # await self._ws_client.subscribe_fills()
+
+    async def _init_account_balance(self):
+        ...
 
     def _handle_event_msg(self, msg: OkxWsGeneralMsg):
         if msg.event == "error":
@@ -287,6 +295,8 @@ class OkxPrivateConnector(PrivateConnector):
                     self._handle_account(raw)
                 elif channel == "fills":
                     self._handle_fills(raw)
+                elif channel == "balance_and_position":
+                    self._handle_account_position(raw)
         except msgspec.DecodeError as e:
             self._log.error(f"Error decoding message: {str(raw)} {e}")
 
@@ -322,15 +332,20 @@ class OkxPrivateConnector(PrivateConnector):
             self._msgbus.publish(topic="okx.order", msg=order)
 
     def _handle_positions(self, raw: bytes):
-        # TODO: update positions from fills
+        print(f"receive position: {json.loads(raw)}")
         pass
 
     def _handle_account(self, raw: bytes):
         # TODO: update account from fills
+        print(f"receive account: {json.loads(raw)}")
         pass
 
     def _handle_fills(self, raw: bytes):
         # TODO: update account from fills
+        pass
+
+    def _handle_account_position(self, raw: bytes):
+        print(f"receive account position: {json.loads(raw)}")
         pass
 
     def _get_td_mode(self, market: OkxMarket):

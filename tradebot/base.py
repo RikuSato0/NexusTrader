@@ -621,6 +621,7 @@ class OrderManagementSystem(ABC):
         self._registry = registry
 
         self._order_msg_queue: asyncio.Queue[Order] = asyncio.Queue()
+        self._position_msg_queue: asyncio.Queue[Order] = asyncio.Queue()
 
         # Set up message bus subscriptions
         # self._msgbus.subscribe(topic="order", handler=self._add_order_msg)
@@ -629,6 +630,9 @@ class OrderManagementSystem(ABC):
 
     def _add_order_msg(self, order: Order):
         self._order_msg_queue.put_nowait(order)
+
+    def _add_position_msg(self, position):  # todo 
+        self._position_msg_queue.put_nowait(position)
 
     def _handle_spot_position_event(self, order: Order):
         self._cache._apply_spot_position(order)

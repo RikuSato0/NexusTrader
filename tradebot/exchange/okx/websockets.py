@@ -187,6 +187,11 @@ class OkxWSClient(WSClient):
         subscription_id = "account"
         await self._subscribe(params, subscription_id, auth=True)
 
+    async def subscribe_account_position(self):
+        params = {"channel": "balance_and_position"}
+        subscription_id = "account_position"
+        await self._subscribe(params, subscription_id, auth=True)
+
     async def subscribe_positions(
         self, inst_type: Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY"
     ):
@@ -201,7 +206,7 @@ class OkxWSClient(WSClient):
         params = {"channel": "orders", "instType": inst_type}
         await self._subscribe(params, subscription_id, auth=True)
 
-    async def subscrbe_fills(self):
+    async def subscribe_fills(self):
         subscription_id = "fills"
         params = {"channel": "fills"}
         await self._subscribe(params, subscription_id, auth=True)

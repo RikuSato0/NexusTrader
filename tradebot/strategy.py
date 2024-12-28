@@ -1,5 +1,6 @@
 from typing import Dict, List, Set, Callable, Literal
 from decimal import Decimal
+import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from tradebot.core.log import SpdLog
 from tradebot.base import ExchangeManager
@@ -40,7 +41,7 @@ class Strategy:
             DataType.KLINE: {},
         }
 
-        self._scheduler = AsyncIOScheduler()
+        self._scheduler = AsyncIOScheduler(event_loop=asyncio.new_event_loop())  # to test
         self._initialized = False
 
     def _init_core(

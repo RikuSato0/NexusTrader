@@ -15,6 +15,6 @@ class OkxOrderManagementSystem(OrderManagementSystem):
     ):
         super().__init__(cache, msgbus, task_manager, registry)
         self._msgbus.subscribe(topic="okx.order", handler=self._add_order_msg)
-        self._msgbus.subscribe(topic="okx.order", handler=self._add_position_msg)
+        self._msgbus.subscribe(topic="okx.position", handler=self._add_position_msg)
 
     #TODO: some rest-api check logic

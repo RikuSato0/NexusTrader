@@ -502,7 +502,8 @@ class Engine:
         await self._task_manager.wait()
 
     async def _dispose(self):
-        self._strategy._scheduler.shutdown()
+        if self._is_built:
+            self._strategy._scheduler.shutdown()
         for connector in self._public_connectors.values():
             await connector.disconnect()
         for connector in self._private_connectors.values():

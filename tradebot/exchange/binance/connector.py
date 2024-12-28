@@ -814,3 +814,6 @@ class BinancePrivateConnector(PrivateConnector):
                 status=OrderStatus.FAILED,
             )
             return order
+    
+    # async def _init_account_balance(self):
+    #     pass

@@ -41,8 +41,10 @@ class Strategy:
             DataType.KLINE: {},
         }
 
-        self._scheduler = AsyncIOScheduler(event_loop=asyncio.new_event_loop())  # to test
         self._initialized = False
+        self._loop = None
+        self._scheduler = AsyncIOScheduler()
+        
 
     def _init_core(
         self,

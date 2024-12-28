@@ -1,6 +1,5 @@
 import asyncio
-import warnings
-from typing import Dict, List, Tuple
+from typing import Dict
 from decimal import Decimal
 from tradebot.constants import AccountType
 from tradebot.schema import OrderSubmit
@@ -11,7 +10,6 @@ from tradebot.core.registry import OrderRegistry
 from tradebot.exchange.bybit import BybitAccountType
 from tradebot.exchange.bybit.schema import BybitMarket
 from tradebot.base import ExecutionManagementSystem
-from tradebot.schema import BaseMarket
 
 class BybitExecutionManagementSystem(ExecutionManagementSystem):
     _market: Dict[str, BybitMarket]
@@ -53,39 +51,8 @@ class BybitExecutionManagementSystem(ExecutionManagementSystem):
             account_type = self._bybit_account_type
         self._order_submit_queues[account_type].put_nowait(order)
         
-    def _calculate_twap_orders(self, order_submit: OrderSubmit) -> Tuple[List[Decimal], float]:
-        amount_list = []
-        symbol = order_submit.symbol
-        market = self._market[symbol]
-        total_amount = float(order_submit.amount)
-        wait = order_submit.wait
-        duration = order_submit.duration
-        
+    def _get_min_order_amount(self, symbol: str, market: BybitMarket) -> Decimal:
         book = self._cache.bookl1(symbol)
-        min_order_amount = max(20 / (book.bid + book.ask), market.limits.amount.min)       
-        
-        interval = duration // wait
-        if total_amount < min_order_amount:
-            warnings.warn(f"Amount {total_amount} is less than min order amount {min_order_amount}. No need to split orders.")
-            wait = 0
-            return [self._amount_to_precision(symbol, min_order_amount)], wait
-        
-        base_amount = total_amount / interval
-        
-        while base_amount < min_order_amount and interval > 1:
-            interval -= 1
-            base_amount = total_amount / interval
-        
-        base_amount = self._amount_to_precision(symbol, base_amount)
-        
-        interval = int(total_amount // float(base_amount))
-        remaining = total_amount - interval * float(base_amount)
-        
-        if remaining < min_order_amount:
-            amount_list = [base_amount] * interval 
-            amount_list[-1] += Decimal(str(remaining))
-        else:
-            amount_list = [base_amount] * interval + [Decimal(str(remaining))]
-        
-        wait = duration / len(amount_list)
-        return amount_list, wait
+        min_order_amount = max(12 / (book.bid + book.ask), market.limits.amount.min)
+        min_order_amount = self._amount_to_precision(symbol, min_order_amount, mode="ceil")
+        return min_order_amount

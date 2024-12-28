@@ -550,7 +550,7 @@ class ExecutionManagementSystem(ABC):
     def _get_min_order_amount(self, symbol: str, market: BaseMarket) -> Decimal:
         pass
     
-    def _calculate_twap_orders(self, order_submit: OrderSubmit, market: BaseMarket) -> Tuple[List[Decimal], Decimal, float]:
+    def _calculate_twap_orders(self, symbol: str, total_amount: Decimal, duration: float, wait: float, market: BaseMarket) -> Tuple[List[Decimal], Decimal, float]:
         """
         Calculate the amount list and wait time for the twap order
 
@@ -559,10 +559,6 @@ class ExecutionManagementSystem(ABC):
         wait = 10
         """
         amount_list = []
-        symbol = order_submit.symbol
-        total_amount: Decimal = order_submit.amount
-        wait = order_submit.wait
-        duration = order_submit.duration
         
         min_order_amount: Decimal = self._get_min_order_amount(symbol, market)       
         
@@ -588,21 +584,79 @@ class ExecutionManagementSystem(ABC):
         wait = duration / len(amount_list)
         return amount_list, min_order_amount, wait
     
+    def _cal_limit_order_price(self, side: OrderSide, symbol: str, market: BaseMarket) -> Decimal:
+        basis_point = market.precision.price
+        book = self._cache.bookl1(symbol)  
+        
+        if side == OrderSide.BUY:
+            if book.ask - book.bid > basis_point:
+                price = book.bid + basis_point
+            else:
+                price = book.bid
+        else:
+            if book.ask - book.bid > basis_point:
+                price = book.ask - basis_point
+            else:
+                price = book.ask
+        return self._price_to_precision(symbol, price)
+        
     async def _twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
-        amount_list, min_order_amount, wait = self._calculate_twap_orders(order_submit)
-        for amount in amount_list:
-            order_submit = OrderSubmit(
-                symbol=order_submit.symbol,
-                instrument_id=order_submit.instrument_id,
-                submit_type=SubmitType.CREATE,
-                type=OrderType.LIMIT,
-                side=order_submit.side,
-                amount=amount,
-                position_side=order_submit.position_side,
-                kwargs=order_submit.kwargs,
-            )
-            self._submit_order(order_submit, account_type)
-            await asyncio.sleep(wait)
+        symbol = order_submit.symbol
+        instrument_id = order_submit.instrument_id
+        market = self._market[symbol]
+        amount_list, min_order_amount, wait = self._calculate_twap_orders(
+            symbol=symbol,
+            total_amount=order_submit.amount,
+            duration=order_submit.duration,
+            wait=order_submit.wait,
+            market=market,
+        )
+        
+        order_uuid = None
+        
+        while amount_list:
+            price = self._cal_limit_order_price(order_submit.side, symbol, market)
+            if order_uuid:
+                order = self._cache.get_order(order_uuid)
+                if order.is_opened:
+                    order_cancel_submit = OrderSubmit(
+                        symbol=order_submit.symbol,
+                        uuid=order_uuid,
+                        submit_type=SubmitType.CANCEL,
+                    )
+                    await self._cancel_order(order_cancel_submit, account_type)
+                elif order.is_closed:
+                    amount = amount_list.pop()
+                    remaining = order.remaining
+                    if remaining > min_order_amount:
+                        await self._create_order(
+                            order_submit=OrderSubmit(
+                                symbol=symbol,
+                                instrument_id=instrument_id,
+                                submit_type=SubmitType.CREATE,
+                                side=order_submit.side,
+                                type=OrderType.MARKET,
+                                amount=remaining,
+                            )
+                        )
+                    else:
+                        amount += remaining
+                    order_submit = OrderSubmit(
+                        symbol=symbol,
+                        instrument_id=instrument_id,
+                        submit_type=SubmitType.CREATE,
+                        type=OrderType.LIMIT,
+                        side=order_submit.side,
+                        amount=amount,
+                        price=price,
+                        position_side=order_submit.position_side,
+                        kwargs=order_submit.kwargs,
+                    )
+
+                    order = await self._create_order(order_submit, account_type)
+                    if order.success:
+                        order_uuid = order.uuid
+                    await asyncio.sleep(wait)
 
     async def _create_twap_order(
         self, order_submit: OrderSubmit, account_type: AccountType

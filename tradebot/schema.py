@@ -162,7 +162,22 @@ class Order(Struct):
     @property
     def success(self) -> bool:
         return self.status != OrderStatus.FAILED
-
+    
+    @property
+    def is_filled(self) -> bool:
+        return self.status == OrderStatus.FILLED
+    
+    @property
+    def is_canceled(self) -> bool:
+        return self.status == OrderStatus.CANCELED
+    
+    @property
+    def is_closed(self) -> bool:
+        return self.status in [OrderStatus.FILLED, OrderStatus.CANCELED, OrderStatus.EXPIRED]
+    
+    @property
+    def is_opened(self) -> bool:
+        return not self.is_closed
 
 class AlgoOrder(Struct):
     uuid: str

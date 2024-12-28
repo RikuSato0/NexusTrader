@@ -1,6 +1,5 @@
 from typing import Dict, List, Set, Callable, Literal
 from decimal import Decimal
-import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from tradebot.core.log import SpdLog
 from tradebot.base import ExchangeManager

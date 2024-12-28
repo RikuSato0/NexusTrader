@@ -2,7 +2,7 @@ import asyncio
 from decimal import Decimal
 from typing import Dict
 from tradebot.constants import AccountType
-from tradebot.schema import BaseMarket, OrderSubmit, InstrumentId
+from tradebot.schema import OrderSubmit, InstrumentId
 from tradebot.core.cache import AsyncCache
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager

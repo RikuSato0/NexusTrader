@@ -41,8 +41,8 @@ class Strategy:
             DataType.KLINE: {},
         }
 
-        self._scheduler = AsyncIOScheduler()
         self._initialized = False
+        self._scheduler = AsyncIOScheduler()
 
     def _init_core(
         self,

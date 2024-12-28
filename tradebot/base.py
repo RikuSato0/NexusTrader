@@ -519,7 +519,7 @@ class ExecutionManagementSystem(ABC):
             else:
                 # self._cache._order_status_update(order) # SOME STATUS -> FAILED
                 self._msgbus.send(endpoint="cancel_failed", msg=order)
-
+            return order
         else:
             self._log.error(
                 f"Order ID not found for UUID: {order_submit.uuid}, The order may already be canceled or filled or not exist"
@@ -544,11 +544,13 @@ class ExecutionManagementSystem(ABC):
         else:
             self._cache._order_status_update(order)  # INITIALIZED -> FAILED
             self._msgbus.send(endpoint="failed", msg=order)
-
+        return order
+    
     @abstractmethod
-    def _calculate_twap_orders(
-        self, order_submit: OrderSubmit
-    ) -> Tuple[List[Decimal], float]:
+    def _get_min_order_amount(self, symbol: str, market: BaseMarket) -> Decimal:
+        pass
+    
+    def _calculate_twap_orders(self, order_submit: OrderSubmit, market: BaseMarket) -> Tuple[List[Decimal], Decimal, float]:
         """
         Calculate the amount list and wait time for the twap order
 
@@ -556,16 +558,44 @@ class ExecutionManagementSystem(ABC):
         amount_list = [10, 10, 10]
         wait = 10
         """
-        pass
-
+        amount_list = []
+        symbol = order_submit.symbol
+        total_amount: Decimal = order_submit.amount
+        wait = order_submit.wait
+        duration = order_submit.duration
+        
+        min_order_amount: Decimal = self._get_min_order_amount(symbol, market)       
+        
+        interval = duration // wait
+        if total_amount < min_order_amount:
+            warnings.warn(f"Amount {total_amount} is less than min order amount {min_order_amount}. No need to split orders.")
+            wait = 0
+            return [min_order_amount], wait
+        
+        base_amount = float(total_amount) / interval
+        
+        base_amount = max(min_order_amount, self._amount_to_precision(symbol, base_amount))
+        
+        interval = int(total_amount // base_amount)
+        remaining = total_amount - interval * base_amount
+        
+        if remaining < min_order_amount:
+            amount_list = [base_amount] * interval 
+            amount_list[-1] += remaining
+        else:
+            amount_list = [base_amount] * interval + [remaining]
+        
+        wait = duration / len(amount_list)
+        return amount_list, min_order_amount, wait
+    
     async def _twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
-        amount_list, wait = self._calculate_twap_orders(order_submit)
+        amount_list, min_order_amount, wait = self._calculate_twap_orders(order_submit)
         for amount in amount_list:
             order_submit = OrderSubmit(
                 symbol=order_submit.symbol,
                 instrument_id=order_submit.instrument_id,
                 submit_type=SubmitType.CREATE,
-                type=OrderType.MARKET,
+                type=OrderType.LIMIT,
                 side=order_submit.side,
                 amount=amount,
                 position_side=order_submit.position_side,

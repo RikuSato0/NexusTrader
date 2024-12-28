@@ -270,6 +270,7 @@ class OkxPrivateConnector(PrivateConnector):
         # await self._ws_client.subscribe_fills()
 
     async def _init_account_balance(self):
+        # todo:
         ...
 
     def _handle_event_msg(self, msg: OkxWsGeneralMsg):
@@ -333,7 +334,9 @@ class OkxPrivateConnector(PrivateConnector):
                 reduce_only=data.reduceOnly,
                 position_side=OkxEnumParser.parse_position_side(data.posSide),
             )
-            self._msgbus.publish(topic="okx.order", msg=order)
+            self._msgbus.send(topic="okx.order", msg=order)
+            if data.instType == "SPOT":
+                self._msgbus.send(topic="okx.spot.position", msg=order)
 
     def _handle_positions(self, raw: bytes):
         position_msg = self._decoder_ws_position_msg.decode(raw)
@@ -371,12 +374,6 @@ class OkxPrivateConnector(PrivateConnector):
             balances = data.parse_to_balance()
             self._account_balance._apply(balances)
 
-    def _handle_fills(self, raw: bytes):
-        # TODO: update account from fills
-        pass
-
-    def _handle_account_position(self, raw: bytes):
-        pass
 
     def _get_td_mode(self, market: OkxMarket):
         return OkxTdMode.CASH if market.spot else OkxTdMode.CROSS

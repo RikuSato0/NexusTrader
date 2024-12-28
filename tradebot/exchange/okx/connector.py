@@ -334,9 +334,9 @@ class OkxPrivateConnector(PrivateConnector):
                 reduce_only=data.reduceOnly,
                 position_side=OkxEnumParser.parse_position_side(data.posSide),
             )
-            self._msgbus.send(topic="okx.order", msg=order)
+            self._msgbus.send(endpoint="okx.order", msg=order)
             if data.instType == "SPOT":
-                self._msgbus.send(topic="okx.spot.position", msg=order)
+                self._msgbus.send(endpoint="okx.spot.position", msg=order)
 
     def _handle_positions(self, raw: bytes):
         position_msg = self._decoder_ws_position_msg.decode(raw)

@@ -510,7 +510,7 @@ class ExecutionManagementSystem(ABC):
             order: Order = await self._private_connectors[account_type].cancel_order(
                 symbol=order_submit.symbol,
                 order_id=order_id,
-                **order_submit.kwargs,
+                **(order_submit.kwargs or {}),
             )
             order.uuid = order_submit.uuid
             if order.success:
@@ -632,27 +632,26 @@ class ExecutionManagementSystem(ABC):
             f"amount_list: {amount_list}, min_order_amount: {min_order_amount}, wait: {wait}"
         )
 
-        order_uuid = None
-        while amount_list:
-            # self._log.debug(f"amount_list: {amount_list}")
-            if order_uuid:
-                order = self._cache.get_order(order_uuid)
+        on_flight_oid = None
+        while amount_list or on_flight_oid:
+            if on_flight_oid:
+                order = self._cache.get_order(on_flight_oid)
                 if not order:
-                    self._log.error(f"Order {order_uuid} not found")
-                    break  # TBD
+                    self._log.error(f"Order {on_flight_oid} not found")
+                    break
 
-                # 检查现价单是否已成交，不然的话立刻下市价单成交或者 把remaining amount加到下一个市价单上
-                if order.is_opened and not order.on_fight:
+                # 检查现价单是否已成交，不然的话立刻下市价单成交 或者 把remaining amount加到下一个市价单上
+                if order.is_opened and not order.on_flight:
                     order_cancel_submit = OrderSubmit(
                         symbol=symbol,
                         instrument_id=instrument_id,
                         submit_type=SubmitType.CANCEL,
-                        uuid=order_uuid,
+                        uuid=on_flight_oid,
                     )
                     await self._cancel_order(order_cancel_submit, account_type)
-                    self._log.debug(f"order canceled: {order}")
+                    self._log.debug(f"CANCEL: {order}")
                 elif order.is_closed:
-                    order_uuid = None
+                    on_flight_oid = None
                     # amount = amount_list.pop()
                     if remaining := order.remaining:
                         if remaining > min_order_amount:
@@ -674,8 +673,13 @@ class ExecutionManagementSystem(ABC):
                                 amount_list[-1] += remaining
                             else:
                                 # how to deal with the last limit order not fully filled?
-                                ...
-
+                                self._log.warning(
+                                    f"Last limit order not fully filled, remaining amount: {remaining}"
+                                )
+                else:
+                    pass
+                    self._log.debug(f"order opened and flighting: {order}")
+                    await asyncio.sleep(0.01)
             else:
                 price = self._cal_limit_order_price(
                     symbol=symbol,
@@ -709,10 +713,15 @@ class ExecutionManagementSystem(ABC):
                     )
                 order = await self._create_order(order_submit, account_type)
                 if order.success:
-                    order_uuid = order.uuid
+                    on_flight_oid = order.uuid
+                    self._log.debug(f"SUBMIT: {order_submit}")
                     await asyncio.sleep(wait)
                 else:
+                    self._log.error(f"SUBMIT FAILED: {order_submit}")
                     break
+        
+        self._log.debug(f"TWAP ORDER FINISHED: {order_submit}")
+
 
     async def _create_twap_order(
         self, order_submit: OrderSubmit, account_type: AccountType

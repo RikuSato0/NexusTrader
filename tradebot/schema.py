@@ -189,7 +189,7 @@ class Order(Struct):
         ]
     
     @property
-    def on_fight(self) -> bool:
+    def on_flight(self) -> bool:
         return self.status in [
             OrderStatus.PENDING,
             OrderStatus.CANCELING,

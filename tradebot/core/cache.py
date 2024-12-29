@@ -46,7 +46,6 @@ class AsyncCache:
         # in-memory save
         self._mem_closed_orders: Dict[str, bool] = {}  # uuid -> bool
         self._mem_orders: Dict[str, Order] = {}  # uuid -> Order
-        self._mem_algo_orders: Dict[str, AlgoOrder] = {}  # uuid -> AlgoOrderStatus
 
         self._mem_open_orders: Dict[ExchangeType, Set[str]] = defaultdict(
             set
@@ -267,7 +266,7 @@ class AsyncCache:
             self._mem_open_orders[order.exchange].discard(order.uuid)
             self._mem_symbol_open_orders[order.symbol].discard(order.uuid)
 
-    def get_order(self, uuid: str) -> Order | AlgoOrder:
+    def get_order(self, uuid: str) -> Order:
         if uuid in self._mem_orders:
             return self._mem_orders[uuid]
 

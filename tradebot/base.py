@@ -510,7 +510,7 @@ class ExecutionManagementSystem(ABC):
             order: Order = await self._private_connectors[account_type].cancel_order(
                 symbol=order_submit.symbol,
                 order_id=order_id,
-                **(order_submit.kwargs or {}),
+                **order_submit.kwargs,
             )
             order.uuid = order_submit.uuid
             if order.success:

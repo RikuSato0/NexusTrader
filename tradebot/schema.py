@@ -130,7 +130,7 @@ class OrderSubmit(Struct):
     position_side: PositionSide | None = None
     duration: int | None = None
     wait: int | None = None
-    kwargs: Dict[str, Any] | None = None
+    kwargs: Dict[str, Any] = {}
     status: OrderStatus = OrderStatus.INITIALIZED
 
 

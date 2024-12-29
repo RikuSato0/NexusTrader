@@ -56,6 +56,7 @@ class Engine:
         self._config = config
         self._is_running = False
         self._is_built = False
+        self._scheduler_started = False
         self.set_loop_policy()
         self._loop = asyncio.new_event_loop()
         self._task_manager = TaskManager(self._loop)
@@ -490,6 +491,10 @@ class Engine:
     async def _start_oms(self):
         for oms in self._oms.values():
             await oms.start()
+    
+    def _start_scheduler(self):
+        self._strategy._scheduler.start()
+        self._scheduler_started = True
 
     async def _start(self):
         await self._cache.start()
@@ -498,11 +503,11 @@ class Engine:
         await self._start_connectors()
         if self._custom_signal_recv:
             await self._custom_signal_recv.start()
-        self._strategy._scheduler.start()
+        self._start_scheduler()
         await self._task_manager.wait()
 
     async def _dispose(self):
-        if self._is_built:
+        if self._scheduler_started:
             self._strategy._scheduler.shutdown()
         for connector in self._public_connectors.values():
             await connector.disconnect()

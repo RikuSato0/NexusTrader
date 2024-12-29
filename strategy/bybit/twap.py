@@ -39,7 +39,7 @@ class Demo(Strategy):
                 symbol="BTCUSDT-PERP.BYBIT",
                 side=OrderSide.BUY,
                 amount=Decimal("0.1"),
-                duration=60 * 1,
+                duration=60,
                 wait=5,
             )
             self.signal = False

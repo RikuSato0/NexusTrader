@@ -633,7 +633,7 @@ class ExecutionManagementSystem(ABC):
         )
 
         on_flight_oid = None
-        while amount_list or on_flight_oid:
+        while amount_list:
             if on_flight_oid:
                 order = self._cache.get_order(on_flight_oid)
                 if not order:
@@ -655,6 +655,7 @@ class ExecutionManagementSystem(ABC):
                     # amount = amount_list.pop()
                     if remaining := order.remaining:
                         if remaining > min_order_amount:
+                            self._log.debug(f"remaining {remaining} create market order")
                             await self._create_order(
                                 order_submit=OrderSubmit(
                                     symbol=symbol,
@@ -670,6 +671,7 @@ class ExecutionManagementSystem(ABC):
                             )
                         else:
                             if amount_list:
+                                self._log.debug(f"remaining {remaining} add to next order")
                                 amount_list[-1] += remaining
                             else:
                                 # how to deal with the last limit order not fully filled?
@@ -677,8 +679,7 @@ class ExecutionManagementSystem(ABC):
                                     f"Last limit order not fully filled, remaining amount: {remaining}"
                                 )
                 else:
-                    pass
-                    self._log.debug(f"order opened and flighting: {order}")
+                    # self._log.debug(f"order opened and flighting: {order}")
                     await asyncio.sleep(0.01)
             else:
                 price = self._cal_limit_order_price(

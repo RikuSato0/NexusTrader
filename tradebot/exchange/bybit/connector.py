@@ -402,7 +402,7 @@ class BybitPrivateConnector(PrivateConnector):
                 average=float(data.avgPrice) if data.avgPrice else None,
                 amount=Decimal(data.qty),
                 filled=Decimal(data.cumExecQty),
-                remaining=Decimal(data.leavesQty),
+                remaining=Decimal(data.qty) - Decimal(data.cumExecQty), # TODO: check if this is correct leavsQty is not correct
                 fee=Decimal(data.cumExecFee),
                 fee_currency=data.feeCurrency,
                 cum_cost=Decimal(data.cumExecValue),

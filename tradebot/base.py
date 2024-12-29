@@ -545,12 +545,19 @@ class ExecutionManagementSystem(ABC):
             self._cache._order_status_update(order)  # INITIALIZED -> FAILED
             self._msgbus.send(endpoint="failed", msg=order)
         return order
-    
+
     @abstractmethod
     def _get_min_order_amount(self, symbol: str, market: BaseMarket) -> Decimal:
         pass
-    
-    def _calculate_twap_orders(self, symbol: str, total_amount: Decimal, duration: float, wait: float, market: BaseMarket) -> Tuple[List[Decimal], Decimal, float]:
+
+    def _calculate_twap_orders(
+        self,
+        symbol: str,
+        total_amount: Decimal,
+        duration: float,
+        wait: float,
+        min_order_amount: Decimal,
+    ) -> Tuple[List[Decimal], float]:
         """
         Calculate the amount list and wait time for the twap order
 
@@ -559,35 +566,38 @@ class ExecutionManagementSystem(ABC):
         wait = 10
         """
         amount_list = []
-        
-        min_order_amount: Decimal = self._get_min_order_amount(symbol, market)       
-        
-        interval = duration // wait
         if total_amount < min_order_amount:
-            warnings.warn(f"Amount {total_amount} is less than min order amount {min_order_amount}. No need to split orders.")
+            warnings.warn(
+                f"Amount {total_amount} is less than min order amount {min_order_amount}. No need to split orders."
+            )
             wait = 0
             return [min_order_amount], wait
-        
+
+        interval = duration // wait
         base_amount = float(total_amount) / interval
-        
-        base_amount = max(min_order_amount, self._amount_to_precision(symbol, base_amount))
-        
+
+        base_amount = max(
+            min_order_amount, self._amount_to_precision(symbol, base_amount)
+        )
+
         interval = int(total_amount // base_amount)
         remaining = total_amount - interval * base_amount
-        
+
         if remaining < min_order_amount:
-            amount_list = [base_amount] * interval 
+            amount_list = [base_amount] * interval
             amount_list[-1] += remaining
         else:
             amount_list = [base_amount] * interval + [remaining]
-        
+
         wait = duration / len(amount_list)
-        return amount_list, min_order_amount, wait
-    
-    def _cal_limit_order_price(self, symbol: str, side: OrderSide, market: BaseMarket) -> Decimal:
+        return amount_list, wait
+
+    def _cal_limit_order_price(
+        self, symbol: str, side: OrderSide, market: BaseMarket
+    ) -> Decimal:
         basis_point = market.precision.price
-        book = self._cache.bookl1(symbol)  
-        
+        book = self._cache.bookl1(symbol)
+
         if side == OrderSide.BUY:
             if book.ask - book.bid > basis_point:
                 price = book.bid + basis_point
@@ -599,7 +609,7 @@ class ExecutionManagementSystem(ABC):
             else:
                 price = book.ask
         return self._price_to_precision(symbol, price)
-        
+
     async def _twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
         symbol = order_submit.symbol
         instrument_id = order_submit.instrument_id
@@ -607,54 +617,72 @@ class ExecutionManagementSystem(ABC):
         market = self._market[symbol]
         position_side = order_submit.position_side
         kwargs = order_submit.kwargs
-        
-        amount_list, min_order_amount, wait = self._calculate_twap_orders(
+
+        self._log.debug(f"order_submit: {order_submit}")
+
+        min_order_amount: Decimal = self._get_min_order_amount(symbol, market)
+        amount_list, wait = self._calculate_twap_orders(
             symbol=symbol,
             total_amount=order_submit.amount,
             duration=order_submit.duration,
             wait=order_submit.wait,
-            market=market,
+            min_order_amount=min_order_amount,
         )
-        
+        self._log.debug(
+            f"amount_list: {amount_list}, min_order_amount: {min_order_amount}, wait: {wait}"
+        )
+
         order_uuid = None
-        amount = amount_list.pop()
         while amount_list:
+            # self._log.debug(f"amount_list: {amount_list}")
             if order_uuid:
                 order = self._cache.get_order(order_uuid)
-                if order.is_opened:
+                if not order:
+                    self._log.error(f"Order {order_uuid} not found")
+                    break  # TBD
+
+                # 检查现价单是否已成交，不然的话立刻下市价单成交或者 把remaining amount加到下一个市价单上
+                if order.is_opened and not order.on_fight:
                     order_cancel_submit = OrderSubmit(
                         symbol=symbol,
-                        uuid=order_uuid,
+                        instrument_id=instrument_id,
                         submit_type=SubmitType.CANCEL,
+                        uuid=order_uuid,
                     )
                     await self._cancel_order(order_cancel_submit, account_type)
+                    self._log.debug(f"order canceled: {order}")
                 elif order.is_closed:
-                    amount = amount_list.pop()
-                    remaining = order.remaining
-                    if remaining > min_order_amount:
-                        await self._create_order(
-                            order_submit=OrderSubmit(
-                                symbol=symbol,
-                                instrument_id=instrument_id,
-                                submit_type=SubmitType.CREATE,
-                                side=side,
-                                type=OrderType.MARKET,
-                                amount=remaining,
-                                position_side=position_side,
-                                kwargs=kwargs,
-                            ),
-                            account_type=account_type,
-                        )
-                    else:
-                        amount += remaining
                     order_uuid = None
+                    # amount = amount_list.pop()
+                    if remaining := order.remaining:
+                        if remaining > min_order_amount:
+                            await self._create_order(
+                                order_submit=OrderSubmit(
+                                    symbol=symbol,
+                                    instrument_id=instrument_id,
+                                    submit_type=SubmitType.CREATE,
+                                    side=side,
+                                    type=OrderType.MARKET,
+                                    amount=remaining,
+                                    position_side=position_side,
+                                    kwargs=kwargs,
+                                ),
+                                account_type=account_type,
+                            )
+                        else:
+                            if amount_list:
+                                amount_list[-1] += remaining
+                            else:
+                                # how to deal with the last limit order not fully filled?
+                                ...
+
             else:
                 price = self._cal_limit_order_price(
                     symbol=symbol,
                     side=side,
                     market=market,
                 )
-                
+                amount = amount_list.pop()  # 每次下limit order 才 pop()
                 if amount_list:
                     order_submit = OrderSubmit(
                         symbol=symbol,
@@ -682,9 +710,9 @@ class ExecutionManagementSystem(ABC):
                 order = await self._create_order(order_submit, account_type)
                 if order.success:
                     order_uuid = order.uuid
+                    await asyncio.sleep(wait)
                 else:
                     break
-                await asyncio.sleep(wait)
 
     async def _create_twap_order(
         self, order_submit: OrderSubmit, account_type: AccountType

@@ -584,7 +584,7 @@ class BybitWalletBalance(msgspec.Struct):
 class BybitWalletBalanceResponse(msgspec.Struct):
     retCode: int
     retMsg: str
-    result: List[BybitWalletBalance]
+    result: BybitListResult[BybitWalletBalance]
     time: int
 
 class BybitWsAccountWalletCoin(msgspec.Struct):

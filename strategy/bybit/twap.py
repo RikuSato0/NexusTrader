@@ -20,6 +20,15 @@ class Demo(Strategy):
         super().__init__()
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
         self.signal = True
+        
+    def on_canceled_order(self, order: Order):
+        print(order)
+    
+    def on_accepted_order(self, order: Order):
+        print(order)
+    
+    def on_partial_filled_order(self, order: Order):
+        print(order)
     
     def on_filled_order(self, order: Order):
         print(order)

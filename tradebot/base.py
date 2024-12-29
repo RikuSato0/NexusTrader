@@ -617,7 +617,7 @@ class ExecutionManagementSystem(ABC):
         )
         
         order_uuid = None
-        
+        amount = amount_list.pop()
         while amount_list:
             if order_uuid:
                 order = self._cache.get_order(order_uuid)
@@ -654,21 +654,36 @@ class ExecutionManagementSystem(ABC):
                     side=side,
                     market=market,
                 )
-                order_submit = OrderSubmit(
-                    symbol=symbol,
-                    instrument_id=instrument_id,
-                    submit_type=SubmitType.CREATE,
-                    type=OrderType.LIMIT,
-                    side=side,
-                    amount=amount,
-                    price=price,
-                    position_side=position_side,
-                    kwargs=kwargs,
-                )
                 
+                if amount_list:
+                    order_submit = OrderSubmit(
+                        symbol=symbol,
+                        instrument_id=instrument_id,
+                        submit_type=SubmitType.CREATE,
+                        type=OrderType.LIMIT,
+                        side=side,
+                        amount=amount,
+                        price=price,
+                        position_side=position_side,
+                        kwargs=kwargs,
+                    )
+                else:
+                    # last order should be market order
+                    order_submit = OrderSubmit(
+                        symbol=symbol,
+                        instrument_id=instrument_id,
+                        submit_type=SubmitType.CREATE,
+                        type=OrderType.MARKET,
+                        side=side,
+                        amount=amount,
+                        position_side=position_side,
+                        kwargs=kwargs,
+                    )
                 order = await self._create_order(order_submit, account_type)
                 if order.success:
                     order_uuid = order.uuid
+                else:
+                    break
                 await asyncio.sleep(wait)
 
     async def _create_twap_order(

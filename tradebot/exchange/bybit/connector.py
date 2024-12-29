@@ -285,7 +285,7 @@ class BybitPrivateConnector(PrivateConnector):
     
     async def _init_account_balance(self):
         res: BybitWalletBalanceResponse = await self._api_client.get_v5_account_wallet_balance(account_type="UNIFIED")
-        for result in res.result:
+        for result in res.result.list:
             self._account_balance._apply(result.parse_to_balances())
         
     async def create_order(

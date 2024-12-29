@@ -177,7 +177,7 @@ class Order(Struct):
     
     @property
     def is_opened(self) -> bool:
-        return not self.is_closed
+        return self.status in [OrderStatus.PENDING, OrderStatus.CANCELING, OrderStatus.PARTIALLY_FILLED]
 
 class AlgoOrder(Struct):
     uuid: str

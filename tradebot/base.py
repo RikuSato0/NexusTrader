@@ -584,7 +584,7 @@ class ExecutionManagementSystem(ABC):
         wait = duration / len(amount_list)
         return amount_list, min_order_amount, wait
     
-    def _cal_limit_order_price(self, side: OrderSide, symbol: str, market: BaseMarket) -> Decimal:
+    def _cal_limit_order_price(self, symbol: str, side: OrderSide, market: BaseMarket) -> Decimal:
         basis_point = market.precision.price
         book = self._cache.bookl1(symbol)  
         
@@ -603,7 +603,11 @@ class ExecutionManagementSystem(ABC):
     async def _twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
         symbol = order_submit.symbol
         instrument_id = order_submit.instrument_id
+        side = order_submit.side
         market = self._market[symbol]
+        position_side = order_submit.position_side
+        kwargs = order_submit.kwargs
+        
         amount_list, min_order_amount, wait = self._calculate_twap_orders(
             symbol=symbol,
             total_amount=order_submit.amount,
@@ -615,12 +619,11 @@ class ExecutionManagementSystem(ABC):
         order_uuid = None
         
         while amount_list:
-            price = self._cal_limit_order_price(order_submit.side, symbol, market)
             if order_uuid:
                 order = self._cache.get_order(order_uuid)
                 if order.is_opened:
                     order_cancel_submit = OrderSubmit(
-                        symbol=order_submit.symbol,
+                        symbol=symbol,
                         uuid=order_uuid,
                         submit_type=SubmitType.CANCEL,
                     )
@@ -634,29 +637,39 @@ class ExecutionManagementSystem(ABC):
                                 symbol=symbol,
                                 instrument_id=instrument_id,
                                 submit_type=SubmitType.CREATE,
-                                side=order_submit.side,
+                                side=side,
                                 type=OrderType.MARKET,
                                 amount=remaining,
-                            )
+                                position_side=position_side,
+                                kwargs=kwargs,
+                            ),
+                            account_type=account_type,
                         )
                     else:
                         amount += remaining
-                    order_submit = OrderSubmit(
-                        symbol=symbol,
-                        instrument_id=instrument_id,
-                        submit_type=SubmitType.CREATE,
-                        type=OrderType.LIMIT,
-                        side=order_submit.side,
-                        amount=amount,
-                        price=price,
-                        position_side=order_submit.position_side,
-                        kwargs=order_submit.kwargs,
-                    )
-
-                    order = await self._create_order(order_submit, account_type)
-                    if order.success:
-                        order_uuid = order.uuid
-                    await asyncio.sleep(wait)
+                    order_uuid = None
+            else:
+                price = self._cal_limit_order_price(
+                    symbol=symbol,
+                    side=side,
+                    market=market,
+                )
+                order_submit = OrderSubmit(
+                    symbol=symbol,
+                    instrument_id=instrument_id,
+                    submit_type=SubmitType.CREATE,
+                    type=OrderType.LIMIT,
+                    side=side,
+                    amount=amount,
+                    price=price,
+                    position_side=position_side,
+                    kwargs=kwargs,
+                )
+                
+                order = await self._create_order(order_submit, account_type)
+                if order.success:
+                    order_uuid = order.uuid
+                await asyncio.sleep(wait)
 
     async def _create_twap_order(
         self, order_submit: OrderSubmit, account_type: AccountType

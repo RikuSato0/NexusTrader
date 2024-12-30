@@ -197,7 +197,7 @@ class VwapStrategy(Strategy):
                         + self.get_bookl1("bybit", symbol).bid
                     )
                     / 2,
-                    self.market(BybitAccountType.ALL_TESTNET)[symbol].limits.amount.min,
+                    self.market(BybitAccountType.UNIFIED_TESTNET)[symbol].limits.amount.min,
                 ):
                     task = asyncio.create_task(
                         self.vwap_order(symbol, side, amount, reduce_only)
@@ -263,7 +263,7 @@ class VwapStrategy(Strategy):
             else:
                 await asyncio.sleep(interval)
             if order_id:
-                order: Order = await self.cache(BybitAccountType.ALL_TESTNET).get_order(
+                order: Order = await self.cache(BybitAccountType.UNIFIED_TESTNET).get_order(
                     order_id
                 )
                 if order:
@@ -283,12 +283,12 @@ class VwapStrategy(Strategy):
                             not on_bid and order.price != book.ask
                         ):
                             # order: Order = await self.cache(
-                            #     BybitAccountType.ALL_TESTNET
+                            #     BybitAccountType.UNIFIED_TESTNET
                             # ).get_order(
                             #     order_id
                             # )  # if the order is partially filled, we should get the current status of the order, if the cancel is successful, we should get the filled amount and cost
                             order_cancel = await self.cancel_order(
-                                account_type=BybitAccountType.ALL_TESTNET,
+                                account_type=BybitAccountType.UNIFIED_TESTNET,
                                 symbol=symbol,
                                 order_id=order_id,
                             )
@@ -317,12 +317,12 @@ class VwapStrategy(Strategy):
                         on_bid = True
 
                 price = self.price_to_precision(
-                    account_type=BybitAccountType.ALL_TESTNET, symbol=symbol, price=price
+                    account_type=BybitAccountType.UNIFIED_TESTNET, symbol=symbol, price=price
                 )
                 
 
                 size = max(
-                    self.market(BybitAccountType.ALL_TESTNET)[symbol].limits.amount.min,
+                    self.market(BybitAccountType.UNIFIED_TESTNET)[symbol].limits.amount.min,
                     min(size * size_ratio, amount - pos),
                     6 / price,
                 )
@@ -334,13 +334,13 @@ class VwapStrategy(Strategy):
                         size = min(size, amount - pos) # reduce only size should be less than the remaining amount
                         
                     size = self.amount_to_precision(
-                        account_type=BybitAccountType.ALL_TESTNET,
+                        account_type=BybitAccountType.UNIFIED_TESTNET,
                         symbol=symbol,
                         amount=size,
                     )
                     
                     open_orders = await self.cache(
-                        BybitAccountType.ALL_TESTNET
+                        BybitAccountType.UNIFIED_TESTNET
                     ).get_open_orders(symbol)
                     if order_id in open_orders and order_id:
                         self.log.debug(
@@ -348,7 +348,7 @@ class VwapStrategy(Strategy):
                         )
                         continue
                     order = await self.create_order(
-                        account_type=BybitAccountType.ALL_TESTNET,
+                        account_type=BybitAccountType.UNIFIED_TESTNET,
                         symbol=symbol,
                         side=side,
                         type=OrderType.LIMIT,
@@ -368,7 +368,7 @@ class VwapStrategy(Strategy):
                         )
                         for order_id in open_orders:
                             await self.cancel_order(
-                                account_type=BybitAccountType.ALL_TESTNET,
+                                account_type=BybitAccountType.UNIFIED_TESTNET,
                                 symbol=symbol,
                                 order_id=order_id,
                             )
@@ -379,7 +379,7 @@ class VwapStrategy(Strategy):
                 
         position = self.fetch_positions()
         real_pos = position.get(symbol, Decimal(str(0)))
-        pos_obj = await self.cache(BybitAccountType.ALL_TESTNET).get_position(symbol)
+        pos_obj = await self.cache(BybitAccountType.UNIFIED_TESTNET).get_position(symbol)
         real_pos_2 = pos_obj.signed_amount
         if real_pos_2 != real_pos:
             self.log.error(f"Symbol: {symbol} BUY pos mismatch {real_pos_2} != {real_pos}")
@@ -428,7 +428,7 @@ async def main():
 
         private_conn = BybitPrivateConnector(
             exchange,
-            account_type=BybitAccountType.ALL_TESTNET,
+            account_type=BybitAccountType.UNIFIED_TESTNET,
             strategy_id="strategy_vwap",
             user_id="vip_user",
             rate_limit=20,

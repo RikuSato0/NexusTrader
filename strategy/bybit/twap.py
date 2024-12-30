@@ -68,7 +68,7 @@ config = Config(
     private_conn_config={
         ExchangeType.BYBIT: [
             PrivateConnectorConfig(
-                account_type=BybitAccountType.ALL_TESTNET,
+                account_type=BybitAccountType.UNIFIED_TESTNET,
             )
         ]
     }

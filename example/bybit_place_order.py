@@ -25,7 +25,7 @@ async def main():
         )
         connector = BybitPrivateConnector(
             exchange,
-            BybitAccountType.ALL_TESTNET,
+            BybitAccountType.UNIFIED_TESTNET,
             strategy_id="strategy_01",
             user_id="test_user",
         )

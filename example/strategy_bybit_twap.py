@@ -29,7 +29,7 @@ class Demo(Strategy):
         if self.finished:
             return
         if self.order_id:
-            order: Order = self.cache(BybitAccountType.ALL_TESTNET).get_order(
+            order: Order = self.cache(BybitAccountType.UNIFIED_TESTNET).get_order(
                 self.order_id
             )
             print(order)
@@ -42,13 +42,13 @@ class Demo(Strategy):
                     self.finished = True
             else:
                 order_cancel = await self.cancel_order(
-                    account_type=BybitAccountType.ALL_TESTNET,
+                    account_type=BybitAccountType.UNIFIED_TESTNET,
                     symbol=self.symbol,
                     order_id=self.order_id,
                 )
                 if not order_cancel.success:
                     print(f"Failed to cancel order {self.order_id}")
-                    order: Order = self.cache(BybitAccountType.ALL_TESTNET).get_order(
+                    order: Order = self.cache(BybitAccountType.UNIFIED_TESTNET).get_order(
                         self.order_id
                     )
                     self.pos += order.amount
@@ -59,28 +59,28 @@ class Demo(Strategy):
         book = self.get_bookl1("bybit", self.symbol)
 
         size = max(
-            self.market(BybitAccountType.ALL_TESTNET)[self.symbol].limits.amount.min,
+            self.market(BybitAccountType.UNIFIED_TESTNET)[self.symbol].limits.amount.min,
             min(book.ask_size, self.amount - self.pos),
         )
         amount = self.amount_to_precision(
-            account_type=BybitAccountType.ALL_TESTNET,
+            account_type=BybitAccountType.UNIFIED_TESTNET,
             symbol=self.symbol,
             amount=size,
         )
 
         price = self.price_to_precision(
-            account_type=BybitAccountType.ALL_TESTNET,
+            account_type=BybitAccountType.UNIFIED_TESTNET,
             symbol=self.symbol,
             price=book.ask,
         )
 
         if self.pos < self.amount:
-            open_orders = self.cache(BybitAccountType.ALL_TESTNET).get_open_orders(self.symbol)
+            open_orders = self.cache(BybitAccountType.UNIFIED_TESTNET).get_open_orders(self.symbol)
             if self.order_id in open_orders and self.order_id:
                 print(f"Symbol {self.symbol} still have open orders: {self.order_id}")
                 return
             order = await self.create_order(
-                account_type=BybitAccountType.ALL_TESTNET,
+                account_type=BybitAccountType.UNIFIED_TESTNET,
                 symbol=self.symbol,
                 side=OrderSide.BUY,
                 type=OrderType.LIMIT,
@@ -105,7 +105,7 @@ async def main():
 
         private_conn = BybitPrivateConnector(
             exchange,
-            account_type=BybitAccountType.ALL_TESTNET,
+            account_type=BybitAccountType.UNIFIED_TESTNET,
             strategy_id="strategy_vwap",
             user_id="test_user",
         )

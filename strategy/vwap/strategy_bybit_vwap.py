@@ -197,7 +197,7 @@ class VwapStrategy(Strategy):
                         + self.get_bookl1("bybit", symbol).bid
                     )
                     / 2,
-                    self.market(BybitAccountType.ALL)[symbol].limits.amount.min,
+                    self.market(BybitAccountType.UNIFIED)[symbol].limits.amount.min,
                 ):
                     task = asyncio.create_task(
                         self.vwap_order(symbol, side, amount, reduce_only)
@@ -263,7 +263,7 @@ class VwapStrategy(Strategy):
             else:
                 await asyncio.sleep(interval)
             if order_id:
-                order: Order = await self.cache(BybitAccountType.ALL).get_order(
+                order: Order = await self.cache(BybitAccountType.UNIFIED).get_order(
                     order_id
                 )
                 if order:
@@ -283,7 +283,7 @@ class VwapStrategy(Strategy):
                             not on_bid and order.price != book.ask
                         ):
                             order_cancel = await self.cancel_order(
-                                account_type=BybitAccountType.ALL,
+                                account_type=BybitAccountType.UNIFIED,
                                 symbol=symbol,
                                 order_id=order_id,
                             )
@@ -312,12 +312,12 @@ class VwapStrategy(Strategy):
                         on_bid = True
 
                 price = self.price_to_precision(
-                    account_type=BybitAccountType.ALL, symbol=symbol, price=price
+                    account_type=BybitAccountType.UNIFIED, symbol=symbol, price=price
                 )
                 
 
                 size = max(
-                    self.market(BybitAccountType.ALL)[symbol].limits.amount.min,
+                    self.market(BybitAccountType.UNIFIED)[symbol].limits.amount.min,
                     min(size * size_ratio, amount - pos),
                     6 / price,
                 )
@@ -329,13 +329,13 @@ class VwapStrategy(Strategy):
                         size = min(size, amount - pos) # reduce only size should be less than the remaining amount
                         
                     size = self.amount_to_precision(
-                        account_type=BybitAccountType.ALL,
+                        account_type=BybitAccountType.UNIFIED,
                         symbol=symbol,
                         amount=size,
                     )
                     
                     open_orders = await self.cache(
-                        BybitAccountType.ALL
+                        BybitAccountType.UNIFIED
                     ).get_open_orders(symbol)
                     if order_id in open_orders and order_id:
                         self.log.debug(
@@ -343,7 +343,7 @@ class VwapStrategy(Strategy):
                         )
                         continue
                     order = await self.create_order(
-                        account_type=BybitAccountType.ALL,
+                        account_type=BybitAccountType.UNIFIED,
                         symbol=symbol,
                         side=side,
                         type=OrderType.LIMIT,
@@ -363,7 +363,7 @@ class VwapStrategy(Strategy):
                         )
                         for order_id in open_orders:
                             await self.cancel_order(
-                                account_type=BybitAccountType.ALL,
+                                account_type=BybitAccountType.UNIFIED,
                                 symbol=symbol,
                                 order_id=order_id,
                             )
@@ -419,7 +419,7 @@ async def main():
 
         private_conn = BybitPrivateConnector(
             exchange,
-            account_type=BybitAccountType.ALL,
+            account_type=BybitAccountType.UNIFIED,
             strategy_id="strategy_vwap",
             user_id="vip_user",
             rate_limit=20,

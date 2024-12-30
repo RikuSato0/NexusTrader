@@ -45,9 +45,9 @@ class BybitPublicConnector(PublicConnector):
         msgbus: MessageBus,
         task_manager: TaskManager,
     ):
-        if account_type in {BybitAccountType.ALL, BybitAccountType.ALL_TESTNET}:
+        if account_type in {BybitAccountType.UNIFIED, BybitAccountType.UNIFIED_TESTNET}:
             raise ValueError(
-                "Please not using `BybitAccountType.ALL` or `BybitAccountType.ALL_TESTNET` in `PublicConnector`"
+                "Please not using `BybitAccountType.UNIFIED` or `BybitAccountType.UNIFIED_TESTNET` in `PublicConnector`"
             )
 
         super().__init__(
@@ -179,9 +179,9 @@ class BybitPrivateConnector(PrivateConnector):
         if not exchange.api_key or not exchange.secret:
             raise ValueError("API key and secret are required for private endpoints")
 
-        if account_type not in {BybitAccountType.ALL, BybitAccountType.ALL_TESTNET}:
+        if account_type not in {BybitAccountType.UNIFIED, BybitAccountType.UNIFIED_TESTNET}:
             raise ValueError(
-                "Please using `BybitAccountType.ALL` or `BybitAccountType.ALL_TESTNET` in `PrivateConnector`"
+                "Please using `BybitAccountType.UNIFIED` or `BybitAccountType.UNIFIED_TESTNET` in `PrivateConnector`"
             )
 
         super().__init__(

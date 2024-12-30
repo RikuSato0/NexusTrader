@@ -106,8 +106,8 @@ class Engine:
         for account_type in self._public_connectors.keys():
             if isinstance(account_type, BybitAccountType):
                 if (
-                    account_type == BybitAccountType.ALL
-                    or account_type == BybitAccountType.ALL_TESTNET
+                    account_type == BybitAccountType.UNIFIED
+                    or account_type == BybitAccountType.UNIFIED_TESTNET
                 ):
                     raise EngineBuildError(
                         f"{account_type} is not supported for public connector."
@@ -217,9 +217,9 @@ class Engine:
                     config = private_conn_configs[0]
                     exchange: BybitExchangeManager = self._exchanges[exchange_id]
                     account_type = (
-                        BybitAccountType.ALL_TESTNET
+                        BybitAccountType.UNIFIED_TESTNET
                         if exchange.is_testnet
-                        else BybitAccountType.ALL
+                        else BybitAccountType.UNIFIED
                     )
 
                     private_connector = BybitPrivateConnector(

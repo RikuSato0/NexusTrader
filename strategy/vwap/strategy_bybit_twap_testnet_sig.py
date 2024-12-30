@@ -200,7 +200,7 @@ class VwapStrategy(Strategy):
                         + self.get_bookl1("bybit", symbol).bid
                     )
                     / 2,
-                    self.market(BybitAccountType.ALL_TESTNET)[symbol].limits.amount.min,
+                    self.market(BybitAccountType.UNIFIED_TESTNET)[symbol].limits.amount.min,
                 ):
                     task = asyncio.create_task(
                         self.vwap_order(symbol, side, amount, reduce_only)
@@ -282,7 +282,7 @@ class VwapStrategy(Strategy):
             else:
                 await asyncio.sleep(interval)
             if order_id:
-                order: Order = await self.cache(BybitAccountType.ALL_TESTNET).get_order(
+                order: Order = await self.cache(BybitAccountType.UNIFIED_TESTNET).get_order(
                     order_id
                 )
                 if order:
@@ -302,7 +302,7 @@ class VwapStrategy(Strategy):
                             not on_bid and order.price != book.ask
                         ):
                             order_cancel = await self.cancel_order(
-                                account_type=BybitAccountType.ALL_TESTNET,
+                                account_type=BybitAccountType.UNIFIED_TESTNET,
                                 symbol=symbol,
                                 order_id=order_id,
                             )
@@ -347,7 +347,7 @@ class VwapStrategy(Strategy):
                         on_bid = True
 
                 price = self.price_to_precision(
-                    account_type=BybitAccountType.ALL_TESTNET,
+                    account_type=BybitAccountType.UNIFIED_TESTNET,
                     symbol=symbol,
                     price=price,
                 )
@@ -358,7 +358,7 @@ class VwapStrategy(Strategy):
                     f"Symbol: {symbol} remaining_seconds: {remaining_seconds} remaining_interval: {remaining_interval} size: {size}"
                 )
                 size = max(
-                    self.market(BybitAccountType.ALL_TESTNET)[
+                    self.market(BybitAccountType.UNIFIED_TESTNET)[
                         symbol
                     ].limits.amount.min,  # min amount
                     min(size, amount - pos),
@@ -375,13 +375,13 @@ class VwapStrategy(Strategy):
                         )  # reduce only size should be less than the remaining amount
 
                     size = self.amount_to_precision(
-                        account_type=BybitAccountType.ALL_TESTNET,
+                        account_type=BybitAccountType.UNIFIED_TESTNET,
                         symbol=symbol,
                         amount=size,
                     )
 
                     open_orders = await self.cache(
-                        BybitAccountType.ALL_TESTNET
+                        BybitAccountType.UNIFIED_TESTNET
                     ).get_open_orders(symbol)
                     if order_id in open_orders and order_id:
                         self.log.debug(
@@ -389,7 +389,7 @@ class VwapStrategy(Strategy):
                         )
                         continue
                     order = await self.create_order(
-                        account_type=BybitAccountType.ALL_TESTNET,
+                        account_type=BybitAccountType.UNIFIED_TESTNET,
                         symbol=symbol,
                         side=side,
                         type=OrderType.LIMIT,
@@ -413,7 +413,7 @@ class VwapStrategy(Strategy):
                         )
                         for order_id in open_orders:
                             await self.cancel_order(
-                                account_type=BybitAccountType.ALL_TESTNET,
+                                account_type=BybitAccountType.UNIFIED_TESTNET,
                                 symbol=symbol,
                                 order_id=order_id,
                             )
@@ -470,7 +470,7 @@ async def main():
 
         private_conn = BybitPrivateConnector(
             exchange,
-            account_type=BybitAccountType.ALL_TESTNET,
+            account_type=BybitAccountType.UNIFIED_TESTNET,
             strategy_id="strategy_vwap",
             user_id="vip_user",
             rate_limit=20,

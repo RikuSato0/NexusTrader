@@ -14,7 +14,7 @@ async def main():
             "sandbox": True,
         }
         exchange = BybitExchangeManager(config)
-        connector = BybitPrivateConnector(exchange, BybitAccountType.ALL_TESTNET, strategy_id="test", user_id="test")
+        connector = BybitPrivateConnector(exchange, BybitAccountType.UNIFIED_TESTNET, strategy_id="test", user_id="test")
         await connector.connect()
         while True:
             await asyncio.sleep(1)

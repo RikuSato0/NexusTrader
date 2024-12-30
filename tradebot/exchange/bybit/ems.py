@@ -39,9 +39,9 @@ class BybitExecutionManagementSystem(ExecutionManagementSystem):
     def _set_account_type(self):
         account_types = self._private_connectors.keys()
         self._bybit_account_type = (
-            BybitAccountType.ALL_TESTNET
-            if BybitAccountType.ALL_TESTNET in account_types
-            else BybitAccountType.ALL
+            BybitAccountType.UNIFIED_TESTNET
+            if BybitAccountType.UNIFIED_TESTNET in account_types
+            else BybitAccountType.UNIFIED
         )
 
     def _submit_order(

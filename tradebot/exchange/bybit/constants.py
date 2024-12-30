@@ -18,8 +18,8 @@ class BybitAccountType(AccountType):
     LINEAR_TESTNET = "LINEAR_TESTNET"
     INVERSE_TESTNET = "INVERSE_TESTNET"
     OPTION_TESTNET = "OPTION_TESTNET"
-    ALL = "ALL"
-    ALL_TESTNET = "ALL_TESTNET"
+    UNIFIED = "UNIFIED"
+    UNIFIED_TESTNET = "UNIFIED_TESTNET"
     
     @property
     def exchange_id(self):
@@ -32,7 +32,7 @@ class BybitAccountType(AccountType):
             self.LINEAR_TESTNET,
             self.INVERSE_TESTNET,
             self.OPTION_TESTNET,
-            self.ALL_TESTNET,
+            self.UNIFIED_TESTNET,
         }
 
     @property

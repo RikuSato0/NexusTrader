@@ -378,6 +378,7 @@ class OkxPrivateConnector(PrivateConnector):
             balances = data.parse_to_balance()
             self._account_balance._apply(balances)
 
+        self._msgbus.send(endpoint="okx.balance", msg=self._account_balance)
 
     def _get_td_mode(self, market: OkxMarket):
         return OkxTdMode.CASH if market.spot else OkxTdMode.CROSS

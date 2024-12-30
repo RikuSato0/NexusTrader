@@ -144,7 +144,7 @@ class OkxApiClient(ApiClient):
         payload: Dict[str, Any] = None,
         signed: bool = False,
     ) -> bytes:
-        await self._init_session()
+        self._init_session()
         url = urljoin(self._base_url, endpoint)
         request_path = endpoint
         headers = self._headers

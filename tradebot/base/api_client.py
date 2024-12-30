@@ -23,7 +23,7 @@ class ApiClient(ABC):
         self._session: Optional[aiohttp.ClientSession] = None
         self._clock = LiveClock()
 
-    async def _init_session(self):
+    def _init_session(self):
         if self._session is None:
             timeout = aiohttp.ClientTimeout(total=self._timeout)
             tcp_connector = aiohttp.TCPConnector(

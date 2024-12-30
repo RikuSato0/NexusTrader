@@ -200,6 +200,7 @@ class AlgoOrder(Struct):
     symbol: str
     uuid: str # start with "ALGO-"
     status: AlgoOrderStatus
+    exchange: ExchangeType
     orders: List[str] = field(default_factory=list) # [uuid1, uuid2, ...]
     
     @property

@@ -103,7 +103,7 @@ class BybitApiClient(ApiClient):
         payload: Dict[str, Any] = None,
         signed: bool = False,
     ):
-        await self._init_session()
+        self._init_session()
         
         url = urljoin(base_url, endpoint)
         payload = payload or {}

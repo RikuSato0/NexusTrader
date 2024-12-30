@@ -55,7 +55,7 @@ class BinanceApiClient(ApiClient):
         payload: Dict[str, Any] = None,
         signed: bool = False,
     ) -> Any:
-        await self._init_session()
+        self._init_session()
         
         url = urljoin(base_url, endpoint)
         payload = payload or {}

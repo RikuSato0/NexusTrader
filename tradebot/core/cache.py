@@ -78,12 +78,12 @@ class AsyncCache:
 
     ################# # base functions ####################
 
-    def _encode(self, obj: Order | Position) -> bytes:
+    def _encode(self, obj: Order | Position | AlgoOrder) -> bytes:
         return msgspec.json.encode(obj)
 
     def _decode(
-        self, data: bytes, obj_type: Type[Order | Position]
-    ) -> Order | Position:
+        self, data: bytes, obj_type: Type[Order | Position | AlgoOrder]
+    ) -> Order | Position | AlgoOrder:
         return msgspec.json.decode(data, type=obj_type)
 
     async def start(self):
@@ -100,6 +100,10 @@ class AsyncCache:
         for uuid, order in self._mem_orders.copy().items():
             orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:orders"
             await self._r_async.hset(orders_key, uuid, self._encode(order))
+        
+        for uuid, algo_order in self._mem_algo_orders.copy().items():
+            algo_orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:algo_orders"
+            await self._r_async.hset(algo_orders_key, uuid, self._encode(algo_order))
 
         for exchange, open_order_uuids in self._mem_open_orders.copy().items():
             open_orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{exchange.value}:open_orders"
@@ -258,27 +262,34 @@ class AsyncCache:
             self._mem_symbol_open_orders[order.symbol].add(order.uuid)
 
     def _order_status_update(self, order: Order | AlgoOrder):
-        if not self._check_status_transition(order):
-            return
-
-        self._mem_orders[order.uuid] = order
-        if order.status in (
-            OrderStatus.FILLED,
-            OrderStatus.CANCELED,
-            OrderStatus.EXPIRED,
-        ):
-            self._mem_open_orders[order.exchange].discard(order.uuid)
-            self._mem_symbol_open_orders[order.symbol].discard(order.uuid)
+        if isinstance(order, AlgoOrder):
+            self._mem_algo_orders[order.uuid] = order
+        else:
+            if not self._check_status_transition(order):
+                return
+            self._mem_orders[order.uuid] = order
+            if order.is_closed:
+                self._mem_open_orders[order.exchange].discard(order.uuid)
+                self._mem_symbol_open_orders[order.symbol].discard(order.uuid)
 
     def get_order(self, uuid: str) -> Order:
-        if uuid in self._mem_orders:
-            return self._mem_orders[uuid]
+        # 先从内存中查找
+        if uuid.startswith("ALGO-"):
+            if order := self._mem_algo_orders.get(uuid):
+                return order
+            key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:algo_orders"
+            obj_type = AlgoOrder
+            mem_dict = self._mem_algo_orders
+        else:
+            if order := self._mem_orders.get(uuid):
+                return order
+            key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:orders"
+            obj_type = Order
+            mem_dict = self._mem_orders
 
-        orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:orders"
-        raw_order = self._r.hget(orders_key, uuid)
-        if raw_order:
-            order = self._decode(raw_order, Order)
-            self._mem_orders[uuid] = order
+        if raw_order := self._r.hget(key, uuid):
+            order = self._decode(raw_order, obj_type)
+            mem_dict[uuid] = order
             return order
         return None
 

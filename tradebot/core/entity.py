@@ -27,7 +27,7 @@ class RateLimit:
 class TaskManager:
     def __init__(self, loop: asyncio.AbstractEventLoop, enable_signal_handlers: bool = True):
         self._log = SpdLog.get_logger(type(self).__name__, level="DEBUG", flush=True)
-        self._tasks: List[asyncio.Task] = []
+        self._tasks: Dict[str, asyncio.Task] = {}
         self._shutdown_event = asyncio.Event()
         self._loop = loop
         if enable_signal_handlers:
@@ -46,20 +46,20 @@ class TaskManager:
 
     def create_task(self, coro: asyncio.coroutines, name: str = None) -> asyncio.Task:
         task = asyncio.create_task(coro, name=name)
-        self._tasks.append(task)
+        self._tasks[task.get_name()] = task
         task.add_done_callback(self._handle_task_done)
         return task
     
     def cancel_task(self, name: str) -> bool:
-        for task in self._tasks:  
-            if task.get_name() == name:
-                task.cancel()
-                return True
+        if name in self._tasks:
+            self._tasks[name].cancel()
+            return True
         return False
 
     def _handle_task_done(self, task: asyncio.Task):
         try:
-            self._tasks.remove(task)
+            name = task.get_name()
+            self._tasks.pop(name, None)
             task.result()
         except asyncio.CancelledError:
             pass
@@ -78,12 +78,12 @@ class TaskManager:
 
     async def cancel(self):
         try:
-            for task in self._tasks:
+            for task in self._tasks.values():
                 if not task.done():
                     task.cancel()
 
             if self._tasks:
-                results = await asyncio.gather(*self._tasks, return_exceptions=True)
+                results = await asyncio.gather(*self._tasks.values(), return_exceptions=True)
 
                 for result in results:
                     if isinstance(result, Exception) and not isinstance(

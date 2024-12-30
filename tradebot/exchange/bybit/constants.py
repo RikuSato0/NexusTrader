@@ -70,15 +70,31 @@ WS_PUBLIC_URL = {
 }
 
 
-class BybitBaseUrl(Enum):
-    MAINNET_1 = "https://api.bybit.com"
-    MAINNET_2 = "https://api.bytick.com"
-    TESTNET = "https://api-testnet.bybit.com"
-    NETHERLAND = "https://api.bybit.nl"
-    HONGKONG = "https://api.byhkbit.com"
-    TURKEY = "https://api.bybit-tr.com"
-    HAZAKHSTAN = "https://api.bybit.kz"
 
+
+
+class BybitBaseUrl(Enum):
+    MAINNET_1 = "MAINNET_1"
+    MAINNET_2 = "MAINNET_2"
+    TESTNET = "TESTNET"
+    NETHERLAND = "NETHERLAND"
+    HONGKONG = "HONGKONG"
+    TURKEY = "TURKEY"
+    HAZAKHSTAN = "HAZAKHSTAN"
+    
+    @property
+    def base_url(self):
+        return REST_API_URL[self]
+
+REST_API_URL = {
+    BybitBaseUrl.MAINNET_1: "https://api.bybit.com",
+    BybitBaseUrl.MAINNET_2: "https://api.bytick.com",
+    BybitBaseUrl.TESTNET: "https://api-testnet.bybit.com",
+    BybitBaseUrl.NETHERLAND: "https://api.bybit.nl",
+    BybitBaseUrl.HONGKONG: "https://api.byhkbit.com",
+    BybitBaseUrl.TURKEY: "https://api.bybit-tr.com",
+    BybitBaseUrl.HAZAKHSTAN: "https://api.bybit.kz",
+}
 
 class BybitOrderSide(Enum):
     BUY = "Buy"

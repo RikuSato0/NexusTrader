@@ -54,15 +54,17 @@ class BybitApiClient(ApiClient):
         self._recv_window = 5000
 
         if testnet:
-            self._base_url = BybitBaseUrl.TESTNET.value
+            self._base_url = BybitBaseUrl.TESTNET.base_url
         else:
-            self._base_url = BybitBaseUrl.MAINNET_1.value
+            self._base_url = BybitBaseUrl.MAINNET_1.base_url
 
         self._headers = {
             "Content-Type": "application/json",
             "User-Agent": "TradingBot/1.0",
-            "X-BAPI-API-KEY": api_key,
         }
+        
+        if api_key:
+            self._headers["X-BAPI-API-KEY"] = api_key
 
         self._response_decoder = msgspec.json.Decoder(BybitResponse)
         self._order_response_decoder = msgspec.json.Decoder(BybitOrderResponse)

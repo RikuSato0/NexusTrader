@@ -714,10 +714,10 @@ class ExecutionManagementSystem(ABC):
                         await asyncio.sleep(wait - elapsed_time)
                         elapsed_time = 0
                     else:
-                        self._log.error(f"TWAP ORDER FAILED: symbol: {symbol}, side: {side} amount: {amount}")
+                        self._log.error(f"TWAP ORDER FAILED: symbol: {symbol}, side: {side}")
                         break
             
-            self._log.debug(f"TWAP ORDER FINISHED: symbol: {symbol}, side: {side} amount: {amount}")
+            self._log.debug(f"TWAP ORDER FINISHED: symbol: {symbol}, side: {side}")
         except asyncio.CancelledError:
             open_orders = self._cache.get_open_orders(symbol=symbol)
             for uuid in open_orders:
@@ -730,7 +730,7 @@ class ExecutionManagementSystem(ABC):
                     ),
                     account_type=account_type,
                 )
-            self._log.error(f"TWAP ORDER CANCELLED: symbol: {symbol}, side: {side} amount: {amount}")
+            self._log.debug(f"TWAP ORDER CANCELLED: symbol: {symbol}, side: {side}")
 
 
     async def _create_twap_order(

@@ -5,7 +5,7 @@ from tradebot.core.log import SpdLog
 from tradebot.base import ExchangeManager
 from tradebot.core.entity import TaskManager
 from tradebot.core.cache import AsyncCache
-from tradebot.base import ExecutionManagementSystem
+from tradebot.base import ExecutionManagementSystem, OrderManagementSystem
 from tradebot.core.nautilius_core import MessageBus, UUID4
 from tradebot.schema import (
     BookL1,
@@ -15,6 +15,7 @@ from tradebot.schema import (
     OrderSubmit,
     InstrumentId,
     BaseMarket,
+    AccountBalance,
 )
 from tradebot.constants import (
     DataType,
@@ -77,6 +78,9 @@ class Strategy:
         self._msgbus.register(
             endpoint="cancel_failed", handler=self.on_cancel_failed_order
         )
+
+        self._msgbus.register(endpoint="balance", handler=self.on_balance)
+
         self._initialized = True
 
     def schedule(
@@ -274,3 +278,8 @@ class Strategy:
 
     def on_cancel_failed_order(self, order: Order):
         pass
+
+    def on_balance(self, balance: AccountBalance):
+        pass
+    
+        

@@ -203,59 +203,44 @@ class Engine:
         self._public_connector_check()
 
     def _build_private_connectors(self):
-        okx_private_conn_count = 0
         for (
             exchange_id,
             private_conn_configs,
         ) in self._config.private_conn_config.items():
-            if exchange_id == ExchangeType.BYBIT:
-                if not private_conn_configs:
-                    raise EngineBuildError(
-                        f"Private connector config for {ExchangeType.BYBIT} is not set. Please add `{ExchangeType.BYBIT}` in `private_conn_config`."
+            if not private_conn_configs:
+                raise EngineBuildError(
+                    f"Private connector config for {exchange_id} is not set. Please add `{exchange_id}` in `private_conn_config`."
+                )
+
+            match exchange_id:
+                case ExchangeType.BYBIT:
+                    config = private_conn_configs[0]
+                    exchange: BybitExchangeManager = self._exchanges[exchange_id]
+                    account_type = (
+                        BybitAccountType.ALL_TESTNET
+                        if exchange.is_testnet
+                        else BybitAccountType.ALL
                     )
-                
-                config = private_conn_configs[0]
-                exchange: BybitExchangeManager = self._exchanges[exchange_id]
 
-                account_type = (
-                    BybitAccountType.ALL_TESTNET
-                    if exchange.is_testnet
-                    else BybitAccountType.ALL
-                )
-
-                private_connector = BybitPrivateConnector(
-                    exchange=exchange,
-                    account_type=account_type,
-                    msgbus=self._msgbus,
-                    rate_limit=config.rate_limit,
-                    task_manager=self._task_manager,
-                )
-                self._private_connectors[account_type] = private_connector
-                continue
-
-            for config in private_conn_configs:
-                if exchange_id == ExchangeType.BINANCE:
-                    exchange: BinanceExchangeManager = self._exchanges[exchange_id]
-                    account_type: BinanceAccountType = config.account_type
-
-                    private_connector = BinancePrivateConnector(
+                    private_connector = BybitPrivateConnector(
                         exchange=exchange,
                         account_type=account_type,
                         msgbus=self._msgbus,
                         rate_limit=config.rate_limit,
                         task_manager=self._task_manager,
                     )
-
                     self._private_connectors[account_type] = private_connector
 
-                elif exchange_id == ExchangeType.OKX:
-                    exchange: OkxExchangeManager = self._exchanges[exchange_id]
-                    account_type: OkxAccountType = config.account_type
+                case ExchangeType.OKX:
+                    assert (
+                        len(private_conn_configs) == 1
+                    ), "Only one private connector is supported for OKX, please remove the extra private connector config."
 
-                    if okx_private_conn_count > 1:
-                        raise ValueError(
-                            "Only one private connector is supported for OKX, please remove the extra private connector config."
-                        )
+                    config = private_conn_configs[0]
+                    exchange: OkxExchangeManager = self._exchanges[exchange_id]
+                    account_type = (
+                        OkxAccountType.DEMO if exchange.is_testnet else OkxAccountType.LIVE
+                    )
 
                     private_connector = OkxPrivateConnector(
                         exchange=exchange,
@@ -264,9 +249,21 @@ class Engine:
                         rate_limit=config.rate_limit,
                         task_manager=self._task_manager,
                     )
-
                     self._private_connectors[account_type] = private_connector
-                    okx_private_conn_count += 1
+
+                case ExchangeType.BINANCE:
+                    for config in private_conn_configs:
+                        exchange: BinanceExchangeManager = self._exchanges[exchange_id]
+                        account_type: BinanceAccountType = config.account_type
+
+                        private_connector = BinancePrivateConnector(
+                            exchange=exchange,
+                            account_type=account_type,
+                            msgbus=self._msgbus,
+                            rate_limit=config.rate_limit,
+                            task_manager=self._task_manager,
+                        )
+                        self._private_connectors[account_type] = private_connector
 
     def _build_exchanges(self):
         for exchange_id, basic_config in self._config.basic_config.items():
@@ -372,11 +369,12 @@ class Engine:
             case ExchangeType.BYBIT:
                 bybit_basic_config = self._config.basic_config.get(ExchangeType.BYBIT)
                 if not bybit_basic_config:
-                    raise EngineBuildError(f"Basic config for {ExchangeType.BYBIT} is not set. Please add `{ExchangeType.BYBIT}` in `basic_config`.")
-                
+                    raise EngineBuildError(
+                        f"Basic config for {ExchangeType.BYBIT} is not set. Please add `{ExchangeType.BYBIT}` in `basic_config`."
+                    )
+
                 is_testnet = bybit_basic_config.testnet
-                
-                
+
                 if instrument_id.is_spot:
                     return (
                         BybitAccountType.SPOT_TESTNET
@@ -400,10 +398,14 @@ class Engine:
                         f"Unsupported instrument type: {instrument_id.type}"
                     )
             case ExchangeType.BINANCE:
-                binance_basic_config = self._config.basic_config.get(ExchangeType.BINANCE)
+                binance_basic_config = self._config.basic_config.get(
+                    ExchangeType.BINANCE
+                )
                 if not binance_basic_config:
-                    raise EngineBuildError(f"Basic config for {ExchangeType.BINANCE} is not set. Please add `{ExchangeType.BINANCE}` in `basic_config`.")
-                
+                    raise EngineBuildError(
+                        f"Basic config for {ExchangeType.BINANCE} is not set. Please add `{ExchangeType.BINANCE}` in `basic_config`."
+                    )
+
                 is_testnet = binance_basic_config.testnet
 
                 if instrument_id.is_spot:
@@ -431,8 +433,10 @@ class Engine:
             case ExchangeType.OKX:
                 account_types = self._config.public_conn_config.get(ExchangeType.OKX)
                 if not account_types:
-                    raise EngineBuildError(f"Public connector config for {ExchangeType.OKX} is not set. Please add `{ExchangeType.OKX}` in `public_conn_config`.")
-                
+                    raise EngineBuildError(
+                        f"Public connector config for {ExchangeType.OKX} is not set. Please add `{ExchangeType.OKX}` in `public_conn_config`."
+                    )
+
                 return account_types[0].account_type
 
     async def _start_connectors(self):
@@ -491,7 +495,7 @@ class Engine:
     async def _start_oms(self):
         for oms in self._oms.values():
             await oms.start()
-    
+
     def _start_scheduler(self):
         self._strategy._scheduler.start()
         self._scheduler_started = True

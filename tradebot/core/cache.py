@@ -46,6 +46,7 @@ class AsyncCache:
         # in-memory save
         self._mem_closed_orders: Dict[str, bool] = {}  # uuid -> bool
         self._mem_orders: Dict[str, Order] = {}  # uuid -> Order
+        self._mem_algo_orders: Dict[str, AlgoOrder] = {}  # uuid -> AlgoOrder
 
         self._mem_open_orders: Dict[ExchangeType, Set[str]] = defaultdict(
             set
@@ -245,15 +246,18 @@ class AsyncCache:
             return position
         return None
 
-    def _order_initialized(self, order: Order):
-        if not self._check_status_transition(order):
-            return
-        self._mem_orders[order.uuid] = order
-        self._mem_open_orders[order.exchange].add(order.uuid)
-        self._mem_symbol_orders[order.symbol].add(order.uuid)
-        self._mem_symbol_open_orders[order.symbol].add(order.uuid)
+    def _order_initialized(self, order: Order | AlgoOrder):
+        if isinstance(order, AlgoOrder):
+            self._mem_algo_orders[order.uuid] = order
+        else:
+            if not self._check_status_transition(order):
+                return
+            self._mem_orders[order.uuid] = order
+            self._mem_open_orders[order.exchange].add(order.uuid)
+            self._mem_symbol_orders[order.symbol].add(order.uuid)
+            self._mem_symbol_open_orders[order.symbol].add(order.uuid)
 
-    def _order_status_update(self, order: Order):
+    def _order_status_update(self, order: Order | AlgoOrder):
         if not self._check_status_transition(order):
             return
 

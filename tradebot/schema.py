@@ -218,7 +218,13 @@ class AlgoOrder(Struct):
     def is_failed(self) -> bool:
         return self.status == AlgoOrderStatus.FAILED
     
-
+    @property
+    def is_closed(self) -> bool:
+        return self.status in [AlgoOrderStatus.CANCELED, AlgoOrderStatus.FAILED, AlgoOrderStatus.FINISHED]
+    
+    @property
+    def is_opened(self) -> bool:
+        return self.status in [AlgoOrderStatus.RUNNING, AlgoOrderStatus.CANCELING]
 
 class Balance(Struct):
     """

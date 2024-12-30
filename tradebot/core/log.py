@@ -4,7 +4,7 @@ import sys
 import traceback
 import asyncio
 import spdlog as spd
-
+     
 
 class SpdLog:
     """
@@ -23,17 +23,10 @@ class SpdLog:
     loggers = {}
     async_mode = True
     error_logger = None
+    sinks = None
+    production_mode = False
     
-    daily_sink = spd.daily_file_sink_mt(filename=str(log_dir / "log.log"), rotation_hour=0, rotation_minute=0)
-    daily_sink.set_level(spd.LogLevel.INFO)
-    
-    stdout_sink = spd.stdout_color_sink_mt()    
-    stdout_sink.set_level(spd.LogLevel.DEBUG)
-    
-    sinks = [
-        daily_sink,
-        stdout_sink,
-    ]
+
 
     @classmethod
     def setup_error_handling(cls):
@@ -73,7 +66,6 @@ class SpdLog:
         name: str,
         level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
         flush: bool = False,
-        production_mode: bool = False,
     ) -> spd.Logger:
         """
         Get the logger with the specified name. If it doesn't exist, create a new logger.
@@ -87,7 +79,7 @@ class SpdLog:
             if not cls.log_dir_created:
                 cls.log_dir.mkdir(parents=True, exist_ok=True)
                 cls.log_dir_created = True
-            if production_mode:
+            if cls.production_mode:
                 logger_instance = spd.SinkLogger(name=name, sinks=cls.sinks)
             else:
                 logger_instance = spd.DailyLogger(
@@ -132,7 +124,7 @@ class SpdLog:
             logger.drop()
 
     @classmethod
-    def initialize(cls, log_dir: str = ".logs", async_mode: bool = True, setup_error_handlers: bool = True):
+    def initialize(cls, log_dir: str = ".log", async_mode: bool = True, setup_error_handlers: bool = True):
         """
         Initialize the log registry.
 
@@ -144,7 +136,18 @@ class SpdLog:
         cls.async_mode = async_mode
         if setup_error_handlers:
             cls.setup_error_handling()
-
+        if cls.production_mode:
+            daily_sink = spd.daily_file_sink_mt(filename=str(log_dir / "log.log"), rotation_hour=0, rotation_minute=0)
+            daily_sink.set_level(spd.LogLevel.INFO)
+            
+            stdout_sink = spd.stdout_color_sink_mt()    
+            stdout_sink.set_level(spd.LogLevel.DEBUG)
+            
+            cls.sinks = [
+                daily_sink,
+                stdout_sink,
+            ]
+            
     @classmethod
     def __del__(cls):
         cls.close_all_loggers()

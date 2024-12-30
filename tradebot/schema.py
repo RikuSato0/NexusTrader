@@ -197,9 +197,27 @@ class Order(Struct):
 
 
 class AlgoOrder(Struct):
-    uuid: str
+    symbol: str
+    uuid: str # start with "ALGO-"
     status: AlgoOrderStatus
-    orders: List[Order]
+    orders: List[str] = field(default_factory=list) # [uuid1, uuid2, ...]
+    
+    @property
+    def is_running(self) -> bool:
+        return self.status == AlgoOrderStatus.RUNNING
+    
+    @property
+    def is_finished(self) -> bool:
+        return self.status == AlgoOrderStatus.FINISHED
+    
+    @property
+    def is_canceled(self) -> bool:
+        return self.status == AlgoOrderStatus.CANCELED
+    
+    @property
+    def is_failed(self) -> bool:
+        return self.status == AlgoOrderStatus.FAILED
+    
 
 
 class Balance(Struct):

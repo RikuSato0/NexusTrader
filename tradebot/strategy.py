@@ -5,7 +5,7 @@ from tradebot.core.log import SpdLog
 from tradebot.base import ExchangeManager
 from tradebot.core.entity import TaskManager
 from tradebot.core.cache import AsyncCache
-from tradebot.base import ExecutionManagementSystem, OrderManagementSystem
+from tradebot.base import ExecutionManagementSystem
 from tradebot.core.nautilius_core import MessageBus, UUID4
 from tradebot.schema import (
     BookL1,

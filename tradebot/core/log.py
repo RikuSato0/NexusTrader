@@ -23,6 +23,17 @@ class SpdLog:
     loggers = {}
     async_mode = True
     error_logger = None
+    
+    daily_sink = spd.daily_file_sink_mt(filename=str(log_dir / "log.log"), rotation_hour=0, rotation_minute=0)
+    daily_sink.set_level(spd.LogLevel.INFO)
+    
+    stdout_sink = spd.stdout_color_sink_mt()    
+    stdout_sink.set_level(spd.LogLevel.DEBUG)
+    
+    sinks = [
+        daily_sink,
+        stdout_sink,
+    ]
 
     @classmethod
     def setup_error_handling(cls):
@@ -62,6 +73,7 @@ class SpdLog:
         name: str,
         level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
         flush: bool = False,
+        production_mode: bool = False,
     ) -> spd.Logger:
         """
         Get the logger with the specified name. If it doesn't exist, create a new logger.
@@ -75,13 +87,16 @@ class SpdLog:
             if not cls.log_dir_created:
                 cls.log_dir.mkdir(parents=True, exist_ok=True)
                 cls.log_dir_created = True
-            logger_instance = spd.DailyLogger(
-                name=name,
-                filename=str(cls.log_dir / f"{name}.log"),
-                hour=0,
-                minute=0,
-                async_mode=cls.async_mode,
-            )
+            if production_mode:
+                logger_instance = spd.SinkLogger(name=name, sinks=cls.sinks)
+            else:
+                logger_instance = spd.DailyLogger(
+                    name=name,
+                    filename=str(cls.log_dir / f"{name}.log"),
+                    hour=0,
+                    minute=0,
+                    async_mode=cls.async_mode,
+                )
             logger_instance.set_level(cls.parse_level(level))
             if flush:
                 logger_instance.flush_on(cls.parse_level(level))

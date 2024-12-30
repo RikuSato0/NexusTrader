@@ -191,10 +191,11 @@ class EventType(Enum):
 
 
 class AlgoOrderStatus(Enum):
-    PENDING = "PENDING"
+    RUNNING = "RUNNING"
     CANCELING = "CANCELING"
     FINISHED = "FINISHED"
     CANCELED = "CANCELED"
+    FAILED = "FAILED"
 
 class OrderStatus(Enum):
     # LOCAL

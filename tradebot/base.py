@@ -632,30 +632,33 @@ class ExecutionManagementSystem(ABC):
             f"amount_list: {amount_list}, min_order_amount: {min_order_amount}, wait: {wait}"
         )
 
-        on_flight_oid = None
-        while amount_list:
-            if on_flight_oid:
-                order = self._cache.get_order(on_flight_oid)
-                if not order:
-                    self._log.error(f"Order {on_flight_oid} not found")
-                    break
+        order_id = None
+        check_interval = 0.1
+        elapsed_time = 0
+        
+        try:
+            while amount_list:
+                if order_id:
+                    order = self._cache.get_order(order_id)
+                    if not order:
+                        self._log.error(f"Order {order_id} not found")
+                        break
 
-                # 检查现价单是否已成交，不然的话立刻下市价单成交 或者 把remaining amount加到下一个市价单上
-                if order.is_opened and not order.on_flight:
-                    order_cancel_submit = OrderSubmit(
-                        symbol=symbol,
-                        instrument_id=instrument_id,
-                        submit_type=SubmitType.CANCEL,
-                        uuid=on_flight_oid,
-                    )
-                    await self._cancel_order(order_cancel_submit, account_type)
-                    self._log.debug(f"CANCEL: {order}")
-                elif order.is_closed:
-                    on_flight_oid = None
-                    # amount = amount_list.pop()
-                    if remaining := order.remaining:
+                    # 检查现价单是否已成交，不然的话立刻下市价单成交 或者 把remaining amount加到下一个市价单上
+                    if order.is_opened and not order.on_flight:
+                        order_cancel_submit = OrderSubmit(
+                            symbol=symbol,
+                            instrument_id=instrument_id,
+                            submit_type=SubmitType.CANCEL,
+                            uuid=order_id,
+                        )
+                        await self._cancel_order(order_cancel_submit, account_type)
+                        self._log.debug(f"CANCEL: {order}")
+                    elif order.is_closed:
+                        order_id = None
+                        # amount = amount_list.pop()
+                        remaining = order.remaining
                         if remaining > min_order_amount:
-                            self._log.debug(f"remaining {remaining} create market order")
                             await self._create_order(
                                 order_submit=OrderSubmit(
                                     symbol=symbol,
@@ -671,57 +674,63 @@ class ExecutionManagementSystem(ABC):
                             )
                         else:
                             if amount_list:
-                                self._log.debug(f"remaining {remaining} add to next order")
                                 amount_list[-1] += remaining
-                            else:
-                                # how to deal with the last limit order not fully filled?
-                                self._log.warning(
-                                    f"Last limit order not fully filled, remaining amount: {remaining}"
-                                )
+                    else:
+                        await asyncio.sleep(check_interval)
+                        elapsed_time += check_interval
                 else:
-                    # self._log.debug(f"order opened and flighting: {order}")
-                    await asyncio.sleep(0.01)
-            else:
-                price = self._cal_limit_order_price(
-                    symbol=symbol,
-                    side=side,
-                    market=market,
+                    price = self._cal_limit_order_price(
+                        symbol=symbol,
+                        side=side,
+                        market=market,
+                    )
+                    amount = amount_list.pop()
+                    if amount_list:
+                        order_submit = OrderSubmit(
+                            symbol=symbol,
+                            instrument_id=instrument_id,
+                            submit_type=SubmitType.CREATE,
+                            type=OrderType.LIMIT,
+                            side=side,
+                            amount=amount,
+                            price=price,
+                            position_side=position_side,
+                            kwargs=kwargs,
+                        )
+                    else:
+                        order_submit = OrderSubmit(
+                            symbol=symbol,
+                            instrument_id=instrument_id,
+                            submit_type=SubmitType.CREATE,
+                            type=OrderType.MARKET,
+                            side=side,
+                            amount=amount,
+                            position_side=position_side,
+                            kwargs=kwargs,
+                        )
+                    order = await self._create_order(order_submit, account_type)
+                    if order.success:
+                        order_id = order.uuid
+                        await asyncio.sleep(wait - elapsed_time)
+                        elapsed_time = 0
+                    else:
+                        self._log.error(f"TWAP ORDER FAILED: symbol: {symbol}, side: {side} amount: {amount}")
+                        break
+            
+            self._log.debug(f"TWAP ORDER FINISHED: symbol: {symbol}, side: {side} amount: {amount}")
+        except asyncio.CancelledError:
+            open_orders = self._cache.get_open_orders(symbol=symbol)
+            for uuid in open_orders:
+                await self._cancel_order(
+                    order_submit=OrderSubmit(
+                        symbol=symbol,
+                        instrument_id=instrument_id,
+                        submit_type=SubmitType.CANCEL,
+                        uuid=uuid,
+                    ),
+                    account_type=account_type,
                 )
-                amount = amount_list.pop()  # 每次下limit order 才 pop()
-                if amount_list:
-                    order_submit = OrderSubmit(
-                        symbol=symbol,
-                        instrument_id=instrument_id,
-                        submit_type=SubmitType.CREATE,
-                        type=OrderType.LIMIT,
-                        side=side,
-                        amount=amount,
-                        price=price,
-                        position_side=position_side,
-                        kwargs=kwargs,
-                    )
-                else:
-                    # last order should be market order
-                    order_submit = OrderSubmit(
-                        symbol=symbol,
-                        instrument_id=instrument_id,
-                        submit_type=SubmitType.CREATE,
-                        type=OrderType.MARKET,
-                        side=side,
-                        amount=amount,
-                        position_side=position_side,
-                        kwargs=kwargs,
-                    )
-                order = await self._create_order(order_submit, account_type)
-                if order.success:
-                    on_flight_oid = order.uuid
-                    self._log.debug(f"SUBMIT: {order_submit}")
-                    await asyncio.sleep(wait)
-                else:
-                    self._log.error(f"SUBMIT FAILED: {order_submit}")
-                    break
-        
-        self._log.debug(f"TWAP ORDER FINISHED: {order_submit}")
+            self._log.error(f"TWAP ORDER CANCELLED: symbol: {symbol}, side: {side} amount: {amount}")
 
 
     async def _create_twap_order(

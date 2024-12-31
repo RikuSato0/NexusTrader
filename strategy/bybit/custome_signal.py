@@ -1,4 +1,5 @@
 import zmq
+import orjson
 from zmq.asyncio import Context
 from decimal import Decimal
 from tradebot.constants import settings
@@ -25,7 +26,11 @@ class Demo(Strategy):
         self.signal = True
         
     def on_custom_signal(self, signal):
-        print(signal)
+        signal = orjson.loads(signal)
+        for pos in signal:
+            instrument = pos["instrumentID"].replace("USDT.BBP", "USDT-PERP.BYBIT")
+            position = pos["position"]
+            print(f"Instrument: {instrument}, Position: {position}")
         
 
 config = Config(

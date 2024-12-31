@@ -401,6 +401,10 @@ class Position(Struct):
     symbol: str
     exchange: ExchangeType
     signed_amount: Decimal = Decimal("0")
+    
+    @property
+    def amount(self) -> Decimal:
+        raise NotImplementedError
 
 
 class SpotPosition(Position):

@@ -37,7 +37,7 @@ class Demo(Strategy):
         if self.signal:
             self.create_twap(
                 symbol="BTCUSDT-PERP.BYBIT",
-                side=OrderSide.SELL,
+                side=OrderSide.BUY,
                 amount=Decimal("0.3"),
                 duration=60 * 5,
                 wait=3,

@@ -187,9 +187,6 @@ class ExecutionManagementSystem(ABC):
         """
         amount_list = []
         if total_amount < min_order_amount:
-            warnings.warn(
-                f"Amount {total_amount} is less than min order amount {min_order_amount}. No need to split orders."
-            )
             wait = 0
             return [min_order_amount], wait
 
@@ -376,7 +373,7 @@ class ExecutionManagementSystem(ABC):
             self._cache._order_status_update(algo_order)
             
             open_orders = self._cache.get_open_orders(symbol=symbol)
-            for uuid in open_orders:
+            for uuid in open_orders.copy():
                 await self._cancel_order(
                     order_submit=OrderSubmit(
                         symbol=symbol,

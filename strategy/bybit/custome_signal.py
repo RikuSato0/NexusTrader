@@ -24,15 +24,61 @@ class Demo(Strategy):
         super().__init__()
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
         self.signal = True
+        self.multiplier = 0.6
+        
+        self.orders = {}
+    
+    def cal_diff(self, symbol, target_position) -> Decimal:
+        pos_struct = self.cache.get_position(symbol)
+        if pos_struct:
+            diff = self.amount_to_precision(symbol, target_position) - pos_struct.signed_amount
+            print(f"current {pos_struct.signed_amount} -> target {target_position}")
+        else:
+            diff = self.amount_to_precision(symbol, target_position) 
+            print(f"current 0 -> target {target_position}")
+        return diff
+    
         
     def on_custom_signal(self, signal):
         signal = orjson.loads(signal)
         for pos in signal:
-            instrument = pos["instrumentID"].replace("USDT.BBP", "USDT-PERP.BYBIT")
-            position = pos["position"]
-            print(f"Instrument: {instrument}, Position: {position}")
-        
-
+            symbol = pos["instrumentID"].replace("USDT.BBP", "USDT-PERP.BYBIT")
+            target_position = pos["position"] * self.market(symbol).precision.amount * self.multiplier
+            uuid = self.orders.get(symbol, None)
+            if uuid is None:
+                diff = self.cal_diff(symbol, target_position)
+                uuid = self.create_twap(
+                    symbol=symbol,
+                    side=OrderSide.BUY if diff > 0 else OrderSide.SELL,
+                    amount=abs(diff),
+                    duration=60,
+                    wait=5,
+                    account_type=BybitAccountType.UNIFIED_TESTNET, # recommend to specify the account type
+                )
+                
+                self.orders[symbol] = uuid
+            else:
+                order_obj = self.cache.get_order(uuid)
+                if not order_obj:
+                    continue
+                if order_obj.is_opened:
+                    self.cancel_twap(
+                        symbol=symbol,
+                        uuid=uuid,
+                        account_type=BybitAccountType.UNIFIED_TESTNET,
+                    )
+                    print(f"canceled {uuid}")
+                    diff = self.cal_diff(symbol, target_position)
+                    uuid = self.create_twap(
+                        symbol=symbol,
+                        side=OrderSide.BUY if diff > 0 else OrderSide.SELL,
+                        amount=abs(diff),
+                        duration=60,
+                        wait=5,
+                        account_type=BybitAccountType.UNIFIED_TESTNET, # recommend to specify the account type
+                    )
+                    self.orders[symbol] = uuid
+                    
 config = Config(
     strategy_id="bybit_twap",
     user_id="user_test",

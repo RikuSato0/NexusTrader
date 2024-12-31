@@ -37,10 +37,10 @@ class Demo(Strategy):
         if self.signal:
             self.uuid = self.create_twap(
                 symbol="BTCUSDT-PERP.BYBIT",
-                side=OrderSide.BUY,
-                amount=Decimal("0.1"),
-                duration=60,
-                wait=10,
+                side=OrderSide.SELL,
+                amount=Decimal("0.3"),
+                duration=60 * 5,
+                wait=3,
             )
             self.signal = False
         order = self.cache.get_order(self.uuid)

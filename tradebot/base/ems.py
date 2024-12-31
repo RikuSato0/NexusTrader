@@ -209,7 +209,7 @@ class ExecutionManagementSystem(ABC):
         else:
             amount_list = [base_amount] * interval + [remaining]
 
-        wait = duration / len(amount_list)
+        wait = duration / (len(amount_list) - 1)
         return amount_list, wait
 
     def _cal_limit_order_price(

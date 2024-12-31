@@ -295,7 +295,7 @@ class ExecutionManagementSystem(ABC):
                         # amount = amount_list.pop()
                         remaining = order.remaining
                         if remaining > min_order_amount:
-                            await self._create_order(
+                            order = await self._create_order(
                                 order_submit=OrderSubmit(
                                     symbol=symbol,
                                     instrument_id=instrument_id,
@@ -308,6 +308,15 @@ class ExecutionManagementSystem(ABC):
                                 ),
                                 account_type=account_type,
                             )
+                            if order.success:
+                                order_id = order.uuid
+                                algo_order.orders.append(order_id)
+                                self._cache._order_status_update(algo_order)
+                            else:
+                                algo_order.status = AlgoOrderStatus.FAILED
+                                self._cache._order_status_update(algo_order)
+                                self._log.error(f"TWAP ORDER FAILED: symbol: {symbol}, side: {side}")
+                                break
                         else:
                             if amount_list:
                                 amount_list[-1] += remaining
@@ -347,6 +356,8 @@ class ExecutionManagementSystem(ABC):
                     order = await self._create_order(order_submit, account_type)
                     if order.success:
                         order_id = order.uuid
+                        algo_order.orders.append(order_id)
+                        self._cache._order_status_update(algo_order)
                         await asyncio.sleep(wait - elapsed_time)
                         elapsed_time = 0
                     else:

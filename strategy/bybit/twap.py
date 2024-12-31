@@ -20,7 +20,7 @@ class Demo(Strategy):
         super().__init__()
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
         self.signal = True
-        
+        self.uuid = None
     def on_canceled_order(self, order: Order):
         print(order)
     
@@ -35,7 +35,7 @@ class Demo(Strategy):
     
     def on_bookl1(self, bookl1: BookL1):
         if self.signal:
-            self.create_twap(
+            self.uuid = self.create_twap(
                 symbol="BTCUSDT-PERP.BYBIT",
                 side=OrderSide.BUY,
                 amount=Decimal("0.1"),
@@ -43,6 +43,10 @@ class Demo(Strategy):
                 wait=10,
             )
             self.signal = False
+        order = self.cache.get_order(self.uuid)
+        print(f"algo order: {order}")
+        
+        
 
 config = Config(
     strategy_id="bybit_twap",

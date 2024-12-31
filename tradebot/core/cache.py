@@ -153,6 +153,15 @@ class AsyncCache:
             for symbol, order_set in self._mem_symbol_orders.copy().items():
                 self._log.debug(f"removing order {uuid} from symbol {symbol}")
                 order_set.discard(uuid)
+        
+        expired_algo_orders = [
+            uuid
+            for uuid, algo_order in self._mem_algo_orders.copy().items()
+            if algo_order.timestamp < expire_before
+        ]
+        for uuid in expired_algo_orders:
+            del self._mem_algo_orders[uuid]
+            self._log.debug(f"removing algo order {uuid} from memory")
 
     async def close(self):
         self._shutdown_event.set()

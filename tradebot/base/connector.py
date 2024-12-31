@@ -95,6 +95,10 @@ class PrivateConnector(ABC):
     @abstractmethod
     async def _init_account_balance(self):
         pass
+    
+    @abstractmethod
+    async def _init_future_position(self):
+        pass
 
     @abstractmethod
     async def create_order(
@@ -117,7 +121,7 @@ class PrivateConnector(ABC):
     @abstractmethod
     async def connect(self):
         await self._init_account_balance()
-
+        await self._init_future_position()
     async def disconnect(self):
         self._ws_client.disconnect()
         await self._api_client.close_session()

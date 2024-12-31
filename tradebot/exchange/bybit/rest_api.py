@@ -62,7 +62,7 @@ class BybitApiClient(ApiClient):
             "Content-Type": "application/json",
             "User-Agent": "TradingBot/1.0",
         }
-        
+
         if api_key:
             self._headers["X-BAPI-API-KEY"] = api_key
 
@@ -88,13 +88,13 @@ class BybitApiClient(ApiClient):
         )
         signature = hash.hexdigest()
         return [signature, timestamp]
-    
+
     def _generate_signature_v2(self, payload: str) -> List[str]:
         timestamp = str(self._clock.timestamp_ms())
         param = f"{timestamp}{self._api_key}{self._recv_window}{payload}"
-        signature = hmac_signature(self._secret, param) # return hex digest string
+        signature = hmac_signature(self._secret, param)  # return hex digest string
         return [signature, timestamp]
-    
+
     async def _fetch(
         self,
         method: str,
@@ -104,7 +104,7 @@ class BybitApiClient(ApiClient):
         signed: bool = False,
     ):
         self._init_session()
-        
+
         url = urljoin(base_url, endpoint)
         payload = payload or {}
 
@@ -233,8 +233,10 @@ class BybitApiClient(ApiClient):
         }
         raw = await self._fetch("GET", self._base_url, endpoint, payload, signed=True)
         return self._order_history_response_decoder.decode(raw)
-    
-    async def get_v5_account_wallet_balance(self, account_type: str, **kwargs) -> BybitWalletBalanceResponse:
+
+    async def get_v5_account_wallet_balance(
+        self, account_type: str, **kwargs
+    ) -> BybitWalletBalanceResponse:
         endpoint = "/v5/account/wallet-balance"
         payload = {
             "accountType": account_type,
@@ -242,8 +244,6 @@ class BybitApiClient(ApiClient):
         }
         raw = await self._fetch("GET", self._base_url, endpoint, payload, signed=True)
         return self._wallet_balance_response_decoder.decode(raw)
-    
-    
 
     def raise_error(self, raw: bytes, status: int, headers: Dict[str, Any]):
         pass

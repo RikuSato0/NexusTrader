@@ -23,6 +23,7 @@ from tradebot.exchange.bybit.schema import (
     BybitWsPositionMsg,
     BybitWsAccountWalletMsg,
     BybitWalletBalanceResponse,
+    BybitPositionResponse,
 )
 from tradebot.exchange.bybit.rest_api import BybitApiClient
 from tradebot.exchange.bybit.websockets import BybitWSClient
@@ -287,6 +288,44 @@ class BybitPrivateConnector(PrivateConnector):
         res: BybitWalletBalanceResponse = await self._api_client.get_v5_account_wallet_balance(account_type="UNIFIED")
         for result in res.result.list:
             self._account_balance._apply(result.parse_to_balances())
+    
+    async def _init_future_position(self):
+        await self._query_future_position(BybitProductType.LINEAR)
+        await self._query_future_position(BybitProductType.INVERSE)
+    
+    async def _query_future_position(self, category: BybitProductType):
+        res: BybitPositionResponse = await self._api_client.get_v5_position_list(category=category.value, limit=200)
+        category = res.result.category
+                
+        for result in res.result.list:
+            side = result.side.parse_to_position_side()
+            if side == PositionSide.FLAT:
+                signed_amount = Decimal(0)
+                side = None
+            elif side == PositionSide.LONG:
+                signed_amount = Decimal(result.size)
+            elif side == PositionSide.SHORT:
+                signed_amount = -Decimal(result.size)
+            
+            if category.is_inverse:
+                id = result.symbol + "_inverse"
+            elif category.is_linear:
+                id = result.symbol + "_linear"
+            
+            symbol = self._market_id[id]    
+            
+            position = FuturePosition(
+                symbol=symbol,
+                exchange=self._exchange_id,
+                side=side,
+                signed_amount=signed_amount,
+                entry_price=float(result.avgPrice),
+                unrealized_pnl=float(result.unrealisedPnl),
+                realized_pnl=float(result.cumRealisedPnl),
+            )
+            self._msgbus.send(endpoint="bybit.future.position", msg=position)
+            
+            
         
     async def create_order(
         self,
@@ -380,11 +419,11 @@ class BybitPrivateConnector(PrivateConnector):
         self._log.debug(f"Order update: {str(order_msg)}")
         for data in order_msg.data:
             category = data.category
-            if category == BybitProductType.SPOT:
+            if category.is_spot:
                 id = data.symbol + "_spot"
-            elif category == BybitProductType.LINEAR:
+            elif category.is_linear:
                 id = data.symbol + "_linear"
-            elif category == BybitProductType.INVERSE:
+            elif category.is_inverse:
                 id = data.symbol + "_inverse"
             symbol = self._market_id[id]
 
@@ -420,9 +459,9 @@ class BybitPrivateConnector(PrivateConnector):
         
         for data in position_msg.data:
             category = data.category
-            if category == BybitProductType.LINEAR: # only linear/inverse/ position is supported
+            if category.is_linear: # only linear/inverse/ position is supported
                 id = data.symbol + "_linear"
-            elif category == BybitProductType.INVERSE:
+            elif category.is_inverse:
                 id = data.symbol + "_inverse"
             symbol = self._market_id[id]
             

@@ -150,6 +150,22 @@ class BybitProductType(Enum):
     LINEAR = "linear"
     INVERSE = "inverse"
     OPTION = "option"
+    
+    @property
+    def is_spot(self):
+        return self == self.SPOT
+    
+    @property
+    def is_linear(self):
+        return self == self.LINEAR
+    
+    @property
+    def is_inverse(self):
+        return self == self.INVERSE
+    
+    @property
+    def is_option(self):
+        return self == self.OPTION
 
 
 class BybitTriggerType(Enum):

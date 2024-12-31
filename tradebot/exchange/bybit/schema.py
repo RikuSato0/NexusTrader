@@ -106,6 +106,8 @@ T = TypeVar("T")
 
 class BybitListResult(Generic[T], msgspec.Struct):
     list: list[T]
+    nextPageCursor: str | None = None
+    category: BybitProductType | None = None
     
 class BybitPositionResponse(msgspec.Struct):
     retCode: int
@@ -627,7 +629,7 @@ class BybitWsAccountWallet(msgspec.Struct):
     totalPerpUPL: str
     totalInitialMargin: str
     totalMaintenanceMargin: str
-    coin: list[BybitWsAccountWalletCoin]
+    coin: List[BybitWsAccountWalletCoin]
     accountLTV: str
     accountType: str
 
@@ -640,7 +642,7 @@ class BybitWsAccountWalletMsg(msgspec.Struct):
     topic: str
     id: str
     creationTime: int
-    data: list[BybitWsAccountWallet]
+    data: List[BybitWsAccountWallet]
 
 
 class BybitWsPosition(msgspec.Struct, kw_only=True):
@@ -689,4 +691,4 @@ class BybitWsPositionMsg(msgspec.Struct):
     topic: str
     id: str
     creationTime: int
-    data: list[BybitWsPosition]
+    data: List[BybitWsPosition]

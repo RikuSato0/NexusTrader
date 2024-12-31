@@ -43,6 +43,8 @@ class Demo(Strategy):
                 wait=3,
             )
             self.signal = False
+        position = self.cache.get_position("BTCUSDT-PERP.BYBIT")
+        print(f"position: {position}")
         
         
 

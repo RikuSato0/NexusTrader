@@ -290,11 +290,11 @@ class BybitPrivateConnector(PrivateConnector):
             self._account_balance._apply(result.parse_to_balances())
     
     async def _init_future_position(self):
-        await self._query_future_position(BybitProductType.LINEAR)
-        await self._query_future_position(BybitProductType.INVERSE)
+        await self._query_future_position(BybitProductType.LINEAR, settleCoin="USDT", limit=200)
+
     
-    async def _query_future_position(self, category: BybitProductType):
-        res: BybitPositionResponse = await self._api_client.get_v5_position_list(category=category.value, limit=200)
+    async def _query_future_position(self, category: BybitProductType, **kwargs):
+        res: BybitPositionResponse = await self._api_client.get_v5_position_list(category=category.value, **kwargs)
         category = res.result.category
                 
         for result in res.result.list:

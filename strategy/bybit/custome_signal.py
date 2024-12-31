@@ -1,7 +1,8 @@
+import zmq
+from zmq.asyncio import Context
 from decimal import Decimal
-
 from tradebot.constants import settings
-from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
+from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig, ZeroMQSignalConfig
 from tradebot.strategy import Strategy
 from tradebot.constants import ExchangeType, OrderSide
 from tradebot.exchange.bybit import BybitAccountType
@@ -9,11 +10,13 @@ from tradebot.schema import BookL1, Order
 from tradebot.engine import Engine
 
 
-
 BYBIT_API_KEY = settings.BYBIT.ACCOUNT1.api_key
 BYBIT_SECRET = settings.BYBIT.ACCOUNT1.secret
 
-
+context = Context()
+socket = context.socket(zmq.SUB)
+socket.connect("ipc:///tmp/zmq_data_test")
+socket.setsockopt(zmq.SUBSCRIBE, b"")
 
 class Demo(Strategy):
     def __init__(self):
@@ -21,29 +24,8 @@ class Demo(Strategy):
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
         self.signal = True
         
-    def on_canceled_order(self, order: Order):
-        print(f"canceled: {order.uuid}")
-    
-    def on_accepted_order(self, order: Order):
-        print(f"accepted: {order.uuid}")
-    
-    def on_partial_filled_order(self, order: Order):
-        print(f"partial filled: {order.uuid}")
-    
-    def on_filled_order(self, order: Order):
-        print(f"filled: {order.uuid}")
-    
-    def on_bookl1(self, bookl1: BookL1):
-        if self.signal:
-            self.create_twap(
-                symbol="BTCUSDT-PERP.BYBIT",
-                side=OrderSide.SELL,
-                amount=Decimal("0.3"),
-                duration=60 * 5,
-                wait=3,
-            )
-            self.signal = False
-        
+    def on_custom_signal(self, signal):
+        print(signal)
         
 
 config = Config(
@@ -73,7 +55,10 @@ config = Config(
                 account_type=BybitAccountType.UNIFIED_TESTNET,
             )
         ]
-    }
+    },
+    zero_mq_signal_config=ZeroMQSignalConfig(
+        socket=socket,
+    )
 )
 
 engine = Engine(config)

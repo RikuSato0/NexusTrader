@@ -94,6 +94,7 @@ class Engine:
             task_manager=self._task_manager,
             ems=self._ems,
             exchanges=self._exchanges,
+            private_connectors=self._private_connectors,
         )
 
         self._subscriptions: Dict[DataType, Dict[str, str] | Set[str]] = (

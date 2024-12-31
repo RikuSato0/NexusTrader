@@ -5,7 +5,7 @@ from tradebot.core.log import SpdLog
 from tradebot.base import ExchangeManager
 from tradebot.core.entity import TaskManager
 from tradebot.core.cache import AsyncCache
-from tradebot.base import ExecutionManagementSystem
+from tradebot.base import ExecutionManagementSystem, PrivateConnector
 from tradebot.core.nautilius_core import MessageBus, UUID4
 from tradebot.schema import (
     BookL1,
@@ -47,6 +47,7 @@ class Strategy:
     def _init_core(
         self,
         exchanges: Dict[ExchangeType, ExchangeManager],
+        private_connectors: Dict[AccountType, PrivateConnector],
         cache: AsyncCache,
         msgbus: MessageBus,
         task_manager: TaskManager,
@@ -60,7 +61,7 @@ class Strategy:
         self._ems = ems
         self._task_manager = task_manager
         self._msgbus = msgbus
-
+        self._private_connectors = private_connectors
         self._exchanges = exchanges
         self._msgbus.subscribe(topic="trade", handler=self.on_trade)
         self._msgbus.subscribe(topic="bookl1", handler=self.on_bookl1)
@@ -100,6 +101,10 @@ class Strategy:
         instrument_id = InstrumentId.from_str(symbol)
         exchange = self._exchanges[instrument_id.exchange]
         return exchange.market[instrument_id.symbol]
+    
+    def account_balance(self, account_type: AccountType) -> AccountBalance:
+        connector = self._private_connectors[account_type]
+        return connector._account_balance
 
     def amount_to_precision(
         self,

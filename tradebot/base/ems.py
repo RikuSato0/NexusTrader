@@ -238,6 +238,21 @@ class ExecutionManagementSystem(ABC):
         position_side = order_submit.position_side
         kwargs = order_submit.kwargs
         
+        algo_order = AlgoOrder(
+            symbol=symbol,
+            uuid=order_submit.uuid,
+            side=side,
+            amount=order_submit.amount,
+            duration=order_submit.duration,
+            wait=order_submit.wait,
+            status=AlgoOrderStatus.RUNNING,
+            exchange=instrument_id.exchange,
+            timestamp=self._clock.timestamp_ms(),
+            position_side=position_side,
+        )
+        
+        self._cache._order_initialized(algo_order)
+        
         self._log.debug(f"order_submit: {order_submit}")
 
         min_order_amount: Decimal = self._get_min_order_amount(symbol, market)
@@ -248,21 +263,6 @@ class ExecutionManagementSystem(ABC):
             wait=order_submit.wait,
             min_order_amount=min_order_amount,
         )
-        
-        algo_order = AlgoOrder(
-            symbol=symbol,
-            uuid=order_submit.uuid,
-            side=side,
-            amount=order_submit.amount,
-            duration=order_submit.duration,
-            wait=wait,
-            status=AlgoOrderStatus.RUNNING,
-            exchange=instrument_id.exchange,
-            timestamp=self._clock.timestamp_ms(),
-            position_side=position_side,
-        )
-        
-        self._cache._order_initialized(algo_order)
         
         self._log.debug(
             f"amount_list: {amount_list}, min_order_amount: {min_order_amount}, wait: {wait}"

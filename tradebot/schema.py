@@ -199,9 +199,15 @@ class Order(Struct):
 class AlgoOrder(Struct):
     symbol: str
     uuid: str # start with "ALGO-"
+    side: OrderSide
+    amount: Decimal
+    duration: int
+    wait: int
     status: AlgoOrderStatus
     exchange: ExchangeType
+    timestamp: int 
     orders: List[str] = field(default_factory=list) # [uuid1, uuid2, ...]
+    position_side: PositionSide | None = None
     
     @property
     def is_running(self) -> bool:

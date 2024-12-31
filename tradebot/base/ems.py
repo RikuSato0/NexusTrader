@@ -9,11 +9,11 @@ from decimal import ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
 from tradebot.schema import Order, BaseMarket
 from tradebot.core.log import SpdLog
 from tradebot.core.entity import TaskManager
-from tradebot.core.nautilius_core import MessageBus
+from tradebot.core.nautilius_core import MessageBus, LiveClock
 from tradebot.core.cache import AsyncCache
 from tradebot.core.registry import OrderRegistry
-from tradebot.constants import AccountType, SubmitType, OrderType, OrderSide
-from tradebot.schema import OrderSubmit
+from tradebot.constants import AccountType, SubmitType, OrderType, OrderSide, AlgoOrderStatus
+from tradebot.schema import OrderSubmit, AlgoOrder
 from tradebot.base.connector import PrivateConnector
 
 
@@ -36,7 +36,7 @@ class ExecutionManagementSystem(ABC):
         self._msgbus = msgbus
         self._task_manager = task_manager
         self._registry = registry
-
+        self._clock = LiveClock()
         self._order_submit_queues: Dict[AccountType, asyncio.Queue[OrderSubmit]] = {}
         self._private_connectors: Dict[AccountType, PrivateConnector] | None = None
 
@@ -237,7 +237,7 @@ class ExecutionManagementSystem(ABC):
         market = self._market[symbol]
         position_side = order_submit.position_side
         kwargs = order_submit.kwargs
-
+        
         self._log.debug(f"order_submit: {order_submit}")
 
         min_order_amount: Decimal = self._get_min_order_amount(symbol, market)
@@ -248,6 +248,22 @@ class ExecutionManagementSystem(ABC):
             wait=order_submit.wait,
             min_order_amount=min_order_amount,
         )
+        
+        algo_order = AlgoOrder(
+            symbol=symbol,
+            uuid=order_submit.uuid,
+            side=side,
+            amount=order_submit.amount,
+            duration=order_submit.duration,
+            wait=wait,
+            status=AlgoOrderStatus.RUNNING,
+            exchange=instrument_id.exchange,
+            timestamp=self._clock.timestamp_ms(),
+            position_side=position_side,
+        )
+        
+        self._cache._order_initialized(algo_order)
+        
         self._log.debug(
             f"amount_list: {amount_list}, min_order_amount: {min_order_amount}, wait: {wait}"
         )
@@ -334,11 +350,20 @@ class ExecutionManagementSystem(ABC):
                         await asyncio.sleep(wait - elapsed_time)
                         elapsed_time = 0
                     else:
+                        algo_order.status = AlgoOrderStatus.FAILED
+                        self._cache._order_status_update(algo_order)
+                        
                         self._log.error(f"TWAP ORDER FAILED: symbol: {symbol}, side: {side}")
                         break
             
+            algo_order.status = AlgoOrderStatus.FINISHED
+            self._cache._order_status_update(algo_order)
+            
             self._log.debug(f"TWAP ORDER FINISHED: symbol: {symbol}, side: {side}")
         except asyncio.CancelledError:
+            algo_order.status = AlgoOrderStatus.CANCELING
+            self._cache._order_status_update(algo_order)
+            
             open_orders = self._cache.get_open_orders(symbol=symbol)
             for uuid in open_orders:
                 await self._cancel_order(
@@ -350,13 +375,22 @@ class ExecutionManagementSystem(ABC):
                     ),
                     account_type=account_type,
                 )
+            
+            algo_order.status = AlgoOrderStatus.CANCELED
+            self._cache._order_status_update(algo_order)
+            
             self._log.debug(f"TWAP ORDER CANCELLED: symbol: {symbol}, side: {side}")
 
 
     async def _create_twap_order(
         self, order_submit: OrderSubmit, account_type: AccountType
     ):
-        self._task_manager.create_task(self._twap_order(order_submit, account_type))
+        uuid = order_submit.uuid
+        self._task_manager.create_task(self._twap_order(order_submit, account_type), name = uuid)
+    
+    async def _cancel_twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
+        uuid = order_submit.uuid
+        self._task_manager.cancel_task(uuid)
 
     async def _handle_submit_order(
         self, account_type: AccountType, queue: asyncio.Queue[OrderSubmit]
@@ -371,6 +405,8 @@ class ExecutionManagementSystem(ABC):
                 await self._create_order(order_submit, account_type)
             elif order_submit.submit_type == SubmitType.TWAP:
                 await self._create_twap_order(order_submit, account_type)
+            elif order_submit.submit_type == SubmitType.CANCEL_TWAP:
+                await self._cancel_twap_order(order_submit, account_type)
             queue.task_done()
 
     async def start(self):

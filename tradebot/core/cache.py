@@ -273,7 +273,7 @@ class AsyncCache:
                 self._mem_symbol_open_orders[order.symbol].discard(order.uuid)
 
     def get_order(self, uuid: str) -> Order:
-        # 先从内存中查找
+        # find in memory first
         if uuid.startswith("ALGO-"):
             if order := self._mem_algo_orders.get(uuid):
                 return order

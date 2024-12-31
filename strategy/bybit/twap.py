@@ -35,7 +35,7 @@ class Demo(Strategy):
     
     def on_bookl1(self, bookl1: BookL1):
         if self.signal:
-            self.twap_order(
+            self.create_twap(
                 symbol="BTCUSDT-PERP.BYBIT",
                 side=OrderSide.BUY,
                 amount=Decimal("0.1"),

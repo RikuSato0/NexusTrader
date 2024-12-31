@@ -179,8 +179,9 @@ class SubmitType(Enum):
     CREATE = 0
     CANCEL = 1
     TWAP = 2
-    VWAP = 3
-
+    CANCEL_TWAP = 3
+    VWAP = 4
+    CANCEL_VWAP = 5
 class EventType(Enum):
     BOOKL1 = 0
     TRADE = 1

@@ -216,5 +216,4 @@ class OkxWSClient(WSClient):
             self._authed = False
             await self._auth()
         for _, payload in self._subscriptions.items():
-            await self._limiter.acquire()
             await self._send(payload)

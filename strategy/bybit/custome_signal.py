@@ -9,6 +9,7 @@ from tradebot.constants import ExchangeType, OrderSide
 from tradebot.exchange.bybit import BybitAccountType
 from tradebot.schema import BookL1, Order
 from tradebot.engine import Engine
+from tradebot.core.entity import RateLimit
 
 
 BYBIT_API_KEY = settings.BYBIT.ACCOUNT1.api_key
@@ -32,10 +33,10 @@ class Demo(Strategy):
         pos_struct = self.cache.get_position(symbol)
         if pos_struct:
             diff = self.amount_to_precision(symbol, target_position) - pos_struct.signed_amount
-            print(f"current {pos_struct.signed_amount} -> target {target_position}")
+            self.log.debug(f"symbol: {symbol}, current {pos_struct.signed_amount} -> target {target_position}")
         else:
             diff = self.amount_to_precision(symbol, target_position) 
-            print(f"current 0 -> target {target_position}")
+            self.log.debug(f"symbol: {symbol}, current 0 -> target {target_position}")
         return diff
     
         
@@ -51,7 +52,7 @@ class Demo(Strategy):
                     symbol=symbol,
                     side=OrderSide.BUY if diff > 0 else OrderSide.SELL,
                     amount=abs(diff),
-                    duration=60,
+                    duration=60 * 5,
                     wait=5,
                     account_type=BybitAccountType.UNIFIED_TESTNET, # recommend to specify the account type
                 )
@@ -67,13 +68,13 @@ class Demo(Strategy):
                         uuid=uuid,
                         account_type=BybitAccountType.UNIFIED_TESTNET,
                     )
-                    print(f"canceled {uuid}")
+                    self.log.debug(f"symbol: {symbol}, canceled {uuid}")
                     diff = self.cal_diff(symbol, target_position)
                     uuid = self.create_twap(
                         symbol=symbol,
                         side=OrderSide.BUY if diff > 0 else OrderSide.SELL,
                         amount=abs(diff),
-                        duration=60,
+                        duration=60 * 5,
                         wait=5,
                         account_type=BybitAccountType.UNIFIED_TESTNET, # recommend to specify the account type
                     )
@@ -104,6 +105,10 @@ config = Config(
         ExchangeType.BYBIT: [
             PrivateConnectorConfig(
                 account_type=BybitAccountType.UNIFIED_TESTNET,
+                rate_limit=RateLimit(
+                    max_rate=20,
+                    time_period=1,
+                )
             )
         ]
     },

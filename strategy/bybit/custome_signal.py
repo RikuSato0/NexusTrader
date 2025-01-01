@@ -39,10 +39,10 @@ class Demo(Strategy):
         target_position = self.amount_to_precision(symbol, target_position)
         if position:
             diff = target_position - position.signed_amount
-            self.log.debug(f"symbol: {symbol}, current {position.signed_amount} -> target {target_position}")
+            self.log.info(f"symbol: {symbol}, current {position.signed_amount} -> target {target_position}")
         else:
             diff = target_position
-            self.log.debug(f"symbol: {symbol}, current 0 -> target {diff}")
+            self.log.info(f"symbol: {symbol}, current 0 -> target {diff}")
         return diff
     
         
@@ -50,7 +50,7 @@ class Demo(Strategy):
         signal = orjson.loads(signal)
         for pos in signal:
             if not self.data_ready.ready:
-                self.log.debug("Data not ready, skip")
+                self.log.info("Data not ready, skip")
                 continue
             
             symbol = pos["instrumentID"].replace("USDT.BBP", "USDT-PERP.BYBIT")
@@ -66,7 +66,7 @@ class Demo(Strategy):
                         uuid=uuid,
                         account_type=BybitAccountType.UNIFIED_TESTNET,
                     )
-                    self.log.debug(f"symbol: {symbol}, canceled {uuid}")
+                    self.log.info(f"symbol: {symbol}, canceled {uuid}")
                 uuid = None
             
             if uuid is None:

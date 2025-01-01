@@ -7,7 +7,7 @@ from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfi
 from tradebot.strategy import Strategy
 from tradebot.constants import ExchangeType, OrderSide
 from tradebot.exchange.bybit import BybitAccountType
-from tradebot.schema import BookL1, Order
+from tradebot.schema import BookL1
 from tradebot.engine import Engine
 from tradebot.core.entity import RateLimit, DataReady
 

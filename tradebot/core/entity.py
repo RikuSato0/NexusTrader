@@ -292,6 +292,9 @@ class DataReady:
         Returns:
             bool: if all data is ready or timed out, return True
         """
+        if self._first_data_time is None:
+            return False
+
         if self._clock.timestamp_ms() - self._first_data_time > self._timeout * 1000:
             not_ready = [symbol for symbol, ready in self._symbols.items() if not ready]
             if not_ready:

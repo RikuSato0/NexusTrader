@@ -226,6 +226,7 @@ class Engine:
                     private_connector = BybitPrivateConnector(
                         exchange=exchange,
                         account_type=account_type,
+                        cache=self._cache,
                         msgbus=self._msgbus,
                         rate_limit=config.rate_limit,
                         task_manager=self._task_manager,
@@ -246,6 +247,7 @@ class Engine:
                     private_connector = OkxPrivateConnector(
                         exchange=exchange,
                         account_type=account_type,
+                        cache=self._cache,
                         msgbus=self._msgbus,
                         rate_limit=config.rate_limit,
                         task_manager=self._task_manager,
@@ -260,6 +262,7 @@ class Engine:
                         private_connector = BinancePrivateConnector(
                             exchange=exchange,
                             account_type=account_type,
+                            cache=self._cache,
                             msgbus=self._msgbus,
                             rate_limit=config.rate_limit,
                             task_manager=self._task_manager,

@@ -22,6 +22,12 @@ class Demo(Strategy):
         self.subscribe_bookl1(symbols=["BTCUSDT.OKX"])
         self.signal = True
     
+    def on_cancel_failed_order(self, order: Order):
+        print(order)
+    
+    def on_canceled_order(self, order: Order):
+        print(order)
+    
     def on_failed_order(self, order: Order):
         print(order)
     
@@ -40,13 +46,19 @@ class Demo(Strategy):
     def on_bookl1(self, bookl1: BookL1):
         
         if self.signal:
-            self.create_order(
+            uuid = self.create_order(
                 symbol="BTCUSDT.OKX",
                 side=OrderSide.BUY,
                 type=OrderType.LIMIT,
                 price=self.price_to_precision("BTCUSDT.OKX", bookl1.bid),
                 amount=Decimal("0.01"),
             )
+            
+            self.cancel_order(
+                symbol="BTCUSDT.OKX",
+                uuid=uuid,
+            )
+            
             # self.create_order(
             #     symbol="BTCUSDT.OKX",
             #     side=OrderSide.SELL,

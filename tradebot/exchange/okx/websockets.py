@@ -11,7 +11,7 @@ from aiolimiter import AsyncLimiter
 
 from tradebot.base import WSClient
 from tradebot.exchange.okx.constants import OkxAccountType
-from tradebot.core.entity import TaskManager, RateLimit
+from tradebot.core.entity import TaskManager
 
 class OkxWSClient(WSClient):
     def __init__(
@@ -22,7 +22,6 @@ class OkxWSClient(WSClient):
         api_key: str = None,
         secret: str = None,
         passphrase: str = None,
-        rate_limit: RateLimit | None = None,
     ):
         self._api_key = api_key
         self._secret = secret
@@ -34,12 +33,9 @@ class OkxWSClient(WSClient):
         else:
             url = f"{account_type.stream_url}/v5/public"
         
-        if rate_limit is None:
-            rate_limit = RateLimit(max_rate=2, time_period=1)
-        
         super().__init__(
             url,
-            limiter=AsyncLimiter(max_rate=rate_limit.max_rate, time_period=rate_limit.time_period),
+            limiter=AsyncLimiter(max_rate=2, time_period=1),
             handler=handler,
             task_manager=task_manager,
             specific_ping_msg=b"ping",

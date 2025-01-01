@@ -14,7 +14,6 @@ from tradebot.core.cache import AsyncCache
 from tradebot.core.entity import RateLimit
 from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
 from tradebot.core.nautilius_core import LiveClock, MessageBus
-from tradebot.schema import AccountBalance
 
 
 

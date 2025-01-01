@@ -161,7 +161,7 @@ class Order(Struct):
 
     @property
     def success(self) -> bool:
-        return self.status != OrderStatus.FAILED
+        return self.status not in [OrderStatus.FAILED, OrderStatus.CANCEL_FAILED]
 
     @property
     def is_filled(self) -> bool:

@@ -35,6 +35,7 @@ from tradebot.exchange.binance.schema import (
     BinanceSpotOrderUpdateMsg,
     BinanceFuturesOrderUpdateMsg,
 )
+from tradebot.core.cache import AsyncCache
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager, RateLimit
 
@@ -310,6 +311,7 @@ class BinancePrivateConnector(PrivateConnector):
         self,
         account_type: BinanceAccountType,
         exchange: BinanceExchangeManager,
+        cache: AsyncCache,
         msgbus: MessageBus,
         task_manager: TaskManager,
         rate_limit: RateLimit | None = None,
@@ -329,6 +331,7 @@ class BinancePrivateConnector(PrivateConnector):
                 secret=exchange.secret,
                 testnet=account_type.is_testnet,
             ),
+            cache=cache,
             msgbus=msgbus,
             rate_limit=rate_limit,
         )

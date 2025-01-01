@@ -22,6 +22,7 @@ from tradebot.constants import (
 )
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.core.nautilius_core import MessageBus
+from tradebot.core.cache import AsyncCache
 from tradebot.core.entity import TaskManager, RateLimit
 from tradebot.exchange.okx.rest_api import OkxApiClient
 from tradebot.constants import OrderSide, OrderType
@@ -223,6 +224,7 @@ class OkxPrivateConnector(PrivateConnector):
         self,
         exchange: OkxExchangeManager,
         account_type: OkxAccountType,
+        cache: AsyncCache,
         msgbus: MessageBus,
         task_manager: TaskManager,
         rate_limit: RateLimit | None = None,
@@ -252,6 +254,7 @@ class OkxPrivateConnector(PrivateConnector):
                 testnet=account_type.is_testnet,
             ),
             msgbus=msgbus,
+            cache=cache,
             rate_limit=rate_limit,
         )
 
@@ -269,7 +272,11 @@ class OkxPrivateConnector(PrivateConnector):
         # await self._ws_client.subscribe_fills()
 
     async def _init_account_balance(self):
-        # todo:
+        # TODO: implement
+        ...
+    
+    async def _init_future_position(self):
+        # TODO: implement
         ...
 
     def _handle_event_msg(self, msg: OkxWsGeneralMsg):
@@ -322,8 +329,8 @@ class OkxPrivateConnector(PrivateConnector):
                 last_filled_price=float(data.fillPx) if data.fillPx else None,
                 last_filled=Decimal(data.fillSz) if data.fillSz else Decimal(0),
                 remaining=Decimal(data.sz) - Decimal(data.accFillSz),
-                fee=Decimal(data.fee),
-                fee_currency=data.feeCcy,
+                fee=Decimal(data.fee), # accumalated fee
+                fee_currency=data.feeCcy, # accumalated fee currency
                 cost=Decimal(data.avgPx) * Decimal(data.fillSz),
                 cum_cost=Decimal(data.avgPx) * Decimal(data.accFillSz),
                 reduce_only=data.reduceOnly,
@@ -331,7 +338,7 @@ class OkxPrivateConnector(PrivateConnector):
             )
             self._msgbus.send(endpoint="okx.order", msg=order)
             if data.instType == "SPOT":
-                self._msgbus.send(endpoint="okx.spot.position", msg=order)
+                self._cache._apply_spot_position(order)
 
     def _handle_positions(self, raw: bytes):
         position_msg = self._decoder_ws_position_msg.decode(raw)
@@ -367,7 +374,7 @@ class OkxPrivateConnector(PrivateConnector):
                 realized_pnl=float(data.realizedPnl) if data.realizedPnl else 0,
             )
             
-            self._msgbus.send(endpoint="okx.future.position", msg=position)
+            self._cache._apply_future_position(position)
 
     def _handle_account(self, raw: bytes):
         account_msg: OkxWsAccountMsg = self._decoder_ws_account_msg.decode(raw)
@@ -375,9 +382,7 @@ class OkxPrivateConnector(PrivateConnector):
         
         for data in account_msg.data:
             balances = data.parse_to_balance()
-            self._account_balance._apply(balances)
-
-        self._msgbus.send(endpoint="okx.balance", msg=self._account_balance)
+            self._cache._apply_balance(self._account_type, balances)
 
     def _get_td_mode(self, market: OkxMarket):
         return OkxTdMode.CASH if market.spot else OkxTdMode.CROSS
@@ -479,7 +484,7 @@ class OkxPrivateConnector(PrivateConnector):
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
         symbol = market.id
 
-        params = {"instId": symbol, "ordId": order_id, **kwargs}
+        params = {"inst_id": symbol, "ord_id": order_id, **kwargs}
 
         try:
             res = await self._api_client.post_api_v5_trade_cancel_order(**params)

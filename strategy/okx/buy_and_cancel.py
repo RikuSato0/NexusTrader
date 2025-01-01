@@ -59,12 +59,6 @@ class Demo(Strategy):
                 uuid=uuid,
             )
             
-            # self.create_order(
-            #     symbol="BTCUSDT.OKX",
-            #     side=OrderSide.SELL,
-            #     type=OrderType.MARKET,
-            #     amount=Decimal("0.01"),
-            # )
             self.signal = False
         
 

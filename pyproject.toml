@@ -9,10 +9,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
-aiohttp = "3.10.10"
+aiohttp = "^3.10.10"
 ccxt = "^4.4.25"
 numpy = "2.1.1"
-orjson = "3.10.10"
+orjson = "^3.10.10"
 pyinstrument = "4.7.3"
 redis = "5.0.8"
 requests = "2.32.3"
@@ -30,6 +30,7 @@ zmq = "^0.0.0"
 aiolimiter = "^1.2.1"
 apscheduler = "^3.11.0"
 dynaconf = "^3.2.6"
+returns = "^0.24.0"
 
 
 

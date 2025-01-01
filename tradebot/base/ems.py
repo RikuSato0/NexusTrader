@@ -272,12 +272,12 @@ class ExecutionManagementSystem(ABC):
             while amount_list:
                 if order_id:
                     order = self._cache.get_order(order_id)
-                    if not order:
-                        self._log.error(f"Order {order_id} not found")
-                        break
+                    
+                    is_opened = order.bind_optional(lambda order: order.is_opened).value_or(False)
+                    on_flight = order.bind_optional(lambda order: order.on_flight).value_or(False)
 
                     # 检查现价单是否已成交，不然的话立刻下市价单成交 或者 把remaining amount加到下一个市价单上
-                    if order.is_opened and not order.on_flight:
+                    if is_opened and not on_flight:
                         order_cancel_submit = OrderSubmit(
                             symbol=symbol,
                             instrument_id=instrument_id,

@@ -1,9 +1,9 @@
 import msgspec
 import asyncio
 
-from typing import Dict, Set, Type, List
+from typing import Dict, Set, Type, List, Optional
 from collections import defaultdict
-
+from returns.maybe import maybe
 
 from tradebot.schema import (
     Order,
@@ -248,7 +248,8 @@ class AsyncCache:
     def get_balance(self, account_type: AccountType) -> AccountBalance:
         return self._mem_account_balance[account_type]
 
-    def get_position(self, symbol: str) -> Position:
+    @maybe
+    def get_position(self, symbol: str) -> Optional[Position]:
         # First try memory
         instrument_id = InstrumentId.from_str(symbol)
         if instrument_id.is_spot:
@@ -291,7 +292,8 @@ class AsyncCache:
                 self._mem_open_orders[order.exchange].discard(order.uuid)
                 self._mem_symbol_open_orders[order.symbol].discard(order.uuid)
 
-    def get_order(self, uuid: str) -> Order:
+    @maybe
+    def get_order(self, uuid: str) -> Optional[Order]:
         # find in memory first
         if uuid.startswith("ALGO-"):
             if order := self._mem_algo_orders.get(uuid):

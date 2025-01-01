@@ -4,9 +4,10 @@ import socket
 from collections import defaultdict
 from typing import Callable, Optional
 from typing import Dict, List, Any
+import warnings
 
-import time
 import redis
+import time
 
 from dataclasses import dataclass
 from tradebot.constants import get_redis_config
@@ -20,12 +21,15 @@ class RateLimit:
     max_rate: Allow up to max_rate / time_period acquisitions before blocking.
     time_period: Time period in seconds.
     """
+
     max_rate: float
     time_period: float = 60
 
 
 class TaskManager:
-    def __init__(self, loop: asyncio.AbstractEventLoop, enable_signal_handlers: bool = True):
+    def __init__(
+        self, loop: asyncio.AbstractEventLoop, enable_signal_handlers: bool = True
+    ):
         self._log = SpdLog.get_logger(type(self).__name__, level="DEBUG", flush=True)
         self._tasks: Dict[str, asyncio.Task] = {}
         self._shutdown_event = asyncio.Event()
@@ -36,7 +40,9 @@ class TaskManager:
     def _setup_signal_handlers(self):
         try:
             for sig in (signal.SIGINT, signal.SIGTERM):
-                self._loop.add_signal_handler(sig, lambda: self.create_task(self._shutdown()))
+                self._loop.add_signal_handler(
+                    sig, lambda: self.create_task(self._shutdown())
+                )
         except NotImplementedError:
             self._log.warning("Signal handlers not supported on this platform")
 
@@ -49,7 +55,7 @@ class TaskManager:
         self._tasks[task.get_name()] = task
         task.add_done_callback(self._handle_task_done)
         return task
-    
+
     def cancel_task(self, name: str) -> bool:
         if name in self._tasks:
             self._tasks[name].cancel()
@@ -83,7 +89,9 @@ class TaskManager:
                     task.cancel()
 
             if self._tasks:
-                results = await asyncio.gather(*self._tasks.values(), return_exceptions=True)
+                results = await asyncio.gather(
+                    *self._tasks.values(), return_exceptions=True
+                )
 
                 for result in results:
                     if isinstance(result, Exception) and not isinstance(
@@ -179,8 +187,6 @@ class RedisClient:
         return redis.asyncio.Redis(**cls._get_params())
 
 
-
-
 class Clock:
     def __init__(self, tick_size: float = 1.0):
         """
@@ -227,12 +233,13 @@ class Clock:
                 else:
                     callback(self.current_timestamp)
 
+
 class ZeroMQSignalRecv:
     def __init__(self, config, callback: Callable, task_manager: TaskManager):
         self._socket = config.socket
         self._callback = callback
         self._task_manager = task_manager
-    
+
     async def _recv(self):
         while True:
             date = await self._socket.recv()
@@ -240,7 +247,58 @@ class ZeroMQSignalRecv:
                 await self._callback(date)
             else:
                 self._callback(date)
-                
+
     async def start(self):
         self._task_manager.create_task(self._recv())
-                
+
+
+class DataReady:
+    def __init__(self, symbols: List[str], timeout: int = 60):
+        """
+        Initialize DataReady class
+
+        Args:
+            symbols: symbols list need to monitor
+            timeout: timeout in seconds
+        """
+        self._log = SpdLog.get_logger(type(self).__name__, level="DEBUG", flush=True)
+        self._symbols = {symbol: False for symbol in symbols}
+        self._timeout = timeout
+        self._clock = LiveClock()
+        self._first_data_time: int | None = None
+
+    def input(self, data) -> None:
+        """
+        Input data, update the status of the corresponding symbol
+
+        Args:
+            data: data object with symbol attribute
+        """
+
+        if not self.ready:
+            symbol = data.symbol
+
+            if self._first_data_time is None:
+                self._first_data_time = self._clock.timestamp_ms()
+
+            if symbol in self._symbols:
+                self._symbols[symbol] = True
+
+    @property
+    def ready(self) -> bool:
+        """
+        Check if all data is ready or if it has timed out
+
+        Returns:
+            bool: if all data is ready or timed out, return True
+        """
+        if self._clock.timestamp_ms() - self._first_data_time > self._timeout * 1000:
+            not_ready = [symbol for symbol, ready in self._symbols.items() if not ready]
+            if not_ready:
+                warnings.warn(
+                    f"Data receiving timed out. The following symbols are not ready: {', '.join(not_ready)}"
+                )
+            return True
+
+        # check if all data is ready
+        return all(self._symbols.values())

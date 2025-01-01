@@ -9,7 +9,7 @@ from tradebot.constants import ExchangeType, OrderSide
 from tradebot.exchange.bybit import BybitAccountType
 from tradebot.schema import BookL1, Order
 from tradebot.engine import Engine
-from tradebot.core.entity import RateLimit
+from tradebot.core.entity import RateLimit, DataReady
 
 
 BYBIT_API_KEY = settings.BYBIT.ACCOUNT1.api_key
@@ -23,11 +23,16 @@ socket.setsockopt(zmq.SUBSCRIBE, b"")
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
+        symbols = ["BTCUSDT-PERP.BYBIT"]
+        self.subscribe_bookl1(symbols=symbols)
         self.signal = True
         self.multiplier = 0.1
-        
+        self.data_ready = DataReady(symbols=symbols)
         self.orders = {}
+        
+    def on_bookl1(self, bookl1: BookL1):
+        self.data_ready.input(bookl1)
+    
     
     def cal_diff(self, symbol, target_position) -> Decimal:
         position = self.cache.get_position(symbol).value_or(None)
@@ -44,6 +49,10 @@ class Demo(Strategy):
     def on_custom_signal(self, signal):
         signal = orjson.loads(signal)
         for pos in signal:
+            if not self.data_ready.ready:
+                self.log.debug("Data not ready, skip")
+                continue
+            
             symbol = pos["instrumentID"].replace("USDT.BBP", "USDT-PERP.BYBIT")
             target_position = pos["position"] * self.market(symbol).precision.amount * self.multiplier
             uuid = self.orders.get(symbol, None)

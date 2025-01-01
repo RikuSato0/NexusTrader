@@ -292,7 +292,7 @@ class BybitPrivateConnector(PrivateConnector):
         for result in res.result.list:
             self._cache._apply_balance(self._account_type, result.parse_to_balances())
     
-    async def _init_future_position(self):
+    async def _init_position(self):
         await self._query_future_position(BybitProductType.LINEAR, settleCoin="USDT", limit=200)
 
     

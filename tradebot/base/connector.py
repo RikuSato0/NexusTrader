@@ -98,7 +98,7 @@ class PrivateConnector(ABC):
         pass
     
     @abstractmethod
-    async def _init_future_position(self):
+    async def _init_position(self):
         pass
 
     @abstractmethod

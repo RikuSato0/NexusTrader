@@ -275,7 +275,7 @@ class OkxPrivateConnector(PrivateConnector):
         # TODO: implement
         ...
     
-    async def _init_future_position(self):
+    async def _init_position(self):
         # TODO: implement
         ...
 

@@ -8,8 +8,6 @@ from returns.maybe import maybe
 from tradebot.schema import (
     Order,
     Position,
-    SpotPosition,
-    Position,
     ExchangeType,
     InstrumentId,
     Kline,
@@ -19,7 +17,7 @@ from tradebot.schema import (
     AccountBalance,
     Balance,
 )
-from tradebot.constants import OrderStatus, STATUS_TRANSITIONS, AccountType
+from tradebot.constants import STATUS_TRANSITIONS, AccountType
 from tradebot.core.entity import TaskManager, RedisClient
 from tradebot.core.log import SpdLog
 from tradebot.core.nautilius_core import LiveClock, MessageBus

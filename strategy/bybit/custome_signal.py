@@ -30,10 +30,10 @@ class Demo(Strategy):
         self.orders = {}
     
     def cal_diff(self, symbol, target_position) -> Decimal:
-        pos_struct = self.cache.get_position(symbol)
-        if pos_struct:
-            diff = self.amount_to_precision(symbol, target_position) - pos_struct.signed_amount
-            self.log.debug(f"symbol: {symbol}, current {pos_struct.signed_amount} -> target {target_position}")
+        position = self.cache.get_position(symbol).value_or(None)
+        if position:
+            diff = self.amount_to_precision(symbol, target_position) - position.signed_amount
+            self.log.debug(f"symbol: {symbol}, current {position.signed_amount} -> target {target_position}")
         else:
             diff = self.amount_to_precision(symbol, target_position) 
             self.log.debug(f"symbol: {symbol}, current 0 -> target {target_position}")

@@ -275,21 +275,24 @@ class ExecutionManagementSystem(ABC):
                     
                     is_opened = order.bind_optional(lambda order: order.is_opened).value_or(False)
                     on_flight = order.bind_optional(lambda order: order.on_flight).value_or(False)
+                    is_closed = order.bind_optional(lambda order: order.is_closed).value_or(False)
 
                     # 检查现价单是否已成交，不然的话立刻下市价单成交 或者 把remaining amount加到下一个市价单上
                     if is_opened and not on_flight:
-                        order_cancel_submit = OrderSubmit(
-                            symbol=symbol,
-                            instrument_id=instrument_id,
-                            submit_type=SubmitType.CANCEL,
-                            uuid=order_id,
+                        await self._cancel_order(
+                            order_submit=OrderSubmit(
+                                symbol=symbol,
+                                instrument_id=instrument_id,
+                                submit_type=SubmitType.CANCEL,
+                                uuid=order_id,
+                            ),
+                            account_type=account_type,
                         )
-                        await self._cancel_order(order_cancel_submit, account_type)
                         self._log.debug(f"CANCEL: {order}")
-                    elif order.is_closed:
+                    elif is_closed:
                         order_id = None
                         # amount = amount_list.pop()
-                        remaining = order.remaining
+                        remaining = order.unwrap().remaining
                         if remaining > min_order_amount:
                             order = await self._create_order(
                                 order_submit=OrderSubmit(

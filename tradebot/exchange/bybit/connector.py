@@ -6,7 +6,7 @@ from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager, RateLimit
 from tradebot.core.cache import AsyncCache
-from tradebot.schema import BookL1, Order, Trade, FuturePosition
+from tradebot.schema import BookL1, Order, Trade, Position
 from tradebot.constants import (
     OrderSide,
     OrderStatus,
@@ -317,7 +317,7 @@ class BybitPrivateConnector(PrivateConnector):
             
             symbol = self._market_id[id]    
             
-            position = FuturePosition(
+            position = Position(
                 symbol=symbol,
                 exchange=self._exchange_id,
                 side=side,
@@ -326,7 +326,7 @@ class BybitPrivateConnector(PrivateConnector):
                 unrealized_pnl=float(result.unrealisedPnl),
                 realized_pnl=float(result.cumRealisedPnl),
             )
-            self._cache._apply_future_position(position)
+            self._cache._apply_position(position)
             
             
         
@@ -453,8 +453,6 @@ class BybitPrivateConnector(PrivateConnector):
             )
 
             self._msgbus.send(endpoint="bybit.order", msg=order)
-            if category == BybitProductType.SPOT:
-                self._cache._apply_spot_position(order)
     
     def _parse_position_update(self, raw: bytes):
         position_msg = self._ws_msg_position_decoder.decode(raw)
@@ -477,7 +475,7 @@ class BybitPrivateConnector(PrivateConnector):
                 side = None
                 signed_amount = Decimal(0)
             
-            position = FuturePosition(
+            position = Position(
                 symbol=symbol,
                 exchange=self._exchange_id,
                 side=side,
@@ -487,7 +485,7 @@ class BybitPrivateConnector(PrivateConnector):
                 realized_pnl=float(data.cumRealisedPnl),
             )
             
-            self._cache._apply_future_position(position)
+            self._cache._apply_position(position)
         
     def _parse_wallet_update(self, raw: bytes):
         wallet_msg = self._ws_msg_wallet_decoder.decode(raw)

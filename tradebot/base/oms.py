@@ -8,7 +8,6 @@ from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.cache import AsyncCache
 from tradebot.core.registry import OrderRegistry
 from tradebot.constants import OrderStatus
-from tradebot.schema import FuturePosition
 
 
 
@@ -32,12 +31,6 @@ class OrderManagementSystem(ABC):
 
     def _add_order_msg(self, order: Order):
         self._order_msg_queue.put_nowait(order)
-
-    def _handle_spot_position_event(self, order: Order):
-        self._cache._apply_spot_position(order)
-
-    def _handle_future_position_event(self, position: FuturePosition):
-        self._cache._apply_future_position(position)
 
     async def _handle_order_event(self):
         while True:

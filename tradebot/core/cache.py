@@ -9,7 +9,7 @@ from tradebot.schema import (
     Order,
     Position,
     SpotPosition,
-    FuturePosition,
+    Position,
     ExchangeType,
     InstrumentId,
     Kline,
@@ -59,8 +59,7 @@ class AsyncCache:
         self._mem_symbol_orders: Dict[str, Set[str]] = defaultdict(
             set
         )  # symbol -> set(uuid)
-        self._mem_spot_positions: Dict[str, SpotPosition] = {}  # symbol -> Position
-        self._mem_future_positions: Dict[str, FuturePosition] = {}  # symbol -> Position
+        self._mem_positions: Dict[str, Position] = {}  # symbol -> Position
         
         self._mem_account_balance: Dict[AccountType, AccountBalance] = defaultdict(AccountBalance)
 
@@ -131,12 +130,8 @@ class AsyncCache:
             if uuids:
                 await self._r_async.sadd(key, *uuids)
 
-        # Add position sync
-        for symbol, position in self._mem_spot_positions.copy().items():
-            key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{position.exchange.value}:symbol_positions:{symbol}"
-            await self._r_async.set(key, self._encode(position))
-        
-        for symbol, position in self._mem_future_positions.copy().items():
+        # Add position sync        
+        for symbol, position in self._mem_positions.copy().items():
             key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{position.exchange.value}:symbol_positions:{symbol}"
             await self._r_async.set(key, self._encode(position))
 
@@ -206,41 +201,9 @@ class AsyncCache:
             return False
 
         return True
-
-    def _apply_spot_position(self, order: Order):
-        symbol = order.symbol
-
-        # Check if order is already closed
-        if self._mem_closed_orders.get(order.uuid, False):
-            self._log.debug(
-                f"Order {order.uuid} is already closed, skipping position update"
-            )
-            return
-
-        if symbol not in self._mem_spot_positions:
-            position = self.get_position(symbol)
-            if not position:
-                position = SpotPosition(
-                    symbol=symbol,
-                    exchange=order.exchange,
-                )
-            self._mem_spot_positions[symbol] = position
-
-        if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
-            self._mem_closed_orders[order.uuid] = True # set the order to closed, so it will not be applied again
-
-        if order.status in (
-            OrderStatus.FILLED,
-            OrderStatus.PARTIALLY_FILLED,
-            OrderStatus.CANCELED,
-        ):
-            self._log.debug(
-                f"POSITION UPDATED: status {order.status} order_id {order.id} side {order.side} filled: {order.filled} amount: {order.amount}"
-            )
-            self._mem_spot_positions[symbol]._apply(order)
     
-    def _apply_future_position(self, position: FuturePosition):
-        self._mem_future_positions[position.symbol] = position
+    def _apply_position(self, position: Position):
+        self._mem_positions[position.symbol] = position
     
     def _apply_balance(self, account_type: AccountType, balances: List[Balance]):
         self._mem_account_balance[account_type]._apply(balances)
@@ -252,21 +215,14 @@ class AsyncCache:
     def get_position(self, symbol: str) -> Optional[Position]:
         # First try memory
         instrument_id = InstrumentId.from_str(symbol)
-        if instrument_id.is_spot:
-            if position := self._mem_spot_positions.get(symbol, None):
-                return position
-        else:
-            if position := self._mem_future_positions.get(symbol, None):
-                return position
+        if position := self._mem_positions.get(symbol, None):
+            return position
+            
         # Then try Redis
         key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{instrument_id.exchange.value}:symbol_positions:{symbol}"
         if position_data := self._r.get(key):
-            if instrument_id.is_spot:
-                position = self._decode(position_data, SpotPosition)
-                self._mem_spot_positions[symbol] = position  # Cache in memory
-            else:
-                position = self._decode(position_data, FuturePosition)
-                self._mem_future_positions[symbol] = position  # Cache in memory
+            position = self._decode(position_data, Position)
+            self._mem_positions[symbol] = position  # Cache in memory
             return position
         return None
 

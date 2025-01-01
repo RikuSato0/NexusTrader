@@ -5,7 +5,7 @@ from tradebot.exchange.okx import OkxAccountType
 from tradebot.exchange.okx.websockets import OkxWSClient
 from tradebot.exchange.okx.exchange import OkxExchangeManager
 from tradebot.exchange.okx.schema import OkxWsGeneralMsg
-from tradebot.schema import Trade, BookL1, Kline, Order, FuturePosition
+from tradebot.schema import Trade, BookL1, Kline, Order, Position
 from tradebot.exchange.okx.schema import (
     OkxMarket,
     OkxWsBboTbtMsg,
@@ -337,8 +337,6 @@ class OkxPrivateConnector(PrivateConnector):
                 position_side=OkxEnumParser.parse_position_side(data.posSide),
             )
             self._msgbus.send(endpoint="okx.order", msg=order)
-            if data.instType == "SPOT":
-                self._cache._apply_spot_position(order)
 
     def _handle_positions(self, raw: bytes):
         position_msg = self._decoder_ws_position_msg.decode(raw)
@@ -364,7 +362,7 @@ class OkxPrivateConnector(PrivateConnector):
             else:
                 self._log.warning(f"Invalid position side: {side}")
             
-            position = FuturePosition(
+            position = Position(
                 symbol=symbol,
                 exchange=self._exchange_id,
                 side=side,
@@ -374,7 +372,7 @@ class OkxPrivateConnector(PrivateConnector):
                 realized_pnl=float(data.realizedPnl) if data.realizedPnl else 0,
             )
             
-            self._cache._apply_future_position(position)
+            self._cache._apply_position(position)
 
     def _handle_account(self, raw: bytes):
         account_msg: OkxWsAccountMsg = self._decoder_ws_account_msg.decode(raw)

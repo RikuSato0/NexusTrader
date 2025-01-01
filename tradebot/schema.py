@@ -401,10 +401,30 @@ class Position(Struct):
     symbol: str
     exchange: ExchangeType
     signed_amount: Decimal = Decimal("0")
-    
+    entry_price: float = 0
+    side: Optional[PositionSide] = None
+    unrealized_pnl: float = 0
+    realized_pnl: float = 0
+
     @property
-    def amount(self) -> Decimal:
-        raise NotImplementedError
+    def amount(self, contract_size: Decimal = Decimal("1")) -> Decimal:
+        return abs(self.signed_amount) * contract_size
+
+    @property
+    def is_open(self) -> bool:
+        return self.amount != 0
+
+    @property
+    def is_closed(self) -> bool:
+        return not self.is_open
+
+    @property
+    def is_long(self) -> bool:
+        return self.side == PositionSide.LONG
+
+    @property
+    def is_short(self) -> bool:
+        return self.side == PositionSide.SHORT
 
 
 class SpotPosition(Position):
@@ -438,33 +458,6 @@ class SpotPosition(Position):
             self.signed_amount += fill_delta
         elif order.side == OrderSide.SELL:
             self.signed_amount -= fill_delta
-
-
-class FuturePosition(Position):
-    entry_price: float = 0
-    side: Optional[PositionSide] = None
-    unrealized_pnl: float = 0
-    realized_pnl: float = 0
-
-    @property
-    def amount(self, contract_size: Decimal = Decimal("1")) -> Decimal:
-        return abs(self.signed_amount) * contract_size
-
-    @property
-    def is_open(self) -> bool:
-        return self.amount != 0
-
-    @property
-    def is_closed(self) -> bool:
-        return not self.is_open
-
-    @property
-    def is_long(self) -> bool:
-        return self.side == PositionSide.LONG
-
-    @property
-    def is_short(self) -> bool:
-        return self.side == PositionSide.SHORT
 
 
 # class Position(Struct):

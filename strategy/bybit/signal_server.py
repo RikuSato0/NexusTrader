@@ -52,7 +52,7 @@ try:
         index += 1
         if index == len(datas):
             index = 0
-        time.sleep(50)
+        time.sleep(60)
         
 except KeyboardInterrupt:
     print("Exiting...")

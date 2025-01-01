@@ -25,18 +25,19 @@ class Demo(Strategy):
         super().__init__()
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
         self.signal = True
-        self.multiplier = 0.6
+        self.multiplier = 0.1
         
         self.orders = {}
     
     def cal_diff(self, symbol, target_position) -> Decimal:
         position = self.cache.get_position(symbol).value_or(None)
+        target_position = self.amount_to_precision(symbol, target_position)
         if position:
-            diff = self.amount_to_precision(symbol, target_position) - position.signed_amount
+            diff = target_position - position.signed_amount
             self.log.debug(f"symbol: {symbol}, current {position.signed_amount} -> target {target_position}")
         else:
-            diff = self.amount_to_precision(symbol, target_position) 
-            self.log.debug(f"symbol: {symbol}, current 0 -> target {target_position}")
+            diff = target_position
+            self.log.debug(f"symbol: {symbol}, current 0 -> target {diff}")
         return diff
     
         
@@ -46,19 +47,8 @@ class Demo(Strategy):
             symbol = pos["instrumentID"].replace("USDT.BBP", "USDT-PERP.BYBIT")
             target_position = pos["position"] * self.market(symbol).precision.amount * self.multiplier
             uuid = self.orders.get(symbol, None)
-            if uuid is None:
-                diff = self.cal_diff(symbol, target_position)
-                uuid = self.create_twap(
-                    symbol=symbol,
-                    side=OrderSide.BUY if diff > 0 else OrderSide.SELL,
-                    amount=abs(diff),
-                    duration=60 * 5,
-                    wait=5,
-                    account_type=BybitAccountType.UNIFIED_TESTNET, # recommend to specify the account type
-                )
-                
-                self.orders[symbol] = uuid
-            else:
+
+            if uuid:
                 order = self.cache.get_order(uuid)
                 is_opened = order.bind_optional(lambda order: order.is_opened).value_or(False)
                 if is_opened:
@@ -68,16 +58,20 @@ class Demo(Strategy):
                         account_type=BybitAccountType.UNIFIED_TESTNET,
                     )
                     self.log.debug(f"symbol: {symbol}, canceled {uuid}")
-                    diff = self.cal_diff(symbol, target_position)
-                    uuid = self.create_twap(
-                        symbol=symbol,
-                        side=OrderSide.BUY if diff > 0 else OrderSide.SELL,
-                        amount=abs(diff),
-                        duration=60 * 5,
-                        wait=5,
-                        account_type=BybitAccountType.UNIFIED_TESTNET, # recommend to specify the account type
-                    )
-                    self.orders[symbol] = uuid
+                uuid = None
+            
+            if uuid is None:
+                diff = self.cal_diff(symbol, target_position)
+                uuid = self.create_twap(
+                    symbol=symbol,
+                    side=OrderSide.BUY if diff > 0 else OrderSide.SELL,
+                    amount=abs(diff),
+                    duration=65,
+                    wait=5,
+                    account_type=BybitAccountType.UNIFIED_TESTNET, # recommend to specify the account type
+                )
+                
+                self.orders[symbol] = uuid
                     
 config = Config(
     strategy_id="bybit_twap",

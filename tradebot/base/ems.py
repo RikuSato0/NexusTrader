@@ -185,7 +185,9 @@ class ExecutionManagementSystem(ABC):
         wait = 10
         """
         amount_list = []
-        if total_amount < min_order_amount:
+        if total_amount == 0:
+            return [], 0
+        elif total_amount < min_order_amount:
             wait = 0
             return [min_order_amount], wait
 
@@ -205,7 +207,7 @@ class ExecutionManagementSystem(ABC):
         else:
             amount_list = [base_amount] * interval + [remaining]
 
-        wait = duration / (len(amount_list) - 1)
+        wait = duration / len(amount_list)
         return amount_list, wait
 
     def _cal_limit_order_price(

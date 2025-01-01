@@ -59,10 +59,9 @@ class Demo(Strategy):
                 
                 self.orders[symbol] = uuid
             else:
-                order_obj = self.cache.get_order(uuid)
-                if not order_obj:
-                    continue
-                if order_obj.is_opened:
+                order = self.cache.get_order(uuid)
+                is_opened = order.bind_optional(lambda order: order.is_opened).value_or(False)
+                if is_opened:
                     self.cancel_twap(
                         symbol=symbol,
                         uuid=uuid,

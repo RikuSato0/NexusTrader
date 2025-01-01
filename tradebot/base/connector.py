@@ -10,6 +10,7 @@ from tradebot.base.api_client import ApiClient
 from tradebot.schema import Order, BaseMarket
 from tradebot.constants import ExchangeType
 from tradebot.core.log import SpdLog
+from tradebot.core.cache import AsyncCache
 from tradebot.core.entity import RateLimit
 from tradebot.constants import OrderSide, OrderType, TimeInForce, PositionSide
 from tradebot.core.nautilius_core import LiveClock, MessageBus
@@ -68,6 +69,7 @@ class PrivateConnector(ABC):
         ws_client: WSClient,
         api_client: ApiClient,
         msgbus: MessageBus,
+        cache: AsyncCache,
         rate_limit: RateLimit | None = None,
     ):
         self._log = SpdLog.get_logger(
@@ -79,9 +81,9 @@ class PrivateConnector(ABC):
         self._exchange_id = exchange_id
         self._ws_client = ws_client
         self._api_client = api_client
+        self._cache = cache
         self._clock = LiveClock()
         self._msgbus: MessageBus = msgbus
-        self._account_balance: AccountBalance = AccountBalance()
 
         if rate_limit:
             self._limiter = AsyncLimiter(rate_limit.max_rate, rate_limit.time_period)

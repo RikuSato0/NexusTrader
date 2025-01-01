@@ -1,5 +1,4 @@
 import msgspec
-import json
 from typing import Dict
 from decimal import Decimal
 from tradebot.exchange.okx import OkxAccountType

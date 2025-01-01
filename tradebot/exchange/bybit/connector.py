@@ -5,6 +5,7 @@ from collections import defaultdict
 from tradebot.base import PublicConnector, PrivateConnector
 from tradebot.core.nautilius_core import MessageBus
 from tradebot.core.entity import TaskManager, RateLimit
+from tradebot.core.cache import AsyncCache
 from tradebot.schema import BookL1, Order, Trade, FuturePosition
 from tradebot.constants import (
     OrderSide,
@@ -170,6 +171,7 @@ class BybitPrivateConnector(PrivateConnector):
         self,
         exchange: BybitExchangeManager,
         account_type: BybitAccountType,
+        cache: AsyncCache,
         msgbus: MessageBus,
         task_manager: TaskManager,
         rate_limit: RateLimit | None = None,
@@ -203,6 +205,7 @@ class BybitPrivateConnector(PrivateConnector):
                 testnet=account_type.is_testnet,
             ),
             msgbus=msgbus,
+            cache=cache,
             rate_limit=rate_limit,
         )
 
@@ -287,7 +290,7 @@ class BybitPrivateConnector(PrivateConnector):
     async def _init_account_balance(self):
         res: BybitWalletBalanceResponse = await self._api_client.get_v5_account_wallet_balance(account_type="UNIFIED")
         for result in res.result.list:
-            self._account_balance._apply(result.parse_to_balances())
+            self._cache._apply_balance(self._account_type, result.parse_to_balances())
     
     async def _init_future_position(self):
         await self._query_future_position(BybitProductType.LINEAR, settleCoin="USDT", limit=200)
@@ -323,7 +326,7 @@ class BybitPrivateConnector(PrivateConnector):
                 unrealized_pnl=float(result.unrealisedPnl),
                 realized_pnl=float(result.cumRealisedPnl),
             )
-            self._msgbus.send(endpoint="bybit.future.position", msg=position)
+            self._cache._apply_future_position(position)
             
             
         
@@ -451,7 +454,7 @@ class BybitPrivateConnector(PrivateConnector):
 
             self._msgbus.send(endpoint="bybit.order", msg=order)
             if category == BybitProductType.SPOT:
-                self._msgbus.send(endpoint="bybit.spot.position", msg=order)
+                self._cache._apply_spot_position(order)
     
     def _parse_position_update(self, raw: bytes):
         position_msg = self._ws_msg_position_decoder.decode(raw)
@@ -484,7 +487,7 @@ class BybitPrivateConnector(PrivateConnector):
                 realized_pnl=float(data.cumRealisedPnl),
             )
             
-            self._msgbus.send(endpoint="bybit.future.position", msg=position)
+            self._cache._apply_future_position(position)
         
     def _parse_wallet_update(self, raw: bytes):
         wallet_msg = self._ws_msg_wallet_decoder.decode(raw)
@@ -492,7 +495,7 @@ class BybitPrivateConnector(PrivateConnector):
         
         for data in wallet_msg.data:
             balances = data.parse_to_balances()
-            self._account_balance._apply(balances)
+            self._cache._apply_balance(self._account_type, balances)
         
     async def disconnect(self):
         await super().disconnect()

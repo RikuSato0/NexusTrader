@@ -1,7 +1,7 @@
 import msgspec
 import asyncio
 
-from typing import Dict, Set, Type
+from typing import Dict, Set, Type, List
 from collections import defaultdict
 
 
@@ -16,8 +16,10 @@ from tradebot.schema import (
     BookL1,
     Trade,
     AlgoOrder,
+    AccountBalance,
+    Balance,
 )
-from tradebot.constants import OrderStatus, STATUS_TRANSITIONS
+from tradebot.constants import OrderStatus, STATUS_TRANSITIONS, AccountType
 from tradebot.core.entity import TaskManager, RedisClient
 from tradebot.core.log import SpdLog
 from tradebot.core.nautilius_core import LiveClock, MessageBus
@@ -59,6 +61,8 @@ class AsyncCache:
         )  # symbol -> set(uuid)
         self._mem_spot_positions: Dict[str, SpotPosition] = {}  # symbol -> Position
         self._mem_future_positions: Dict[str, FuturePosition] = {}  # symbol -> Position
+        
+        self._mem_account_balance: Dict[AccountType, AccountBalance] = defaultdict(AccountBalance)
 
         # set params
         self._sync_interval = sync_interval  # sync interval
@@ -237,6 +241,12 @@ class AsyncCache:
     
     def _apply_future_position(self, position: FuturePosition):
         self._mem_future_positions[position.symbol] = position
+    
+    def _apply_balance(self, account_type: AccountType, balances: List[Balance]):
+        self._mem_account_balance[account_type]._apply(balances)
+    
+    def get_balance(self, account_type: AccountType) -> AccountBalance:
+        return self._mem_account_balance[account_type]
 
     def get_position(self, symbol: str) -> Position:
         # First try memory

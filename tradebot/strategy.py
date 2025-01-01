@@ -101,10 +101,6 @@ class Strategy:
         instrument_id = InstrumentId.from_str(symbol)
         exchange = self._exchanges[instrument_id.exchange]
         return exchange.market[instrument_id.symbol]
-    
-    def account_balance(self, account_type: AccountType) -> AccountBalance:
-        connector = self._private_connectors[account_type]
-        return connector._account_balance
 
     def amount_to_precision(
         self,

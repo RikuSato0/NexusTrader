@@ -222,6 +222,3 @@ class OkxApiClient(ApiClient):
         except Exception as e:
             self._log.error(f"Error {method} Url: {url} {e}")
             raise
-
-    def raise_error(self, raw: bytes, http_status: int, headers: Dict[str, Any]):
-        pass

@@ -223,6 +223,24 @@ class AsyncCache:
             self._mem_positions[symbol] = position  # Cache in memory
             return position
         return None
+    
+    def get_all_positions(self, exchange: ExchangeType) -> Dict[str, Position]:
+        positions = {symbol: position for symbol, position in self._mem_positions.copy().items() if position.exchange == exchange}
+        
+        key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:exchange:{exchange.value}:symbol_positions:*"
+        if keys := self._r.keys(key):
+            for position_key in keys:
+                symbol = position_key.decode().split(":")[-1]
+                if symbol in positions:
+                    continue
+                    
+                if position_data := self._r.get(position_key):
+                    position = self._decode(position_data, Position)
+                    positions[symbol] = position
+                    self._mem_positions[symbol] = position  # Cache in memory
+        return positions
+    
+    
 
     def _order_initialized(self, order: Order | AlgoOrder):
         if isinstance(order, AlgoOrder):

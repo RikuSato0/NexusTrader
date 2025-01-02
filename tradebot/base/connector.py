@@ -122,7 +122,7 @@ class PrivateConnector(ABC):
     @abstractmethod
     async def connect(self):
         await self._init_account_balance()
-        await self._init_future_position()
+        await self._init_position()
     async def disconnect(self):
         self._ws_client.disconnect()
         await self._api_client.close_session()

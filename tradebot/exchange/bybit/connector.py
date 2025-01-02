@@ -293,13 +293,30 @@ class BybitPrivateConnector(PrivateConnector):
             self._cache._apply_balance(self._account_type, result.parse_to_balances())
     
     async def _init_position(self):
-        await self._query_future_position(BybitProductType.LINEAR, settleCoin="USDT", limit=200)
+        res_linear: BybitPositionResponse = await self._api_client.get_v5_position_list(category="linear", settleCoin="USDT", limit=200) # TODO: position must be smaller than 200
+        res_inverse: BybitPositionResponse = await self._api_client.get_v5_position_list(category="inverse", limit=200)
+        
+        
+        cache_positions = self._cache.get_all_positions(self._exchange_id)
 
+        self._apply_cache_position(res_linear, cache_positions)
+        self._apply_cache_position(res_inverse, cache_positions)
+            
+        
+        for symbol, position in cache_positions.items():
+            position = Position(
+                symbol=symbol,
+                exchange=self._exchange_id,
+                side=None,
+                signed_amount=Decimal(0),
+                entry_price=0,
+                unrealized_pnl=0,
+                realized_pnl=0,
+            )
+            self._cache._apply_position(position)
     
-    async def _query_future_position(self, category: BybitProductType, **kwargs):
-        res: BybitPositionResponse = await self._api_client.get_v5_position_list(category=category.value, **kwargs)
+    def _apply_cache_position(self, res: BybitPositionResponse, cache_positions: Dict[str, Position]):
         category = res.result.category
-                
         for result in res.result.list:
             side = result.side.parse_to_position_side()
             if side == PositionSide.FLAT:
@@ -317,6 +334,8 @@ class BybitPrivateConnector(PrivateConnector):
             
             symbol = self._market_id[id]    
             
+            cache_positions.pop(symbol, None)
+            
             position = Position(
                 symbol=symbol,
                 exchange=self._exchange_id,
@@ -327,8 +346,7 @@ class BybitPrivateConnector(PrivateConnector):
                 realized_pnl=float(result.cumRealisedPnl),
             )
             self._cache._apply_position(position)
-            
-            
+        
         
     async def create_order(
         self,

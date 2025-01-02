@@ -14,6 +14,8 @@ from tradebot.exchange.okx.schema import (
     OkxCancelOrderResponse,
     OkxGeneralResponse,
     OkxErrorResponse,
+    OkxBalanceResponse,
+    OkxPositionResponse,
 )
 from tradebot.core.nautilius_core import hmac_signature
 
@@ -40,11 +42,31 @@ class OkxApiClient(ApiClient):
         self._cancel_order_decoder = msgspec.json.Decoder(OkxCancelOrderResponse)
         self._general_response_decoder = msgspec.json.Decoder(OkxGeneralResponse)
         self._error_response_decoder = msgspec.json.Decoder(OkxErrorResponse)
+        self._balance_response_decoder = msgspec.json.Decoder(OkxBalanceResponse)
+        self._position_response_decoder = msgspec.json.Decoder(OkxPositionResponse)
         self._headers = {
             "Content-Type": "application/json",
             "User-Agent": "TradingBot/1.0",
         }
-
+        
+    async def get_api_v5_account_balance(self, ccy: str | None = None) -> OkxBalanceResponse:
+        endpoint = "/api/v5/account/balance"
+        payload = {"ccy": ccy} if ccy else {}
+        raw = await self._fetch("GET", endpoint, payload=payload, signed=True)
+        return self._balance_response_decoder.decode(raw)
+    
+    async def get_api_v5_account_positions(self, inst_type: str | None = None, inst_id: str | None = None, pos_id: str | None = None) -> OkxPositionResponse:
+        endpoint = "/api/v5/account/positions"
+        payload = {
+            k: v for k, v in {
+                "instType": inst_type,
+                "instId": inst_id,
+                "posId": pos_id
+            }.items() if v is not None
+        }
+        raw = await self._fetch("GET", endpoint, payload=payload, signed=True)
+        return self._position_response_decoder.decode(raw)
+    
     async def post_api_v5_trade_order(
         self,
         inst_id: str,

@@ -14,6 +14,8 @@ from tradebot.exchange.okx.schema import (
     OkxWsOrderMsg,
     OkxWsPositionMsg,
     OkxWsAccountMsg,
+    OkxBalanceResponse,
+    OkxPositionResponse,
 )
 from tradebot.constants import (
     OrderStatus,
@@ -59,7 +61,7 @@ class OkxPublicConnector(PublicConnector):
         self._ws_msg_general_decoder = msgspec.json.Decoder(OkxWsGeneralMsg)
         self._ws_msg_bbo_tbt_decoder = msgspec.json.Decoder(OkxWsBboTbtMsg)
         self._ws_msg_candle_decoder = msgspec.json.Decoder(OkxWsCandleMsg)
-        self._ws_msg_trade_decoder = msgspec.json.Decoder(OkxWsTradeMsg) 
+        self._ws_msg_trade_decoder = msgspec.json.Decoder(OkxWsTradeMsg)
 
     async def subscribe_trade(self, symbol: str):
         market = self._market.get(symbol, None)
@@ -260,9 +262,13 @@ class OkxPrivateConnector(PrivateConnector):
 
         self._decoder_ws_general_msg = msgspec.json.Decoder(OkxWsGeneralMsg)
         self._decoder_ws_order_msg = msgspec.json.Decoder(OkxWsOrderMsg, strict=False)
-        self._decoder_ws_position_msg = msgspec.json.Decoder(OkxWsPositionMsg, strict=False)
-        self._decoder_ws_account_msg = msgspec.json.Decoder(OkxWsAccountMsg, strict=False)
-    
+        self._decoder_ws_position_msg = msgspec.json.Decoder(
+            OkxWsPositionMsg, strict=False
+        )
+        self._decoder_ws_account_msg = msgspec.json.Decoder(
+            OkxWsAccountMsg, strict=False
+        )
+
     async def connect(self):
         await super().connect()
         await self._ws_client.subscribe_orders()
@@ -272,12 +278,41 @@ class OkxPrivateConnector(PrivateConnector):
         # await self._ws_client.subscribe_fills()
 
     async def _init_account_balance(self):
-        # TODO: implement
-        ...
-    
+        res: OkxBalanceResponse = await self._api_client.get_api_v5_account_balance()
+        for data in res.data:
+            self._cache._apply_balance(self._account_type, data.parse_to_balances())
+
     async def _init_position(self):
-        # TODO: implement
-        ...
+        res: OkxPositionResponse = await self._api_client.get_api_v5_account_positions()
+        for data in res.data:
+            side = data.posSide.parse_to_position_side()
+            if side == PositionSide.FLAT:
+                signed_amount = Decimal(data.pos)
+                if signed_amount > 0:
+                    side = PositionSide.LONG
+                elif signed_amount < 0:
+                    side = PositionSide.SHORT
+                else:
+                    side = None
+            elif side == PositionSide.LONG:
+                signed_amount = Decimal(data.pos)
+            elif side == PositionSide.SHORT:
+                signed_amount = -Decimal(data.pos)
+            
+            symbol = self._market_id[data.instId]
+            
+            position = Position(
+                symbol=symbol,
+                exchange=self._exchange_id,
+                side=side,
+                signed_amount=signed_amount,
+                entry_price=float(data.avgPx) if data.avgPx else 0,
+                unrealized_pnl=float(data.upl) if data.upl else 0,
+                realized_pnl=float(data.realizedPnl) if data.realizedPnl else 0,
+            )
+            self._cache._apply_position(position)
+            
+            
 
     def _handle_event_msg(self, msg: OkxWsGeneralMsg):
         if msg.event == "error":
@@ -329,8 +364,8 @@ class OkxPrivateConnector(PrivateConnector):
                 last_filled_price=float(data.fillPx) if data.fillPx else None,
                 last_filled=Decimal(data.fillSz) if data.fillSz else Decimal(0),
                 remaining=Decimal(data.sz) - Decimal(data.accFillSz),
-                fee=Decimal(data.fee), # accumalated fee
-                fee_currency=data.feeCcy, # accumalated fee currency
+                fee=Decimal(data.fee),  # accumalated fee
+                fee_currency=data.feeCcy,  # accumalated fee currency
                 cost=Decimal(data.avgPx) * Decimal(data.fillSz),
                 cum_cost=Decimal(data.avgPx) * Decimal(data.accFillSz),
                 reduce_only=data.reduceOnly,
@@ -341,10 +376,10 @@ class OkxPrivateConnector(PrivateConnector):
     def _handle_positions(self, raw: bytes):
         position_msg = self._decoder_ws_position_msg.decode(raw)
         self._log.debug(f"Position update: {str(position_msg)}")
-        
+
         for data in position_msg.data:
             symbol = self._market_id[data.instId]
-            
+
             side = data.posSide.parse_to_position_side()
             if side == PositionSide.LONG:
                 signed_amount = Decimal(data.pos)
@@ -361,7 +396,7 @@ class OkxPrivateConnector(PrivateConnector):
                     side = None
             else:
                 self._log.warning(f"Invalid position side: {side}")
-            
+
             position = Position(
                 symbol=symbol,
                 exchange=self._exchange_id,
@@ -371,13 +406,13 @@ class OkxPrivateConnector(PrivateConnector):
                 unrealized_pnl=float(data.upl) if data.upl else 0,
                 realized_pnl=float(data.realizedPnl) if data.realizedPnl else 0,
             )
-            
+
             self._cache._apply_position(position)
 
     def _handle_account(self, raw: bytes):
         account_msg: OkxWsAccountMsg = self._decoder_ws_account_msg.decode(raw)
         self._log.debug(f"Account update: {str(account_msg)}")
-        
+
         for data in account_msg.data:
             balances = data.parse_to_balance()
             self._cache._apply_balance(self._account_type, balances)
@@ -426,7 +461,7 @@ class OkxPrivateConnector(PrivateConnector):
 
         if position_side:
             params["posSide"] = OkxEnumParser.to_okx_position_side(position_side).value
-        
+
         reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop(
             "reduce_only", False
         )

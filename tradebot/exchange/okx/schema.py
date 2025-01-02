@@ -670,7 +670,13 @@ class OkxBalanceDetail(msgspec.Struct):
     spotUplRatio: str  # Spot unrealized PnL ratio
     totalPnl: str  # Spot accumulated PnL
     totalPnlRatio: str  # Spot accumulated PnL ratio
-
+    
+    def parse_to_balance(self) -> Balance:
+        return Balance(
+            asset=self.ccy,
+            free=Decimal(self.availBal),
+            locked=Decimal(self.frozenBal),
+        )
 
 class OkxBalanceData(msgspec.Struct):
     adjEq: str  # Adjusted/Effective equity in USD
@@ -685,7 +691,9 @@ class OkxBalanceData(msgspec.Struct):
     totalEq: str  # Total equity in USD
     uTime: int  # Update time
     upl: str  # Unrealized PnL in USD
-
+    
+    def parse_to_balances(self) -> list[Balance]:
+        return [detail.parse_to_balance() for detail in self.details]
 
 class OkxBalanceResponse(msgspec.Struct):
     code: str  # Response code
@@ -701,9 +709,6 @@ class OkxPositionResponseData(msgspec.Struct):
     adl: str
     availPos: str
     avgPx: str
-    baseBal: str
-    baseBorrowed: str
-    baseInterest: str
     bePx: str
     bizRefId: str
     bizRefType: str
@@ -742,9 +747,6 @@ class OkxPositionResponseData(msgspec.Struct):
     posCcy: str
     posId: str
     posSide: OkxPositionSide
-    quoteBal: str
-    quoteBorrowed: str
-    quoteInterest: str
     realizedPnl: str
     spotInUseAmt: str
     spotInUseCcy: str

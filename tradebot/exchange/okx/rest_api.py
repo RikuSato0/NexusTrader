@@ -42,8 +42,8 @@ class OkxApiClient(ApiClient):
         self._cancel_order_decoder = msgspec.json.Decoder(OkxCancelOrderResponse)
         self._general_response_decoder = msgspec.json.Decoder(OkxGeneralResponse)
         self._error_response_decoder = msgspec.json.Decoder(OkxErrorResponse)
-        self._balance_response_decoder = msgspec.json.Decoder(OkxBalanceResponse)
-        self._position_response_decoder = msgspec.json.Decoder(OkxPositionResponse)
+        self._balance_response_decoder = msgspec.json.Decoder(OkxBalanceResponse, strict=False)
+        self._position_response_decoder = msgspec.json.Decoder(OkxPositionResponse, strict=False)
         self._headers = {
             "Content-Type": "application/json",
             "User-Agent": "TradingBot/1.0",

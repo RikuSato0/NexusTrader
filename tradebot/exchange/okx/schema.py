@@ -623,3 +623,145 @@ class OkxWsPositionMsg(Struct):
 class OkxWsAccountMsg(Struct):
     arg: dict
     data: List[OkxAccount]
+
+################################################################################
+# GET /api/v5/account/balance
+################################################################################
+
+class OkxBalanceDetail(msgspec.Struct):
+    availBal: str  # Available balance
+    availEq: str  # Available equity
+    borrowFroz: str  # Potential borrowing IMR in USD
+    cashBal: str  # Cash balance
+    ccy: str  # Currency
+    crossLiab: str  # Cross liabilities
+    disEq: str  # Discount equity in USD
+    eq: str  # Equity
+    eqUsd: str  # Equity in USD
+    smtSyncEq: str  # Smart sync equity
+    spotCopyTradingEq: str  # Spot smart sync equity
+    fixedBal: str  # Frozen balance for Dip/Peak Sniper
+    frozenBal: str  # Frozen balance
+    imr: str  # Cross initial margin requirement
+    interest: str  # Accrued interest
+    isoEq: str  # Isolated margin equity
+    isoLiab: str  # Isolated liabilities
+    isoUpl: str  # Isolated unrealized PnL
+    liab: str  # Liabilities
+    maxLoan: str  # Max loan
+    mgnRatio: str  # Cross margin ratio
+    mmr: str  # Cross maintenance margin requirement
+    notionalLever: str  # Leverage
+    ordFrozen: str  # Margin frozen for open orders
+    rewardBal: str  # Trial fund balance
+    spotInUseAmt: str  # Spot in use amount
+    clSpotInUseAmt: str  # User-defined spot risk offset amount
+    maxSpotInUse: str  # Max possible spot risk offset amount
+    spotIsoBal: str  # Spot isolated balance
+    stgyEq: str  # Strategy equity
+    twap: str  # Risk indicator of auto liability repayment
+    uTime: str  # Update time
+    upl: str  # Unrealized PnL
+    uplLiab: str  # Liabilities due to unrealized loss
+    spotBal: str  # Spot balance
+    openAvgPx: str  # Spot average cost price
+    accAvgPx: str  # Spot accumulated cost price
+    spotUpl: str  # Spot unrealized PnL
+    spotUplRatio: str  # Spot unrealized PnL ratio
+    totalPnl: str  # Spot accumulated PnL
+    totalPnlRatio: str  # Spot accumulated PnL ratio
+
+
+class OkxBalanceData(msgspec.Struct):
+    adjEq: str  # Adjusted/Effective equity in USD
+    borrowFroz: str  # Potential borrowing IMR of account in USD
+    details: list[OkxBalanceDetail]  # Detailed asset information
+    imr: str  # Initial margin requirement in USD
+    isoEq: str  # Isolated margin equity in USD
+    mgnRatio: str  # Margin ratio in USD
+    mmr: str  # Maintenance margin requirement in USD
+    notionalUsd: str  # Notional value of positions in USD
+    ordFroz: str  # Cross margin frozen for pending orders
+    totalEq: str  # Total equity in USD
+    uTime: int  # Update time
+    upl: str  # Unrealized PnL in USD
+
+
+class OkxBalanceResponse(msgspec.Struct):
+    code: str  # Response code
+    data: list[OkxBalanceData]  # Balance data
+    msg: str  # Response message
+
+################################################################################
+# GET /api/v5/account/positions
+################################################################################
+
+
+class OkxPositionResponseData(msgspec.Struct):
+    adl: str
+    availPos: str
+    avgPx: str
+    baseBal: str
+    baseBorrowed: str
+    baseInterest: str
+    bePx: str
+    bizRefId: str
+    bizRefType: str
+    cTime: str
+    ccy: str
+    clSpotInUseAmt: str
+    closeOrderAlgo: List[OkxPositionCloseOrderAlgo]
+    deltaBS: str
+    deltaPA: str
+    fee: str
+    fundingFee: str
+    gammaBS: str
+    gammaPA: str
+    idxPx: str
+    imr: str
+    instId: str
+    instType: str
+    interest: str
+    last: str
+    lever: str
+    liab: str
+    liabCcy: str
+    liqPenalty: str
+    liqPx: str
+    margin: str
+    markPx: str
+    maxSpotInUseAmt: str
+    mgnMode: str
+    mgnRatio: str
+    mmr: str
+    notionalUsd: str
+    optVal: str
+    pendingCloseOrdLiabVal: str
+    pnl: str
+    pos: str
+    posCcy: str
+    posId: str
+    posSide: OkxPositionSide
+    quoteBal: str
+    quoteBorrowed: str
+    quoteInterest: str
+    realizedPnl: str
+    spotInUseAmt: str
+    spotInUseCcy: str
+    thetaBS: str
+    thetaPA: str
+    tradeId: str
+    uTime: int
+    upl: str
+    uplLastPx: str
+    uplRatio: str
+    uplRatioLastPx: str
+    usdPx: str
+    vegaBS: str
+    vegaPA: str
+
+
+class OkxPositionResponse(msgspec.Struct):
+    code: str
+    data: List[OkxPositionResponseData]
+    msg: str

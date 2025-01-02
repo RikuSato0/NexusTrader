@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from abc import ABC
+from typing import Optional
 import ssl
 import certifi
 import orjson
@@ -37,7 +37,3 @@ class ApiClient(ABC):
         if self._session:
             await self._session.close()
             self._session = None
-
-    @abstractmethod
-    def raise_error(self, raw: bytes, status: int, headers: Dict[str, Any]):
-        raise NotImplementedError("Subclasses must implement this method.")

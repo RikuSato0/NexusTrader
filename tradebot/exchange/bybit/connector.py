@@ -31,7 +31,6 @@ from tradebot.exchange.bybit.websockets import BybitWSClient
 from tradebot.exchange.bybit.constants import (
     BybitAccountType,
     BybitEnumParser,
-    BybitProductType,
 )
 from tradebot.exchange.bybit.exchange import BybitExchangeManager
 

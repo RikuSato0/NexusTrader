@@ -23,16 +23,15 @@ socket.setsockopt(zmq.SUBSCRIBE, b"")
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        symbols = ["BTCUSDT-PERP.BYBIT"]
-        self.subscribe_bookl1(symbols=symbols)
+        self.symbols = ["BTCUSDT-PERP.BYBIT"]
+        self.subscribe_bookl1(symbols=self.symbols)
         self.signal = True
         self.multiplier = 0.1
-        self.data_ready = DataReady(symbols=symbols)
+        self.data_ready = DataReady(symbols=self.symbols)
         self.orders = {}
         
     def on_bookl1(self, bookl1: BookL1):
         self.data_ready.input(bookl1)
-    
     
     def cal_diff(self, symbol, target_position) -> Decimal:
         position = self.cache.get_position(symbol).value_or(None)
@@ -54,6 +53,11 @@ class Demo(Strategy):
                 continue
             
             symbol = pos["instrumentID"].replace("USDT.BBP", "USDT-PERP.BYBIT")
+            
+            if symbol not in self.symbols:
+                self.log.info(f"symbol: {symbol} not in self.symbols, skip")
+                continue
+            
             target_position = pos["position"] * self.market(symbol).precision.amount * self.multiplier
             uuid = self.orders.get(symbol, None)
 
@@ -108,7 +112,7 @@ config = Config(
             PrivateConnectorConfig(
                 account_type=BybitAccountType.UNIFIED_TESTNET,
                 rate_limit=RateLimit(
-                    max_rate=20,
+                    max_rate=20, # 20 orders per second
                     time_period=1,
                 )
             )

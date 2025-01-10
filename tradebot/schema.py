@@ -427,37 +427,37 @@ class Position(Struct):
         return self.side == PositionSide.SHORT
 
 
-class SpotPosition(Position):
-    @property
-    def amount(self) -> Decimal:
-        return abs(self.signed_amount)
+# class SpotPosition(Position):
+#     @property
+#     def amount(self) -> Decimal:
+#         return abs(self.signed_amount)
 
-    _last_order_filled: Dict[str, Decimal] = field(default_factory=dict)
+#     _last_order_filled: Dict[str, Decimal] = field(default_factory=dict)
 
-    def _calculate_fill_delta(self, order: Order) -> Decimal:
-        """
-        calculate the fill delta of the order, since filled in order is cumulative,
-        we need to calculate the delta of the order
-        """
-        previous_fill = self._last_order_filled.get(order.uuid, Decimal("0"))
-        current_fill = order.filled
-        fill_delta = current_fill - previous_fill
-        if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
-            self._last_order_filled.pop(order.uuid, None)
-        else:
-            self._last_order_filled[order.uuid] = order.filled
-        return fill_delta
+#     def _calculate_fill_delta(self, order: Order) -> Decimal:
+#         """
+#         calculate the fill delta of the order, since filled in order is cumulative,
+#         we need to calculate the delta of the order
+#         """
+#         previous_fill = self._last_order_filled.get(order.uuid, Decimal("0"))
+#         current_fill = order.filled
+#         fill_delta = current_fill - previous_fill
+#         if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
+#             self._last_order_filled.pop(order.uuid, None)
+#         else:
+#             self._last_order_filled[order.uuid] = order.filled
+#         return fill_delta
 
-    def _apply(self, order: Order):
-        if not order.last_filled:
-            fill_delta = self._calculate_fill_delta(order)
-        else:
-            fill_delta = order.last_filled
+#     def _apply(self, order: Order):
+#         if not order.last_filled:
+#             fill_delta = self._calculate_fill_delta(order)
+#         else:
+#             fill_delta = order.last_filled
 
-        if order.side == OrderSide.BUY:
-            self.signed_amount += fill_delta
-        elif order.side == OrderSide.SELL:
-            self.signed_amount -= fill_delta
+#         if order.side == OrderSide.BUY:
+#             self.signed_amount += fill_delta
+#         elif order.side == OrderSide.SELL:
+#             self.signed_amount -= fill_delta
 
 
 # class Position(Struct):

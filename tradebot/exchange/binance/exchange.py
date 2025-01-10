@@ -23,7 +23,7 @@ class BinanceExchangeManager(ExchangeManager):
                 mkt_json = orjson.dumps(mkt)
                 mkt = msgspec.json.decode(mkt_json, type=BinanceMarket)
                 
-                if mkt.spot or mkt.future or mkt.linear or mkt.inverse:
+                if (mkt.spot or mkt.linear or mkt.inverse or mkt.future) and not mkt.option:
                     symbol = self._parse_symbol(mkt, exchange_suffix="BINANCE")
                     mkt.symbol = symbol
                     self.market[symbol] = mkt

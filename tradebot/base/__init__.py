@@ -1,4 +1,4 @@
-from tradebot.base.exchange_manager import ExchangeManager
+from tradebot.base.exchange import ExchangeManager
 from tradebot.base.ws_client import WSClient
 from tradebot.base.api_client import ApiClient
 from tradebot.base.oms import OrderManagementSystem

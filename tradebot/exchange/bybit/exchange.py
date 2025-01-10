@@ -37,8 +37,3 @@ class BybitExchangeManager(ExchangeManager):
             except Exception as e:
                 print(f"Error: {e}, {symbol}, {mkt}")
                 continue
-
-if __name__ == "__main__":
-    exchange = BybitExchangeManager()
-    exchange.load_markets()
-    print(exchange.linear)

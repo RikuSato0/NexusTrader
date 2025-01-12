@@ -78,7 +78,8 @@ async def test_order_management(async_cache: AsyncCache, sample_order: Order):
     # Test order initialization
     sample_order.timestamp = time.time()
     async_cache._order_initialized(sample_order)
-    assert async_cache.get_order(sample_order.uuid) == sample_order
+    order = async_cache.get_order(sample_order.uuid)
+    assert order.unwrap() == sample_order
     assert sample_order.uuid in async_cache.get_open_orders(symbol=sample_order.symbol)
     assert sample_order.uuid in async_cache.get_symbol_orders(sample_order.symbol)
 
@@ -87,7 +88,7 @@ async def test_order_management(async_cache: AsyncCache, sample_order: Order):
     updated_order.status = OrderStatus.FILLED
     async_cache._order_status_update(updated_order)
 
-    assert async_cache.get_order(updated_order.uuid) == updated_order
+    assert async_cache.get_order(updated_order.uuid).unwrap() == updated_order
     assert updated_order.uuid not in async_cache.get_open_orders(
         symbol=updated_order.symbol
     )

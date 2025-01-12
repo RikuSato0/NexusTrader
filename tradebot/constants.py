@@ -446,3 +446,7 @@ class DataType(Enum):
     MARK_PRICE = "mark_price"
     FUNDING_RATE = "funding_rate"
     INDEX_PRICE = "index_price"
+
+class StorageBackend(Enum):
+    REDIS = "redis"
+    SQLITE = "sqlite"

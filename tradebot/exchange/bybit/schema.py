@@ -177,8 +177,10 @@ class BybitOrderBook(msgspec.Struct):
         return self._get_orderbook(levels)
 
     def _handle_snapshot(self, data: BybitWsOrderbookDepth) -> None:
-        self.bids.clear()
-        self.asks.clear()
+        if data.b:
+            self.bids.clear()
+        if data.a:
+            self.asks.clear()
 
         for price, size in data.b:
             self.bids[float(price)] = float(size)

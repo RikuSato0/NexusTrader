@@ -44,4 +44,4 @@ autodoc_default_options = {
 todo_include_todos = True
 
 # Mock modules that might cause import issues
-autodoc_mock_imports = ['redis', 'aioredis', 'ccxt', 'ccxt.pro', 'dynaconf', 'spdlog', 'nautilus_trader', 'orjson', 'aiosqlite', 'aiolimiter', 'returns']
+autodoc_mock_imports = ['redis', 'aioredis', 'ccxt', 'ccxt.pro', 'dynaconf', 'spdlog', 'nautilus_trader', 'orjson', 'aiosqlite', 'aiolimiter', 'returns', 'picows']

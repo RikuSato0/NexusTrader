@@ -1,5 +1,5 @@
-OrderRegistry Module
-=====================
+tradebot.core.registry
+=======================
 
 .. currentmodule:: tradebot.core.registry
 

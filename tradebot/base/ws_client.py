@@ -19,13 +19,29 @@ from picows import (
 from tradebot.core.nautilius_core import LiveClock
 
 class Listener(WSListener):
+    """WebSocket listener implementation that handles connection events and message frames.
+    
+    Inherits from picows.WSListener to provide WebSocket event handling functionality.
+    """
+    
     def __init__(self, logger, specific_ping_msg=None, *args, **kwargs):
+        """Initialize the WebSocket listener.
+        
+        Args:
+            logger: Logger instance for logging events
+            specific_ping_msg: Optional custom ping message
+        """
         super().__init__(*args, **kwargs)
         self._log = logger
         self.msg_queue = asyncio.Queue()
         self._specific_ping_msg = specific_ping_msg
 
-    def send_user_specific_ping(self, transport: WSTransport):
+    def send_user_specific_ping(self, transport: WSTransport) -> None:
+        """Send a custom ping message or default ping frame.
+        
+        Args:
+            transport (picows.WSTransport): WebSocket transport instance
+        """
         if self._specific_ping_msg:
             transport.send(WSMsgType.TEXT, self._specific_ping_msg)
             self._log.debug(f"Sent user specific ping {self._specific_ping_msg}")
@@ -33,13 +49,29 @@ class Listener(WSListener):
             transport.send_ping()
             self._log.debug("Sent default ping.")
 
-    def on_ws_connected(self, transport: WSTransport):
+    def on_ws_connected(self, transport: WSTransport) -> None:
+        """Called when WebSocket connection is established.
+        
+        Args:
+            transport (picows.WSTransport): WebSocket transport instance
+        """
         self._log.debug("Connected to Websocket...")
 
-    def on_ws_disconnected(self, transport: WSTransport):
+    def on_ws_disconnected(self, transport: WSTransport) -> None:
+        """Called when WebSocket connection is closed.
+        
+        Args:
+            transport (picows.WSTransport): WebSocket transport instance
+        """
         self._log.debug("Disconnected from Websocket.")
 
-    def on_ws_frame(self, transport: WSTransport, frame: WSFrame):
+    def on_ws_frame(self, transport: WSTransport, frame: WSFrame) -> None:
+        """Handle incoming WebSocket frames.
+        
+        Args:
+            transport (picows.WSTransport): WebSocket transport instance
+            frame (picows.WSFrame): Received WebSocket frame
+        """
         try:
             match frame.msg_type:
                 case WSMsgType.PING:

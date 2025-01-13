@@ -50,6 +50,9 @@ class ExecutionManagementSystem(ABC):
         amount: float,
         mode: Literal["round", "ceil", "floor"] = "round",
     ) -> Decimal:
+        """
+        Convert the amount to the precision of the market
+        """
         market = self._market[symbol]
         amount: Decimal = Decimal(str(amount))
         precision = market.precision.amount
@@ -82,6 +85,9 @@ class ExecutionManagementSystem(ABC):
         price: float,
         mode: Literal["round", "ceil", "floor"] = "round",
     ) -> Decimal:
+        """
+        Convert the price to the precision of the market
+        """
         market = self._market[symbol]
         price: Decimal = Decimal(str(price))
 
@@ -111,19 +117,31 @@ class ExecutionManagementSystem(ABC):
 
     @abstractmethod
     def _build_order_submit_queues(self):
+        """
+        Build the order submit queues
+        """
         pass
 
     @abstractmethod
     def _set_account_type(self):
+        """
+        Set the account type
+        """
         pass
 
     @abstractmethod
     def _submit_order(
         self, order: OrderSubmit, account_type: AccountType | None = None
     ):
+        """
+        Submit an order
+        """
         pass
 
     async def _cancel_order(self, order_submit: OrderSubmit, account_type: AccountType):
+        """
+        Cancel an order
+        """
         order_id = self._registry.get_order_id(order_submit.uuid)
         if order_id:
             order: Order = await self._private_connectors[account_type].cancel_order(
@@ -145,6 +163,9 @@ class ExecutionManagementSystem(ABC):
             )
 
     async def _create_order(self, order_submit: OrderSubmit, account_type: AccountType):
+        """
+        Create an order
+        """
         order: Order = await self._private_connectors[account_type].create_order(
             symbol=order_submit.symbol,
             side=order_submit.side,
@@ -167,6 +188,9 @@ class ExecutionManagementSystem(ABC):
 
     @abstractmethod
     def _get_min_order_amount(self, symbol: str, market: BaseMarket) -> Decimal:
+        """
+        Get the minimum order amount
+        """
         pass
 
     def _calculate_twap_orders(
@@ -213,6 +237,9 @@ class ExecutionManagementSystem(ABC):
     def _cal_limit_order_price(
         self, symbol: str, side: OrderSide, market: BaseMarket
     ) -> Decimal:
+        """
+        Calculate the limit order price
+        """
         basis_point = market.precision.price
         book = self._cache.bookl1(symbol)
 
@@ -229,6 +256,9 @@ class ExecutionManagementSystem(ABC):
         return self._price_to_precision(symbol, price)
 
     async def _twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
+        """
+        Execute the twap order
+        """
         symbol = order_submit.symbol
         instrument_id = order_submit.instrument_id
         side = order_submit.side
@@ -397,16 +427,25 @@ class ExecutionManagementSystem(ABC):
     async def _create_twap_order(
         self, order_submit: OrderSubmit, account_type: AccountType
     ):
+        """
+        Create a twap order
+        """
         uuid = order_submit.uuid
         self._task_manager.create_task(self._twap_order(order_submit, account_type), name = uuid)
     
     async def _cancel_twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
+        """
+        Cancel a twap order
+        """
         uuid = order_submit.uuid
         self._task_manager.cancel_task(uuid)
 
     async def _handle_submit_order(
         self, account_type: AccountType, queue: asyncio.Queue[OrderSubmit]
     ):
+        """
+        Handle the order submit
+        """
         self._log.debug(f"Handling orders for account type: {account_type}")
         while True:
             order_submit = await queue.get()
@@ -422,6 +461,9 @@ class ExecutionManagementSystem(ABC):
             queue.task_done()
 
     async def start(self):
+        """
+        Start the order submit
+        """
         for account_type in self._order_submit_queues.keys():
             self._task_manager.create_task(
                 self._handle_submit_order(

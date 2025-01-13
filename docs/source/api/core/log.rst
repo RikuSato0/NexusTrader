@@ -1,5 +1,5 @@
-SpdLog Module
-=============
+tradebot.core.log
+=====================
 
 .. currentmodule:: tradebot.core.log
 

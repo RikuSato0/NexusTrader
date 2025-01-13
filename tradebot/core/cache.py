@@ -84,7 +84,7 @@ class AsyncCache:
         return msgspec.json.decode(data, type=obj_type)
     
     async def _init_storage(self):
-        """init storage backend"""
+        """Initialize the storage backend"""
         if self._storage_backend == StorageBackend.REDIS:
             self._r_async = RedisClient.get_async_client()
             self._r = RedisClient.get_client()
@@ -96,7 +96,7 @@ class AsyncCache:
             await self._init_sqlite_tables()
 
     async def _init_sqlite_tables(self):
-        """init sqlite tables"""
+        """Initialize the SQLite tables"""
         async with self._db_async.cursor() as cursor:
             await cursor.executescript("""
                 CREATE TABLE IF NOT EXISTS orders (
@@ -146,10 +146,12 @@ class AsyncCache:
             await self._db_async.commit()
 
     async def start(self):
+        """Start the cache"""
         await self._init_storage()
         self._task_manager.create_task(self._periodic_sync())
 
     async def _periodic_sync(self):
+        """Periodically sync the cache"""
         while not self._shutdown_event.is_set():
             if self._storage_backend == StorageBackend.REDIS:
                 await self._sync_to_redis()
@@ -159,6 +161,7 @@ class AsyncCache:
             await asyncio.sleep(self._sync_interval)
 
     async def _sync_to_redis(self):
+        """Sync the cache to Redis"""
         self._log.debug("syncing to redis")
         for uuid, order in self._mem_orders.copy().items():
             orders_key = f"strategy:{self.strategy_id}:user_id:{self.user_id}:orders"
@@ -196,7 +199,7 @@ class AsyncCache:
             await self._r_async.set(key, self._encode(position))
     
     async def _sync_to_sqlite(self):
-        """同步数据到SQLite"""
+        """Sync the cache to SQLite"""
         async with self._db_async.cursor() as cursor:
             # sync orders
             for uuid, order in self._mem_orders.copy().items():
@@ -235,10 +238,11 @@ class AsyncCache:
             await self._db_async.commit()
 
     def _cleanup_expired_data(self):
+        """Cleanup expired data"""
         current_time = self._clock.timestamp_ms()
         expire_before = current_time - self._expire_time * 1000
 
-        # 清理过期orders
+        # Clean up expired orders
         expired_orders = [
             uuid
             for uuid, order in self._mem_orders.copy().items()
@@ -262,6 +266,7 @@ class AsyncCache:
             self._log.debug(f"removing algo order {uuid} from memory")
 
     async def close(self):
+        """Close the cache"""
         self._shutdown_event.set()
         await self._sync_to_redis()
         await self._r_async.aclose()
@@ -279,13 +284,31 @@ class AsyncCache:
     def _update_trade_cache(self, trade: Trade):
         self._trade_cache[trade.symbol] = trade
 
-    def kline(self, symbol: str) -> Kline | None:
+    def kline(self, symbol: str) -> Optional[Kline]:
+        """
+        Retrieve a Kline object from the cache by symbol.
+
+        :param symbol: The symbol of the Kline to retrieve.
+        :return: The Kline object if found, otherwise None.
+        """
         return self._kline_cache.get(symbol, None)
 
-    def bookl1(self, symbol: str) -> BookL1 | None:
+    def bookl1(self, symbol: str) -> Optional[BookL1]:
+        """
+        Retrieve a BookL1 object from the cache by symbol.
+
+        :param symbol: The symbol of the BookL1 to retrieve.
+        :return: The BookL1 object if found, otherwise None.
+        """
         return self._bookl1_cache.get(symbol, None)
 
-    def trade(self, symbol: str) -> Trade | None:
+    def trade(self, symbol: str) -> Optional[Trade]:
+        """
+        Retrieve a Trade object from the cache by symbol.
+
+        :param symbol: The symbol of the Trade to retrieve.
+        :return: The Trade object if found, otherwise None.
+        """
         return self._trade_cache.get(symbol, None)
 
     ################ # cache private data  ###################
@@ -337,7 +360,7 @@ class AsyncCache:
             )
             if row := cursor.fetchone():
                 position = self._decode(row[0], Position)
-                self._mem_positions[instrument_id.symbol] = position  # 缓存到内存
+                self._mem_positions[instrument_id.symbol] = position  # Cache in memory
                 return position
             return None
         except sqlite3.Error as e:
@@ -445,7 +468,7 @@ class AsyncCache:
     
     def _get_order_from_sqlite(self, uuid: str) -> Optional[Order | AlgoOrder]:
         try:
-            # 确定查询的表和对象类型
+            # determine the table and object type to query
             if uuid.startswith("ALGO-"):
                 table = "algo_orders"
                 obj_type = AlgoOrder
@@ -455,11 +478,11 @@ class AsyncCache:
                 obj_type = Order
                 mem_dict = self._mem_orders
 
-            # 从内存中查找
+            # find in memory
             if order := mem_dict.get(uuid):
                 return order
 
-            # 从SQLite查询
+            # query SQLite
             cursor = self._db.cursor()
             cursor.execute(
                 f"""
@@ -471,7 +494,7 @@ class AsyncCache:
             
             if row := cursor.fetchone():
                 order = self._decode(row[0], obj_type)
-                mem_dict[uuid] = order  # 缓存到内存
+                mem_dict[uuid] = order  # Cache in memory
                 return order
                 
             return None

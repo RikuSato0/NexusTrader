@@ -30,9 +30,15 @@ class OrderManagementSystem(ABC):
         self._order_msg_queue: asyncio.Queue[Order] = asyncio.Queue()
 
     def _add_order_msg(self, order: Order):
+        """
+        Add an order to the order message queue
+        """
         self._order_msg_queue.put_nowait(order)
 
     async def _handle_order_event(self):
+        """
+        Handle the order event
+        """
         while True:
             try:
                 order = await self._order_msg_queue.get()
@@ -71,6 +77,9 @@ class OrderManagementSystem(ABC):
                 self._log.error(f"Error in handle_order_event: {e}")
 
     async def start(self):
+        """
+        Start the order management system
+        """
         self._log.debug("OrderManagementSystem started")
 
         # Start order and position event handlers

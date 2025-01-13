@@ -24,6 +24,7 @@ class ApiClient(ABC):
         self._clock = LiveClock()
 
     def _init_session(self):
+        """Initialize the session"""
         if self._session is None:
             timeout = aiohttp.ClientTimeout(total=self._timeout)
             tcp_connector = aiohttp.TCPConnector(
@@ -34,6 +35,7 @@ class ApiClient(ABC):
             )
 
     async def close_session(self):
+        """Close the session"""
         if self._session:
             await self._session.close()
             self._session = None

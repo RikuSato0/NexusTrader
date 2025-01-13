@@ -1,8 +1,8 @@
-Core Components
+tradebot.core
 ===============
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    cache
    entity

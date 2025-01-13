@@ -31,6 +31,9 @@ class ExchangeManager(ABC):
         self.load_markets()
 
     def _init_exchange(self) -> ccxt.Exchange:
+        """
+        Initialize the exchange
+        """
         try:
             exchange_class = getattr(ccxt, self.config["exchange_id"])
         except AttributeError:
@@ -45,6 +48,9 @@ class ExchangeManager(ABC):
         return api
 
     def _parse_symbol(self, mkt: BaseMarket, exchange_suffix: str) -> str:
+        """
+        Parse the symbol for the exchange
+        """
         if mkt.spot:
             return f"{mkt.base}{mkt.quote}.{exchange_suffix}"
         elif mkt.future:

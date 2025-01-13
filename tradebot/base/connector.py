@@ -44,17 +44,21 @@ class PublicConnector(ABC):
 
     @abstractmethod
     async def subscribe_trade(self, symbol: str):
+        """Subscribe to the trade data"""
         pass
 
     @abstractmethod
     async def subscribe_bookl1(self, symbol: str):
+        """Subscribe to the bookl1 data"""
         pass
 
     @abstractmethod
     async def subscribe_kline(self, symbol: str, interval: str):
+        """Subscribe to the kline data"""
         pass
 
     async def disconnect(self):
+        """Disconnect from the exchange"""
         self._ws_client.disconnect()  # not needed to await
 
 
@@ -95,10 +99,12 @@ class PrivateConnector(ABC):
 
     @abstractmethod
     async def _init_account_balance(self):
+        """Initialize the account balance"""
         pass
     
     @abstractmethod
     async def _init_position(self):
+        """Initialize the position"""
         pass
 
     @abstractmethod
@@ -113,16 +119,21 @@ class PrivateConnector(ABC):
         position_side: PositionSide,
         **kwargs,
     ) -> Order:
+        """Create an order"""
         pass
 
     @abstractmethod
     async def cancel_order(self, symbol: str, order_id: str, **kwargs) -> Order:
+        """Cancel an order"""
         pass
 
     @abstractmethod
     async def connect(self):
+        """Connect to the exchange"""
         await self._init_account_balance()
         await self._init_position()
+
     async def disconnect(self):
+        """Disconnect from the exchange"""
         self._ws_client.disconnect()
         await self._api_client.close_session()

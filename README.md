@@ -5,7 +5,7 @@
   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/RiverTrading/tradebot-pro-doc/main/docs/source/_static/logo-light.png">
   <img alt="TradeBotPro Logo" src="https://raw.githubusercontent.com/RiverTrading/tradebot-pro-doc/main/docs/source/_static/logo-light.png">
 </picture>
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)[![PyPI Version](https://img.shields.io/pypi/v/nautilus_trader)](https://pypi.org/project/nautilus_trader/)[![Python Versions](https://img.shields.io/pypi/pyversions/nautilus_trader)](https://pypi.org/project/nautilus_trader/)[![PyPI Format](https://img.shields.io/pypi/format/nautilus_trader?color=blue)](https://pypi.org/project/nautilus_trader/)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)![Python](https://img.shields.io/badge/python-3.10%2B-blue)![Version](https://img.shields.io/badge/version-1.0.0-blue)
 
 - **Docs**: https://nautilustrader.io/docs/
 - **Support**: [quantweb3.ai@gmail.com](mailto:quantweb3.ai@gmail.com)

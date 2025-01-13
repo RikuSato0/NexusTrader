@@ -39,12 +39,12 @@ Then you can import related configurations using ``KEYS``:
     BYBIT_API_SECRET = KEYS["bybit_testnet_2"]["SECRET"]
 
 Public Market Data
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
 
 Public market data supports ``Trade``, ``BookL1/L2``, ``Kline``, ``MarkPrice``, ``IndexPrice``, and ``FundingRate``. These are imported from ``tradebot.types``.
 
 BookL1 Data Structure
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -58,7 +58,7 @@ BookL1 Data Structure
         timestamp: int
 
 BookL2 Data Structure
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -70,7 +70,7 @@ BookL2 Data Structure
         timestamp: int
 
 Trade Data Structure
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -82,7 +82,7 @@ Trade Data Structure
         timestamp: int
 
 Kline Data Structure
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -98,7 +98,7 @@ Kline Data Structure
         timestamp: int
 
 Mark Price Data Structure
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -109,7 +109,7 @@ Mark Price Data Structure
         timestamp: int
 
 Funding Rate Data Structure
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -121,7 +121,7 @@ Funding Rate Data Structure
         next_funding_time: int
 
 Index Price Data Structure
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -136,7 +136,7 @@ Index Price Data Structure
     Not all ``AccountType`` supports all ``DataTypes``. For example, ``IndexPrice``, ``FundingRate`` and ``MarkPrice`` are only supported by ``Future`` ``AccountType``.
     
 Retrieving Market Data
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Market data is retrieved using ``PublicConnector``. Each exchange has its own ``PublicConnector``, which can be imported from ``tradebot.exchange.{$exchange_name}``. Example:
 
@@ -252,7 +252,7 @@ Cache/Market Access
 - ``market`` - Access the ``PrivateConnector``'s Market
 
 Cache
-^^^^^
+^^^^^^
 
 ``Cache`` is the ``PrivateConnector``'s storage for ``Orders`` and ``Positions``. It provides the following public methods:
 

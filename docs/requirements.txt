@@ -3,4 +3,4 @@ furo
 sphinx-autodoc-typehints
 msgspec
 recommonmark
-sphinx-markdown-tables
+myst-parser

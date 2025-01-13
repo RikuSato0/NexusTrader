@@ -2,3 +2,5 @@ sphinx
 furo
 sphinx-autodoc-typehints
 msgspec
+recommonmark
+sphinx-markdown-tables

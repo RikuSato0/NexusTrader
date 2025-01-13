@@ -17,6 +17,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx_autodoc_typehints',
     'sphinx.ext.todo',
+    'sphinx_markdown_tables',
 ]
 
 templates_path = ['_templates']
@@ -45,3 +46,10 @@ todo_include_todos = True
 
 # Mock modules that might cause import issues
 autodoc_mock_imports = ['aiohttp', 'redis', 'aioredis', 'ccxt', 'ccxt.pro', 'dynaconf', 'spdlog', 'nautilus_trader', 'orjson', 'aiosqlite', 'aiolimiter', 'returns', 'picows']
+
+
+source_parsers = {
+    '.md': 'recommonmark.parser.CommonMarkParser',
+}
+
+source_suffix = ['.rst', '.md']

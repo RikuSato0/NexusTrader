@@ -1,3 +1,9 @@
+---
+myst:
+  enable_extensions:
+    - html_image
+---
+
 | Framework                                                                                                       | Websocket Package                                                                   | Data Serialization                                 | Strategy Support |
 |-----------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|----------------------------------------------------|------------------|
 | TradeBot                                                                                                    | [picows](https://picows.readthedocs.io/en/stable/introduction.html#installation)    | [msgspec](https://jcristharif.com/msgspec/)        | ✅                |

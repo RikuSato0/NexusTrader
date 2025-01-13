@@ -57,7 +57,9 @@ Why TradeBot Is Faster?
 
 Comparison with Other Frameworks
 ----------------------------------
+
 The speed of websocket connection mainly depends on the performance of json decoder and websocket package. Among them, mesgepc is the best performing json decoder, even faster than orjson. picows is the best performing websocket package in Python.
+
 .. include:: ./comparison.md
    :parser: myst_parser.sphinx_
 
@@ -82,10 +84,3 @@ Contents
    concepts/index
    exchange/index
    api/index
-
-Indices and tables
-=====================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search` 

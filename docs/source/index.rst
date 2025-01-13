@@ -60,8 +60,17 @@ Comparison with Other Frameworks
 
 The speed of websocket connection mainly depends on the performance of json decoder and websocket package. Among them, mesgepc is the best performing json decoder, even faster than orjson. picows is the best performing websocket package in Python.
 
-.. include:: ./comparison.md
-   :parser: myst_parser.sphinx_
++-------------------------------+-------------------+--------------------+------------------+
+| Framework                     | Websocket Package | Data Serialization | Strategy Support |
++===============================+===================+====================+==================+
+| Tradebot                      | Picows            | Msgspec            |                  |
+| Hummingboy                    | Aiohttp           | Ujson              |                  |
+| Freqtrade                     | Websockets        | Orjson             |                  |
+| Ccxt                          | Aiohttp           | Json               |                  |
+| Binance-Futures-Connector     | Websocket-Client  | Json               |                  |
+| Python-Okx                    | Websockets        | Json               |                  |
+| Unicorn-Binance-Websocket-Api | Websockets        | Ujson              |                  |
++-------------------------------+-------------------+--------------------+------------------+
 
 Getting Started
 ------------------

@@ -17,7 +17,6 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx_autodoc_typehints',
     'sphinx.ext.todo',
-    'myst_parser',
 ]
 
 templates_path = ['_templates']

@@ -1,95 +1,84 @@
-# TradeBotPro
+# TradeBot
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/RiverTrading/tradebot-pro-doc/main/docs/source/_static/logo-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/RiverTrading/tradebot-pro-doc/main/docs/source/_static/logo-light.png">
   <img alt="TradeBotPro Logo" src="https://raw.githubusercontent.com/RiverTrading/tradebot-pro-doc/main/docs/source/_static/logo-light.png">
 </picture>
+[![License](https://camo.githubusercontent.com/6581c31c16c1b13ddc2efb92e2ad69a93ddc4a92fd871ff15d401c4c6c9155a4/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f6c6963656e73652d4d49542d626c75652e737667)](https://camo.githubusercontent.com/6581c31c16c1b13ddc2efb92e2ad69a93ddc4a92fd871ff15d401c4c6c9155a4/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f6c6963656e73652d4d49542d626c75652e737667)[![pypi 版本](https://camo.githubusercontent.com/71b6517969ee6e46645f9ef17cdf1e23e2f86dca77cbf3f100476e4f4fa82d38/68747470733a2f2f696d672e736869656c64732e696f2f707970692f762f6e617574696c75735f747261646572)](https://camo.githubusercontent.com/71b6517969ee6e46645f9ef17cdf1e23e2f86dca77cbf3f100476e4f4fa82d38/68747470733a2f2f696d672e736869656c64732e696f2f707970692f762f6e617574696c75735f747261646572)[![pythons](https://camo.githubusercontent.com/73e10549c67e415eaf8267c3431a81610ed391085f35621e8fbc48d5f5820a49/68747470733a2f2f696d672e736869656c64732e696f2f707970692f707976657273696f6e732f6e617574696c75735f747261646572)![pypi 格式](https://camo.githubusercontent.com/02627bd13e24e9817c6c332a9dca59a406d709d8ce1db64ee2fbb93c612a37c8/68747470733a2f2f696d672e736869656c64732e696f2f707970692f666f726d61742f6e617574696c75735f7472616465723f636f6c6f723d626c7565)](https://camo.githubusercontent.com/02627bd13e24e9817c6c332a9dca59a406d709d8ce1db64ee2fbb93c612a37c8/68747470733a2f2f696d672e736869656c64732e696f2f707970692f666f726d61742f6e617574696c75735f7472616465723f636f6c6f723d626c7565)
 
-TradeBotPro is a flexible and powerful trading bot framework designed to interact with various cryptocurrency exchanges. It provides a robust architecture for managing exchange connections, order placements, and real-time data streaming via WebSockets.
+- **Docs**: https://nautilustrader.io/docs/
+- **Support**: [quantweb3.ai@gmail.com](mailto:quantweb3.ai@gmail.com)
 
-## Features
+## Introduction
 
-- Support for multiple cryptocurrency exchanges (currently implemented: Binance, Bybit, OKX)
-- Asynchronous operations using `asyncio`
-- WebSocket support for real-time data streaming
-- Order management (limit orders, market orders)
-- Account management
-- Extensible architecture for easy addition of new exchanges
+TradeBot is a professional-grade open-source quantitative trading platform, specifically designed for large capital
+management and complex strategy development, dedicated to providing high-performance, scalable, and user-friendly
+quantitative trading solutions.
 
-## Why We Are Faster Than Other Bots
+## Overview
 
-- We utilize [uvloop](https://github.com/MagicStack/uvloop) to enhance the event loop's performance, achieving speeds that are 2-4 times faster than the default event loop.
-- We employ [picows](https://github.com/tarasko/picows), a Cython-based WebSocket framework, which can match the performance of C++'s Boost.Beast. Other Python frameworks, such as `websockets` and `aiohttp`, are comparatively slower.
-- We leverage `msgspec` for data serialization and deserialization, which outperforms alternatives like `orjson`, `ujson`, and `json`. All data classes are defined as `msgspec.Struct`, which is more efficient than traditional `dataclass`.
+### Features
+
+- **Multi-Exchange Support**: Seamless integration with leading cryptocurrency exchanges including Binance, Bybit, and OKX, with an extensible design to support additional exchanges effortlessly.
+- **Asynchronous Operations**: Built with `asyncio` to enable highly efficient and scalable asynchronous operations, ensuring optimal performance even during high-frequency trading.
+- **Real-Time Data Streaming**: Robust WebSocket support for real-time market data, order book updates, and trade execution notifications.
+- **Advanced Order Management**: Supports a wide range of order types including limit orders, market orders, and stop orders, with professional-grade order execution optimization.
+- **Comprehensive Account Management**: Track balances, positions, and PnL across multiple exchanges in real-time with integrated account monitoring tools.
+- **Modular and Extensible Architecture**: A highly flexible framework that allows users to easily add new exchanges, trading instruments, or custom strategy modules.
+- **Strategy Execution and Backtesting**: Native support for implementing and backtesting trading strategies, ensuring a smooth transition from testing to live trading.
+- **High Scalability**: Designed for large-scale, multi-market tracking and execution, ideal for both retail and institutional traders.
+- **Risk and Fund Management**: Integrated tools for managing risk exposure and capital allocation to maximize trading efficiency.
+- **Real-Time Notifications**: Stay informed with built-in notifications for trade executions, market conditions, and custom alerts.
+
+### Why TradeBot Is Faster?
+
+- We utilize [uvloop](https://github.com/MagicStack/uvloop) to enhance the event loop's performance, achieving speeds
+  that are 2-4 times faster than the default event loop.
+- We employ [picows](https://github.com/tarasko/picows), a Cython-based WebSocket framework, which can match the
+  performance of C++'s Boost.Beast. Other Python frameworks, such as `websockets` and `aiohttp`, are comparatively
+  slower.
+- We leverage `msgspec` for data serialization and deserialization, which outperforms alternatives like `orjson`,
+  `ujson`, and `json`. All data classes are defined as `msgspec.Struct`, which is more efficient than traditional
+  `dataclass`.
 - All orders are managed using `asyncio.Queue`.
-- The core components (MessageBus, Clock, etc.) are implemented in Rust, with the Python code generated by the [nautilius](https://github.com/nautilius/nautilius) framework.
+- The core components (MessageBus, Clock, etc.) are implemented in Rust, with the Python code generated by
+  the [nautilius](https://github.com/nautilius/nautilius) framework.
 
-## Compare with other frameworks
+### Comparison with Other Frameworks
 
-| Framework | Websocket Package | Data Serialization | Strategy Support |
-|-----------|-------|-------|-------|
-| TradeBotPro | [picows](https://picows.readthedocs.io/en/stable/introduction.html#installation) | [msgspec](https://jcristharif.com/msgspec/) | ✅ |
-| [HummingBot](https://github.com/hummingbot/hummingbot?tab=readme-ov-file) | aiohttp | [ujson](https://pypi.org/project/ujson/) | ✅ |
-| [Freqtrade](https://github.com/freqtrade/freqtrade) | websockets | [orjson](https://github.com/ijl/orjson) | ✅ |
-| [crypto-feed](https://github.com/bmoscon/cryptofeed) | [websockets](https://websockets.readthedocs.io/en/stable/) | [yapic.json](https://pypi.org/project/yapic.json/) | ❌ |
-| [ccxt](https://github.com/bmoscon/cryptofeed) | [aiohttp](https://docs.aiohttp.org/en/stable/client_reference.html) | json | ❌ |
-| [binance-futures-connector](https://github.com/binance/binance-futures-connector-python) | [websocket-client](https://websocket-client.readthedocs.io/en/latest/examples.html) | json | ❌ |
-| [python-okx](https://github.com/okxapi/python-okx) | websockets | json | ❌ |
-| [unicorn-binance-websocket-api](https://github.com/LUCIT-Systems-and-Development/unicorn-binance-websocket-api) | websockets | [ujson](https://pypi.org/project/ujson/) | ❌ |
+| Framework                                                                                                       | Websocket Package                                                                   | Data Serialization                                 | Strategy Support |
+|-----------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|----------------------------------------------------|------------------|
+| TradeBotPro                                                                                                     | [picows](https://picows.readthedocs.io/en/stable/introduction.html#installation)    | [msgspec](https://jcristharif.com/msgspec/)        | ✅                |
+| [HummingBot](https://github.com/hummingbot/hummingbot?tab=readme-ov-file)                                       | aiohttp                                                                             | [ujson](https://pypi.org/project/ujson/)           | ✅                |
+| [Freqtrade](https://github.com/freqtrade/freqtrade)                                                             | websockets                                                                          | [orjson](https://github.com/ijl/orjson)            | ✅                |
+| [crypto-feed](https://github.com/bmoscon/cryptofeed)                                                            | [websockets](https://websockets.readthedocs.io/en/stable/)                          | [yapic.json](https://pypi.org/project/yapic.json/) | ❌                |
+| [ccxt](https://github.com/bmoscon/cryptofeed)                                                                   | [aiohttp](https://docs.aiohttp.org/en/stable/client_reference.html)                 | json                                               | ❌                |
+| [binance-futures-connector](https://github.com/binance/binance-futures-connector-python)                        | [websocket-client](https://websocket-client.readthedocs.io/en/latest/examples.html) | json                                               | ❌                |
+| [python-okx](https://github.com/okxapi/python-okx)                                                              | websockets                                                                          | json                                               | ❌                |
+| [unicorn-binance-websocket-api](https://github.com/LUCIT-Systems-and-Development/unicorn-binance-websocket-api) | websockets                                                                          | [ujson](https://pypi.org/project/ujson/)           | ❌                |
 
-## Multi-Mode Support
+### Architecture (data flow)
 
-TradeBotPro supports multiple modes of operation to cater to different trading strategies and requirements. Each mode allows for flexibility in how trading logic is executed based on market conditions or specific triggers.
+![Architecture](https://github.com/nautechsystems/nautilus_trader/blob/develop/docs/_images/architecture-overview.png?raw=true "architecture")
 
-### Event-Driven Mode
+### Supported Exchanges
 
-In this mode, trading logic is executed in response to real-time market events. The methods `on_bookl1`, `on_trade`, and `on_kline` are triggered whenever relevant data is updated, allowing for immediate reaction to market changes.
+| BYBIT                                                        | **Binance**                                                  | OKX                                                          |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| <img src="https://www.bybit.com/common-static/fhs/bybit-home-new/favicon.ico" width="100"> | <img src="https://cryptologos.cc/logos/binance-coin-bnb-logo.png" width="100"> | <img src="https://www.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png" width="100"> |
 
-```python
-class Demo(Strategy):
-    def __init__(self):
-        super().__init__()
-        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BINANCE"])
-    
-    def on_bookl1(self, bookl1: BookL1):
-        # implement the trading logic Here
-        pass
-```
+## Getting Started
 
-### Timer Mode
+### Installation (From PyPI)
 
-This mode allows you to schedule trading logic to run at specific intervals. You can use the `schedule` method to define when your trading algorithm should execute, making it suitable for strategies that require periodic checks or actions.
+We recommend using the latest supported version of Python and setting
+up [tradebot](https://pypi.org/project/nautilus_trader/) in a virtual environment to isolate dependencies
 
-```python
-class Demo2(Strategy):
-    def __init__(self):
-        super().__init__()
-        self.schedule(self.algo, trigger="interval", seconds=1)
-    
-    def algo(self):
-        # run every 1 second
-        # implement the trading logic Here
-        pass
-```
+To install the latest binary wheel (or sdist package) from PyPI using Pythons pip package manager:
 
-### Custom Signal Mode
-
-In this mode, trading logic is executed based on custom signals. You can define your own signals and use the `on_custom_signal` method to trigger trading actions when these signals are received. This is particularly useful for integrating with external systems or custom event sources.
-
-```python
-class Demo3(Strategy):
-    def __init__(self):
-        super().__init__()
-        self.signal = True
-    
-    def on_custom_signal(self, signal: object):
-        # implement the trading logic Here,
-        # signal can be any object, it is up to you to define the signal
-        pass
-```
-
-## Quick Start
+    pip install -U tradebot
+### Quick Start
 
 Here's a basic example of how to use TradeBotPro, demonstrating a simple buy and sell strategy on OKX.
 
@@ -221,14 +210,124 @@ config = Config(
 )
 ```
 
+## Multi-Mode Support
+
+TradeBotPro supports multiple modes of operation to cater to different trading strategies and requirements. Each mode
+allows for flexibility in how trading logic is executed based on market conditions or specific triggers.
+
+### Event-Driven Mode
+
+In this mode, trading logic is executed in response to real-time market events. The methods `on_bookl1`, `on_trade`, and
+`on_kline` are triggered whenever relevant data is updated, allowing for immediate reaction to market changes.
+
+```python
+class Demo(Strategy):
+    def __init__(self):
+        super().__init__()
+        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BINANCE"])
+
+    def on_bookl1(self, bookl1: BookL1):
+        # implement the trading logic Here
+        pass
+```
+
+### Timer Mode
+
+This mode allows you to schedule trading logic to run at specific intervals. You can use the `schedule` method to define
+when your trading algorithm should execute, making it suitable for strategies that require periodic checks or actions.
+
+```python
+class Demo2(Strategy):
+    def __init__(self):
+        super().__init__()
+        self.schedule(self.algo, trigger="interval", seconds=1)
+
+    def algo(self):
+        # run every 1 second
+        # implement the trading logic Here
+        pass
+```
+
+### Custom Signal Mode
+
+In this mode, trading logic is executed based on custom signals. You can define your own signals and use the
+`on_custom_signal` method to trigger trading actions when these signals are received. This is particularly useful for
+integrating with external systems or custom event sources.
+
+```python
+class Demo3(Strategy):
+    def __init__(self):
+        super().__init__()
+        self.signal = True
+
+    def on_custom_signal(self, signal: object):
+        # implement the trading logic Here,
+        # signal can be any object, it is up to you to define the signal
+        pass
+```
+
 ## Contributing
 
-Contributions to TradeBotPro are welcome! Please refer to our [contribution guidelines](CONTRIBUTING.md) for more information on how to get started.
+Thank you for considering contributing to TradeBotPro! We greatly appreciate any effort to help improve the project. If
+you have an idea for an enhancement or a bug fix, the first step is to open
+an [issue](https://github.com/Quantweb3-ai/tradebot-pro/issues) on GitHub. This allows us to discuss your proposal and
+ensure it aligns with the project's goals, while also helping to avoid duplicate efforts.
+
+When you're ready to start working on your contribution, please review the guidelines in
+the [CONTRIBUTING.md](CONTRIBUTING.md) file. Depending on the nature of your contribution, you may also need to sign a
+Contributor License Agreement (CLA) to ensure it can be included in the project.
+
+> **Note**
+> Pull requests should be directed to the `main` branch (the default branch), where new features and improvements are
+> integrated before release.
+
+Thank you again for your interest in TradeBotPro! We look forward to reviewing your contributions and collaborating with
+you to make the project even better.
+
+## VIP Privileges
+
+Trading on our platform is completely free. Upgrade to VIP status for just $199 per month ([Subscribe Here](https://quantweb3.ai)) to enjoy exclusive technical support privileges.
+
+Alternatively, get VIP status **at no cost** by opening an account through our partnership referral links!
+
+### Partner Benefits
+
+When you register through our partners, you'll gain access to the following exclusive perks:
+
+1. **Trading Fee Discounts**: Enjoy reduced trading fees to optimize your costs.
+2. **VIP Service Support**: After opening an account, contact us to activate your VIP status. Participate in exclusive events and gain access to unparalleled benefits.
+
+Our partners include leading global trading platforms such as Bybit, OKX, ZFX, and Bison.
+
+### Join Our VIP Program
+
+Act now and take advantage of this opportunity to enhance your trading experience!
+
+> **Click the links below to register with our partners:**
+>
+> - [Bybit](https://partner.bybit.com/b/90899)
+> - [OKX](http://www.okx.com/join/80353297)
+> - [ZFX](https://zfx.link/46dFByp)
+> - [Bison](https://m.bison.com/#/register?invitationCode=1002)
+
+## Social
+
+Connect with us on your favorite platforms:
+
+- **[X (formerly Twitter)](https://x.com/quantweb3_ai)**: Stay updated with our latest news, features, and
+  announcements.
+- **[Discord](https://discord.gg/BR8VGRrXFr)**: Join our community to discuss ideas, get support, and connect with other
+  users.
+- **[Telegram](https://t.me/+6e2MtXxoibM2Yzlk)**: Receive instant updates and engage in real-time discussions.
+
+## See Also  
+
+We recommend exploring related tools and projects that can enhance your trading workflows:  
+
+- **[Nexus](https://github.com/Quantweb3-ai/nexus):** A robust exchange interface optimization solution that integrates seamlessly with trading bots like TradeBotPro, enabling faster and more reliable trading execution.  
 
 ## License
 
-TradeBotPro is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-## Documentation
-
-Documentation is available at [Read the Docs](https://your-project-name.readthedocs.io/).
+TradeBotPro is available on GitHub under the MIT License. Contributions to the project are welcome and require the
+completion of a Contributor License Agreement (CLA). Please review the contribution guidelines and submit a pull
+request. See the [LICENSE](LICENSE) file for details.

@@ -5,7 +5,7 @@
   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/RiverTrading/tradebot-pro-doc/main/docs/source/_static/logo-light.png">
   <img alt="TradeBotPro Logo" src="https://raw.githubusercontent.com/RiverTrading/tradebot-pro-doc/main/docs/source/_static/logo-light.png">
 </picture>
-[![License](https://camo.githubusercontent.com/6581c31c16c1b13ddc2efb92e2ad69a93ddc4a92fd871ff15d401c4c6c9155a4/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f6c6963656e73652d4d49542d626c75652e737667)](https://camo.githubusercontent.com/6581c31c16c1b13ddc2efb92e2ad69a93ddc4a92fd871ff15d401c4c6c9155a4/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f6c6963656e73652d4d49542d626c75652e737667)[![pypi 版本](https://camo.githubusercontent.com/71b6517969ee6e46645f9ef17cdf1e23e2f86dca77cbf3f100476e4f4fa82d38/68747470733a2f2f696d672e736869656c64732e696f2f707970692f762f6e617574696c75735f747261646572)](https://camo.githubusercontent.com/71b6517969ee6e46645f9ef17cdf1e23e2f86dca77cbf3f100476e4f4fa82d38/68747470733a2f2f696d672e736869656c64732e696f2f707970692f762f6e617574696c75735f747261646572)[![pythons](https://camo.githubusercontent.com/73e10549c67e415eaf8267c3431a81610ed391085f35621e8fbc48d5f5820a49/68747470733a2f2f696d672e736869656c64732e696f2f707970692f707976657273696f6e732f6e617574696c75735f747261646572)![pypi 格式](https://camo.githubusercontent.com/02627bd13e24e9817c6c332a9dca59a406d709d8ce1db64ee2fbb93c612a37c8/68747470733a2f2f696d672e736869656c64732e696f2f707970692f666f726d61742f6e617574696c75735f7472616465723f636f6c6f723d626c7565)](https://camo.githubusercontent.com/02627bd13e24e9817c6c332a9dca59a406d709d8ce1db64ee2fbb93c612a37c8/68747470733a2f2f696d672e736869656c64732e696f2f707970692f666f726d61742f6e617574696c75735f7472616465723f636f6c6f723d626c7565)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)[![PyPI Version](https://img.shields.io/pypi/v/nautilus_trader)](https://pypi.org/project/nautilus_trader/)[![Python Versions](https://img.shields.io/pypi/pyversions/nautilus_trader)](https://pypi.org/project/nautilus_trader/)[![PyPI Format](https://img.shields.io/pypi/format/nautilus_trader?color=blue)](https://pypi.org/project/nautilus_trader/)
 
 - **Docs**: https://nautilustrader.io/docs/
 - **Support**: [quantweb3.ai@gmail.com](mailto:quantweb3.ai@gmail.com)
@@ -66,7 +66,7 @@ quantitative trading solutions.
 
 | BYBIT                                                        | **Binance**                                                  | OKX                                                          |
 | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| <img src="https://www.bybit.com/common-static/fhs/bybit-home-new/favicon.ico" width="100"> | <img src="https://cryptologos.cc/logos/binance-coin-bnb-logo.png" width="100"> | <img src="https://www.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png" width="100"> |
+| <img src="https://raw.githubusercontent.com/bybit-web3/bybit-web3.github.io/main/docs/images/bybit-logo.png" width="100"> | <img src="https://cryptologos.cc/logos/binance-coin-bnb-logo.png" width="100"> | <img src="https://www.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png" width="100"> |
 
 ## Getting Started
 

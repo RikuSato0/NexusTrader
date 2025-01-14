@@ -60,7 +60,7 @@ quantitative trading solutions.
 
 ### Architecture (data flow)
 
-![Architecture](https://raw.githubusercontent.com/RiverTrading/tradebot-pro-doc/main/docs/source/_static/arch.png "architecture")
+![Architecture](docs/source/_static/arch.png "architecture")
 
 ### Supported Exchanges
 

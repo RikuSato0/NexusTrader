@@ -9,7 +9,7 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)![Python](https://img.shields.io/badge/python-3.10%2B-blue)![Version](https://img.shields.io/badge/version-1.0.0-blue)
 
-- **Docs**: https://nautilustrader.io/docs/
+- **Docs**: https://tradebot-pro.readthedocs.io/en/latest/
 - **Support**: [quantweb3.ai@gmail.com](mailto:quantweb3.ai@gmail.com)
 
 ## Introduction
@@ -22,17 +22,17 @@ quantitative trading solutions.
 
 ### Core Advantages
 
-1. **Professionally Optimized Order Algorithms：** Deep optimization for algorithmic orders including TWAP, effectively
+- 🚀 **Professionally Optimized Order Algorithms：** Deep optimization for algorithmic orders including TWAP, effectively
    reducing market impact costs. Users can easily integrate their own execution signals to achieve more efficient and
    precise order execution.
-2. **Professional Arbitrage Strategy Support：** Provides professional optimization for various arbitrage strategies,
+- 💰 **Professional Arbitrage Strategy Support：** Provides professional optimization for various arbitrage strategies,
    including funding rate arbitrage and cross-exchange arbitrage, supporting real-time tracking and trading of thousands
    of trading pairs to help users easily capture arbitrage opportunities.
-3. **Full-Featured Quantitative Trading Framework：** Users don't need to build frameworks or handle complex exchange
+- 🚧 **Full-Featured Quantitative Trading Framework：** Users don't need to build frameworks or handle complex exchange
    interface details themselves. TradeBot has integrated professional position management, order management, fund
    management, and statistical analysis modules, allowing users to focus on writing strategy logic and quickly implement
    quantitative trading.
-4. **Multi-Market Support and High Scalability：** Supports large-scale multi-market tracking and high-frequency strategy
+- 🚀 **Multi-Market Support and High Scalability：** Supports large-scale multi-market tracking and high-frequency strategy
    execution, covering a wide range of trading instruments, making it an ideal choice for professional trading needs.
 
 ### Why TradeBot Is More Efficient?
@@ -93,6 +93,14 @@ up [tradebot](https://pypi.org/project/nautilus_trader/) in a virtual environmen
 To install the latest binary wheel (or sdist package) from PyPI using Pythons pip package manager:
 
     pip install -U tradebot
+
+### Building from Source
+
+```
+git clone https://github.com/RiverTrading/tradebot-pro.git
+cd tradebot-pro
+poetry install
+```
 
 ### Quick Start
 

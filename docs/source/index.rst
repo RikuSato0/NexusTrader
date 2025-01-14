@@ -1,6 +1,12 @@
 Welcome to TradeBot's documentation!
 =========================================
+.. |python-versions| image:: https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue?logo=python
+   :alt: Python Versions
 
+.. |docs| image:: https://img.shields.io/badge/docs-passing-brightgreen
+   :alt: Documentation Status
+
+|python-versions| |docs| 
 
 Introduction
 -----------------
@@ -11,10 +17,10 @@ quantitative trading solutions.
 Core Advantages
 -----------------
 
-- 🚀 **Professionally Optimized Order Algorithms：** Deep optimization for algorithmic orders including TWAP, effectively reducing market impact costs. Users can easily integrate their own execution signals to achieve more efficient and precise order execution.
-- 💰 **Professional Arbitrage Strategy Support：** Provides professional optimization for various arbitrage strategies, including funding rate arbitrage and cross-exchange arbitrage, supporting real-time tracking and trading of thousandsof trading pairs to help users easily capture arbitrage opportunities.
-- 🚧 **Full-Featured Quantitative Trading Framework：** Users don't need to build frameworks or handle complex exchange interface details themselves. TradeBot has integrated professional position management, order management, fundmanagement, and statistical analysis modules, allowing users to focus on writing strategy logic and quickly implement quantitative trading.
-- 🚀 **Multi-Market Support and High Scalability：** Supports large-scale multi-market tracking and high-frequency strategy execution, covering a wide range of trading instruments, making it an ideal choice for professional trading needs.
+- 🚀 **Professionally Optimized Order Algorithms**: Deep optimization for algorithmic orders including TWAP, effectively reducing market impact costs. Users can easily integrate their own execution signals to achieve more efficient and precise order execution.
+- 💰 **Professional Arbitrage Strategy Support**: Provides professional optimization for various arbitrage strategies, including funding rate arbitrage and cross-exchange arbitrage, supporting real-time tracking and trading of thousandsof trading pairs to help users easily capture arbitrage opportunities.
+- 🚧 **Full-Featured Quantitative Trading Framework**: Users don't need to build frameworks or handle complex exchange interface details themselves. TradeBot has integrated professional position management, order management, fundmanagement, and statistical analysis modules, allowing users to focus on writing strategy logic and quickly implement quantitative trading.
+- 🚀 **Multi-Market Support and High Scalability**: Supports large-scale multi-market tracking and high-frequency strategy execution, covering a wide range of trading instruments, making it an ideal choice for professional trading needs.
 
 Why TradeBot Is More Efficient?
 ------------------------------------
@@ -47,13 +53,13 @@ Key Features
 Contact
 -------
 
-.. |twitter| image:: https://img.shields.io/badge/X-000000?style=for-the-badge&logo=x&logoColor=white
+.. |twitter| image:: https://img.shields.io/badge/X-000000?&logo=x&logoColor=white
    :target: https://x.com/quantweb3_ai
 
-.. |discord| image:: https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white
+.. |discord| image:: https://img.shields.io/badge/Discord-5865F2?&logo=discord&logoColor=white
    :target: https://discord.gg/BR8VGRrXFr
 
-.. |telegram| image:: https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white
+.. |telegram| image:: https://img.shields.io/badge/Telegram-2CA5E0?&logo=telegram&logoColor=white
    :target: https://t.me/+6e2MtXxoibM2Yzlk
 
 |twitter| Stay updated with our latest news, features, and announcements.
@@ -69,7 +75,7 @@ Contents
    :maxdepth: 2
 
    installation
-   quickstart
+   quickstart/index
    concepts/index
    exchange/index
    api/index

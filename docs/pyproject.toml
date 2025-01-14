@@ -1,0 +1,4 @@
+[tool.esbonio.sphinx]
+buildCommand = ["sphinx-build", "-M", "html", "source", "build"]
+pythonCommand = ["/root/miniforge3/envs/ccxt/bin/python"]
+confDir = "${workspaceFolder}/docs/source"

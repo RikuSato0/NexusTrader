@@ -110,27 +110,6 @@ class OkxPublicConnector(PublicConnector):
             self._log.debug(f"Subscribed to {ws_msg.arg.channel}")
 
     def _handle_kline(self, raw: bytes):
-        """
-        {
-            "arg": {
-                "channel": "candle1D",
-                "instId": "BTC-USDT"
-            },
-            "data": [
-                [
-                "1597026383085", ts
-                "8533.02", open
-                "8553.74", high
-                "8527.17", low
-                "8548.26", close
-                "45247", vol
-                "529.5858061",
-                "5529.5858061",
-                "0"
-                ]
-            ]
-            }
-        """
         msg: OkxWsCandleMsg = self._ws_msg_candle_decoder.decode(raw)
 
         id = msg.arg.instId
@@ -151,24 +130,6 @@ class OkxPublicConnector(PublicConnector):
             self._msgbus.publish(topic="kline", msg=kline)
 
     def _handle_trade(self, raw: bytes):
-        """
-        {
-            "arg": {
-                "channel": "trades",
-                "instId": "BTC-USD-191227"
-            },
-            "data": [
-                {
-                    "instId": "BTC-USD-191227",
-                    "tradeId": "9",
-                    "px": "0.016",
-                    "sz": "50",
-                    "side": "buy",
-                    "ts": "1597026383085"
-                }
-            ]
-        }
-        """
         msg: OkxWsTradeMsg = self._ws_msg_trade_decoder.decode(raw)
         id = msg.arg.instId
         symbol = self._market_id[id]
@@ -183,20 +144,6 @@ class OkxPublicConnector(PublicConnector):
             self._msgbus.publish(topic="trade", msg=trade)
 
     def _handle_bbo_tbt(self, raw: bytes):
-        """
-        {
-            'arg': {
-                'channel': 'bbo-tbt',
-                'instId': 'BTC-USDT'
-            },
-            'data': [{
-                'asks': [['67201.2', '2.17537208', '0', '7']],
-                'bids': [['67201.1', '1.44375999', '0', '5']],
-                'ts': '1729594943707',
-                'seqId': 34209632254
-            }]
-        }
-        """
         msg: OkxWsBboTbtMsg = self._ws_msg_bbo_tbt_decoder.decode(raw)
 
         id = msg.arg.instId

@@ -306,7 +306,7 @@ you to make the project even better.
 
 ## VIP Privileges
 
-Trading on our platform is free. Become a VIP customer to enjoy exclusive technical support privileges for $199 per month ([Subscription Here](https://quantweb3.ai))—or get VIP status at no cost by opening an account through our partnership links.
+Trading on our platform is free. Become a VIP customer to enjoy exclusive technical support privileges for $499 per month ([Subscription Here](https://quantweb3.ai/subscribe/ ))—or get VIP status at no cost by opening an account through our partnership links.
 
 Our partners include global leading trading platforms like Bybit, OKX, ZFX, Bison and others. By opening an account through our referral links, you'll enjoy these benefits:
 

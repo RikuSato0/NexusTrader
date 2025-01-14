@@ -4,7 +4,9 @@
   <img alt="TradeBotPro Logo" src="https://raw.githubusercontent.com/RiverTrading/tradebot-pro-doc/develop/docs/source/_static/logo-light-new.png">
 </picture>
 
+
 ---
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)![Python](https://img.shields.io/badge/python-3.10%2B-blue)![Version](https://img.shields.io/badge/version-1.0.0-blue)
 
 - **Docs**: https://nautilustrader.io/docs/
@@ -12,26 +14,29 @@
 
 ## Introduction
 
-TradeBot is a professional-grade open-source quantitative trading platform, specifically designed for large capital
-management and complex strategy development, dedicated to providing high-performance, scalable, and user-friendly
+TradeBot is a professional-grade open-source quantitative trading platform, specifically designed for **large capital
+management** and **complex strategy development**, dedicated to providing high-performance, scalable, and user-friendly
 quantitative trading solutions.
 
 ## Overview
 
-### Features
+### Core Advantages
 
-- 🌍 **Multi-Exchange Integration**: Effortlessly connect to top exchanges like Binance, Bybit, and OKX, with an extensible design to support additional platforms.
-- ⚡ **Asynchronous Operations**: Built on asyncio for highly efficient, scalable performance, even during high-frequency trading.
-- 📡 **Real-Time Data Streaming**: Reliable WebSocket support for live market data, order book updates, and trade execution notifications.
-- 📊 **Advanced Order Management**: Execute diverse order types (limit, market, stop) with optimized, professional-grade order handling.
-- 📋 **Account Monitoring**: Real-time tracking of balances, positions, and PnL across multiple exchanges with integrated monitoring tools.
-- 🛠️ **Modular Architecture**: Flexible framework to add exchanges, instruments, or custom strategies with ease.
-- 🔄 **Strategy Execution & Backtesting**: Seamlessly transition from strategy testing to live trading with built-in tools.
-- 📈 **Scalability**: Designed to handle large-scale, multi-market operations for retail and institutional traders alike.
-- 💰 **Risk & Fund Management**: Optimize capital allocation and control risk exposure with integrated management tools.
-- 🔔 **Instant Notifications**: Stay updated with alerts for trades, market changes, and custom conditions.
+1. **Professionally Optimized Order Algorithms：** Deep optimization for algorithmic orders including TWAP, effectively
+   reducing market impact costs. Users can easily integrate their own execution signals to achieve more efficient and
+   precise order execution.
+2. **Professional Arbitrage Strategy Support：** Provides professional optimization for various arbitrage strategies,
+   including funding rate arbitrage and cross-exchange arbitrage, supporting real-time tracking and trading of thousands
+   of trading pairs to help users easily capture arbitrage opportunities.
+3. **Full-Featured Quantitative Trading Framework：** Users don't need to build frameworks or handle complex exchange
+   interface details themselves. TradeBot has integrated professional position management, order management, fund
+   management, and statistical analysis modules, allowing users to focus on writing strategy logic and quickly implement
+   quantitative trading.
+4. **Multi-Market Support and High Scalability：** Supports large-scale multi-market tracking and high-frequency strategy
+   execution, covering a wide range of trading instruments, making it an ideal choice for professional trading needs.
 
 ### Why TradeBot Is More Efficient?
+
   - **Enhanced Event Loop Performance**: TradeBot leverages [uvloop](https://github.com/MagicStack/uvloop), a high-performance event loop, delivering speeds up to 2-4 times faster than Python's default asyncio loop.
 
   - **High-Performance WebSocket Framework**: Built with [picows](https://github.com/tarasko/picows), a Cython-based WebSocket library that matches the speed of C++'s Boost.Beast, significantly outperforming Python alternatives like websockets and aiohttp.
@@ -44,26 +49,39 @@ quantitative trading solutions.
 
 ### Comparison with Other Frameworks
 
-| Framework                                                                                                       | Websocket Package                                                                   | Data Serialization                                 | Strategy Support |
-|-----------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|----------------------------------------------------|------------------|
-| TradeBotPro                                                                                                     | [picows](https://picows.readthedocs.io/en/stable/introduction.html#installation)    | [msgspec](https://jcristharif.com/msgspec/)        | ✅                |
-| [HummingBot](https://github.com/hummingbot/hummingbot?tab=readme-ov-file)                                       | aiohttp                                                                             | [ujson](https://pypi.org/project/ujson/)           | ✅                |
-| [Freqtrade](https://github.com/freqtrade/freqtrade)                                                             | websockets                                                                          | [orjson](https://github.com/ijl/orjson)            | ✅                |
-| [crypto-feed](https://github.com/bmoscon/cryptofeed)                                                            | [websockets](https://websockets.readthedocs.io/en/stable/)                          | [yapic.json](https://pypi.org/project/yapic.json/) | ❌                |
-| [ccxt](https://github.com/bmoscon/cryptofeed)                                                                   | [aiohttp](https://docs.aiohttp.org/en/stable/client_reference.html)                 | json                                               | ❌                |
-| [binance-futures-connector](https://github.com/binance/binance-futures-connector-python)                        | [websocket-client](https://websocket-client.readthedocs.io/en/latest/examples.html) | json                                               | ❌                |
-| [python-okx](https://github.com/okxapi/python-okx)                                                              | websockets                                                                          | json                                               | ❌                |
-| [unicorn-binance-websocket-api](https://github.com/LUCIT-Systems-and-Development/unicorn-binance-websocket-api) | websockets                                                                          | [ujson](https://pypi.org/project/ujson/)           | ❌                |
+| Framework                                                    | Websocket Package                                            | Data Serialization                                 | Strategy Support | Advantages                                         | Disadvantages                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | -------------------------------------------------- | ---------------- | -------------------------------------------------- | ------------------------------------------------- |
+| **TradeBotPro**                                              | [picows](https://picows.readthedocs.io/en/stable/introduction.html#installation) | [msgspec](https://jcristharif.com/msgspec/)        | ✅                | Professionally optimized for speed and low latency | Requires some familiarity with async workflows    |
+| [HummingBot](https://github.com/hummingbot/hummingbot?tab=readme-ov-file) | aiohttp                                                      | [ujson](https://pypi.org/project/ujson/)           | ✅                | Widely adopted with robust community support       | Slower WebSocket handling and limited flexibility |
+| [Freqtrade](https://github.com/freqtrade/freqtrade)          | websockets                                                   | [orjson](https://github.com/ijl/orjson)            | ✅                | Flexible strategy support                          | Higher resource consumption                       |
+| [crypto-feed](https://github.com/bmoscon/cryptofeed)         | [websockets](https://websockets.readthedocs.io/en/stable/)   | [yapic.json](https://pypi.org/project/yapic.json/) | ❌                | Simple design for feed-only use                    | Lacks trading support and advanced features       |
+| [ccxt](https://github.com/bmoscon/cryptofeed)                | [aiohttp](https://docs.aiohttp.org/en/stable/client_reference.html) | json                                               | ❌                | Great REST API support                             | Limited WebSocket performance                     |
+| [binance-futures-connector](https://github.com/binance/binance-futures-connector-python) | [websocket-client](https://websocket-client.readthedocs.io/en/latest/examples.html) | json                                               | ❌                | Optimized for Binance-specific integration         | Limited to Binance Futures                        |
+| [python-okx](https://github.com/okxapi/python-okx)           | websockets                                                   | json                                               | ❌                | Dedicated to OKX trading                           | Limited to OKX platform                           |
+| [unicorn-binance-websocket-api](https://github.com/LUCIT-Systems-and-Development/unicorn-binance-websocket-api) | websockets                                                   | [ujson](https://pypi.org/project/ujson/)           | ❌                | Easy-to-use for Binance users                      | Restricted to Binance and resource-heavy          |
 
 ### Architecture (data flow)
 
 ![Architecture](docs/source/_static/arch.png "architecture")
 
+### Features
+
+- 🌍 Multi-Exchange Integration: Effortlessly connect to top exchanges like Binance, Bybit, and OKX, with an extensible design to support additional platforms.
+- ⚡ Asynchronous Operations: Built on asyncio for highly efficient, scalable performance, even during high-frequency trading.
+- 📡 Real-Time Data Streaming: Reliable WebSocket support for live market data, order book updates, and trade execution notifications.
+- 📊 Advanced Order Management: Execute diverse order types (limit, market, stop) with optimized, professional-grade order handling.
+- 📋 Account Monitoring: Real-time tracking of balances, positions, and PnL across multiple exchanges with integrated monitoring tools.
+- 🛠️ Modular Architecture: Flexible framework to add exchanges, instruments, or custom strategies with ease.
+- 🔄 Strategy Execution & Backtesting: Seamlessly transition from strategy testing to live trading with built-in tools.
+- 📈 Scalability: Designed to handle large-scale, multi-market operations for retail and institutional traders alike.
+- 💰 Risk & Fund Management: Optimize capital allocation and control risk exposure with integrated management tools.
+- 🔔 Instant Notifications: Stay updated with alerts for trades, market changes, and custom conditions.
+
 ### Supported Exchanges
 
-| BYBIT                                                        | **Binance**                                                  | OKX                                                          |
+| OKX                                                          | **Binance**                                                  | BYBIT                                                        |
 | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| <img src="https://raw.githubusercontent.com/bybit-web3/bybit-web3.github.io/main/docs/images/bybit-logo.png" width="100"> | <img src="https://cryptologos.cc/logos/binance-coin-bnb-logo.png" width="100"> | <img src="https://www.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png" width="100"> |
+| <img src="https://www.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png" width="100"> | <img src="https://cryptologos.cc/logos/binance-coin-bnb-logo.png" width="100"> | <img src="https://raw.githubusercontent.com/bybit-web3/bybit-web3.github.io/main/docs/images/bybit-logo.png" width="100"> |
 
 ## Getting Started
 
@@ -75,6 +93,7 @@ up [tradebot](https://pypi.org/project/nautilus_trader/) in a virtual environmen
 To install the latest binary wheel (or sdist package) from PyPI using Pythons pip package manager:
 
     pip install -U tradebot
+
 ### Quick Start
 
 Here's a basic example of how to use TradeBotPro, demonstrating a simple buy and sell strategy on OKX.
@@ -95,27 +114,28 @@ OKX_API_KEY = settings.OKX.DEMO_1.api_key
 OKX_SECRET = settings.OKX.DEMO_1.secret
 OKX_PASSPHRASE = settings.OKX.DEMO_1.passphrase
 
+
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.OKX"])  # Subscribe to the order book for the specified symbol
         self.signal = True  # Initialize signal to control order execution
-    
+
     def on_failed_order(self, order: Order):
         print(order)  # Log failed orders
-    
+
     def on_pending_order(self, order: Order):
         print(order)  # Log pending orders
-    
+
     def on_accepted_order(self, order: Order):
         print(order)  # Log accepted orders
-    
+
     def on_partially_filled_order(self, order: Order):
         print(order)  # Log partially filled orders
-    
+
     def on_filled_order(self, order: Order):
         print(order)  # Log filled orders
-    
+
     def on_bookl1(self, bookl1: BookL1):
         if self.signal:  # Check if the signal is active
             # Create a market buy order
@@ -133,7 +153,7 @@ class Demo(Strategy):
                 amount=Decimal("0.1"),
             )
             self.signal = False  # Deactivate the signal after placing orders
-        
+
 
 # Configuration for the trading strategy
 config = Config(
@@ -174,7 +194,10 @@ if __name__ == "__main__":
         engine.dispose()  # Ensure resources are cleaned up
 
 ```
-This example illustrates how easy it is to switch between different exchanges and strategies by modifying the `config` class. For instance, to switch to Binance, you can adjust the configuration as follows, and change the symbol to `BTCUSDT-PERP.BINANCE`.
+
+This example illustrates how easy it is to switch between different exchanges and strategies by modifying the `config`
+class. For instance, to switch to Binance, you can adjust the configuration as follows, and change the symbol to
+`BTCUSDT-PERP.BINANCE`.
 
 ```python
 from tradebot.exchange.binance import BinanceAccountType
@@ -283,29 +306,23 @@ you to make the project even better.
 
 ## VIP Privileges
 
-Trading on our platform is completely free. Upgrade to VIP status for just $199 per month ([Subscribe Here](https://quantweb3.ai)) to enjoy exclusive technical support privileges.
+Trading on our platform is free. Become a VIP customer to enjoy exclusive technical support privileges for $199 per month ([Subscription Here](https://quantweb3.ai))—or get VIP status at no cost by opening an account through our partnership links.
 
-Alternatively, get VIP status **at no cost** by opening an account through our partnership referral links!
+Our partners include global leading trading platforms like Bybit, OKX, ZFX, Bison and others. By opening an account through our referral links, you'll enjoy these benefits:
 
-### Partner Benefits
+Instant Account Benefits
 
-When you register through our partners, you'll gain access to the following exclusive perks:
+1. Trading Fee Discounts: Exclusive discounts to lower your trading costs.
+2. VIP Service Support: Contact us after opening your account to become our VIP customer. Enjoy exclusive events and benefits for the ultimate VIP experience.
 
-1. **Trading Fee Discounts**: Enjoy reduced trading fees to optimize your costs.
-2. **VIP Service Support**: After opening an account, contact us to activate your VIP status. Participate in exclusive events and gain access to unparalleled benefits.
+Act now and join our VIP program!
 
-Our partners include leading global trading platforms such as Bybit, OKX, ZFX, and Bison.
+> Click the links below to register
 
-### Join Our VIP Program
-
-Act now and take advantage of this opportunity to enhance your trading experience!
-
-> **Click the links below to register with our partners:**
->
-> - [Bybit](https://partner.bybit.com/b/90899)
-> - [OKX](http://www.okx.com/join/80353297)
-> - [ZFX](https://zfx.link/46dFByp)
-> - [Bison](https://m.bison.com/#/register?invitationCode=1002)
+- [Bybit](https://partner.bybit.com/b/90899)
+- [OKX](http://www.okx.com/join/80353297)
+- [ZFX](https://zfx.link/46dFByp)
+- [Bison](https://m.bison.com/#/register?invitationCode=1002)
 
 ## Social
 
@@ -317,11 +334,12 @@ Connect with us on your favorite platforms:
 
 [![Telegram](https://img.shields.io/badge/Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/+6e2MtXxoibM2Yzlk) Receive instant updates and engage in real-time discussions.
 
-## See Also  
+## See Also
 
-We recommend exploring related tools and projects that can enhance your trading workflows:  
+We recommend exploring related tools and projects that can enhance your trading workflows:
 
-- **[Nexus](https://github.com/Quantweb3-ai/nexus):** A robust exchange interface optimization solution that integrates seamlessly with trading bots like TradeBotPro, enabling faster and more reliable trading execution.  
+- **[Nexus](https://github.com/Quantweb3-ai/nexus):** A robust exchange interface optimization solution that integrates
+  seamlessly with trading bots like TradeBotPro, enabling faster and more reliable trading execution.
 
 ## License
 

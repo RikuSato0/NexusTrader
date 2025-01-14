@@ -20,10 +20,6 @@ from tradebot.exchange.binance.constants import (
 
 
 class BinanceFuturesBalanceInfo(msgspec.Struct, frozen=True):
-    """
-    HTTP response 'inner struct' from Binance Futures GET /fapi/v2/account (HMAC
-    SHA256).
-    """
 
     asset: str  # asset name
     walletBalance: str  # wallet balance
@@ -51,9 +47,6 @@ class BinanceFuturesBalanceInfo(msgspec.Struct, frozen=True):
         )
 
 class BinanceFuturesAccountInfo(msgspec.Struct, kw_only=True):
-    """
-    HTTP response from Binance Futures GET /fapi/v2/account (HMAC SHA256).
-    """
 
     feeTier: int  # account commission tier
     canTrade: bool  # if can trade
@@ -82,11 +75,6 @@ class BinanceFuturesAccountInfo(msgspec.Struct, kw_only=True):
         return [balance.parse_to_balance() for balance in self.assets]
 
 class BinanceSpotBalanceInfo(msgspec.Struct):
-    """
-    HTTP response 'inner struct' from Binance Spot/Margin GET /api/v3/account (HMAC
-    SHA256).
-    """
-
     asset: str
     free: str
     locked: str
@@ -99,10 +87,6 @@ class BinanceSpotBalanceInfo(msgspec.Struct):
         )
 
 class BinanceSpotAccountInfo(msgspec.Struct, frozen=True):
-    """
-    HTTP response from Binance Spot/Margin GET /api/v3/account (HMAC SHA256).
-    """
-
     makerCommission: int
     takerCommission: int
     buyerCommission: int
@@ -119,10 +103,6 @@ class BinanceSpotAccountInfo(msgspec.Struct, frozen=True):
         return [balance.parse_to_balance() for balance in self.balances]
 
 class BinanceSpotOrderUpdateMsg(msgspec.Struct, kw_only=True):
-    """
-    WebSocket message 'inner struct' for Binance Spot/Margin Order Update events.
-    """
-
     e: BinanceUserDataStreamWsEventType
     E: int  # Event time
     s: str  # Symbol
@@ -157,14 +137,6 @@ class BinanceSpotOrderUpdateMsg(msgspec.Struct, kw_only=True):
     Q: str  # Quote Order Qty
 
 class BinanceFuturesOrderData(msgspec.Struct, kw_only=True):
-    """
-    WebSocket message 'inner struct' for Binance Futures Order Update events.
-
-    Client Order ID 'c':
-     - starts with "autoclose-": liquidation order/
-     - starts with "adl_autoclose": ADL auto close order/
-
-    """
     s: str  # Symbol
     c: str  # Client Order ID
     S: BinanceOrderSide
@@ -215,18 +187,6 @@ class BinanceFuturesOrderUpdateMsg(msgspec.Struct, kw_only = True):
 
 
 class BinanceMarkPrice(msgspec.Struct):
-    """
-     {
-        "e": "markPriceUpdate",     // Event type
-        "E": 1562305380000,         // Event time
-        "s": "BTCUSDT",             // Symbol
-        "p": "11794.15000000",      // Mark price
-        "i": "11784.62659091",      // Index price
-        "P": "11784.25641265",      // Estimated Settle Price, only useful in the last hour before the settlement starts
-        "r": "0.00038167",          // Funding rate
-        "T": 1562306400000          // Next funding time
-    }
-    """
     e: BinanceWsEventType
     E: int
     s: str
@@ -295,19 +255,6 @@ class BinanceSpotBookTicker(msgspec.Struct):
 
 
 class BinanceFuturesBookTicker(msgspec.Struct):
-    """
-      {
-      "e":"bookTicker",         // event type
-      "u":400900217,            // order book updateId
-      "E": 1568014460893,       // event time
-      "T": 1568014460891,       // transaction time
-      "s":"BNBUSDT",            // symbol
-      "b":"25.35190000",        // best bid price
-      "B":"31.21000000",        // best bid qty
-      "a":"25.36520000",        // best ask price
-      "A":"40.66000000"         // best ask qty
-    }
-    """
     e: BinanceWsEventType
     u: int
     E: int
@@ -333,12 +280,6 @@ class BinanceListenKey(msgspec.Struct):
 
 
 class BinanceUserTrade(msgspec.Struct, frozen=True):
-    """
-    HTTP response from Binance Spot/Margin `GET /api/v3/myTrades` HTTP response from
-    Binance USD-M Futures `GET /fapi/v1/userTrades` HTTP response from Binance COIN-M
-    Futures `GET /dapi/v1/userTrades`.
-    """
-
     commission: str
     commissionAsset: str
     price: str
@@ -369,12 +310,6 @@ class BinanceUserTrade(msgspec.Struct, frozen=True):
 
 
 class BinanceOrder(msgspec.Struct, frozen=True):
-    """
-    HTTP response from Binance Spot/Margin `GET /api/v3/order` HTTP response from
-    Binance USD-M Futures `GET /fapi/v1/order` HTTP response from Binance COIN-M Futures
-    `GET /dapi/v1/order`.
-    """
-
     symbol: str
     orderId: int
     clientOrderId: str
@@ -423,285 +358,6 @@ class BinanceOrder(msgspec.Struct, frozen=True):
 
 
 class BinanceMarketInfo(msgspec.Struct):
-    """
-    {
-      "symbol": "ETHBTC",
-      "status": "TRADING",
-      "baseAsset": "ETH",
-      "baseAssetPrecision": "8",
-      "quoteAsset": "BTC",
-      "quotePrecision": "8",
-      "quoteAssetPrecision": "8",
-      "baseCommissionPrecision": "8",
-      "quoteCommissionPrecision": "8",
-      "orderTypes": [
-        "LIMIT",
-        "LIMIT_MAKER",
-        "MARKET",
-        "STOP_LOSS",
-        "STOP_LOSS_LIMIT",
-        "TAKE_PROFIT",
-        "TAKE_PROFIT_LIMIT"
-      ],
-      "icebergAllowed": true,
-      "ocoAllowed": true,
-      "otoAllowed": true,
-      "quoteOrderQtyMarketAllowed": true,
-      "allowTrailingStop": true,
-      "cancelReplaceAllowed": true,
-      "isSpotTradingAllowed": true,
-      "isMarginTradingAllowed": true,
-      "filters": [
-        {
-          "filterType": "PRICE_FILTER",
-          "minPrice": "0.00001000",
-          "maxPrice": "922327.00000000",
-          "tickSize": "0.00001000"
-        },
-        {
-          "filterType": "LOT_SIZE",
-          "minQty": "0.00010000",
-          "maxQty": "100000.00000000",
-          "stepSize": "0.00010000"
-        },
-        {
-          "filterType": "ICEBERG_PARTS",
-          "limit": "10"
-        },
-        {
-          "filterType": "MARKET_LOT_SIZE",
-          "minQty": "0.00000000",
-          "maxQty": "2716.24643375",
-          "stepSize": "0.00000000"
-        },
-        {
-          "filterType": "TRAILING_DELTA",
-          "minTrailingAboveDelta": "10",
-          "maxTrailingAboveDelta": "2000",
-          "minTrailingBelowDelta": "10",
-          "maxTrailingBelowDelta": "2000"
-        },
-        {
-          "filterType": "PERCENT_PRICE_BY_SIDE",
-          "bidMultiplierUp": "5",
-          "bidMultiplierDown": "0.2",
-          "askMultiplierUp": "5",
-          "askMultiplierDown": "0.2",
-          "avgPriceMins": "5"
-        },
-        {
-          "filterType": "NOTIONAL",
-          "minNotional": "0.00010000",
-          "applyMinToMarket": true,
-          "maxNotional": "9000000.00000000",
-          "applyMaxToMarket": false,
-          "avgPriceMins": "5"
-        },
-        {
-          "filterType": "MAX_NUM_ORDERS",
-          "maxNumOrders": "200"
-        },
-        {
-          "filterType": "MAX_NUM_ALGO_ORDERS",
-          "maxNumAlgoOrders": "5"
-        }
-      ],
-      "permissions": [],
-      "permissionSets": [
-        [
-          "SPOT",
-          "MARGIN",
-          "TRD_GRP_004",
-          "TRD_GRP_005",
-          "TRD_GRP_006",
-          "TRD_GRP_008",
-          "TRD_GRP_009",
-          "TRD_GRP_010",
-          "TRD_GRP_011",
-          "TRD_GRP_012",
-          "TRD_GRP_013",
-          "TRD_GRP_014",
-          "TRD_GRP_015",
-          "TRD_GRP_016",
-          "TRD_GRP_017",
-          "TRD_GRP_018",
-          "TRD_GRP_019",
-          "TRD_GRP_020",
-          "TRD_GRP_021",
-          "TRD_GRP_022",
-          "TRD_GRP_023",
-          "TRD_GRP_024",
-          "TRD_GRP_025",
-          "TRD_GRP_026",
-          "TRD_GRP_027",
-          "TRD_GRP_028",
-          "TRD_GRP_029",
-          "TRD_GRP_030",
-          "TRD_GRP_031",
-          "TRD_GRP_032",
-          "TRD_GRP_033",
-          "TRD_GRP_034",
-          "TRD_GRP_035",
-          "TRD_GRP_036",
-          "TRD_GRP_037",
-          "TRD_GRP_038",
-          "TRD_GRP_039",
-          "TRD_GRP_040",
-          "TRD_GRP_041",
-          "TRD_GRP_042",
-          "TRD_GRP_043",
-          "TRD_GRP_044",
-          "TRD_GRP_045",
-          "TRD_GRP_046",
-          "TRD_GRP_047",
-          "TRD_GRP_048",
-          "TRD_GRP_049",
-          "TRD_GRP_050",
-          "TRD_GRP_051",
-          "TRD_GRP_052",
-          "TRD_GRP_053",
-          "TRD_GRP_054",
-          "TRD_GRP_055",
-          "TRD_GRP_056",
-          "TRD_GRP_057",
-          "TRD_GRP_058",
-          "TRD_GRP_059",
-          "TRD_GRP_060",
-          "TRD_GRP_061",
-          "TRD_GRP_062",
-          "TRD_GRP_063",
-          "TRD_GRP_064",
-          "TRD_GRP_065",
-          "TRD_GRP_066",
-          "TRD_GRP_067",
-          "TRD_GRP_068",
-          "TRD_GRP_069",
-          "TRD_GRP_070",
-          "TRD_GRP_071",
-          "TRD_GRP_072",
-          "TRD_GRP_073",
-          "TRD_GRP_074",
-          "TRD_GRP_075",
-          "TRD_GRP_076",
-          "TRD_GRP_077",
-          "TRD_GRP_078",
-          "TRD_GRP_079",
-          "TRD_GRP_080",
-          "TRD_GRP_081",
-          "TRD_GRP_082",
-          "TRD_GRP_083",
-          "TRD_GRP_084",
-          "TRD_GRP_085",
-          "TRD_GRP_086",
-          "TRD_GRP_087",
-          "TRD_GRP_088",
-          "TRD_GRP_089",
-          "TRD_GRP_090",
-          "TRD_GRP_091",
-          "TRD_GRP_092",
-          "TRD_GRP_093",
-          "TRD_GRP_094",
-          "TRD_GRP_095",
-          "TRD_GRP_096",
-          "TRD_GRP_097",
-          "TRD_GRP_098",
-          "TRD_GRP_099",
-          "TRD_GRP_100",
-          "TRD_GRP_101",
-          "TRD_GRP_102",
-          "TRD_GRP_103",
-          "TRD_GRP_104",
-          "TRD_GRP_105",
-          "TRD_GRP_106",
-          "TRD_GRP_107",
-          "TRD_GRP_108",
-          "TRD_GRP_109",
-          "TRD_GRP_110",
-          "TRD_GRP_111",
-          "TRD_GRP_112",
-          "TRD_GRP_113",
-          "TRD_GRP_114",
-          "TRD_GRP_115",
-          "TRD_GRP_116",
-          "TRD_GRP_117",
-          "TRD_GRP_118",
-          "TRD_GRP_119",
-          "TRD_GRP_120",
-          "TRD_GRP_121",
-          "TRD_GRP_122",
-          "TRD_GRP_123",
-          "TRD_GRP_124",
-          "TRD_GRP_125",
-          "TRD_GRP_126",
-          "TRD_GRP_127",
-          "TRD_GRP_128",
-          "TRD_GRP_129",
-          "TRD_GRP_130",
-          "TRD_GRP_131",
-          "TRD_GRP_132",
-          "TRD_GRP_133",
-          "TRD_GRP_134",
-          "TRD_GRP_135",
-          "TRD_GRP_136",
-          "TRD_GRP_137",
-          "TRD_GRP_138",
-          "TRD_GRP_139",
-          "TRD_GRP_140",
-          "TRD_GRP_141",
-          "TRD_GRP_142",
-          "TRD_GRP_143",
-          "TRD_GRP_144",
-          "TRD_GRP_145",
-          "TRD_GRP_146",
-          "TRD_GRP_147",
-          "TRD_GRP_148",
-          "TRD_GRP_149",
-          "TRD_GRP_150",
-          "TRD_GRP_151",
-          "TRD_GRP_152",
-          "TRD_GRP_153",
-          "TRD_GRP_154",
-          "TRD_GRP_155",
-          "TRD_GRP_156",
-          "TRD_GRP_157",
-          "TRD_GRP_158",
-          "TRD_GRP_159",
-          "TRD_GRP_160",
-          "TRD_GRP_161",
-          "TRD_GRP_162",
-          "TRD_GRP_163",
-          "TRD_GRP_164",
-          "TRD_GRP_165",
-          "TRD_GRP_166",
-          "TRD_GRP_167",
-          "TRD_GRP_168",
-          "TRD_GRP_169",
-          "TRD_GRP_170",
-          "TRD_GRP_171",
-          "TRD_GRP_172",
-          "TRD_GRP_173",
-          "TRD_GRP_174",
-          "TRD_GRP_175",
-          "TRD_GRP_176",
-          "TRD_GRP_177",
-          "TRD_GRP_178",
-          "TRD_GRP_179",
-          "TRD_GRP_180",
-          "TRD_GRP_181",
-          "TRD_GRP_182",
-          "TRD_GRP_183",
-          "TRD_GRP_184"
-        ]
-      ],
-      "defaultSelfTradePreventionMode": "EXPIRE_MAKER",
-      "allowedSelfTradePreventionModes": [
-        "EXPIRE_TAKER",
-        "EXPIRE_MAKER",
-        "EXPIRE_BOTH"
-      ]
-    }
-    """
-
     symbol: str = None
     status: str = None
     baseAsset: str = None
@@ -728,352 +384,6 @@ class BinanceMarketInfo(msgspec.Struct):
 
 
 class BinanceMarket(BaseMarket):
-    """
-       {
-      "id": "ETHBTC",
-      "lowercaseId": "ethbtc",
-      "symbol": "ETH/BTC",
-      "base": "ETH",
-      "quote": "BTC",
-      "settle": null,
-      "baseId": "ETH",
-      "quoteId": "BTC",
-      "settleId": null,
-      "type": "spot",
-      "spot": true,
-      "margin": true,
-      "swap": false,
-      "future": false,
-      "option": false,
-      "index": null,
-      "active": true,
-      "contract": false,
-      "linear": null,
-      "inverse": null,
-      "subType": null,
-      "taker": 0.001,
-      "maker": 0.001,
-      "contractSize": null,
-      "expiry": null,
-      "expiryDatetime": null,
-      "strike": null,
-      "optionType": null,
-      "precision": {
-        "amount": 0.0001,
-        "price": 1e-05,
-        "cost": null,
-        "base": 1e-08,
-        "quote": 1e-08
-      },
-      "limits": {
-        "leverage": {
-          "min": null,
-          "max": null
-        },
-        "amount": {
-          "min": 0.0001,
-          "max": 100000.0
-        },
-        "price": {
-          "min": 1e-05,
-          "max": 922327.0
-        },
-        "cost": {
-          "min": 0.0001,
-          "max": 9000000.0
-        },
-        "market": {
-          "min": 0.0,
-          "max": 2716.24643375
-        }
-      },
-      "marginModes": {
-        "cross": false,
-        "isolated": false
-      },
-      "created": null,
-      "info": {
-        "symbol": "ETHBTC",
-        "status": "TRADING",
-        "baseAsset": "ETH",
-        "baseAssetPrecision": "8",
-        "quoteAsset": "BTC",
-        "quotePrecision": "8",
-        "quoteAssetPrecision": "8",
-        "baseCommissionPrecision": "8",
-        "quoteCommissionPrecision": "8",
-        "orderTypes": [
-          "LIMIT",
-          "LIMIT_MAKER",
-          "MARKET",
-          "STOP_LOSS",
-          "STOP_LOSS_LIMIT",
-          "TAKE_PROFIT",
-          "TAKE_PROFIT_LIMIT"
-        ],
-        "icebergAllowed": true,
-        "ocoAllowed": true,
-        "otoAllowed": true,
-        "quoteOrderQtyMarketAllowed": true,
-        "allowTrailingStop": true,
-        "cancelReplaceAllowed": true,
-        "isSpotTradingAllowed": true,
-        "isMarginTradingAllowed": true,
-        "filters": [
-          {
-            "filterType": "PRICE_FILTER",
-            "minPrice": "0.00001000",
-            "maxPrice": "922327.00000000",
-            "tickSize": "0.00001000"
-          },
-          {
-            "filterType": "LOT_SIZE",
-            "minQty": "0.00010000",
-            "maxQty": "100000.00000000",
-            "stepSize": "0.00010000"
-          },
-          {
-            "filterType": "ICEBERG_PARTS",
-            "limit": "10"
-          },
-          {
-            "filterType": "MARKET_LOT_SIZE",
-            "minQty": "0.00000000",
-            "maxQty": "2716.24643375",
-            "stepSize": "0.00000000"
-          },
-          {
-            "filterType": "TRAILING_DELTA",
-            "minTrailingAboveDelta": "10",
-            "maxTrailingAboveDelta": "2000",
-            "minTrailingBelowDelta": "10",
-            "maxTrailingBelowDelta": "2000"
-          },
-          {
-            "filterType": "PERCENT_PRICE_BY_SIDE",
-            "bidMultiplierUp": "5",
-            "bidMultiplierDown": "0.2",
-            "askMultiplierUp": "5",
-            "askMultiplierDown": "0.2",
-            "avgPriceMins": "5"
-          },
-          {
-            "filterType": "NOTIONAL",
-            "minNotional": "0.00010000",
-            "applyMinToMarket": true,
-            "maxNotional": "9000000.00000000",
-            "applyMaxToMarket": false,
-            "avgPriceMins": "5"
-          },
-          {
-            "filterType": "MAX_NUM_ORDERS",
-            "maxNumOrders": "200"
-          },
-          {
-            "filterType": "MAX_NUM_ALGO_ORDERS",
-            "maxNumAlgoOrders": "5"
-          }
-        ],
-        "permissions": [],
-        "permissionSets": [
-          [
-            "SPOT",
-            "MARGIN",
-            "TRD_GRP_004",
-            "TRD_GRP_005",
-            "TRD_GRP_006",
-            "TRD_GRP_008",
-            "TRD_GRP_009",
-            "TRD_GRP_010",
-            "TRD_GRP_011",
-            "TRD_GRP_012",
-            "TRD_GRP_013",
-            "TRD_GRP_014",
-            "TRD_GRP_015",
-            "TRD_GRP_016",
-            "TRD_GRP_017",
-            "TRD_GRP_018",
-            "TRD_GRP_019",
-            "TRD_GRP_020",
-            "TRD_GRP_021",
-            "TRD_GRP_022",
-            "TRD_GRP_023",
-            "TRD_GRP_024",
-            "TRD_GRP_025",
-            "TRD_GRP_026",
-            "TRD_GRP_027",
-            "TRD_GRP_028",
-            "TRD_GRP_029",
-            "TRD_GRP_030",
-            "TRD_GRP_031",
-            "TRD_GRP_032",
-            "TRD_GRP_033",
-            "TRD_GRP_034",
-            "TRD_GRP_035",
-            "TRD_GRP_036",
-            "TRD_GRP_037",
-            "TRD_GRP_038",
-            "TRD_GRP_039",
-            "TRD_GRP_040",
-            "TRD_GRP_041",
-            "TRD_GRP_042",
-            "TRD_GRP_043",
-            "TRD_GRP_044",
-            "TRD_GRP_045",
-            "TRD_GRP_046",
-            "TRD_GRP_047",
-            "TRD_GRP_048",
-            "TRD_GRP_049",
-            "TRD_GRP_050",
-            "TRD_GRP_051",
-            "TRD_GRP_052",
-            "TRD_GRP_053",
-            "TRD_GRP_054",
-            "TRD_GRP_055",
-            "TRD_GRP_056",
-            "TRD_GRP_057",
-            "TRD_GRP_058",
-            "TRD_GRP_059",
-            "TRD_GRP_060",
-            "TRD_GRP_061",
-            "TRD_GRP_062",
-            "TRD_GRP_063",
-            "TRD_GRP_064",
-            "TRD_GRP_065",
-            "TRD_GRP_066",
-            "TRD_GRP_067",
-            "TRD_GRP_068",
-            "TRD_GRP_069",
-            "TRD_GRP_070",
-            "TRD_GRP_071",
-            "TRD_GRP_072",
-            "TRD_GRP_073",
-            "TRD_GRP_074",
-            "TRD_GRP_075",
-            "TRD_GRP_076",
-            "TRD_GRP_077",
-            "TRD_GRP_078",
-            "TRD_GRP_079",
-            "TRD_GRP_080",
-            "TRD_GRP_081",
-            "TRD_GRP_082",
-            "TRD_GRP_083",
-            "TRD_GRP_084",
-            "TRD_GRP_085",
-            "TRD_GRP_086",
-            "TRD_GRP_087",
-            "TRD_GRP_088",
-            "TRD_GRP_089",
-            "TRD_GRP_090",
-            "TRD_GRP_091",
-            "TRD_GRP_092",
-            "TRD_GRP_093",
-            "TRD_GRP_094",
-            "TRD_GRP_095",
-            "TRD_GRP_096",
-            "TRD_GRP_097",
-            "TRD_GRP_098",
-            "TRD_GRP_099",
-            "TRD_GRP_100",
-            "TRD_GRP_101",
-            "TRD_GRP_102",
-            "TRD_GRP_103",
-            "TRD_GRP_104",
-            "TRD_GRP_105",
-            "TRD_GRP_106",
-            "TRD_GRP_107",
-            "TRD_GRP_108",
-            "TRD_GRP_109",
-            "TRD_GRP_110",
-            "TRD_GRP_111",
-            "TRD_GRP_112",
-            "TRD_GRP_113",
-            "TRD_GRP_114",
-            "TRD_GRP_115",
-            "TRD_GRP_116",
-            "TRD_GRP_117",
-            "TRD_GRP_118",
-            "TRD_GRP_119",
-            "TRD_GRP_120",
-            "TRD_GRP_121",
-            "TRD_GRP_122",
-            "TRD_GRP_123",
-            "TRD_GRP_124",
-            "TRD_GRP_125",
-            "TRD_GRP_126",
-            "TRD_GRP_127",
-            "TRD_GRP_128",
-            "TRD_GRP_129",
-            "TRD_GRP_130",
-            "TRD_GRP_131",
-            "TRD_GRP_132",
-            "TRD_GRP_133",
-            "TRD_GRP_134",
-            "TRD_GRP_135",
-            "TRD_GRP_136",
-            "TRD_GRP_137",
-            "TRD_GRP_138",
-            "TRD_GRP_139",
-            "TRD_GRP_140",
-            "TRD_GRP_141",
-            "TRD_GRP_142",
-            "TRD_GRP_143",
-            "TRD_GRP_144",
-            "TRD_GRP_145",
-            "TRD_GRP_146",
-            "TRD_GRP_147",
-            "TRD_GRP_148",
-            "TRD_GRP_149",
-            "TRD_GRP_150",
-            "TRD_GRP_151",
-            "TRD_GRP_152",
-            "TRD_GRP_153",
-            "TRD_GRP_154",
-            "TRD_GRP_155",
-            "TRD_GRP_156",
-            "TRD_GRP_157",
-            "TRD_GRP_158",
-            "TRD_GRP_159",
-            "TRD_GRP_160",
-            "TRD_GRP_161",
-            "TRD_GRP_162",
-            "TRD_GRP_163",
-            "TRD_GRP_164",
-            "TRD_GRP_165",
-            "TRD_GRP_166",
-            "TRD_GRP_167",
-            "TRD_GRP_168",
-            "TRD_GRP_169",
-            "TRD_GRP_170",
-            "TRD_GRP_171",
-            "TRD_GRP_172",
-            "TRD_GRP_173",
-            "TRD_GRP_174",
-            "TRD_GRP_175",
-            "TRD_GRP_176",
-            "TRD_GRP_177",
-            "TRD_GRP_178",
-            "TRD_GRP_179",
-            "TRD_GRP_180",
-            "TRD_GRP_181",
-            "TRD_GRP_182",
-            "TRD_GRP_183",
-            "TRD_GRP_184"
-          ]
-        ],
-        "defaultSelfTradePreventionMode": "EXPIRE_MAKER",
-        "allowedSelfTradePreventionModes": [
-          "EXPIRE_TAKER",
-          "EXPIRE_MAKER",
-          "EXPIRE_BOTH"
-        ]
-      },
-      "tierBased": false,
-      "percentage": true,
-      "feeSide": "get"
-    },
-    """
-
     info: BinanceMarketInfo
     feeSide: str
 
@@ -1101,66 +411,6 @@ class BinanceAccountUpdateData(msgspec.Struct, kw_only=True):
     P: list[BinanceAccountPositionData]
 
 class BinanceAccountUpdateMsg(msgspec.Struct, kw_only=True):
-    """
-    {
-        "e": "ACCOUNT_UPDATE",				// Event Type
-        "E": 1564745798939,            		// Event Time
-        "T": 1564745798938 ,           		// Transaction
-        "a":                          		// Update Data
-            {
-            "m":"ORDER",						// Event reason type
-            "B":[                     		// Balances
-                {
-                "a":"USDT",           		// Asset
-                "wb":"122624.12345678",    	// Wallet Balance
-                "cw":"100.12345678",			// Cross Wallet Balance
-                "bc":"50.12345678"			// Balance Change except PnL and Commission
-                },
-                {
-                "a":"BUSD",           
-                "wb":"1.00000000",
-                "cw":"0.00000000",         
-                "bc":"-49.12345678"
-                }
-            ],
-            "P":[
-                {
-                "s":"BTCUSDT",          	// Symbol
-                "pa":"0",               	// Position Amount
-                "ep":"0.00000",            // Entry Price
-                "bep":"0",                // breakeven price 
-                "cr":"200",             	// (Pre-fee) Accumulated Realized
-                "up":"0",						// Unrealized PnL
-                "mt":"isolated",				// Margin Type
-                "iw":"0.00000000",			// Isolated Wallet (if isolated position)
-                "ps":"BOTH"					// Position Side
-                }，
-                {
-                    "s":"BTCUSDT",
-                    "pa":"20",
-                    "ep":"6563.66500",
-                    "bep":"0",                // breakeven price
-                    "cr":"0",
-                    "up":"2850.21200",
-                    "mt":"isolated",
-                    "iw":"13200.70726908",
-                    "ps":"LONG"
-                },
-                {
-                    "s":"BTCUSDT",
-                    "pa":"-10",
-                    "ep":"6563.86000",
-                    "bep":"6563.6",          // breakeven price
-                    "cr":"-45.04000000",
-                    "up":"-1423.15600",
-                    "mt":"isolated",
-                    "iw":"6570.42511771",
-                    "ps":"SHORT"
-                }
-            ]
-            }
-        }
-    """
     e: BinanceUserDataStreamWsEventType
     E: int
     T: int

@@ -6,4 +6,5 @@ API Reference
 
    core/index
    base/index
+   exchange/index
 

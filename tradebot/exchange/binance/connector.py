@@ -128,32 +128,6 @@ class BinancePublicConnector(PublicConnector):
             self._log.error(f"Error decoding message: {str(raw)}")
 
     def _parse_kline(self, raw: bytes) -> Kline:
-        """
-        {
-            "e": "kline",     // Event type
-            "E": 1672515782136,   // Event time
-            "s": "BNBBTC",    // Symbol
-            "k": {
-                "t": 123400000, // Kline start time
-                "T": 123460000, // Kline close time
-                "s": "BNBBTC",  // Symbol
-                "i": "1m",      // Interval
-                "f": 100,       // First trade ID
-                "L": 200,       // Last trade ID
-                "o": "0.0010",  // Open price
-                "c": "0.0020",  // Close price
-                "h": "0.0025",  // High price
-                "l": "0.0015",  // Low price
-                "v": "1000",    // Base asset volume
-                "n": 100,       // Number of trades
-                "x": false,     // Is this kline closed?
-                "q": "1.0000",  // Quote asset volume
-                "V": "500",     // Taker buy base asset volume
-                "Q": "0.500",   // Taker buy quote asset volume
-                "B": "123456"   // Ignore
-            }
-        }
-        """
         res = self._ws_kline_decoder.decode(raw)
         id = res.s + self.market_type
         symbol = self._market_id[id]
@@ -173,29 +147,6 @@ class BinancePublicConnector(PublicConnector):
         self._msgbus.publish(topic="kline", msg=ticker)
 
     def _parse_trade(self, raw: bytes) -> Trade:
-        """
-        {
-            "e": "trade",       // Event type
-            "E": 1672515782136, // Event time
-            "s": "BNBBTC",      // Symbol
-            "t": 12345,         // Trade ID
-            "p": "0.001",       // Price
-            "q": "100",         // Quantity
-            "T": 1672515782136, // Trade time
-            "m": true,          // Is the buyer the market maker?
-            "M": true           // Ignore
-        }
-
-        {
-            "u":400900217,     // order book updateId
-            "s":"BNBUSDT",     // symbol
-            "b":"25.35190000", // best bid price
-            "B":"31.21000000", // best bid qty
-            "a":"25.36520000", // best ask price
-            "A":"40.66000000"  // best ask qty
-        }
-        """
-
         res = self._ws_trade_decoder.decode(raw)
 
         id = res.s + self.market_type
@@ -212,16 +163,6 @@ class BinancePublicConnector(PublicConnector):
         self._msgbus.publish(topic="trade", msg=trade)
 
     def _parse_spot_book_ticker(self, raw: bytes) -> BookL1:
-        """
-        {
-            "u":400900217,     // order book updateId
-            "s":"BNBUSDT",     // symbol
-            "b":"25.35190000", // best bid price
-            "B":"31.21000000", // best bid qty
-            "a":"25.36520000", // best ask price
-            "A":"40.66000000"  // best ask qty
-        }
-        """
         res = self._ws_spot_book_ticker_decoder.decode(raw)
         id = res.s + self.market_type
         symbol = self._market_id[id]
@@ -255,18 +196,6 @@ class BinancePublicConnector(PublicConnector):
         self._msgbus.publish(topic="bookl1", msg=bookl1)
 
     def _parse_mark_price(self, raw: bytes):
-        """
-         {
-            "e": "markPriceUpdate",     // Event type
-            "E": 1562305380000,         // Event time
-            "s": "BTCUSDT",             // Symbol
-            "p": "11794.15000000",      // Mark price
-            "i": "11784.62659091",      // Index price
-            "P": "11784.25641265",      // Estimated Settle Price, only useful in the last hour before the settlement starts
-            "r": "0.00038167",          // Funding rate
-            "T": 1562306400000          // Next funding time
-        }
-        """
         res = self._ws_mark_price_decoder.decode(raw)
         id = res.s + self.market_type
         symbol = self._market_id[id]
@@ -424,44 +353,6 @@ class BinancePrivateConnector(PrivateConnector):
             self._log.error(f"Error decoding message: {str(raw)}")
 
     def _parse_order_trade_update(self, raw: bytes) -> Order:
-        """
-        {
-            "e": "ORDER_TRADE_UPDATE", // Event type
-            "T": 1727352962757,  // Transaction time
-            "E": 1727352962762, // Event time
-            "fs": "UM", // Event business unit. 'UM' for USDS-M futures and 'CM' for COIN-M futures
-            "o": {
-                "s": "NOTUSDT", // Symbol
-                "c": "c-11WLU7VP1727352880uzcu2rj4ss0i", // Client order ID
-                "S": "SELL", // Side
-                "o": "LIMIT", // Order type
-                "f": "GTC", // Time in force
-                "q": "5488", // Original quantity
-                "p": "0.0084830", // Original price
-                "ap": "0", // Average price
-                "sp": "0", // Ignore
-                "x": "NEW", // Execution type
-                "X": "NEW", // Order status
-                "i": 4968510801, // Order ID
-                "l": "0", // Order last filled quantity
-                "z": "0", // Order filled accumulated quantity
-                "L": "0", // Last filled price
-                "n": "0", // Commission, will not be returned if no commission
-                "N": "USDT", // Commission asset, will not be returned if no commission
-                "T": 1727352962757, // Order trade time
-                "t": 0, // Trade ID
-                "b": "0", // Bids Notional
-                "a": "46.6067521", // Ask Notional
-                "m": false, // Is this trade the maker side?
-                "R": false, // Is this reduce only
-                "ps": "BOTH", // Position side
-                "rp": "0", // Realized profit of the trade
-                "V": "EXPIRE_NONE", // STP mode
-                "pm": "PM_NONE",
-                "gtd": 0
-            }
-        }
-        """
         res = self._ws_msg_futures_order_update_decoder.decode(raw)
 
         event_data = res.o
@@ -517,70 +408,6 @@ class BinancePrivateConnector(PrivateConnector):
         self._msgbus.publish(topic="binance.order", msg=order)
 
     def _parse_execution_report(self, raw: bytes) -> Order:
-        """
-        {
-            "e": "executionReport", // Event type
-            "E": 1727353057267, // Event time
-            "s": "ORDIUSDT", // Symbol
-            "c": "c-11WLU7VP2rj4ss0i", // Client order ID
-            "S": "BUY", // Side
-            "o": "MARKET", // Order type
-            "f": "GTC", // Time in force
-            "q": "0.50000000", // Order quantity
-            "p": "0.00000000", // Order price
-            "P": "0.00000000", // Stop price
-            "g": -1, // Order list id
-            "x": "TRADE", // Execution type
-            "X": "PARTIALLY_FILLED", // Order status
-            "i": 2233880350, // Order ID
-            "l": "0.17000000", // last executed quantity
-            "z": "0.17000000", // Cumulative filled quantity
-            "L": "36.88000000", // Last executed price
-            "n": "0.00000216", // Commission amount
-            "N": "BNB", // Commission asset
-            "T": 1727353057266, // Transaction time
-            "t": 105069149, // Trade ID
-            "w": false, // Is the order on the book?
-            "m": false, // Is this trade the maker side?
-            "O": 1727353057266, // Order creation time
-            "Z": "6.26960000", // Cumulative quote asset transacted quantity
-            "Y": "6.26960000", // Last quote asset transacted quantity (i.e. lastPrice * lastQty)
-            "V": "EXPIRE_MAKER", // Self trade prevention Mode
-            "I": 1495839281094 // Ignore
-        }
-
-        # Example of an execution report event for a partially filled market buy order
-        {
-            "e": "executionReport", // Event type
-            "E": 1727353057267, // Event time
-            "s": "ORDIUSDT", // Symbol
-            "c": "c-11WLU7VP2rj4ss0i", // Client order ID
-            "S": "BUY", // Side
-            "o": "MARKET", // Order type
-            "f": "GTC", // Time in force
-            "q": "0.50000000", // Order quantity
-            "p": "0.00000000", // Order price
-            "P": "0.00000000", // Stop price
-            "g": -1, // Order list id
-            "x": "TRADE", // Execution type
-            "X": "PARTIALLY_FILLED", // Order status
-            "i": 2233880350, // Order ID
-            "l": "0.17000000", // last executed quantity
-            "z": "0.34000000", // Cumulative filled quantity
-            "L": "36.88000000", // Last executed price
-            "n": "0.00000216", // Commission amount
-            "N": "BNB", // Commission asset
-            "T": 1727353057266, // Transaction time
-            "t": 105069150, // Trade ID
-            "w": false, // Is the order on the book?
-            "m": false, // Is this trade the maker side?
-            "O": 1727353057266, // Order creation time
-            "Z": "12.53920000", // Cumulative quote asset transacted quantity
-            "Y": "6.26960000", // Last quote asset transacted quantity (i.e. lastPrice * lastQty)
-            "V": "EXPIRE_MAKER", // Self trade prevention Mode
-            "I": 1495839281094 // Ignore
-        }
-        """
         event_data = self._ws_msg_spot_order_update_decoder.decode(raw)
 
         id = event_data.s + self.market_type

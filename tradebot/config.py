@@ -23,21 +23,20 @@ class PrivateConnectorConfig:
     
 @dataclass
 class ZeroMQSignalConfig:
-    """
-    Custom signal config
-    socket: zmq.asyncio.Socket
-    
-    ```
-    from zmq.asyncio import Context
-    
-    context = Context()
-    socket = context.socket(zmq.SUB)
-    socket.connect("ipc:///tmp/zmq_custom_signal")
-    
-    # Subscribe to all messages
-    socket.setsockopt(zmq.SUBSCRIBE, b"")
-    ```
-    
+    """ZeroMQ Signal Configuration Class.
+
+    Used to configure the ZeroMQ subscriber socket to receive custom trade signals.
+
+    Attributes:
+        socket (`zmq.asyncio.Socket`): ZeroMQ asynchronous socket object
+
+    Example:
+        >>> from zmq.asyncio import Context
+        >>> context = Context()
+        >>> socket = context.socket(zmq.SUB)
+        >>> socket.connect("ipc:///tmp/zmq_custom_signal")
+        >>> socket.setsockopt(zmq.SUBSCRIBE, b"")
+        >>> config = ZeroMQSignalConfig(socket=socket)
     """
     socket: Socket
     

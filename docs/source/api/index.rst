@@ -7,4 +7,10 @@ API Reference
    core/index
    base/index
    exchange/index
+   error
+   schema
+   strategy
+   config
+   constants
+   engine
 

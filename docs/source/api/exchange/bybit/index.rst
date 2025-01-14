@@ -2,7 +2,7 @@ tradebot.exchange.bybit
 =======================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    connector
    constants

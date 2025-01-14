@@ -294,7 +294,7 @@ an [issue](https://github.com/Quantweb3-ai/tradebot-pro/issues) on GitHub. This 
 ensure it aligns with the project's goals, while also helping to avoid duplicate efforts.
 
 When you're ready to start working on your contribution, please review the guidelines in
-the [CONTRIBUTING.md](CONTRIBUTING.md) file. Depending on the nature of your contribution, you may also need to sign a
+the [CONTRIBUTING.md](./CONTRIBUTING.md) file. Depending on the nature of your contribution, you may also need to sign a
 Contributor License Agreement (CLA) to ensure it can be included in the project.
 
 > **Note**
@@ -345,4 +345,4 @@ We recommend exploring related tools and projects that can enhance your trading 
 
 TradeBotPro is available on GitHub under the MIT License. Contributions to the project are welcome and require the
 completion of a Contributor License Agreement (CLA). Please review the contribution guidelines and submit a pull
-request. See the [LICENSE](LICENSE) file for details.
+request. See the [LICENSE](./LICENSE) file for details.

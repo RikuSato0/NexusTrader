@@ -77,39 +77,22 @@ class BybitWSClient(WSClient):
             self._log.debug(f"Already subscribed to {topic}")
 
     async def subscribe_order_book(self, symbol: str, depth: int):
-        """
-        ### Linear & inverse:
-        - Level 1 data, push frequency: 10ms
-        - Level 50 data, push frequency: 20ms
-        - Level 200 data, push frequency: 100ms
-        - Level 500 data, push frequency: 100ms
-
-        ### Spot:
-        - Level 1 data, push frequency: 10ms
-        - Level 50 data, push frequency: 20ms
-        - Level 200 data, push frequency: 200ms
-
-        ### Option:
-        - Level 25 data, push frequency: 20ms
-        - Level 100 data, push frequency: 100ms
-        """
+        """subscribe to orderbook"""
         topic = f"orderbook.{depth}.{symbol}"
         await self._subscribe(topic)
 
     async def subscribe_trade(self, symbol: str):
+        """subscribe to trade"""
         topic = f"publicTrade.{symbol}"
         await self._subscribe(topic)
 
     async def subscribe_ticker(self, symbol: str):
+        """subscribe to ticker"""
         topic = f"tickers.{symbol}"
         await self._subscribe(topic)
     
     async def subscribe_kline(self, symbol: str, interval: int):
-        """
-        ### Available intervals:
-        - 1 3 5 15 30 (min)
-        - 60 120 240 360 720 (min)
-        """
+        """subscribe to kline"""
         topic = f"kline.{interval}.{symbol}"
         await self._subscribe(topic)
 
@@ -121,37 +104,13 @@ class BybitWSClient(WSClient):
             await self._send(payload)
 
     async def subscribe_order(self, topic: str = "order"):
-        """
-        ### Topics:
-        
-        #### All in one:
-        - order
-        
-        Categorical topics:
-        - order.spot
-        - order.linear
-        - order.inverse
-        - order.option
-        """
+        """subscribe to order"""
         await self._subscribe(topic, auth=True)
     
     async def subscribe_position(self, topic: str = "position"):
-        """
-        ### Topics:
-        
-        #### All in one:
-        - position
-        
-        Categorical topics:
-        - position.linear
-        - position.inverse
-        - position.option
-        """
+        """subscribe to position"""
         await self._subscribe(topic, auth=True)
     
     async def subscribe_wallet(self, topic: str = "wallet"):
-        """
-        ### Topics:
-        - wallet
-        """
+        """subscribe to wallet"""
         await self._subscribe(topic, auth=True)

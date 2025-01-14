@@ -62,7 +62,7 @@ quantitative trading solutions.
 
 ### Architecture (data flow)
 
-![Architecture](/Users/mac/go/src/tradebot-pro/docs/source/_static/arch.png "architecture")
+![Architecture](docs/source/_static/arch.png "architecture")
 
 ### Features
 

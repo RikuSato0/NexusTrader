@@ -25,7 +25,7 @@ quantitative trading solutions.
 1. **Professionally Optimized Order Algorithms：** Deep optimization for algorithmic orders including TWAP, effectively
    reducing market impact costs. Users can easily integrate their own execution signals to achieve more efficient and
    precise order execution.
-2. **Professional Arbitrage Strategy Support：**Provides professional optimization for various arbitrage strategies,
+2. **Professional Arbitrage Strategy Support：** Provides professional optimization for various arbitrage strategies,
    including funding rate arbitrage and cross-exchange arbitrage, supporting real-time tracking and trading of thousands
    of trading pairs to help users easily capture arbitrage opportunities.
 3. **Full-Featured Quantitative Trading Framework：** Users don't need to build frameworks or handle complex exchange

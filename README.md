@@ -1,7 +1,7 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/RiverTrading/tradebot-pro-doc/develop/docs/source/_static/logo-dark-new.png">
-  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/RiverTrading/tradebot-pro-doc/develop/docs/source/_static/logo-light-new.png">
-  <img alt="TradeBotPro Logo" src="https://raw.githubusercontent.com/RiverTrading/tradebot-pro-doc/develop/docs/source/_static/logo-light-new.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/source/_static/logo-dark-new.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/source/_static/logo-light-new.png">
+  <img alt="TradeBotPro Logo" src="docs/source/_static/logo-light-new.png">
 </picture>
 
 

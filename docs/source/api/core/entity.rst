@@ -14,27 +14,49 @@ Class Overview
    :show-inheritance:
 
 .. autoclass:: TaskManager
-   :members: __init__, create_task, cancel_task, wait, cancel
+   :members:
    :undoc-members:
    :show-inheritance:
 
 .. autoclass:: RedisClient
-   :members: get_client, get_async_client
+   :members: 
    :undoc-members:
    :show-inheritance:
 
 .. autoclass:: Clock
-   :members: __init__, add_tick_callback, run
+   :members:
    :undoc-members:
    :show-inheritance:
 
 .. autoclass:: ZeroMQSignalRecv
-   :members: __init__, start
+   :members:
    :undoc-members:
    :show-inheritance:
 
 .. autoclass:: DataReady
-   :members: __init__, input, ready
+   :members: 
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
+   Example
+   -------
+   Input data to the ``DataReady`` class in the ``on_bookl1`` method. 
+
+   .. code-block:: python
+
+      class Demo(Strategy):
+         def __init__(self):
+            super().__init__()
+            self.symbols = ["BTCUSDT-PERP.BYBIT"]
+            self.data_ready = DataReady(symbols=self.symbols)
+            
+         def on_bookl1(self, bookl1: BookL1):
+            self.data_ready.input(bookl1) # input data here
+            
+         def on_custom_signal(self, signal):
+            if not self.data_ready.ready:
+               self.log.info("Data not ready, skip")
+               return
+            
+            # other trading logic....

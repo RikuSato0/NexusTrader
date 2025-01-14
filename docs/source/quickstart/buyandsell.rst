@@ -117,4 +117,4 @@ Finally, you can run the strategy by passing the ``config`` to the ``Engine`` cl
         finally:
             engine.dispose()
 
-The full code can be found in `Simple Buy and Sell <../../strategy/okx/buy_and_cancel.py>`_.
+The full code can be found in :download:`buy_and_cancel.py <../../../strategy/okx/buy_and_cancel.py>`.

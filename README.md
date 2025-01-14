@@ -314,11 +314,11 @@ Act now and take advantage of this opportunity to enhance your trading experienc
 
 Connect with us on your favorite platforms:
 
-- **[X (formerly Twitter)](https://x.com/quantweb3_ai)**: Stay updated with our latest news, features, and
-  announcements.
-- **[Discord](https://discord.gg/BR8VGRrXFr)**: Join our community to discuss ideas, get support, and connect with other
-  users.
-- **[Telegram](https://t.me/+6e2MtXxoibM2Yzlk)**: Receive instant updates and engage in real-time discussions.
+[![X (Twitter)](https://img.shields.io/badge/X_(Twitter)-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/quantweb3_ai) Stay updated with our latest news, features, and announcements.
+
+[![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/BR8VGRrXFr) Join our community to discuss ideas, get support, and connect with other users.
+
+[![Telegram](https://img.shields.io/badge/Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/+6e2MtXxoibM2Yzlk) Receive instant updates and engage in real-time discussions.
 
 ## See Also  
 

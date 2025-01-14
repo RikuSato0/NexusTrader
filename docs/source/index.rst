@@ -11,50 +11,38 @@ quantitative trading solutions.
 Core Advantages
 -----------------
 
-- 🚀 **Professionally Optimized Order Algorithms：** Deep optimization for algorithmic orders including TWAP, effectively
-   reducing market impact costs. Users can easily integrate their own execution signals to achieve more efficient and
-   precise order execution.
-- 💰 **Professional Arbitrage Strategy Support：** Provides professional optimization for various arbitrage strategies,
-   including funding rate arbitrage and cross-exchange arbitrage, supporting real-time tracking and trading of thousands
-   of trading pairs to help users easily capture arbitrage opportunities.
-- 🚧 **Full-Featured Quantitative Trading Framework：** Users don't need to build frameworks or handle complex exchange
-   interface details themselves. TradeBot has integrated professional position management, order management, fund
-   management, and statistical analysis modules, allowing users to focus on writing strategy logic and quickly implement
-   quantitative trading.
-- 🚀 **Multi-Market Support and High Scalability：** Supports large-scale multi-market tracking and high-frequency strategy
-   execution, covering a wide range of trading instruments, making it an ideal choice for professional trading needs.
+- 🚀 **Professionally Optimized Order Algorithms：** Deep optimization for algorithmic orders including TWAP, effectively reducing market impact costs. Users can easily integrate their own execution signals to achieve more efficient and precise order execution.
+- 💰 **Professional Arbitrage Strategy Support：** Provides professional optimization for various arbitrage strategies, including funding rate arbitrage and cross-exchange arbitrage, supporting real-time tracking and trading of thousandsof trading pairs to help users easily capture arbitrage opportunities.
+- 🚧 **Full-Featured Quantitative Trading Framework：** Users don't need to build frameworks or handle complex exchange interface details themselves. TradeBot has integrated professional position management, order management, fundmanagement, and statistical analysis modules, allowing users to focus on writing strategy logic and quickly implement quantitative trading.
+- 🚀 **Multi-Market Support and High Scalability：** Supports large-scale multi-market tracking and high-frequency strategy execution, covering a wide range of trading instruments, making it an ideal choice for professional trading needs.
 
 Why TradeBot Is More Efficient?
 ------------------------------------
 
-  - **Enhanced Event Loop Performance**
-    TradeBot leverages `uvloop <https://github.com/MagicStack/uvloop>`_, a high-performance event loop, delivering speeds up to 2-4 times faster than Python's default asyncio loop.
-
-  - **High-Performance WebSocket Framework**
-    Built with `picows <https://github.com/tarasko/picows>`_, a Cython-based WebSocket library that matches the speed of C++'s Boost.Beast, significantly outperforming Python alternatives like websockets and aiohttp.
-
-  - **Optimized Data Serialization**
-    Utilizing `msgspec` for serialization and deserialization, TradeBot achieves unmatched efficiency, surpassing tools like ``orjson``, ``ujson``, and ``json``. All data classes are implemented with ``msgspec.Struct`` for maximum performance.
-
-  - **Scalable Order Management**
-    Orders are handled efficiently using ``asyncio.Queue``, ensuring seamless processing even at high volumes.
-
-  - **Rust-Powered Core Components**
-    Core modules such as the MessageBus and Clock are implemented in Rust, combining Rust's speed and reliability with Python's flexibility through the `nautilius <https://github.com/nautilius/nautilius>`_ framework.
+- **Enhanced Event Loop Performance**:
+  TradeBot leverages `uvloop <https://github.com/MagicStack/uvloop>`_, a high-performance event loop, delivering speeds up to 2-4 times faster than Python's default asyncio loop.
+- **High-Performance WebSocket Framework**:
+  Built with `picows <https://github.com/tarasko/picows>`_, a Cython-based WebSocket library that matches the speed of C++'s Boost.Beast, significantly outperforming Python alternatives like websockets and aiohttp.
+- **Optimized Data Serialization**:
+  Utilizing `msgspec` for serialization and deserialization, TradeBot achieves unmatched efficiency, surpassing tools like ``orjson``, ``ujson``, and ``json``. All data classes are implemented with ``msgspec.Struct`` for maximum performance.
+- **Scalable Order Management**:
+  Orders are handled efficiently using ``asyncio.Queue``, ensuring seamless processing even at high volumes.
+- **Rust-Powered Core Components**:
+  Core modules such as the MessageBus and Clock are implemented in Rust, combining Rust's speed and reliability with Python's flexibility through the `nautilius <https://github.com/nautilius/nautilius>`_ framework.
 
 Key Features
 --------------
 
-- 🌍 Multi-Exchange Integration: Effortlessly connect to top exchanges like Binance, Bybit, and OKX, with an extensible design to support additional platforms.
-- ⚡ Asynchronous Operations: Built on asyncio for highly efficient, scalable performance, even during high-frequency trading.
-- 📡 Real-Time Data Streaming: Reliable WebSocket support for live market data, order book updates, and trade execution notifications.
-- 📊 Advanced Order Management: Execute diverse order types (limit, market, stop) with optimized, professional-grade order handling.
-- 📋 Account Monitoring: Real-time tracking of balances, positions, and PnL across multiple exchanges with integrated monitoring tools.
-- 🛠️ Modular Architecture: Flexible framework to add exchanges, instruments, or custom strategies with ease.
-- 🔄 Strategy Execution & Backtesting: Seamlessly transition from strategy testing to live trading with built-in tools.
-- 📈 Scalability: Designed to handle large-scale, multi-market operations for retail and institutional traders alike.
-- 💰 Risk & Fund Management: Optimize capital allocation and control risk exposure with integrated management tools.
-- 🔔 Instant Notifications: Stay updated with alerts for trades, market changes, and custom conditions.
+- 🌍 **Multi-Exchange Integration**: Effortlessly connect to top exchanges like Binance, Bybit, and OKX, with an extensible design to support additional platforms.
+- ⚡ **Asynchronous Operations**: Built on asyncio for highly efficient, scalable performance, even during high-frequency trading.
+- 📡 **Real-Time Data Streaming**: Reliable WebSocket support for live market data, order book updates, and trade execution notifications.
+- 📊 **Advanced Order Management**: Execute diverse order types (limit, market, stop) with optimized, professional-grade order handling.
+- 📋 **Account Monitoring**: Real-time tracking of balances, positions, and PnL across multiple exchanges with integrated monitoring tools.
+- 🛠️ **Modular Architecture**: Flexible framework to add exchanges, instruments, or custom strategies with ease.
+- 🔄 **Strategy Execution & Backtesting**: Seamlessly transition from strategy testing to live trading with built-in tools.
+- 📈 **Scalability**: Designed to handle large-scale, multi-market operations for retail and institutional traders alike.
+- 💰 **Risk & Fund Management**: Optimize capital allocation and control risk exposure with integrated management tools.
+- 🔔 **Instant Notifications**: Stay updated with alerts for trades, market changes, and custom conditions.
 
 Contact
 -------

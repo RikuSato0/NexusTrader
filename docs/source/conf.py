@@ -65,6 +65,10 @@ autodoc_mock_imports = [
     "returns",
     "picows",
     "apscheduler",
+    "zmq",
+    "certifi",
+    "bcrypt",
+    "pathlib",
 ]
 
 # Docutils settings

@@ -6,8 +6,9 @@ Concepts
    :caption: Contents:
 
    instruments
-   strategies
    orders
+   strategies
+   
 
 
 Explore the foundational concepts of TradeBot through the following guides.

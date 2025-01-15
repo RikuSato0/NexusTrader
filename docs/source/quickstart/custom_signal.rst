@@ -51,3 +51,41 @@ You need to send your trading signal to a zmq server. Here we are using the ``ip
     if __name__ == "__main__":
         main()
 
+The full code can be found in the :download:`signal_server.py <../../../strategy/bybit/signal_server.py>`.
+
+Build a Receiver
+-----------------------------
+
+Fisrt, we need to build a receiver to receive the signal. Then pass the ``socket`` to the ``ZeroMQSignalConfig`` in the ``config``.
+
+.. code-block:: python
+
+    import zmq
+
+    context = Context()
+    socket = context.socket(zmq.SUB)
+    socket.connect("ipc:///tmp/zmq_data_test")
+    socket.setsockopt(zmq.SUBSCRIBE, b"")
+
+    config = Config(
+        zero_mq_signal_config=ZeroMQSignalConfig(
+            socket=socket,
+        )
+    )
+
+
+Then, we need to define ``on_custom_signal`` method in the strategy.
+
+.. code-block:: python
+
+    class Demo(Strategy):
+        def __init__(self):
+            super().__init__()
+            # subscribe the symbol here
+            ...
+
+        def on_custom_signal(self, signal):
+            # implement the trading logic Here
+            ...
+
+The full code can be found in the :download:`custom_signal.py <../../../strategy/bybit/custom_signal.py>`.

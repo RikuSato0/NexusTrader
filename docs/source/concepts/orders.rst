@@ -88,3 +88,26 @@ The ``AlgoOrder`` is a special type of order that is created by the ``create_twa
 - ``CANCELLED``: when the ``TWAP`` order is cancelled
 - ``FINISHED``: when the ``TWAP`` order is finished
 - ``FAILED``: when the ``TWAP`` order is failed to be created, or one of the orders in the ``TWAP`` order is failed to be created.
+
+Order Linkage
+--------------
+
+Order Creation
+~~~~~~~~~~~~~~~
+
+Tradebot uses an internal order and exchange order linkage mechanism. When an internal order is created, i.e., the status is ``INITIALIZED``, a ``UUID`` is automatically created. When it is submitted to the exchange, if successful, it will be linked to the ``ORDER_ID`` returned by the exchange. If it fails, it will not be linked, and the ``UUID`` will be set to ``FAILED``.
+
+.. image:: ../_static/link.png
+    :alt: Order Linkage
+    :align: center
+    :width: 70%
+
+Order Cancellation
+~~~~~~~~~~~~~~~~~~
+
+When an order is canceled, user need to specify the ``UUID`` of the order to be canceled by calling the ``cancel_order`` method in ``Strategy`` class. The ``UUID`` will be mapped to the ``ORDER_ID`` and submitted to the exchange for cancellation.
+
+.. image:: ../_static/link_cancel.png
+    :alt: Order Cancellation
+    :align: center
+    :width: 70%

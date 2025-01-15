@@ -1,5 +1,5 @@
 tradebot.exchange.bybit.constants
-================================
+====================================
 
 .. currentmodule:: tradebot.exchange.bybit.constants
 
@@ -69,7 +69,7 @@ Enums
    :show-inheritance:
 
 Utility Classes
---------------
+--------------------
 
 .. autoclass:: BybitEnumParser
    :members:
@@ -77,7 +77,7 @@ Utility Classes
    :show-inheritance:
 
 Constants
---------
+---------------
 
 .. autodata:: WS_PUBLIC_URL
    :annotation:

@@ -16,7 +16,7 @@ Class Overview
 -----------------
 
 Market Data
-~~~~~~~~~~
+~~~~~~~~~~~~~~~
 .. autoclass:: BybitMarket
    :members:
    :undoc-members:
@@ -27,7 +27,7 @@ Market Data
    :undoc-members:
 
 Order Related
-~~~~~~~~~~
+~~~~~~~~~~~~~~~
 .. autoclass:: BybitOrder
    :members:
    :undoc-members:
@@ -41,7 +41,7 @@ Order Related
    :undoc-members:
 
 Position Related
-~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 .. autoclass:: BybitPositionStruct
    :members:
    :undoc-members:
@@ -51,7 +51,7 @@ Position Related
    :undoc-members:
 
 WebSocket Messages
-~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: BybitWsMessageGeneral
    :members:
    :undoc-members:
@@ -69,7 +69,7 @@ WebSocket Messages
    :undoc-members:
 
 Balance Related
-~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: BybitWalletBalance
    :members:
    :undoc-members:

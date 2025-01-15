@@ -1,5 +1,5 @@
 tradebot.exchange.okx
-====================
+===========================
 
 .. toctree::
    :maxdepth: 1

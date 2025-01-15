@@ -26,7 +26,7 @@ Class Overview
    Automatically registers for order messages on the "okx.order" endpoint.
 
 Implementation Notes
------------------
+-------------------------------
 
 The OMS is responsible for:
  * Tracking order lifecycle

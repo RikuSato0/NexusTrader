@@ -10,6 +10,7 @@ Welcome to TradeBot's documentation!
 
 Introduction
 -----------------
+
 TradeBot is a professional-grade open-source quantitative trading platform, specifically designed for **large capital
 management** and **complex strategy development**, dedicated to providing high-performance, scalable, and user-friendly
 quantitative trading solutions.
@@ -35,6 +36,13 @@ Why TradeBot Is More Efficient?
   Orders are handled efficiently using ``asyncio.Queue``, ensuring seamless processing even at high volumes.
 - **Rust-Powered Core Components**:
   Core modules such as the MessageBus and Clock are implemented in Rust, combining Rust's speed and reliability with Python's flexibility through the `nautilius <https://github.com/nautilius/nautilius>`_ framework.
+
+Architecture(Data Flow)
+----------------------------
+
+.. image:: ./_static/arch.png
+   :alt: Data Flow Diagram
+   :align: center
 
 Key Features
 --------------

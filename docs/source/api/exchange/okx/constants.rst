@@ -27,7 +27,7 @@ Account Types
    :show-inheritance:
 
 Trading Parameters
------------------
+----------------------
 
 .. autoclass:: OkxTdMode
    :members:

@@ -1,5 +1,5 @@
 tradebot.exchange.binance.constants
-==================================
+==========================================
 
 .. currentmodule:: tradebot.exchange.binance.constants
 
@@ -84,7 +84,7 @@ Enums
    :show-inheritance:
 
 Utility Classes
---------------
+---------------------
 
 .. autoclass:: BinanceEnumParser
    :members:
@@ -92,7 +92,7 @@ Utility Classes
    :show-inheritance:
 
 Constants
---------
+---------------
 
 .. autodata:: BASE_URLS
    :annotation:

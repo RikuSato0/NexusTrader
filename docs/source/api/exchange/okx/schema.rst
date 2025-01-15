@@ -6,7 +6,7 @@ tradebot.exchange.okx.schema
 This module defines data structures and models for OKX exchange API responses and WebSocket messages.
 
 WebSocket Message Models
------------------------
+-----------------------------
 
 .. autoclass:: OkxWsGeneralMsg
    :members:
@@ -34,7 +34,7 @@ WebSocket Message Models
    :show-inheritance:
 
 REST API Response Models
------------------------
+------------------------------
 
 Order Related
 ^^^^^^^^^^^^^
@@ -50,7 +50,7 @@ Order Related
    :show-inheritance:
 
 Account Related
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: OkxBalanceResponse
    :members:
@@ -63,7 +63,7 @@ Account Related
    :show-inheritance:
 
 Market Data Models
------------------
+------------------------------
 
 .. autoclass:: OkxMarket
    :members:
@@ -87,7 +87,7 @@ Market Data Models
       }
 
 Error Response Models
--------------------
+------------------------------
 
 .. autoclass:: OkxErrorResponse
    :members:

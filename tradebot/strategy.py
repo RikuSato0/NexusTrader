@@ -134,23 +134,6 @@ class Strategy:
         account_type: AccountType | None = None,
         **kwargs,
     ) -> str:
-        """
-        Submit a new order.
-
-        Args:
-            symbol (str): The trading symbol/pair (e.g. "BTCUSDT-PERP.BINANCE, BTCUSDT.OKX")
-            side (OrderSide): The side of the order (e.g. OrderSide.BUY)
-            type (OrderType): The type of the order (e.g. OrderType.MARKET)
-            amount (Decimal): The amount of the order (e.g. 1.0)
-            price (Decimal | None, optional): The price of the order. Defaults to None. (Only used for limit orders)
-            time_in_force (TimeInForce | None, optional): The time in force of the order. Defaults to None.
-            position_side (PositionSide | None, optional): The position side of the order. Defaults to None.
-            account_type (AccountType | None, optional): The specific account type to use. If None, will be inferred from symbol. Defaults to None.
-            **kwargs: Additional parameters to pass to the exchange API
-
-        Returns:
-            None: The order request is submitted asynchronously. Listen to order status updates via on_pending_order() etc.
-        """
         order = OrderSubmit(
             symbol=symbol,
             instrument_id=InstrumentId.from_str(symbol),
@@ -169,17 +152,6 @@ class Strategy:
     def cancel_order(
         self, symbol: str, uuid: str, account_type: AccountType | None = None, **kwargs
     ) -> str:
-        """Cancel an existing order.
-
-        Args:
-            symbol (str): The trading symbol/pair (e.g. "BTC/USDT")
-            order_id (str | int): The ID of the order to cancel. String for Bybit/OKX, int for Binance
-            account_type (AccountType | None, optional): The specific account type to use. If None, will be inferred from symbol. Defaults to None.
-            **kwargs: Additional parameters to pass to the exchange API
-
-        Returns:
-            None: The cancel request is submitted asynchronously. Listen to order status updates via on_canceling_order() etc.
-        """
         order = OrderSubmit(
             symbol=symbol,
             instrument_id=InstrumentId.from_str(symbol),

@@ -50,5 +50,41 @@ You can create an ``Algorithmic Order`` by calling the ``create_twap`` method in
 
 Order Status
 ---------------
+.. image:: ../_static/order.png
+    :alt: Order Status Flow
+    :align: center
+
+The Order Status is defined in ``OrderStatus`` class. We define 4 groups of statuses:
 
 
+- ``LOCAL``: The order is created by the user and not sent to the exchange yet.
+    - ``INITIALIZED``: when order is created by ``create_order`` method or ``cancel_order`` method
+    - ``FAILED``: when order is failed to be created
+    - ``CANCEL_FAILED``: when order is failed to be canceled
+- ``IN-FLOW``: The order is sending to the exchange but the websocket response is not received yet.
+    - ``PENDING``: when order is pending on the exchange
+    - ``CANCElING``: when order is pending to be canceled
+- ``OPEN``: The order is open on the exchange which means the websocket response is received.
+    - ``ACCEPTED``: when order is accepted by the exchange
+    - ``PARTIALLY_FILLED``: when order is partially filled
+- ``CLOSED``: The order is closed on the exchange which means the order is ``FILLED``, ``CANCELLED`` or ``EXPIRED``.
+    - ``FILLED``: when order is filled
+    - ``CANCELLED``: when order is cancelled (cancelled by the user).
+    - ``EXPIRED``: when order is expired (canceled by the exchange).
+
+
+Algorithmic Order
+------------------
+
+.. image:: ../_static/algo.png
+    :alt: Algorithmic Order
+    :align: center
+    :width: 70%
+
+The ``AlgoOrder`` is a special type of order that is created by the ``create_twap`` method in ``Strategy`` class. It is used to create a ``TWAP`` order. The status of the ``AlgoOrder`` is defined in ``AlgoOrderStatus`` class. The ``TWAP`` order is used to execute a large order in a series of smaller orders over a specified period of time. There are 5 statuses:
+
+- ``RUNNING``: when the ``TWAP`` order is running
+- ``CANCELING``: when the ``TWAP`` order is canceling
+- ``CANCELLED``: when the ``TWAP`` order is cancelled
+- ``FINISHED``: when the ``TWAP`` order is finished
+- ``FAILED``: when the ``TWAP`` order is failed to be created, or one of the orders in the ``TWAP`` order is failed to be created.

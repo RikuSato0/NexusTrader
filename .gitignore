@@ -22,3 +22,4 @@ clear.sh
 md_source/
 nautilus_trader/
 *.pkl
+env/

@@ -11,12 +11,14 @@ from decimal import Decimal
 from tradebot.base import ApiClient
 from tradebot.exchange.bybit.constants import BybitBaseUrl
 from tradebot.exchange.bybit.error import BybitError
-from tradebot.exchange.bybit.types import (
+from tradebot.core.nautilius_core import hmac_signature
+from tradebot.exchange.bybit.schema import (
     BybitResponse,
     BybitOrderResponse,
     BybitPositionResponse,
     BybitOrderHistoryResponse,
     BybitOpenOrdersResponse,
+    BybitWalletBalanceResponse,
 )
 
 
@@ -52,15 +54,17 @@ class BybitApiClient(ApiClient):
         self._recv_window = 5000
 
         if testnet:
-            self._base_url = BybitBaseUrl.TESTNET.value
+            self._base_url = BybitBaseUrl.TESTNET.base_url
         else:
-            self._base_url = BybitBaseUrl.MAINNET_1.value
+            self._base_url = BybitBaseUrl.MAINNET_1.base_url
 
         self._headers = {
             "Content-Type": "application/json",
             "User-Agent": "TradingBot/1.0",
-            "X-BAPI-API-KEY": api_key,
         }
+
+        if api_key:
+            self._headers["X-BAPI-API-KEY"] = api_key
 
         self._response_decoder = msgspec.json.Decoder(BybitResponse)
         self._order_response_decoder = msgspec.json.Decoder(BybitOrderResponse)
@@ -70,6 +74,9 @@ class BybitApiClient(ApiClient):
         )
         self._open_orders_response_decoder = msgspec.json.Decoder(
             BybitOpenOrdersResponse
+        )
+        self._wallet_balance_response_decoder = msgspec.json.Decoder(
+            BybitWalletBalanceResponse
         )
 
     def _generate_signature(self, payload: str) -> List[str]:
@@ -82,6 +89,12 @@ class BybitApiClient(ApiClient):
         signature = hash.hexdigest()
         return [signature, timestamp]
 
+    def _generate_signature_v2(self, payload: str) -> List[str]:
+        timestamp = str(self._clock.timestamp_ms())
+        param = f"{timestamp}{self._api_key}{self._recv_window}{payload}"
+        signature = hmac_signature(self._secret, param)  # return hex digest string
+        return [signature, timestamp]
+
     async def _fetch(
         self,
         method: str,
@@ -90,6 +103,8 @@ class BybitApiClient(ApiClient):
         payload: Dict[str, Any] = None,
         signed: bool = False,
     ):
+        self._init_session()
+
         url = urljoin(base_url, endpoint)
         payload = payload or {}
 
@@ -101,7 +116,7 @@ class BybitApiClient(ApiClient):
 
         headers = self._headers
         if signed:
-            signature, timestamp = self._generate_signature(payload_str)
+            signature, timestamp = self._generate_signature_v2(payload_str)
             headers = {
                 **headers,
                 "X-BAPI-TIMESTAMP": timestamp,
@@ -218,6 +233,17 @@ class BybitApiClient(ApiClient):
         }
         raw = await self._fetch("GET", self._base_url, endpoint, payload, signed=True)
         return self._order_history_response_decoder.decode(raw)
+
+    async def get_v5_account_wallet_balance(
+        self, account_type: str, **kwargs
+    ) -> BybitWalletBalanceResponse:
+        endpoint = "/v5/account/wallet-balance"
+        payload = {
+            "accountType": account_type,
+            **kwargs,
+        }
+        raw = await self._fetch("GET", self._base_url, endpoint, payload, signed=True)
+        return self._wallet_balance_response_decoder.decode(raw)
 
     def raise_error(self, raw: bytes, status: int, headers: Dict[str, Any]):
         pass

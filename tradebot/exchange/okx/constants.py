@@ -1,5 +1,4 @@
 from enum import Enum, unique
-import msgspec
 from tradebot.constants import (
     AccountType,
     OrderStatus,
@@ -9,6 +8,19 @@ from tradebot.constants import (
     OrderType,
 )
 
+
+class OkxInstrumentType(Enum):
+    SPOT = "SPOT"
+    MARGIN = "MARGIN"
+    SWAP = "SWAP"
+    FUTURES = "FUTURES"
+    OPTION = "OPTION"
+    ANY = "ANY"
+
+class OkxInstrumentFamily(Enum):
+    FUTURES = "FUTURES"
+    SWAP = "SWAP"
+    OPTION = "OPTION"
 
 class OkxAccountType(AccountType):
     LIVE = 0
@@ -22,6 +34,16 @@ class OkxAccountType(AccountType):
     @property
     def is_testnet(self):
         return self == OkxAccountType.DEMO
+    
+    @property
+    def stream_url(self):
+        return STREAM_URLS[self]
+
+
+class OkxRestUrl(Enum):
+    LIVE = "https://www.okx.com"
+    AWS = "https://aws.okx.com"
+    DEMO = "https://www.okx.com"
 
 
 STREAM_URLS = {
@@ -36,32 +58,9 @@ REST_URLS = {
     OkxAccountType.DEMO: "https://www.okx.com",
 }
 
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsAccountPushDataMsg
-# from nautilus_trader.adapters.okx.schemas.ws import OKXWsPositionsPushDataMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsFillsPushDataMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsOrdersPushDataMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsGeneralMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsOrderbookPushDataMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsPushDataMsg
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsPositionsData
-from nautilus_trader.adapters.okx.schemas.ws import OKXWsEventMsg
-
-
-class OKXWsPositionsArg(msgspec.Struct, kw_only=True):
-    channel: str
-    uid: str
-    instType: str
-    instFamily: str | None = None
-    instId: str | None = None
-
-
-class OKXWsPositionsPushDataMsg(msgspec.Struct):
-    arg: OKXWsPositionsArg
-    data: list[OKXWsPositionsData]
-
 
 @unique
-class TdMode(Enum):
+class OkxTdMode(Enum):
     CASH = "cash"  # 现货
     CROSS = "cross"  # 全仓
     ISOLATED = "isolated"  # 逐仓
@@ -73,7 +72,16 @@ class OkxPositionSide(Enum):
     LONG = "long"
     SHORT = "short"
     NET = "net"
+    NONE = ""
 
+    def parse_to_position_side(self) -> PositionSide:
+        if self == self.NET:
+            return PositionSide.FLAT
+        elif self == self.LONG:
+            return PositionSide.LONG
+        elif self == self.SHORT:
+            return PositionSide.SHORT
+        raise RuntimeError(f"Invalid position side: {self}")
 
 @unique
 class OkxOrderSide(Enum):
@@ -122,6 +130,7 @@ class OkxEnumParser:
         OkxPositionSide.NET: PositionSide.FLAT,
         OkxPositionSide.LONG: PositionSide.LONG,
         OkxPositionSide.SHORT: PositionSide.SHORT,
+        OkxPositionSide.NONE: None,
     }
 
     _okx_order_side_map = {
@@ -131,7 +140,11 @@ class OkxEnumParser:
 
     # Add reverse mapping dictionaries
     _order_status_to_okx_map = {v: k for k, v in _okx_order_status_map.items()}
-    _position_side_to_okx_map = {v: k for k, v in _okx_position_side_map.items()}
+    _position_side_to_okx_map = {
+        PositionSide.FLAT: OkxPositionSide.NET,
+        PositionSide.LONG: OkxPositionSide.LONG,
+        PositionSide.SHORT: OkxPositionSide.SHORT,
+    }
     _order_side_to_okx_map = {v: k for k, v in _okx_order_side_map.items()}
 
     # Add reverse parsing methods
@@ -148,7 +161,7 @@ class OkxEnumParser:
         return cls._okx_order_side_map[side]
 
     @classmethod
-    def parse_okx_order_type(cls, ordType: OkxOrderType) -> OrderType:
+    def parse_order_type(cls, ordType: OkxOrderType) -> OrderType:
         # TODO add parameters in future to enable parsing of all other nautilus OrderType's
         match ordType:
             case OkxOrderType.MARKET:
@@ -167,7 +180,7 @@ class OkxEnumParser:
                 )
 
     @classmethod
-    def parse_okx_time_in_force(cls, ordType: OkxOrderType) -> TimeInForce:
+    def parse_time_in_force(cls, ordType: OkxOrderType) -> TimeInForce:
         match ordType:
             case OkxOrderType.MARKET:
                 return TimeInForce.GTC

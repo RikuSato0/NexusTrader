@@ -3,31 +3,34 @@ from typing import Dict
 from decimal import Decimal
 from collections import defaultdict
 from tradebot.base import PublicConnector, PrivateConnector
-from tradebot.entity import EventSystem
-from tradebot.types import BookL1, Order, Trade
-from tradebot.entity import AsyncCache
+from tradebot.core.nautilius_core import MessageBus
+from tradebot.core.entity import TaskManager, RateLimit
+from tradebot.core.cache import AsyncCache
+from tradebot.schema import BookL1, Order, Trade, Position
 from tradebot.constants import (
-    EventType,
     OrderSide,
     OrderStatus,
     OrderType,
     TimeInForce,
     PositionSide,
 )
-from tradebot.exchange.bybit.types import (
+from tradebot.exchange.bybit.schema import (
     BybitWsMessageGeneral,
     BybitWsOrderMsg,
     BybitWsOrderbookDepthMsg,
     BybitOrderBook,
     BybitMarket,
     BybitWsTradeMsg,
+    BybitWsPositionMsg,
+    BybitWsAccountWalletMsg,
+    BybitWalletBalanceResponse,
+    BybitPositionResponse,
 )
 from tradebot.exchange.bybit.rest_api import BybitApiClient
 from tradebot.exchange.bybit.websockets import BybitWSClient
 from tradebot.exchange.bybit.constants import (
     BybitAccountType,
     BybitEnumParser,
-    BybitProductType,
 )
 from tradebot.exchange.bybit.exchange import BybitExchangeManager
 
@@ -40,10 +43,12 @@ class BybitPublicConnector(PublicConnector):
         self,
         account_type: BybitAccountType,
         exchange: BybitExchangeManager,
+        msgbus: MessageBus,
+        task_manager: TaskManager,
     ):
-        if account_type in {BybitAccountType.ALL, BybitAccountType.ALL_TESTNET}:
+        if account_type in {BybitAccountType.UNIFIED, BybitAccountType.UNIFIED_TESTNET}:
             raise ValueError(
-                "Please not using `BybitAccountType.ALL` or `BybitAccountType.ALL_TESTNET` in `PublicConnector`"
+                "Please not using `BybitAccountType.UNIFIED` or `BybitAccountType.UNIFIED_TESTNET` in `PublicConnector`"
             )
 
         super().__init__(
@@ -52,10 +57,12 @@ class BybitPublicConnector(PublicConnector):
             market_id=exchange.market_id,
             exchange_id=exchange.exchange_id,
             ws_client=BybitWSClient(
-                account_type=account_type, handler=self._ws_msg_handler
+                account_type=account_type,
+                handler=self._ws_msg_handler,
+                task_manager=task_manager,
             ),
+            msgbus=msgbus,
         )
-        self._ws_client: BybitWSClient = self._ws_client
         self._ws_msg_trade_decoder = msgspec.json.Decoder(BybitWsTradeMsg)
         self._ws_msg_orderbook_decoder = msgspec.json.Decoder(BybitWsOrderbookDepthMsg)
         self._ws_msg_general_decoder = msgspec.json.Decoder(BybitWsMessageGeneral)
@@ -88,16 +95,15 @@ class BybitPublicConnector(PublicConnector):
                 self._handle_orderbook(raw, ws_msg.topic)
             elif "publicTrade" in ws_msg.topic:
                 self._handle_trade(raw)
-            
+
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
-    
+
     def _handle_trade(self, raw: bytes):
         msg: BybitWsTradeMsg = self._ws_msg_trade_decoder.decode(raw)
         for d in msg.data:
             id = d.s + self.market_type
-            market = self._market_id[id]
-            symbol = market.symbol
+            symbol = self._market_id[id]
             trade = Trade(
                 exchange=self._exchange_id,
                 symbol=symbol,
@@ -105,15 +111,12 @@ class BybitPublicConnector(PublicConnector):
                 size=float(d.v),
                 timestamp=msg.ts,
             )
-            EventSystem.emit(EventType.TRADE, trade)
-            
+            self._msgbus.publish(topic="trade", msg=trade)
 
     def _handle_orderbook(self, raw: bytes, topic: str):
         msg: BybitWsOrderbookDepthMsg = self._ws_msg_orderbook_decoder.decode(raw)
         id = msg.data.s + self.market_type
-        market = self._market_id[id]
-        symbol = market.symbol
-
+        symbol = self._market_id[id]
         res = self._orderbook[symbol].parse_orderbook_depth(msg, levels=1)
 
         bid, bid_size = (
@@ -122,7 +125,7 @@ class BybitPublicConnector(PublicConnector):
         ask, ask_size = (
             (res["asks"][0][0], res["asks"][0][1]) if res["asks"] else (0, 0)
         )
-        
+
         bookl1 = BookL1(
             exchange=self._exchange_id,
             symbol=symbol,
@@ -132,36 +135,45 @@ class BybitPublicConnector(PublicConnector):
             ask=ask,
             ask_size=ask_size,
         )
-        EventSystem.emit(EventType.BOOKL1, bookl1)
+        self._msgbus.publish(topic="bookl1", msg=bookl1)
 
     async def subscribe_bookl1(self, symbol: str):
         market = self._market.get(symbol, None)
-        symbol = market.id if market else symbol
-        await self._ws_client.subscribe_order_book(symbol, depth=1)
+        if not market:
+            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
+        id = market.id
+        await self._ws_client.subscribe_order_book(id, depth=1)
 
     async def subscribe_trade(self, symbol: str):
         market = self._market.get(symbol, None)
-        symbol = market.id if market else symbol
-        await self._ws_client.subscribe_trade(symbol)
-        
+        if not market:
+            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
+        id = market.id
+        await self._ws_client.subscribe_trade(id)
 
     async def subscribe_kline(self, symbol: str, interval: str):
-        pass
+        market = self._market.get(symbol, None)
+        if not market:
+            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
+        id = market.id
+        await self._ws_client.subscribe_kline(id, interval)
 
 
 class BybitPrivateConnector(PrivateConnector):
     _ws_client: BybitWSClient
     _account_type: BybitAccountType
     _market: Dict[str, BybitMarket]
-    _market_id: Dict[str, BybitMarket]
+    _market_id: Dict[str, str]
+    _api_client: BybitApiClient
 
     def __init__(
         self,
         exchange: BybitExchangeManager,
         account_type: BybitAccountType,
-        strategy_id: str = None,
-        user_id: str = None,
-        rate_limit: float = None,
+        cache: AsyncCache,
+        msgbus: MessageBus,
+        task_manager: TaskManager,
+        rate_limit: RateLimit | None = None,
     ):
         # all the private endpoints are the same for all account types, so no need to pass account_type
         # only need to determine if it's testnet or not
@@ -169,9 +181,9 @@ class BybitPrivateConnector(PrivateConnector):
         if not exchange.api_key or not exchange.secret:
             raise ValueError("API key and secret are required for private endpoints")
 
-        if account_type not in {BybitAccountType.ALL, BybitAccountType.ALL_TESTNET}:
+        if account_type not in {BybitAccountType.UNIFIED, BybitAccountType.UNIFIED_TESTNET}:
             raise ValueError(
-                "Please using `BybitAccountType.ALL` or `BybitAccountType.ALL_TESTNET` in `PrivateConnector`"
+                "Please using `BybitAccountType.UNIFIED` or `BybitAccountType.UNIFIED_TESTNET` in `PrivateConnector`"
             )
 
         super().__init__(
@@ -182,30 +194,30 @@ class BybitPrivateConnector(PrivateConnector):
             ws_client=BybitWSClient(
                 account_type=account_type,
                 handler=self._ws_msg_handler,
+                task_manager=task_manager,
                 api_key=exchange.api_key,
                 secret=exchange.secret,
             ),
-            cache=AsyncCache(
-                account_type="BYBIT",
-                strategy_id=strategy_id,
-                user_id=user_id,
+            api_client=BybitApiClient(
+                api_key=exchange.api_key,
+                secret=exchange.secret,
+                testnet=account_type.is_testnet,
             ),
+            msgbus=msgbus,
+            cache=cache,
             rate_limit=rate_limit,
-        )
-
-        self._api_client = BybitApiClient(
-            api_key=exchange.api_key,
-            secret=exchange.secret,
-            testnet=account_type.is_testnet,
         )
 
         self._ws_msg_general_decoder = msgspec.json.Decoder(BybitWsMessageGeneral)
         self._ws_msg_order_update_decoder = msgspec.json.Decoder(BybitWsOrderMsg)
+        self._ws_msg_position_decoder = msgspec.json.Decoder(BybitWsPositionMsg)
+        self._ws_msg_wallet_decoder = msgspec.json.Decoder(BybitWsAccountWalletMsg)
 
     async def connect(self):
         await super().connect()
-        self._task_manager.create_task(self._oms.handle_order_event())
-        await self._ws_client.subscribe_order(topic="order")
+        await self._ws_client.subscribe_order()
+        await self._ws_client.subscribe_position()
+        await self._ws_client.subscribe_wallet()
 
     def _ws_msg_handler(self, raw: bytes):
         try:
@@ -219,6 +231,10 @@ class BybitPrivateConnector(PrivateConnector):
                 return
             if "order" in ws_msg.topic:
                 self._parse_order_update(raw)
+            elif "position" in ws_msg.topic:
+                self._parse_position_update(raw)
+            elif "wallet" == ws_msg.topic:
+                self._parse_wallet_update(raw)       
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
 
@@ -234,7 +250,7 @@ class BybitPrivateConnector(PrivateConnector):
 
     async def cancel_order(self, symbol: str, order_id: str, **kwargs):
         if self._limiter:
-            await self._limiter.wait()
+            await self._limiter.acquire()
         try:
             market = self._market.get(symbol)
             if not market:
@@ -259,7 +275,6 @@ class BybitPrivateConnector(PrivateConnector):
                 symbol=market.symbol,
                 status=OrderStatus.CANCELING,
             )
-            self._oms.add_order_msg(order)
             return order
         except Exception as e:
             self._log.error(f"Error canceling order: {e} params: {str(params)}")
@@ -267,23 +282,84 @@ class BybitPrivateConnector(PrivateConnector):
                 exchange=self._exchange_id,
                 timestamp=self._clock.timestamp_ms(),
                 symbol=symbol,
-                status=OrderStatus.FAILED,
+                status=OrderStatus.CANCEL_FAILED,
             )
             return order
+    
+    async def _init_account_balance(self):
+        res: BybitWalletBalanceResponse = await self._api_client.get_v5_account_wallet_balance(account_type="UNIFIED")
+        for result in res.result.list:
+            self._cache._apply_balance(self._account_type, result.parse_to_balances())
+    
+    async def _init_position(self):
+        res_linear: BybitPositionResponse = await self._api_client.get_v5_position_list(category="linear", settleCoin="USDT", limit=200) # TODO: position must be smaller than 200
+        res_inverse: BybitPositionResponse = await self._api_client.get_v5_position_list(category="inverse", limit=200)
+        
+        
+        cache_positions = self._cache.get_all_positions(self._exchange_id)
 
+        self._apply_cache_position(res_linear, cache_positions)
+        self._apply_cache_position(res_inverse, cache_positions)
+            
+        
+        for symbol, position in cache_positions.items():
+            position = Position(
+                symbol=symbol,
+                exchange=self._exchange_id,
+                side=None,
+                signed_amount=Decimal(0),
+                entry_price=0,
+                unrealized_pnl=0,
+                realized_pnl=0,
+            )
+            self._cache._apply_position(position)
+    
+    def _apply_cache_position(self, res: BybitPositionResponse, cache_positions: Dict[str, Position]):
+        category = res.result.category
+        for result in res.result.list:
+            side = result.side.parse_to_position_side()
+            if side == PositionSide.FLAT:
+                signed_amount = Decimal(0)
+                side = None
+            elif side == PositionSide.LONG:
+                signed_amount = Decimal(result.size)
+            elif side == PositionSide.SHORT:
+                signed_amount = -Decimal(result.size)
+            
+            if category.is_inverse:
+                id = result.symbol + "_inverse"
+            elif category.is_linear:
+                id = result.symbol + "_linear"
+            
+            symbol = self._market_id[id]    
+            
+            cache_positions.pop(symbol, None)
+            
+            position = Position(
+                symbol=symbol,
+                exchange=self._exchange_id,
+                side=side,
+                signed_amount=signed_amount,
+                entry_price=float(result.avgPrice),
+                unrealized_pnl=float(result.unrealisedPnl),
+                realized_pnl=float(result.cumRealisedPnl),
+            )
+            self._cache._apply_position(position)
+        
+        
     async def create_order(
         self,
         symbol: str,
         side: OrderSide,
         type: OrderType,
         amount: Decimal,
-        price: Decimal = None,
+        price: Decimal | None = None,
         time_in_force: TimeInForce = TimeInForce.GTC,
-        position_side: PositionSide = None,
+        position_side: PositionSide | None = None,
         **kwargs,
     ):
         if self._limiter:
-            await self._limiter.wait()
+            await self._limiter.acquire()
         market = self._market.get(symbol)
         if not market:
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
@@ -300,6 +376,8 @@ class BybitPrivateConnector(PrivateConnector):
         }
 
         if type == OrderType.LIMIT:
+            if not price:
+                raise ValueError("Price is required for limit order")
             params["price"] = str(price)
             params["timeInForce"] = BybitEnumParser.to_bybit_time_in_force(
                 time_in_force
@@ -310,7 +388,9 @@ class BybitPrivateConnector(PrivateConnector):
                 position_side
             ).value
 
-        reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop("reduce_only", False)
+        reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop(
+            "reduce_only", False
+        )
         if reduce_only:
             params["reduceOnly"] = True
         params.update(kwargs)
@@ -335,7 +415,6 @@ class BybitPrivateConnector(PrivateConnector):
                 remaining=amount,
                 reduce_only=reduce_only,
             )
-            self._oms.add_order_msg(order)
             return order
         except Exception as e:
             self._log.error(f"Error creating order: {e} params: {str(params)}")
@@ -360,17 +439,17 @@ class BybitPrivateConnector(PrivateConnector):
         self._log.debug(f"Order update: {str(order_msg)}")
         for data in order_msg.data:
             category = data.category
-            if category == BybitProductType.SPOT:
+            if category.is_spot:
                 id = data.symbol + "_spot"
-            elif category == BybitProductType.LINEAR:
+            elif category.is_linear:
                 id = data.symbol + "_linear"
-            elif category == BybitProductType.INVERSE:
+            elif category.is_inverse:
                 id = data.symbol + "_inverse"
-            market = self._market_id[id]
+            symbol = self._market_id[id]
 
             order = Order(
                 exchange=self._exchange_id,
-                symbol=market.symbol,
+                symbol=symbol,
                 status=BybitEnumParser.parse_order_status(data.orderStatus),
                 id=data.orderId,
                 client_order_id=data.orderLinkId,
@@ -382,16 +461,57 @@ class BybitPrivateConnector(PrivateConnector):
                 average=float(data.avgPrice) if data.avgPrice else None,
                 amount=Decimal(data.qty),
                 filled=Decimal(data.cumExecQty),
-                remaining=Decimal(data.leavesQty),
-                fee=float(data.cumExecFee),
+                remaining=Decimal(data.qty) - Decimal(data.cumExecQty), # TODO: check if this is correct leavsQty is not correct
+                fee=Decimal(data.cumExecFee),
                 fee_currency=data.feeCurrency,
-                cum_cost=float(data.cumExecValue),
+                cum_cost=Decimal(data.cumExecValue),
                 reduce_only=data.reduceOnly,
                 position_side=BybitEnumParser.parse_position_side(data.positionIdx),
             )
 
-            self._oms.add_order_msg(order)
-
+            self._msgbus.send(endpoint="bybit.order", msg=order)
+    
+    def _parse_position_update(self, raw: bytes):
+        position_msg = self._ws_msg_position_decoder.decode(raw)
+        self._log.debug(f"Position update: {str(position_msg)}")
+        
+        for data in position_msg.data:
+            category = data.category
+            if category.is_linear: # only linear/inverse/ position is supported
+                id = data.symbol + "_linear"
+            elif category.is_inverse:
+                id = data.symbol + "_inverse"
+            symbol = self._market_id[id]
+            
+            side = data.side.parse_to_position_side()
+            if side == PositionSide.LONG:
+                signed_amount = Decimal(data.size)
+            elif side == PositionSide.SHORT:
+                signed_amount = -Decimal(data.size)
+            else:
+                side = None
+                signed_amount = Decimal(0)
+            
+            position = Position(
+                symbol=symbol,
+                exchange=self._exchange_id,
+                side=side,
+                signed_amount=signed_amount,
+                entry_price=float(data.entryPrice),
+                unrealized_pnl=float(data.unrealisedPnl),
+                realized_pnl=float(data.cumRealisedPnl),
+            )
+            
+            self._cache._apply_position(position)
+        
+    def _parse_wallet_update(self, raw: bytes):
+        wallet_msg = self._ws_msg_wallet_decoder.decode(raw)
+        self._log.debug(f"Wallet update: {str(wallet_msg)}")
+        
+        for data in wallet_msg.data:
+            balances = data.parse_to_balances()
+            self._cache._apply_balance(self._account_type, balances)
+        
     async def disconnect(self):
         await super().disconnect()
         await self._api_client.close_session()

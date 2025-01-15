@@ -6,7 +6,7 @@ from typing import Any, Dict
 from urllib.parse import urljoin, urlencode
 
 
-from tradebot.log import SpdLog
+from tradebot.core.log import SpdLog
 from tradebot.constants import OrderSide, OrderType
 from tradebot.exchange.binance.error import BinanceClientError, BinanceServerError
 from tradebot.core.nautilius_core import LiveClock, HttpClient, HttpMethod, HttpResponse

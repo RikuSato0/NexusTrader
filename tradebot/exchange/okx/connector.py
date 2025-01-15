@@ -1,200 +1,49 @@
-from typing import cast
-import orjson
 import msgspec
+from typing import Dict
 from decimal import Decimal
 from tradebot.exchange.okx import OkxAccountType
-from tradebot.entity import AsyncCache
 from tradebot.exchange.okx.websockets import OkxWSClient
-from tradebot.exchange.okx.websockets_v2 import OkxWSClient as OkxWSClientV2
 from tradebot.exchange.okx.exchange import OkxExchangeManager
-from tradebot.types import Trade, BookL1, Kline
-from tradebot.exchange.okx.types import OkxMarket
+from tradebot.exchange.okx.schema import OkxWsGeneralMsg
+from tradebot.schema import Trade, BookL1, Kline, Order, Position
+from tradebot.exchange.okx.schema import (
+    OkxMarket,
+    OkxWsBboTbtMsg,
+    OkxWsCandleMsg,
+    OkxWsTradeMsg,
+    OkxWsOrderMsg,
+    OkxWsPositionMsg,
+    OkxWsAccountMsg,
+    OkxBalanceResponse,
+    OkxPositionResponse,
+)
 from tradebot.constants import (
-    EventType,
     OrderStatus,
-    OrderType,
     TimeInForce,
     PositionSide,
 )
-from tradebot.entity import EventSystem
-from tradebot.base import PublicConnector, PrivateConnector, OrderManagerSystem
+from tradebot.base import PublicConnector, PrivateConnector
+from tradebot.core.nautilius_core import MessageBus
+from tradebot.core.cache import AsyncCache
+from tradebot.core.entity import TaskManager, RateLimit
 from tradebot.exchange.okx.rest_api import OkxApiClient
-from tradebot.types import Order, OrderSide, OrderType
+from tradebot.constants import OrderSide, OrderType
 from tradebot.exchange.okx.constants import (
-    OKXWsGeneralMsg,
-    OKXWsEventMsg,
-    OKXWsPushDataMsg,
-    OKXWsAccountPushDataMsg,
-    OKXWsFillsPushDataMsg,
-    OKXWsOrdersPushDataMsg,
-    OKXWsPositionsPushDataMsg,
-    TdMode,
+    OkxTdMode,
     OkxEnumParser,
-    OkxOrderType,
 )
 
 
 class OkxPublicConnector(PublicConnector):
+    _ws_client: OkxWSClient
+    _account_type: OkxAccountType
+
     def __init__(
         self,
         account_type: OkxAccountType,
         exchange: OkxExchangeManager,
-    ):
-        super().__init__(
-            account_type=account_type,
-            market=exchange.market,
-            market_id=exchange.market_id,
-            exchange_id=exchange.exchange_id,
-            ws_client=OkxWSClientV2(
-                account_type=account_type,
-                handler=self._ws_msg_handler,
-            ),
-        )
-        self.ws_client = cast(OkxWSClientV2, self.ws_client)
-
-    async def subscribe_trade(self, symbol: str):
-        market = self._market.get(symbol, None)
-        symbol = market["id"] if market else symbol
-        await self.ws_client.subscribe_trade(symbol)
-
-    async def subscribe_bookl1(self, symbol: str):
-        market = self._market.get(symbol, None)
-        symbol = market["id"] if market else symbol
-        await self.ws_client.subscribe_order_book(symbol, channel="bbo-tbt")
-
-    async def subscribe_kline(self, symbol: str, interval: str):
-        market = self._market.get(symbol, None)
-        symbol = market["id"] if market else symbol
-        await self.ws_client.subscribe_candlesticks(symbol, interval)
-
-    def _ws_msg_handler(self, msg):
-        msg = orjson.loads(msg)
-        if "event" in msg:
-            if msg["event"] == "error":
-                self._log.error(str(msg))
-            elif msg["event"] == "subscribe":
-                self._log.info(
-                    f"Subscribed to {msg['arg']['channel']}.{msg['arg']['instId']}"
-                )
-        elif "arg" in msg:
-            channel: str = msg["arg"]["channel"]
-            if channel == "bbo-tbt":
-                self._parse_bbo_tbt(msg)
-            elif channel == "trades":
-                self._parse_trade(msg)
-            elif channel.startswith("candle"):
-                self._parse_kline(msg)
-
-    def _parse_kline(self, msg):
-        """
-        {
-            "arg": {
-                "channel": "candle1D",
-                "instId": "BTC-USDT"
-            },
-            "data": [
-                [
-                "1597026383085", ts
-                "8533.02", open
-                "8553.74", high
-                "8527.17", low
-                "8548.26", close
-                "45247", vol
-                "529.5858061",
-                "5529.5858061",
-                "0"
-                ]
-            ]
-            }
-        """
-        data = msg["data"][0]
-        id = msg["arg"]["instId"]
-        market = self._market_id[id]
-
-        kline = Kline(
-            exchange=self._exchange_id,
-            symbol=market["symbol"],
-            interval=msg["arg"]["channel"],
-            open=float(data[1]),
-            high=float(data[2]),
-            low=float(data[3]),
-            close=float(data[4]),
-            volume=float(data[5]),
-            timestamp=int(data[0]),
-        )
-
-        EventSystem.emit(EventType.KLINE, kline)
-
-    def _parse_trade(self, msg):
-        """
-        {
-            "arg": {
-                "channel": "trades",
-                "instId": "BTC-USD-191227"
-            },
-            "data": [
-                {
-                    "instId": "BTC-USD-191227",
-                    "tradeId": "9",
-                    "px": "0.016",
-                    "sz": "50",
-                    "side": "buy",
-                    "ts": "1597026383085"
-                }
-            ]
-        }
-        """
-        data = msg["data"][0]
-        id = msg["arg"]["instId"]
-        market = self._market_id[id]
-
-        trade = Trade(
-            exchange=self._exchange_id,
-            symbol=market["symbol"],
-            price=float(data["px"]),
-            size=float(data["sz"]),
-            timestamp=int(data["ts"]),
-        )
-        EventSystem.emit(EventType.TRADE, trade)
-
-    def _parse_bbo_tbt(self, msg):
-        """
-        {
-            'arg': {
-                'channel': 'bbo-tbt',
-                'instId': 'BTC-USDT'
-            },
-            'data': [{
-                'asks': [['67201.2', '2.17537208', '0', '7']],
-                'bids': [['67201.1', '1.44375999', '0', '5']],
-                'ts': '1729594943707',
-                'seqId': 34209632254
-            }]
-        }
-        """
-        data = msg["data"][0]
-        id = msg["arg"]["instId"]
-        market = self._market_id[id]
-
-        bookl1 = BookL1(
-            exchange=self._exchange_id,
-            symbol=market["symbol"],
-            bid=float(data["bids"][0][0]),
-            ask=float(data["asks"][0][0]),
-            bid_size=float(data["bids"][0][1]),
-            ask_size=float(data["asks"][0][1]),
-            timestamp=int(data["ts"]),
-        )
-        EventSystem.emit(EventType.BOOKL1, bookl1)
-
-
-class OkxPrivateConnector(PrivateConnector):
-    def __init__(
-        self,
-        account_type: OkxAccountType,
-        exchange: OkxExchangeManager,
-        strategy_id: str = None,
-        user_id: str = None,
+        msgbus: MessageBus,
+        task_manager: TaskManager,
     ):
         super().__init__(
             account_type=account_type,
@@ -204,109 +53,319 @@ class OkxPrivateConnector(PrivateConnector):
             ws_client=OkxWSClient(
                 account_type=account_type,
                 handler=self._ws_msg_handler,
+                task_manager=task_manager,
+            ),
+            msgbus=msgbus,
+        )
+
+        self._ws_msg_general_decoder = msgspec.json.Decoder(OkxWsGeneralMsg)
+        self._ws_msg_bbo_tbt_decoder = msgspec.json.Decoder(OkxWsBboTbtMsg)
+        self._ws_msg_candle_decoder = msgspec.json.Decoder(OkxWsCandleMsg)
+        self._ws_msg_trade_decoder = msgspec.json.Decoder(OkxWsTradeMsg)
+
+    async def subscribe_trade(self, symbol: str):
+        market = self._market.get(symbol, None)
+        if not market:
+            raise ValueError(f"Symbol {symbol} not found in market")
+        await self._ws_client.subscribe_trade(market.id)
+
+    async def subscribe_bookl1(self, symbol: str):
+        market = self._market.get(symbol, None)
+        if not market:
+            raise ValueError(f"Symbol {symbol} not found in market")
+        await self._ws_client.subscribe_order_book(market.id, channel="bbo-tbt")
+
+    async def subscribe_kline(self, symbol: str, interval: str):
+        market = self._market.get(symbol, None)
+        if not market:
+            raise ValueError(f"Symbol {symbol} not found in market")
+        await self._ws_client.subscribe_candlesticks(market.id, interval)
+
+    def _ws_msg_handler(self, raw: bytes):
+        if raw == b"pong":
+            self._ws_client._transport.notify_user_specific_pong_received()
+            self._log.debug(f"Pong received:{str(raw)}")
+            return
+        try:
+            ws_msg: OkxWsGeneralMsg = self._ws_msg_general_decoder.decode(raw)
+            if ws_msg.is_event_msg:
+                self._handle_event_msg(ws_msg)
+            else:
+                channel: str = ws_msg.arg.channel
+                if channel == "bbo-tbt":
+                    self._handle_bbo_tbt(raw)
+                elif channel == "trades":
+                    self._handle_trade(raw)
+                elif channel.startswith("candle"):
+                    self._handle_kline(raw)
+        except msgspec.DecodeError:
+            self._log.error(f"Error decoding message: {str(raw)}")
+
+    def _handle_event_msg(self, ws_msg: OkxWsGeneralMsg):
+        if ws_msg.event == "error":
+            self._log.error(f"Error code: {ws_msg.code}, message: {ws_msg.msg}")
+        elif ws_msg.event == "login":
+            self._log.debug("Login success")
+        elif ws_msg.event == "subscribe":
+            self._log.debug(f"Subscribed to {ws_msg.arg.channel}")
+
+    def _handle_kline(self, raw: bytes):
+        msg: OkxWsCandleMsg = self._ws_msg_candle_decoder.decode(raw)
+
+        id = msg.arg.instId
+        symbol = self._market_id[id]
+
+        for d in msg.data:
+            kline = Kline(
+                exchange=self._exchange_id,
+                symbol=symbol,
+                interval=msg.arg.channel,
+                open=float(d[1]),
+                high=float(d[2]),
+                low=float(d[3]),
+                close=float(d[4]),
+                volume=float(d[5]),
+                timestamp=int(d[0]),
+            )
+            self._msgbus.publish(topic="kline", msg=kline)
+
+    def _handle_trade(self, raw: bytes):
+        msg: OkxWsTradeMsg = self._ws_msg_trade_decoder.decode(raw)
+        id = msg.arg.instId
+        symbol = self._market_id[id]
+        for d in msg.data:
+            trade = Trade(
+                exchange=self._exchange_id,
+                symbol=symbol,
+                price=float(d.px),
+                size=float(d.sz),
+                timestamp=int(d.ts),
+            )
+            self._msgbus.publish(topic="trade", msg=trade)
+
+    def _handle_bbo_tbt(self, raw: bytes):
+        msg: OkxWsBboTbtMsg = self._ws_msg_bbo_tbt_decoder.decode(raw)
+
+        id = msg.arg.instId
+        symbol = self._market_id[id]
+
+        for d in msg.data:
+            bookl1 = BookL1(
+                exchange=self._exchange_id,
+                symbol=symbol,
+                bid=float(d.bids[0][0]),
+                ask=float(d.asks[0][0]),
+                bid_size=float(d.bids[0][1]),
+                ask_size=float(d.asks[0][1]),
+                timestamp=int(d.ts),
+            )
+            self._msgbus.publish(topic="bookl1", msg=bookl1)
+
+
+class OkxPrivateConnector(PrivateConnector):
+    _ws_client: OkxWSClient
+    _api_client: OkxApiClient
+    _account_type: OkxAccountType
+    _market: Dict[str, OkxMarket]
+    _market_id: Dict[str, str]
+
+    def __init__(
+        self,
+        exchange: OkxExchangeManager,
+        account_type: OkxAccountType,
+        cache: AsyncCache,
+        msgbus: MessageBus,
+        task_manager: TaskManager,
+        rate_limit: RateLimit | None = None,
+    ):
+        if not exchange.api_key or not exchange.secret or not exchange.passphrase:
+            raise ValueError(
+                "API key, secret, and passphrase are required for private endpoints"
+            )
+
+        super().__init__(
+            account_type=account_type,
+            market=exchange.market,
+            market_id=exchange.market_id,
+            exchange_id=exchange.exchange_id,
+            ws_client=OkxWSClient(
+                account_type=account_type,
+                handler=self._ws_msg_handler,
+                task_manager=task_manager,
                 api_key=exchange.api_key,
                 secret=exchange.secret,
                 passphrase=exchange.passphrase,
             ),
-            cache=AsyncCache(
-                account_type="OKX",
-                strategy_id=strategy_id,
-                user_id=user_id,
+            api_client=OkxApiClient(
+                api_key=exchange.api_key,
+                secret=exchange.secret,
+                passphrase=exchange.passphrase,
+                testnet=account_type.is_testnet,
             ),
+            msgbus=msgbus,
+            cache=cache,
+            rate_limit=rate_limit,
         )
 
-        self._api_client = OkxApiClient(
-            api_key=exchange.api_key,
-            secret=exchange.secret,
-            passphrase=exchange.passphrase,
-            account_type=account_type,
+        self._decoder_ws_general_msg = msgspec.json.Decoder(OkxWsGeneralMsg)
+        self._decoder_ws_order_msg = msgspec.json.Decoder(OkxWsOrderMsg, strict=False)
+        self._decoder_ws_position_msg = msgspec.json.Decoder(
+            OkxWsPositionMsg, strict=False
         )
-        self._oms = OrderManagerSystem(
-            cache=self._cache,
+        self._decoder_ws_account_msg = msgspec.json.Decoder(
+            OkxWsAccountMsg, strict=False
         )
-
-        self._decoder_ws_general_msg = msgspec.json.Decoder(OKXWsGeneralMsg)
-        self._decoder_ws_event_msg = msgspec.json.Decoder(OKXWsEventMsg)
-        self._decoder_ws_push_data_msg = msgspec.json.Decoder(OKXWsPushDataMsg)
-        self._decoder_ws_orders_msg = msgspec.json.Decoder(OKXWsOrdersPushDataMsg)
-        self._decoder_ws_account_msg = msgspec.json.Decoder(OKXWsAccountPushDataMsg)
-        self._decoder_ws_fills_msg = msgspec.json.Decoder(OKXWsFillsPushDataMsg)
-        self._decoder_ws_positions_msg = msgspec.json.Decoder(OKXWsPositionsPushDataMsg)
-
-    @property
-    def ws_client(self) -> OkxWSClient:
-        return self._ws_client
-
-    def _ws_msg_handler(self, raw: bytes):
-        msg = self._decoder_ws_general_msg.decode(raw)
-
-        if msg.is_event_msg:
-            msg = self._decoder_ws_event_msg.decode(raw)
-            if msg.event == "error":
-                self._log.error(msg)
-            elif msg.event == "login":
-                self._log.info("Login success")
-            elif msg.event == "subscribe":
-                self._log.info(f"Subscribed to {msg.arg.channel}")
-            elif msg.event == "channel-conn-count":
-                self._log.info(
-                    f"Channel {msg.channel} connection count: {msg.connCount}"
-                )
-
-        elif msg.is_push_data_msg:
-            push_data = self._decoder_ws_push_data_msg.decode(raw)
-            channel = push_data.arg.channel
-            if channel == "account":
-                self._parse_account(raw)
-            elif channel == "fills":
-                self._parse_fills(raw)
-            elif channel == "orders":
-                self._parse_orders(raw)
-            elif channel == "positions":
-                self._parse_positions(raw)
-
-    def _parse_orders(self, raw: bytes):
-        orders_push_data: OKXWsOrdersPushDataMsg = self._decoder_ws_orders_msg.decode(
-            raw
-        )
-        print(orjson.loads(raw))
-        # print(orders_push_data.data)
-        # self._log.info(str(orders_push_data.data))
-        return orders_push_data.data
-
-    def _parse_positions(self, raw: bytes):
-        """nautilus updates positions from fills."""
-        positions_push_data: OKXWsPositionsPushDataMsg = (
-            self._decoder_ws_positions_msg.decode(raw)
-        )
-        print(orjson.loads(raw))
-        # print(positions_push_data.data)
-        # self._log.info(str(positions_push_data.data))
-        return positions_push_data.data
-
-    def _parse_account(self, raw: bytes):
-        account_push_data: OKXWsAccountPushDataMsg = (
-            self._decoder_ws_account_msg.decode(raw)
-        )
-        print(orjson.loads(raw))
-        # print(account_push_data.data)
-        # self._log.info(str(account_push_data.data))
-        return account_push_data.data
-
-    def _parse_fills(self, raw: bytes):
-        fills_push_data: OKXWsFillsPushDataMsg = self._decoder_ws_fills_msg.decode(raw)
-        # TODO
-        return fills_push_data.data
 
     async def connect(self):
         await super().connect()
-        await self.ws_client.subscribe_orders()
-        await self.ws_client.subscribe_positions()
-        # await self.ws_client.subscrbe_fills()  # vip5 or above only
-        await self.ws_client.subscribe_account()
+        await self._ws_client.subscribe_orders()
+        await self._ws_client.subscribe_positions()
+        await self._ws_client.subscribe_account()
+        # await self._ws_client.subscribe_account_position()
+        # await self._ws_client.subscribe_fills()
+
+    async def _init_account_balance(self):
+        res: OkxBalanceResponse = await self._api_client.get_api_v5_account_balance()
+        for data in res.data:
+            self._cache._apply_balance(self._account_type, data.parse_to_balances())
+
+    async def _init_position(self):
+        res: OkxPositionResponse = await self._api_client.get_api_v5_account_positions()
+        for data in res.data:
+            side = data.posSide.parse_to_position_side()
+            if side == PositionSide.FLAT:
+                signed_amount = Decimal(data.pos)
+                if signed_amount > 0:
+                    side = PositionSide.LONG
+                elif signed_amount < 0:
+                    side = PositionSide.SHORT
+                else:
+                    side = None
+            elif side == PositionSide.LONG:
+                signed_amount = Decimal(data.pos)
+            elif side == PositionSide.SHORT:
+                signed_amount = -Decimal(data.pos)
+            
+            symbol = self._market_id[data.instId]
+            
+            position = Position(
+                symbol=symbol,
+                exchange=self._exchange_id,
+                side=side,
+                signed_amount=signed_amount,
+                entry_price=float(data.avgPx) if data.avgPx else 0,
+                unrealized_pnl=float(data.upl) if data.upl else 0,
+                realized_pnl=float(data.realizedPnl) if data.realizedPnl else 0,
+            )
+            self._cache._apply_position(position)
+            
+            
+
+    def _handle_event_msg(self, msg: OkxWsGeneralMsg):
+        if msg.event == "error":
+            self._log.error(msg)
+        elif msg.event == "login":
+            self._log.info("Login success")
+        elif msg.event == "subscribe":
+            self._log.info(f"Subscribed to {msg.arg.channel}")
+
+    def _ws_msg_handler(self, raw: bytes):
+        if raw == b"pong":
+            self._ws_client._transport.notify_user_specific_pong_received()
+            self._log.debug(f"Pong received: {str(raw)}")
+            return
+        try:
+            ws_msg: OkxWsGeneralMsg = self._decoder_ws_general_msg.decode(raw)
+            if ws_msg.is_event_msg:
+                self._handle_event_msg(ws_msg)
+            else:
+                channel = ws_msg.arg.channel
+                if channel == "orders":
+                    self._handle_orders(raw)
+                elif channel == "positions":
+                    self._handle_positions(raw)
+                elif channel == "account":
+                    self._handle_account(raw)
+        except msgspec.DecodeError as e:
+            self._log.error(f"Error decoding message: {str(raw)} {e}")
+
+    def _handle_orders(self, raw: bytes):
+        msg: OkxWsOrderMsg = self._decoder_ws_order_msg.decode(raw)
+        self._log.debug(f"Order update: {str(msg)}")
+        for data in msg.data:
+            symbol = self._market_id[data.instId]
+            order = Order(
+                exchange=self._exchange_id,
+                symbol=symbol,
+                status=OkxEnumParser.parse_order_status(data.state),
+                id=data.ordId,
+                amount=Decimal(data.sz),
+                filled=Decimal(data.accFillSz),
+                client_order_id=data.clOrdId,
+                timestamp=data.uTime,
+                type=OkxEnumParser.parse_order_type(data.ordType),
+                side=OkxEnumParser.parse_order_side(data.side),
+                time_in_force=OkxEnumParser.parse_time_in_force(data.ordType),
+                price=float(data.px) if data.px else None,
+                average=float(data.avgPx) if data.avgPx else None,
+                last_filled_price=float(data.fillPx) if data.fillPx else None,
+                last_filled=Decimal(data.fillSz) if data.fillSz else Decimal(0),
+                remaining=Decimal(data.sz) - Decimal(data.accFillSz),
+                fee=Decimal(data.fee),  # accumalated fee
+                fee_currency=data.feeCcy,  # accumalated fee currency
+                cost=Decimal(data.avgPx) * Decimal(data.fillSz),
+                cum_cost=Decimal(data.avgPx) * Decimal(data.accFillSz),
+                reduce_only=data.reduceOnly,
+                position_side=OkxEnumParser.parse_position_side(data.posSide),
+            )
+            self._msgbus.send(endpoint="okx.order", msg=order)
+
+    def _handle_positions(self, raw: bytes):
+        position_msg = self._decoder_ws_position_msg.decode(raw)
+        self._log.debug(f"Position update: {str(position_msg)}")
+
+        for data in position_msg.data:
+            symbol = self._market_id[data.instId]
+
+            side = data.posSide.parse_to_position_side()
+            if side == PositionSide.LONG:
+                signed_amount = Decimal(data.pos)
+            elif side == PositionSide.SHORT:
+                signed_amount = -Decimal(data.pos)
+            elif side == PositionSide.FLAT:
+                # one way mode, posSide always is 'net' from OKX ws msg, and pos amount is signed
+                signed_amount = Decimal(data.pos)
+                if signed_amount > 0:
+                    side = PositionSide.LONG
+                elif signed_amount < 0:
+                    side = PositionSide.SHORT
+                else:
+                    side = None
+            else:
+                self._log.warning(f"Invalid position side: {side}")
+
+            position = Position(
+                symbol=symbol,
+                exchange=self._exchange_id,
+                side=side,
+                signed_amount=signed_amount,
+                entry_price=float(data.avgPx) if data.avgPx else 0,
+                unrealized_pnl=float(data.upl) if data.upl else 0,
+                realized_pnl=float(data.realizedPnl) if data.realizedPnl else 0,
+            )
+
+            self._cache._apply_position(position)
+
+    def _handle_account(self, raw: bytes):
+        account_msg: OkxWsAccountMsg = self._decoder_ws_account_msg.decode(raw)
+        self._log.debug(f"Account update: {str(account_msg)}")
+
+        for data in account_msg.data:
+            balances = data.parse_to_balance()
+            self._cache._apply_balance(self._account_type, balances)
 
     def _get_td_mode(self, market: OkxMarket):
-        return TdMode.CASH if market.spot else TdMode.CROSS  # ?
+        return OkxTdMode.CASH if market.spot else OkxTdMode.CROSS
 
     async def create_order(
         self,
@@ -319,16 +378,23 @@ class OkxPrivateConnector(PrivateConnector):
         position_side: PositionSide = None,
         **kwargs,
     ):
+        if self._limiter:
+            await self._limiter.acquire()
+
         market = self._market.get(symbol)
         if not market:
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
         symbol = market.id
 
+        td_mode = kwargs.pop("td_mode", None)
+        if not td_mode:
+            td_mode = self._get_td_mode(market)
+
         params = {
-            "instId": symbol,
-            "tdMode": self._get_td_mode(market).value,
+            "inst_id": symbol,
+            "td_mode": td_mode.value,
             "side": OkxEnumParser.to_okx_order_side(side).value,
-            "ordType": OkxEnumParser.to_okx_order_type(type, time_in_force).value,
+            "ord_type": OkxEnumParser.to_okx_order_type(type, time_in_force).value,
             "sz": str(amount),
         }
 
@@ -336,15 +402,24 @@ class OkxPrivateConnector(PrivateConnector):
             if not price:
                 raise ValueError("Price is required for limit order")
             params["px"] = str(price)
+        else:
+            if market.spot:
+                params["tgtCcy"] = "base_ccy"
 
         if position_side:
             params["posSide"] = OkxEnumParser.to_okx_position_side(position_side).value
 
+        reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop(
+            "reduce_only", False
+        )
+        if reduce_only:
+            params["reduceOnly"] = True
+
         params.update(kwargs)
 
         try:
-            _res = await self._api_client.post_v5_order_create(**params)
-            res = _res.data[0]
+            res = await self._api_client.post_api_v5_trade_order(**params)
+            res = res.data[0]
             order = Order(
                 exchange=self._exchange_id,
                 id=res.ordId,
@@ -354,25 +429,24 @@ class OkxPrivateConnector(PrivateConnector):
                 type=type,
                 side=side,
                 amount=amount,
-                price=float(price),
+                price=float(price) if price else None,
                 time_in_force=time_in_force,
                 position_side=position_side,
                 status=OrderStatus.PENDING,
                 filled=Decimal(0),
                 remaining=amount,
             )
-            self._oms.add_order_msg(order)
             return order
         except Exception as e:
             self._log.error(f"Error creating order: {e} params: {str(params)}")
             order = Order(
                 exchange=self._exchange_id,
                 timestamp=self._clock.timestamp_ms(),
-                symbol=symbol,
+                symbol=market.symbol,
                 type=type,
                 side=side,
                 amount=amount,
-                price=float(price),
+                price=float(price) if price else None,
                 time_in_force=time_in_force,
                 position_side=position_side,
                 status=OrderStatus.FAILED,
@@ -382,16 +456,19 @@ class OkxPrivateConnector(PrivateConnector):
             return order
 
     async def cancel_order(self, symbol: str, order_id: str, **kwargs):
+        if self._limiter:
+            await self._limiter.acquire()
+
         market = self._market.get(symbol)
         if not market:
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
-        exchange_symbol = market.id
+        symbol = market.id
 
-        params = {"instId": exchange_symbol, "ordId": order_id, **kwargs}
+        params = {"inst_id": symbol, "ord_id": order_id, **kwargs}
 
         try:
-            _res = await self._api_client.post_v5_order_cancel(**params)
-            res = _res.data[0]
+            res = await self._api_client.post_api_v5_trade_cancel_order(**params)
+            res = res.data[0]
             order = Order(
                 exchange=self._exchange_id,
                 id=res.ordId,
@@ -400,7 +477,6 @@ class OkxPrivateConnector(PrivateConnector):
                 symbol=symbol,
                 status=OrderStatus.CANCELING,
             )
-            self._oms.add_order_msg(order)
             return order
         except Exception as e:
             self._log.error(f"Error canceling order: {e} params: {str(params)}")
@@ -408,7 +484,7 @@ class OkxPrivateConnector(PrivateConnector):
                 exchange=self._exchange_id,
                 timestamp=self._clock.timestamp_ms(),
                 symbol=symbol,
-                status=OrderStatus.FAILED,
+                status=OrderStatus.CANCEL_FAILED,
             )
             return order
 

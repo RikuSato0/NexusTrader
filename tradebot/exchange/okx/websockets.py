@@ -4,31 +4,21 @@ import base64
 import asyncio
 
 from typing import Literal
-from typing import Any, Dict
-from decimal import Decimal
+from typing import Any
 from typing import Callable
+from typing import Dict
+from aiolimiter import AsyncLimiter
 
-from asynciolimiter import Limiter
-
-
-from tradebot.types import (
-    BookL1,
-    Trade,
-)
-from tradebot.entity import EventSystem
 from tradebot.base import WSClient
-from tradebot.constants import EventType
-
-
-from tradebot.exchange.okx.constants import STREAM_URLS
 from tradebot.exchange.okx.constants import OkxAccountType
-
+from tradebot.core.entity import TaskManager
 
 class OkxWSClient(WSClient):
     def __init__(
         self,
         account_type: OkxAccountType,
         handler: Callable[..., Any],
+        task_manager: TaskManager,
         api_key: str = None,
         secret: str = None,
         passphrase: str = None,
@@ -39,10 +29,19 @@ class OkxWSClient(WSClient):
         self._account_type = account_type
         self._authed = False
         if self.is_private:
-            url = f"{STREAM_URLS[account_type]}/v5/private"
+            url = f"{account_type.stream_url}/v5/private"
         else:
-            url = f"{STREAM_URLS[account_type]}/v5/public"
-        super().__init__(url, limiter=Limiter(2 / 1), handler=handler)
+            url = f"{account_type.stream_url}/v5/public"
+        
+        super().__init__(
+            url,
+            limiter=AsyncLimiter(max_rate=2, time_period=1),
+            handler=handler,
+            task_manager=task_manager,
+            specific_ping_msg=b"ping",
+            ping_idle_timeout=5,
+            ping_reply_timeout=2,
+        )
 
     @property
     def is_private(self):
@@ -78,11 +77,21 @@ class OkxWSClient(WSClient):
             await self._send(self._get_auth_payload())
             self._authed = True
             await asyncio.sleep(5)
+    
+    async def _submit(self, op: str, params: Dict[str, Any]):
+        await self.connect()
+        await self._auth()
+        
+        payload = {
+            "id": self._clock.timestamp_ms(),
+            "op": op,
+            "args": [params],
+        }
+        await self._send(payload)
 
-    async def _subscribe(self, params: dict, subscription_id: str, auth: bool = False):
+    async def _subscribe(self, params: Dict[str, Any], subscription_id: str, auth: bool = False):
         if subscription_id not in self._subscriptions:
             await self.connect()
-            await self._limiter.wait()
 
             if auth:
                 await self._auth()
@@ -91,10 +100,33 @@ class OkxWSClient(WSClient):
                 "op": "subscribe",
                 "args": [params],
             }
+            
             self._subscriptions[subscription_id] = payload
             await self._send(payload)
         else:
             print(f"Already subscribed to {subscription_id}")
+    
+    async def place_order(self, inst_id: str, td_mode: str, side: str, ord_type: str, sz: str, **kwargs):
+        params = {
+            "instId": inst_id,
+            "tdMode": td_mode,
+            "side": side,
+            "ordType": ord_type,
+            "sz": sz,
+            **kwargs,
+        }
+        await self._submit("order", params)
+    
+    async def cancel_order(self, inst_id: str, ord_id: str | None = None, cl_ord_id: str | None = None):
+        params = {
+            "instId": inst_id,
+        }
+        if ord_id:
+            params["ordId"] = ord_id
+        if cl_ord_id:
+            params["clOrdId"] = cl_ord_id
+        await self._submit("cancel-order", params)
+        
 
     async def subscribe_order_book(
         self,
@@ -151,6 +183,11 @@ class OkxWSClient(WSClient):
         subscription_id = "account"
         await self._subscribe(params, subscription_id, auth=True)
 
+    async def subscribe_account_position(self):
+        params = {"channel": "balance_and_position"}
+        subscription_id = "account_position"
+        await self._subscribe(params, subscription_id, auth=True)
+
     async def subscribe_positions(
         self, inst_type: Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY"
     ):
@@ -165,7 +202,7 @@ class OkxWSClient(WSClient):
         params = {"channel": "orders", "instType": inst_type}
         await self._subscribe(params, subscription_id, auth=True)
 
-    async def subscrbe_fills(self):
+    async def subscribe_fills(self):
         subscription_id = "fills"
         params = {"channel": "fills"}
         await self._subscribe(params, subscription_id, auth=True)
@@ -175,5 +212,4 @@ class OkxWSClient(WSClient):
             self._authed = False
             await self._auth()
         for _, payload in self._subscriptions.items():
-            await self._limiter.wait()
             await self._send(payload)

@@ -5,7 +5,7 @@ from typing import Literal, Callable
 from typing import Any, List
 from asynciolimiter import Limiter
 
-from tradebot.log import SpdLog
+from tradebot.core.log import SpdLog
 from tradebot.exchange.binance.constants import BinanceAccountType
 from tradebot.core.nautilius_core import (
     LiveClock,

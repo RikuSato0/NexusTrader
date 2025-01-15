@@ -1,6 +1,6 @@
 import asyncio
 from collections import defaultdict
-from tradebot.types import Trade
+from tradebot.schema import Trade
 from tradebot.core import Strategy
 from tradebot.exchange.binance import (
     BinanceAccountType,

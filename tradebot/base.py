@@ -929,3 +929,4 @@ class OrderManagerSystem:
                 self._order_msg_queue.task_done()
             except Exception as e:
                 self._log.error(f"Error in handle_order_event: {e}")
+

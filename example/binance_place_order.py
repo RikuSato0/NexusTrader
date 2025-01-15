@@ -1,104 +1,59 @@
 import time
 import asyncio
-from pprint import pprint
-from tradebot.constants import CONFIG
+from tradebot.constants import KEYS
 from tradebot.base import ExchangeManager
-from tradebot.exchange._binance import BinanceOrderManager
-from tradebot.exchange.binance import BinancePrivateConnector, BinanceAccountType, BinanceExchangeManager
-from tradebot.exceptions import OrderError
+from tradebot.exchange.binance import (
+    BinancePrivateConnector,
+    BinanceAccountType,
+    BinanceExchangeManager,
+)
 
 
-BINANCE_API_KEY = CONFIG["binance_future_testnet"]["API_KEY"]
-BINANCE_API_SECRET = CONFIG["binance_future_testnet"]["SECRET"]
-
-# BINANCE_API_KEY = CONFIG['binance_vip']['API_KEY']
-# BINANCE_API_SECRET = CONFIG['binance_vip']['SECRET']
+BINANCE_API_KEY = KEYS["binance_future_testnet"]["API_KEY"]
+BINANCE_API_SECRET = KEYS["binance_future_testnet"]["SECRET"]
 
 
-async def test_ccxt(n: int = 20, exchange: ExchangeManager = None):
-    lat = []
-    
-    order_manager = BinanceOrderManager(exchange)
-
-    for i in range(n):
-        start = time.perf_counter()
-        res = await order_manager.place_market_order(
-                symbol="BTC/USDT:USDT",
-                side="sell",
-                amount=0.01,
-                positionSide="SHORT",
-            )
-        end = time.perf_counter()
-        lat.append(end - start)
-        
-        start = time.perf_counter()
-        res = await order_manager.place_market_order(
-                symbol="BTC/USDT:USDT",
-                side="buy",
-                amount=0.01,
-                positionSide="SHORT",
-            )
-        end = time.perf_counter()
-        lat.append(end - start)
-        
-        await asyncio.sleep(0.2)
-    print(f"Ccxt Time: {sum(lat) / len(lat) * 1000} ms")
-        
-        
 async def test_tradebot(n: int = 20, exchange: ExchangeManager = None):
     lat = []
     private_conn = BinancePrivateConnector(
-            account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
-            market=exchange.market,
-            market_id=exchange.market_id,
-            api=exchange.api,
-        )
-    
+        account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
+        market=exchange.market,
+        market_id=exchange.market_id,
+        api=exchange.api,
+    )
+
     for i in range(n):
-        start = int(time.time() * 1000)   
+        start = int(time.time() * 1000)
         res = await private_conn.create_order(
-            symbol='BTC/USDT:USDT',
-            side='sell',
+            symbol="BTC/USDT:USDT",
+            side="sell",
             type="market",
             amount=0.01,
             positionSide="SHORT",
         )
         end = int(time.time() * 1000)
-        
+
         lat.append(end - start)
-        
-        start = int(time.time() * 1000)   
+
+        start = int(time.time() * 1000)
         res = await private_conn.create_order(
-            symbol='BTC/USDT:USDT',
-            side='buy',
+            symbol="BTC/USDT:USDT",
+            side="buy",
             type="market",
             amount=0.01,
             positionSide="SHORT",
         )
         end = int(time.time() * 1000)
-        
+
         lat.append(end - start)
         await asyncio.sleep(0.2)
-    
+
     print(f"Tradebot Time: {sum(lat) / len(lat)} ms")
     await private_conn.disconnect()
-    
-    
 
 
 async def main():
     try:
-        # config = {
-        #     'exchange_id': 'binance',
-        #     'sandbox': False,
-        #     'apiKey': BINANCE_API_KEY,
-        #     'secret': BINANCE_API_SECRET,
-        #     'enableRateLimit': False,
-        #     'options': {
-        #         'portfolioMargin': True,
-        #     }
-        # }
-
         config = {
             "exchange_id": "binance",
             "sandbox": True,
@@ -109,12 +64,12 @@ async def main():
 
         exchange = BinanceExchangeManager(config)
         await exchange.load_markets()
-        
+
         private_conn = BinancePrivateConnector(
             account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
             exchange=exchange,
         )
-        
+
         res = await private_conn.place_limit_order(
             symbol="BTC/USDT:USDT",
             side="buy",
@@ -122,14 +77,14 @@ async def main():
             price=68300.6,
             positionSide="LONG",
         )
-        
+
         print(res)
-        
+
         # await test_ccxt(30, exchange)
         # await test_tradebot(30, exchange)
 
         # pprint(res)
-        
+
         # res = await order_manager.place_limit_order(
         #     symbol="BTC/USDT:USDT",
         #     side="buy",
@@ -140,7 +95,7 @@ async def main():
         # )
 
         # pprint(res)
-        
+
         # res = await order_manager.place_limit_order(
         #     symbol="BTC/USDT:USDT",
         #     side="buy",
@@ -198,10 +153,8 @@ async def main():
 
         # pprint(res)
 
-    except OrderError as e:
+    except Exception as e:
         print(e)
-    finally:
-        await exchange.close()
 
 
 if __name__ == "__main__":

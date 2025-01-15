@@ -1,17 +1,14 @@
 import asyncio
-from tradebot.constants import CONFIG
+from tradebot.constants import KEYS
 from tradebot.exchange.okx import (
     OkxAccountType,
     OkxPrivateConnector,
     OkxExchangeManager,
-    OkxPublicConnector,
 )
-from tradebot.constants import EventType
-from tradebot.entity import EventSystem
 
-OKX_API_KEY = CONFIG["okex_demo"]["API_KEY"]
-OKX_SECRET = CONFIG["okex_demo"]["SECRET"]
-OKX_PASSPHRASE = CONFIG["okex_demo"]["PASSPHRASE"]
+OKX_API_KEY = KEYS["okex_demo"]["API_KEY"]
+OKX_SECRET = KEYS["okex_demo"]["SECRET"]
+OKX_PASSPHRASE = KEYS["okex_demo"]["PASSPHRASE"]
 
 
 async def main():

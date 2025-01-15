@@ -196,3 +196,4 @@ class Strategy:
     async def _on_tick(self, tick):
         if hasattr(self, "on_tick"):
             await self.on_tick(tick)
+

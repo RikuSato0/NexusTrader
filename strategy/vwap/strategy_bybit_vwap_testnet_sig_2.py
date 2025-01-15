@@ -9,13 +9,13 @@ import zmq.asyncio
 import orjson
 from typing import Dict, Tuple
 from collections import defaultdict
-from tradebot.constants import CONFIG
-from tradebot.types import Order, BookL1
+from tradebot.constants import KEYS
+from tradebot.schema import Order, BookL1
 from tradebot.constants import OrderSide, OrderType, OrderStatus
-from tradebot.core import Strategy
-from tradebot.exchange.bybit.types import BybitMarket
+from tradebot.strategy import Strategy
+from tradebot.exchange.bybit.schema import BybitMarket
 from decimal import Decimal
-from tradebot.entity import EventSystem
+from tradebot.core.entity import EventSystem
 from tradebot.exchange.bybit import (
     BybitPublicConnector,
     BybitPrivateConnector,
@@ -25,8 +25,8 @@ from tradebot.exchange.bybit import (
 
 DIR_PATH = os.path.dirname(os.path.abspath(__file__))
 
-BYBIT_API_KEY = CONFIG["bybit_testnet_2"]["API_KEY"]
-BYBIT_API_SECRET = CONFIG["bybit_testnet_2"]["SECRET"]
+BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]
+BYBIT_API_SECRET = KEYS["bybit_testnet_2"]["SECRET"]
 
 
 class BybitSignal:
@@ -238,7 +238,7 @@ class VwapStrategy(Strategy):
         self, symbol: str, amount: Decimal, price: float, remaining: Decimal
     ):
         min_usdt = 5
-        min_amount_filter = self.market(BybitAccountType.ALL_TESTNET)[
+        min_amount_filter = self.market(BybitAccountType.UNIFIED_TESTNET)[
             symbol
         ].limits.amount.min
         min_notional_filter = min_usdt / price
@@ -265,7 +265,7 @@ class VwapStrategy(Strategy):
         num_interval = max(1, amount / interval_amount)
         interval_duration = duration / num_interval
         """
-        min_amount = self.market(BybitAccountType.ALL_TESTNET)[symbol].limits.amount.min
+        min_amount = self.market(BybitAccountType.UNIFIED_TESTNET)[symbol].limits.amount.min
         interval_amount = max(40 / price, 4*min_amount)
         num_interval = max(1, float(amount) / interval_amount)
         interval_duration = duration / num_interval
@@ -273,7 +273,7 @@ class VwapStrategy(Strategy):
     
     async def cal_pos_diff(self, symbol):
         pos = self.current_positions[symbol]
-        pos_obj = await self.cache(BybitAccountType.ALL_TESTNET).get_position(symbol)
+        pos_obj = await self.cache(BybitAccountType.UNIFIED_TESTNET).get_position(symbol)
         if pos_obj:
             real_pos = pos_obj.signed_amount
         return abs(real_pos - pos)
@@ -329,14 +329,14 @@ class VwapStrategy(Strategy):
             interval_amount = remaing_amount / remaining_interval
 
             interval_amount = self.amount_to_precision(
-                account_type=BybitAccountType.ALL_TESTNET,
+                account_type=BybitAccountType.UNIFIED_TESTNET,
                 symbol=symbol,
                 amount=interval_amount,
             )
 
             amount_make = float(interval_amount) * make_t
             amount_make = self.amount_to_precision(
-                account_type=BybitAccountType.ALL_TESTNET,
+                account_type=BybitAccountType.UNIFIED_TESTNET,
                 symbol=symbol,
                 amount=amount_make,
             )
@@ -348,7 +348,7 @@ class VwapStrategy(Strategy):
 
             remaing_amount_make = remaing_amount * make_t
             remaing_amount_make = self.amount_to_precision(
-                account_type=BybitAccountType.ALL_TESTNET,
+                account_type=BybitAccountType.UNIFIED_TESTNET,
                 symbol=symbol,
                 amount=remaing_amount_make,
             )
@@ -368,7 +368,7 @@ class VwapStrategy(Strategy):
                         symbol, amount_make, price_make, remaing_amount_make
                     ):
                         make_order = await self.create_order(
-                            account_type=BybitAccountType.ALL_TESTNET,
+                            account_type=BybitAccountType.UNIFIED_TESTNET,
                             symbol=symbol,
                             side=side,
                             type=OrderType.LIMIT,
@@ -390,7 +390,7 @@ class VwapStrategy(Strategy):
                         symbol, amount_take, price_take, remaing_amount_take
                     ):
                         take_order = await self.create_order(
-                            account_type=BybitAccountType.ALL_TESTNET,
+                            account_type=BybitAccountType.UNIFIED_TESTNET,
                             symbol=symbol,
                             side=side,
                             type=OrderType.LIMIT,
@@ -413,7 +413,7 @@ class VwapStrategy(Strategy):
                         symbol, interval_amount, price_take, remaing_amount
                     ):
                         take_order = await self.create_order(
-                            account_type=BybitAccountType.ALL_TESTNET,
+                            account_type=BybitAccountType.UNIFIED_TESTNET,
                             symbol=symbol,
                             side=side,
                             type=OrderType.MARKET,
@@ -434,7 +434,7 @@ class VwapStrategy(Strategy):
 
             if make_order_id:
                 make_order: Order = await self.cache(
-                    BybitAccountType.ALL_TESTNET
+                    BybitAccountType.UNIFIED_TESTNET
                 ).get_order(make_order_id)
                 if make_order:
                     if make_order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
@@ -458,7 +458,7 @@ class VwapStrategy(Strategy):
                             or (make_order.amount != amount_make)
                         ):
                             make_order_cancel = await self.cancel_order(
-                                account_type=BybitAccountType.ALL_TESTNET,
+                                account_type=BybitAccountType.UNIFIED_TESTNET,
                                 symbol=symbol,
                                 order_id=make_order_id,
                             )
@@ -474,7 +474,7 @@ class VwapStrategy(Strategy):
 
             if take_order_id:
                 take_order: Order = await self.cache(
-                    BybitAccountType.ALL_TESTNET
+                    BybitAccountType.UNIFIED_TESTNET
                 ).get_order(take_order_id)
                 if take_order:
                     if take_order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
@@ -498,7 +498,7 @@ class VwapStrategy(Strategy):
                             or (take_order.amount != amount_take)
                         ):
                             take_order_cancel = await self.cancel_order(
-                                account_type=BybitAccountType.ALL_TESTNET,
+                                account_type=BybitAccountType.UNIFIED_TESTNET,
                                 symbol=symbol,
                                 order_id=take_order_id,
                             )
@@ -516,7 +516,7 @@ class VwapStrategy(Strategy):
             
         position = self.fetch_positions()
         real_pos = position.get(symbol, Decimal(str(0)))
-        pos_obj = await self.cache(BybitAccountType.ALL_TESTNET).get_position(symbol)
+        pos_obj = await self.cache(BybitAccountType.UNIFIED_TESTNET).get_position(symbol)
         
         real_pos_2 = pos_obj.signed_amount
         if real_pos_2 != real_pos:
@@ -569,7 +569,7 @@ async def main():
 
         private_conn = BybitPrivateConnector(
             exchange,
-            account_type=BybitAccountType.ALL_TESTNET,
+            account_type=BybitAccountType.UNIFIED_TESTNET,
             strategy_id="strategy_vwap",
             user_id="vip_user",
             rate_limit=20,

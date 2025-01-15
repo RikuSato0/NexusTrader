@@ -1,17 +1,30 @@
 import os
+import sys
 from configparser import ConfigParser
 from typing import Literal, Union, Dict, List
 from enum import Enum
+from dynaconf import Dynaconf
+
+
+def is_sphinx_build():
+    return 'sphinx' in sys.modules
 
 if not os.path.exists(".keys/"):
     os.makedirs(".keys/")
-if not os.path.exists(".keys/config.cfg"):
+if not os.path.exists(".keys/config.cfg") and not is_sphinx_build():
     raise FileNotFoundError(
         "Config file not found, please create a config file at .keys/config.cfg"
     )
 
-CONFIG = ConfigParser()
-CONFIG.read(".keys/config.cfg")
+KEYS = ConfigParser()
+KEYS.read(".keys/config.cfg")
+
+
+
+settings = Dynaconf(
+    envvar_prefix="DYNACONF",
+    settings_files=['.keys/settings.toml', '.keys/.secrets.toml'],
+)
 
 
 def get_redis_config(in_docker: bool = False):
@@ -35,14 +48,14 @@ def get_redis_config(in_docker: bool = False):
         if in_docker:
             return {
                 "host": "redis",
-                "db": CONFIG["redis_config"]["db"],
+                "db": KEYS["redis_config"]["db"],
                 "password": password,
             }
 
         return {
-            "host": CONFIG["redis_config"]["host"],
-            "port": CONFIG["redis_config"]["port"],
-            "db": CONFIG["redis_config"]["db"],
+            "host": KEYS["redis_config"]["host"],
+            "port": KEYS["redis_config"]["port"],
+            "db": KEYS["redis_config"]["db"],
             "password": password,
         }
     except Exception as e:
@@ -162,7 +175,13 @@ UrlType = Union[
     Url.Bybit.Option,
 ]
 
-
+class SubmitType(Enum):
+    CREATE = 0
+    CANCEL = 1
+    TWAP = 2
+    CANCEL_TWAP = 3
+    VWAP = 4
+    CANCEL_VWAP = 5
 class EventType(Enum):
     BOOKL1 = 0
     TRADE = 1
@@ -172,10 +191,18 @@ class EventType(Enum):
     INDEX_PRICE = 5
 
 
+class AlgoOrderStatus(Enum):
+    RUNNING = "RUNNING"
+    CANCELING = "CANCELING"
+    FINISHED = "FINISHED"
+    CANCELED = "CANCELED"
+    FAILED = "FAILED"
+
 class OrderStatus(Enum):
     # LOCAL
-    # INITIALIZED = "INITIALIZED"
+    INITIALIZED = "INITIALIZED"
     FAILED = "FAILED"
+    CANCEL_FAILED = "CANCEL_FAILED"
 
     # IN-FLOW
     PENDING = "PENDING"
@@ -192,9 +219,9 @@ class OrderStatus(Enum):
 
 
 class ExchangeType(Enum):
-    BINANCE = 0
-    OKX = 1
-    BYBIT = 2
+    BINANCE = "binance"
+    OKX = "okx"
+    BYBIT = "bybit"
 
 
 class BinanceAccountType(Enum):
@@ -360,7 +387,7 @@ class PositionSide(Enum):
     FLAT = "FLAT"
 
 
-class AssetType(Enum):
+class InstrumentType(Enum):
     SPOT = "spot"
     MARGIN = "margin"
     FUTURE = "future"
@@ -374,14 +401,15 @@ class OptionType(Enum):
     CALL = "call"
     PUT = "put"
 
-
 STATUS_TRANSITIONS: Dict[OrderStatus, List[OrderStatus]] = {
     OrderStatus.PENDING: [
         OrderStatus.CANCELED,
         OrderStatus.CANCELING,
         OrderStatus.ACCEPTED,
         OrderStatus.PARTIALLY_FILLED,
+        OrderStatus.CANCELED,
         OrderStatus.FILLED,
+        OrderStatus.CANCEL_FAILED,
     ],
     OrderStatus.CANCELING: [
         OrderStatus.CANCELED,
@@ -394,6 +422,7 @@ STATUS_TRANSITIONS: Dict[OrderStatus, List[OrderStatus]] = {
         OrderStatus.CANCELING,
         OrderStatus.CANCELED,
         OrderStatus.EXPIRED,
+        OrderStatus.CANCEL_FAILED,
     ],
     OrderStatus.PARTIALLY_FILLED: [
         OrderStatus.PARTIALLY_FILLED,
@@ -401,6 +430,7 @@ STATUS_TRANSITIONS: Dict[OrderStatus, List[OrderStatus]] = {
         OrderStatus.CANCELING,
         OrderStatus.CANCELED,
         OrderStatus.EXPIRED,
+        OrderStatus.CANCEL_FAILED,
     ],
     OrderStatus.FILLED: [],
     OrderStatus.CANCELED: [],
@@ -408,5 +438,16 @@ STATUS_TRANSITIONS: Dict[OrderStatus, List[OrderStatus]] = {
     OrderStatus.FAILED: [],
 }
 
-if __name__ == "__main__":
-    get_redis_config()
+
+class DataType(Enum):
+    BOOKL1 = "bookl1"
+    BOOKL2 = "bookl2"
+    TRADE = "trade"
+    KLINE = "kline"
+    MARK_PRICE = "mark_price"
+    FUNDING_RATE = "funding_rate"
+    INDEX_PRICE = "index_price"
+
+class StorageBackend(Enum):
+    REDIS = "redis"
+    SQLITE = "sqlite"

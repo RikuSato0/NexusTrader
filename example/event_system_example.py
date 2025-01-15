@@ -1,4 +1,4 @@
-from tradebot.entity import EventSystem
+from tradebot.core.entity import EventSystem
 from enum import Enum
 
 

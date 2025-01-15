@@ -334,3 +334,4 @@ class AsyncCache:
         await self._sync_to_redis()
         await self._r.aclose()
         await self._task_manager.cancel()
+

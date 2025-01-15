@@ -1,7 +1,7 @@
 import asyncio
 from decimal import Decimal
 
-from tradebot.constants import CONFIG
+from tradebot.constants import KEYS
 from tradebot.constants import OrderSide, OrderType
 from tradebot.exchange.bybit import (
     BybitExchangeManager,
@@ -9,8 +9,8 @@ from tradebot.exchange.bybit import (
     BybitAccountType,
 )
 
-BYBIT_API_KEY = CONFIG["bybit_testnet_2"]["API_KEY"]
-BYBIT_API_SECRET = CONFIG["bybit_testnet_2"]["SECRET"]
+BYBIT_API_KEY = KEYS["bybit_testnet_2"]["API_KEY"]
+BYBIT_API_SECRET = KEYS["bybit_testnet_2"]["SECRET"]
 
 
 async def main():
@@ -25,7 +25,7 @@ async def main():
         )
         connector = BybitPrivateConnector(
             exchange,
-            BybitAccountType.ALL_TESTNET,
+            BybitAccountType.UNIFIED_TESTNET,
             strategy_id="strategy_01",
             user_id="test_user",
         )

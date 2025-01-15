@@ -3,9 +3,10 @@ import orjson
 import asyncio
 
 from typing import Any, Callable
-from asynciolimiter import Limiter
+from aiolimiter import AsyncLimiter
 
 from tradebot.base import WSClient
+from tradebot.core.entity import TaskManager
 from tradebot.exchange.bybit.constants import BybitAccountType
 
 
@@ -14,6 +15,7 @@ class BybitWSClient(WSClient):
         self,
         account_type: BybitAccountType,
         handler: Callable[..., Any],
+        task_manager: TaskManager,
         api_key: str = None,
         secret: str = None,
     ):
@@ -28,8 +30,9 @@ class BybitWSClient(WSClient):
         # Bybit: do not exceed 500 requests per 5 minutes
         super().__init__(
             url,
-            limiter=Limiter(500 / 5 * 60),
+            limiter=AsyncLimiter(max_rate=500, time_period=5 * 60),
             handler=handler,
+            task_manager=task_manager,
             ping_idle_timeout=5,
             ping_reply_timeout=2,
             specific_ping_msg=orjson.dumps({"op": "ping"}),
@@ -74,39 +77,22 @@ class BybitWSClient(WSClient):
             self._log.debug(f"Already subscribed to {topic}")
 
     async def subscribe_order_book(self, symbol: str, depth: int):
-        """
-        ### Linear & inverse:
-        - Level 1 data, push frequency: 10ms
-        - Level 50 data, push frequency: 20ms
-        - Level 200 data, push frequency: 100ms
-        - Level 500 data, push frequency: 100ms
-
-        ### Spot:
-        - Level 1 data, push frequency: 10ms
-        - Level 50 data, push frequency: 20ms
-        - Level 200 data, push frequency: 200ms
-
-        ### Option:
-        - Level 25 data, push frequency: 20ms
-        - Level 100 data, push frequency: 100ms
-        """
+        """subscribe to orderbook"""
         topic = f"orderbook.{depth}.{symbol}"
         await self._subscribe(topic)
 
     async def subscribe_trade(self, symbol: str):
+        """subscribe to trade"""
         topic = f"publicTrade.{symbol}"
         await self._subscribe(topic)
 
     async def subscribe_ticker(self, symbol: str):
+        """subscribe to ticker"""
         topic = f"tickers.{symbol}"
         await self._subscribe(topic)
     
     async def subscribe_kline(self, symbol: str, interval: int):
-        """
-        ### Available intervals:
-        - 1 3 5 15 30 (min)
-        - 60 120 240 360 720 (min)
-        """
+        """subscribe to kline"""
         topic = f"kline.{interval}.{symbol}"
         await self._subscribe(topic)
 
@@ -117,17 +103,14 @@ class BybitWSClient(WSClient):
         for _, payload in self._subscriptions.items():
             await self._send(payload)
 
-    async def subscribe_order(self, topic: str):
-        """
-        ### Topics:
-        
-        #### All in one:
-        - order
-        
-        Categorical topics:
-        - order.spot
-        - order.linear
-        - order.inverse
-        - order.option
-        """
+    async def subscribe_order(self, topic: str = "order"):
+        """subscribe to order"""
+        await self._subscribe(topic, auth=True)
+    
+    async def subscribe_position(self, topic: str = "position"):
+        """subscribe to position"""
+        await self._subscribe(topic, auth=True)
+    
+    async def subscribe_wallet(self, topic: str = "wallet"):
+        """subscribe to wallet"""
         await self._subscribe(topic, auth=True)

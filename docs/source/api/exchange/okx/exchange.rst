@@ -1,7 +1,7 @@
-tradebot.exchange.okx.exchange
+nexustrader.exchange.okx.exchange
 =====================================
 
-.. currentmodule:: tradebot.exchange.okx.exchange
+.. currentmodule:: nexustrader.exchange.okx.exchange
 
 This module implements the exchange manager for OKX, handling market data loading and symbol management.
 

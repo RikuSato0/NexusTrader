@@ -1,7 +1,7 @@
-tradebot.strategy
+nexustrader.strategy
 ====================
 
-.. currentmodule:: tradebot.strategy
+.. currentmodule:: nexustrader.strategy
 
 Strategy
 --------

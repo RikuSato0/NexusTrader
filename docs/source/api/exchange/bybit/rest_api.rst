@@ -1,7 +1,7 @@
-tradebot.exchange.bybit.rest_api
+nexustrader.exchange.bybit.rest_api
 =====================================
 
-.. currentmodule:: tradebot.exchange.bybit.rest_api
+.. currentmodule:: nexustrader.exchange.bybit.rest_api
 
 The Bybit REST API client implements V5 API endpoints for Bybit exchange, providing methods for order management, position queries, and account operations. It supports both mainnet and testnet environments with region-specific endpoints.
 

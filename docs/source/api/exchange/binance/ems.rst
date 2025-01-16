@@ -1,7 +1,7 @@
-tradebot.exchange.binance.ems
+nexustrader.exchange.binance.ems
 ===============================
 
-.. currentmodule:: tradebot.exchange.binance.ems
+.. currentmodule:: nexustrader.exchange.binance.ems
 
 This module implements the Binance-specific Execution Management System (EMS) which handles order routing and execution across different Binance account types.
 

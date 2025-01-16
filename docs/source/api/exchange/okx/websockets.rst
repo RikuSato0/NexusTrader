@@ -1,7 +1,7 @@
-tradebot.exchange.okx.websockets
+nexustrader.exchange.okx.websockets
 =====================================
 
-.. currentmodule:: tradebot.exchange.okx.websockets
+.. currentmodule:: nexustrader.exchange.okx.websockets
 
 This module implements the WebSocket client for OKX exchange, providing both public and private data stream functionality.
 

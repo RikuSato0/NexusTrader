@@ -1,7 +1,7 @@
-tradebot.exchange.bybit.schema
+nexustrader.exchange.bybit.schema
 =====================================
 
-.. currentmodule:: tradebot.exchange.bybit.schema
+.. currentmodule:: nexustrader.exchange.bybit.schema
 
 This module defines the data structures and schemas used for Bybit API responses and WebSocket messages. It includes market data structures, order types, position information, and wallet balance schemas.
 

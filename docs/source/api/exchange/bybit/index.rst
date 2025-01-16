@@ -1,4 +1,4 @@
-tradebot.exchange.bybit
+nexustrader.exchange.bybit
 =======================
 
 .. toctree::

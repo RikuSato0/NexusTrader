@@ -1,7 +1,7 @@
-tradebot.base.ems
-==================
+nexustrader.base.ems
+=========================
 
-.. currentmodule:: tradebot.base.ems
+.. currentmodule:: nexustrader.base.ems
 
 This module contains the ExecutionManagementSystem class, which is responsible for managing the execution of trading orders.
 

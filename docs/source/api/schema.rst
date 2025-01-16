@@ -1,7 +1,7 @@
-tradebot.schema
+nexustrader.schema
 ====================
 
-.. currentmodule:: tradebot.schema
+.. currentmodule:: nexustrader.schema
 
 Classes
 ---------------

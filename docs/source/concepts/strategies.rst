@@ -1,7 +1,7 @@
 Strategies
 ============
 
-The core of the Tradebot user experience lies in creating and managing trading strategies. A trading strategy is defined by subclassing the ``Strategy`` class and implementing the methods necessary for the user's trading logic.
+The core of the nexustrader user experience lies in creating and managing trading strategies. A trading strategy is defined by subclassing the ``Strategy`` class and implementing the methods necessary for the user's trading logic.
 
 .. note::
 
@@ -13,7 +13,7 @@ Strategy Implementation
 
 .. code-block:: python
 
-    from tradebot.strategy import Strategy
+    from nexustrader.strategy import Strategy
 
     class Demo(Strategy):
         def __init__(self):
@@ -31,7 +31,7 @@ These handlers receive data updates from the exchange.
 
 .. code-block:: python
 
-    from tradebot.schema import BookL1, Trade, Kline  
+    from nexustrader.schema import BookL1, Trade, Kline  
 
 
     class Demo(Strategy):
@@ -57,7 +57,7 @@ These handlers receive order updates from the exchange.
 
 .. code-block:: python
 
-    from tradebot.schema import Order
+    from nexustrader.schema import Order
 
     class Demo(Strategy):
         def on_pending_order(self, order: Order):
@@ -89,7 +89,7 @@ These handlers receive order updates from the exchange.
 Multi-Mode Support
 ^^^^^^^^^^^^^^^^^^^^
 
-TradeBot supports multiple modes of operation to cater to different trading strategies and requirements. Each mode allows for flexibility in how trading logic is executed based on market conditions or specific triggers.
+nexustrader supports multiple modes of operation to cater to different trading strategies and requirements. Each mode allows for flexibility in how trading logic is executed based on market conditions or specific triggers.
 
 Event-Driven Mode
 """"""""""""""""""

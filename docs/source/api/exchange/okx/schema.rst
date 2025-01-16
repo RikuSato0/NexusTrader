@@ -1,7 +1,7 @@
-tradebot.exchange.okx.schema
+nexustrader.exchange.okx.schema
 =====================================
 
-.. currentmodule:: tradebot.exchange.okx.schema
+.. currentmodule:: nexustrader.exchange.okx.schema
 
 This module defines data structures and models for OKX exchange API responses and WebSocket messages.
 

@@ -3,7 +3,7 @@ Orders
 
 This guide offers detailed information about the various order types available on the platform, as well as the execution instructions supported for each.
 
-Orders are a fundamental component of any algorithmic trading strategy. Tradebot has integrated a wide range of order types and execution instructions, from standard to advanced, to maximize the potential functionality of trading venues. This allows traders to set specific conditions and instructions for order execution and management, enabling the creation of virtually any type of trading strategy.
+Orders are a fundamental component of any algorithmic trading strategy. nexustrader has integrated a wide range of order types and execution instructions, from standard to advanced, to maximize the potential functionality of trading venues. This allows traders to set specific conditions and instructions for order execution and management, enabling the creation of virtually any type of trading strategy.
 
 
 Overview
@@ -21,8 +21,8 @@ You can create a ``Basic Order`` by calling the ``create_order`` method in ``Str
 
 .. code-block:: python
 
-    from tradebot.strategy import Strategy
-    from tradebot.constants import ExchangeType, OrderSide, OrderType
+    from nexustrader.strategy import Strategy
+    from nexustrader.constants import ExchangeType, OrderSide, OrderType
 
     class Demo(Strategy):
         def __init__(self):
@@ -95,7 +95,7 @@ Order Linkage
 Order Creation
 ~~~~~~~~~~~~~~~
 
-Tradebot uses an internal order and exchange order linkage mechanism. When an internal order is created, i.e., the status is ``INITIALIZED``, a ``UUID`` is automatically created. When it is submitted to the exchange, if successful, it will be linked to the ``ORDER_ID`` returned by the exchange. If it fails, it will not be linked, and the ``UUID`` will be set to ``FAILED``.
+nexustrader uses an internal order and exchange order linkage mechanism. When an internal order is created, i.e., the status is ``INITIALIZED``, a ``UUID`` is automatically created. When it is submitted to the exchange, if successful, it will be linked to the ``ORDER_ID`` returned by the exchange. If it fails, it will not be linked, and the ``UUID`` will be set to ``FAILED``.
 
 .. image:: ../_static/link.png
     :alt: Order Linkage

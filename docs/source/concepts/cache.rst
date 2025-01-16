@@ -19,7 +19,7 @@ Let's start with a simple example, you want to get the ``bookl1`` and print it e
 
 .. code-block:: python
 
-    from tradebot.strategy import Strategy
+    from nexustrader.strategy import Strategy
 
     class Demo(Strategy):
         def __init__(self):

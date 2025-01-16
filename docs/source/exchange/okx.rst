@@ -12,7 +12,7 @@ There are 3 types of account in Okx. If your server is hosted by ``AWS``, you sh
 
 .. code-block:: python
 
-    from tradebot.exchange.okx import OkxAccountType
+    from nexustrader.exchange.okx import OkxAccountType
 
     account_type = OkxAccountType.LIVE # or OkxAccountType.AWS or OkxAccountType.DEMO
 
@@ -30,9 +30,9 @@ The most important part is the ``config`` object. You need to pass the ``config`
 
 .. code-block:: python
 
-    from tradebot.constants import settings
-    from tradebot.exchange.okx import OkxAccountType
-    from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
+    from nexustrader.constants import settings
+    from nexustrader.exchange.okx import OkxAccountType
+    from nexustrader.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
 
     OKX_API_KEY = settings.OKX.DEMO_1.api_key
     OKX_SECRET = settings.OKX.DEMO_1.secret

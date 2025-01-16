@@ -1,7 +1,7 @@
-tradebot.base.exchange
-======================
+nexustrader.base.exchange
+=============================
 
-.. currentmodule:: tradebot.base.exchange
+.. currentmodule:: nexustrader.base.exchange
 
 This module contains the Exchange class, which is responsible for interacting with the exchange.
 

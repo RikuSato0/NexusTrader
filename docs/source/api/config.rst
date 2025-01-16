@@ -1,7 +1,7 @@
-tradebot.config
+nexustrader.config
 ====================
 
-.. currentmodule:: tradebot.config
+.. currentmodule:: nexustrader.config
 
 Configuration Classes
 -------------------------

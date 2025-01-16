@@ -1,7 +1,7 @@
-tradebot.base.api_client
-========================
+nexustrader.base.api_client
+===============================
 
-.. currentmodule:: tradebot.base.api_client
+.. currentmodule:: nexustrader.base.api_client
 
 The ApiClient class is used to interact with the trading API.
 

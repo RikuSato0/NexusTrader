@@ -40,7 +40,7 @@ Why NexusTrader Is More Efficient?
 Architecture(Data Flow)
 ----------------------------
 
-The core of Tradebot is the ``Connector``, which is responsible for connecting to the exchange and data flow. Through the ``PublicConnector``, users can access market data from the exchange, and through the ``PrivateConnector``, users can execute trades and receive callbacks for trade data. Orders are submitted through the ``OrderExecutionSystem``, which is responsible for submitting orders to the exchange and obtaining the order ID from the exchange. Order status management is handled by the ``OrderManagementSystem``, which is responsible for managing the status of orders and sending them to the ``Strategy``.
+The core of nexustrader is the ``Connector``, which is responsible for connecting to the exchange and data flow. Through the ``PublicConnector``, users can access market data from the exchange, and through the ``PrivateConnector``, users can execute trades and receive callbacks for trade data. Orders are submitted through the ``OrderExecutionSystem``, which is responsible for submitting orders to the exchange and obtaining the order ID from the exchange. Order status management is handled by the ``OrderManagementSystem``, which is responsible for managing the status of orders and sending them to the ``Strategy``.
 
 .. image:: ./_static/arch.png
    :alt: Data Flow Diagram

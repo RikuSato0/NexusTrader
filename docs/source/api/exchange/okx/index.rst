@@ -1,4 +1,4 @@
-tradebot.exchange.okx
+nexustrader.exchange.okx
 ===========================
 
 .. toctree::

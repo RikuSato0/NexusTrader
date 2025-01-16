@@ -1,7 +1,7 @@
-tradebot.exchange.binance.oms
+nexustrader.exchange.binance.oms
 =====================================
 
-.. currentmodule:: tradebot.exchange.binance.oms
+.. currentmodule:: nexustrader.exchange.binance.oms
 
 This module implements the Order Management System (OMS) for Binance exchange, handling order processing and position tracking.
 

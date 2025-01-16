@@ -1,7 +1,7 @@
-tradebot.exchange.binance.exchange
+nexustrader.exchange.binance.exchange
 =====================================
 
-.. currentmodule:: tradebot.exchange.binance.exchange
+.. currentmodule:: nexustrader.exchange.binance.exchange
 
 This module implements the exchange manager for Binance, handling market data synchronization and trading operations.
 

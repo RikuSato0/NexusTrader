@@ -1,7 +1,7 @@
-tradebot.engine
+nexustrader.engine
 ====================
 
-.. currentmodule:: tradebot.engine
+.. currentmodule:: nexustrader.engine
 
 Engine
 ------

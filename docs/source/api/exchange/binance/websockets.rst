@@ -1,7 +1,7 @@
-tradebot.exchange.binance.websockets
+nexustrader.exchange.binance.websockets
 =====================================
 
-.. currentmodule:: tradebot.exchange.binance.websockets
+.. currentmodule:: nexustrader.exchange.binance.websockets
 
 This module implements WebSocket client for Binance exchange, providing real-time market data and user data streams.
 

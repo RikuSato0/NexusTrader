@@ -1,7 +1,7 @@
-tradebot.core.log
-=====================
+nexustrader.core.log
+===============================
 
-.. currentmodule:: tradebot.core.log
+.. currentmodule:: nexustrader.core.log
 
 The SpdLog class is responsible for creating and managing loggers with various features.
 

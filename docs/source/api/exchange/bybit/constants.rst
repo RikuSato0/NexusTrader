@@ -1,7 +1,7 @@
-tradebot.exchange.bybit.constants
+nexustrader.exchange.bybit.constants
 ====================================
 
-.. currentmodule:: tradebot.exchange.bybit.constants
+.. currentmodule:: nexustrader.exchange.bybit.constants
 
 This module contains all Bybit-specific constants and enums used throughout the Bybit connector implementation.
 

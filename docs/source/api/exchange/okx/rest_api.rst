@@ -1,7 +1,7 @@
-tradebot.exchange.okx.rest_api
+nexustrader.exchange.okx.rest_api
 =====================================
 
-.. currentmodule:: tradebot.exchange.okx.rest_api
+.. currentmodule:: nexustrader.exchange.okx.rest_api
 
 This module implements the REST API client for OKX exchange, providing methods to interact with various OKX API endpoints.
 

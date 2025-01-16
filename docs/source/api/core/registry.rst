@@ -1,7 +1,7 @@
-tradebot.core.registry
-=======================
+nexustrader.core.registry
+===============================
 
-.. currentmodule:: tradebot.core.registry
+.. currentmodule:: nexustrader.core.registry
 
 The OrderRegistry class is used to manage the mapping relationship between order IDs and UUIDs. In the trading system, each order has two identifiers:
 

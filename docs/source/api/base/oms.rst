@@ -1,7 +1,7 @@
-tradebot.base.oms
-==================
+nexustrader.base.oms
+========================
 
-.. currentmodule:: tradebot.base.oms
+.. currentmodule:: nexustrader.base.oms
 
 This module contains the OrderManagementSystem class, which is responsible for managing the execution of trading orders.
 

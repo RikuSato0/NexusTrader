@@ -1,4 +1,4 @@
-tradebot.exchange.binance
+nexustrader.exchange.binance
 ==========================
 
 .. toctree::

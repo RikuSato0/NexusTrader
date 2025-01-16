@@ -1,7 +1,7 @@
-tradebot.exchange.binance.schema
+nexustrader.exchange.binance.schema
 =====================================
 
-.. currentmodule:: tradebot.exchange.binance.schema
+.. currentmodule:: nexustrader.exchange.binance.schema
 
 This module defines the data structures and models used for Binance exchange API responses. It provides type-safe data models for market data, orders, trades, and other exchange-specific data structures.
 

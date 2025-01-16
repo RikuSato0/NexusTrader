@@ -1,7 +1,7 @@
-tradebot.exchange.okx.ems
+nexustrader.exchange.okx.ems
 =====================================
 
-.. currentmodule:: tradebot.exchange.okx.ems
+.. currentmodule:: nexustrader.exchange.okx.ems
 
 This module implements the Execution Management System (EMS) for OKX exchange, handling order submission and management across different account types.
 

@@ -1,7 +1,7 @@
-tradebot.exchange.binance.constants
+nexustrader.exchange.binance.constants
 ==========================================
 
-.. currentmodule:: tradebot.exchange.binance.constants
+.. currentmodule:: nexustrader.exchange.binance.constants
 
 This module contains all Binance-specific constants and enums used throughout the Binance connector implementation.
 

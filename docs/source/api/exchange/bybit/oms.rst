@@ -1,7 +1,7 @@
-tradebot.exchange.bybit.oms
+nexustrader.exchange.bybit.oms
 =====================================
 
-.. currentmodule:: tradebot.exchange.bybit.oms
+.. currentmodule:: nexustrader.exchange.bybit.oms
 
 The Bybit Order Management System (OMS) handles order processing and management for the Bybit exchange, including order message handling and status tracking.
 

@@ -8,7 +8,7 @@ Binance provides multiple account types. For testing environment, you can use ac
 
 .. code-block:: python
 
-    from tradebot.exchange.binance import BinanceAccountType
+    from nexustrader.exchange.binance import BinanceAccountType
 
     account_type = BinanceAccountType.USD_M_FUTURE  # or other account types
 
@@ -40,9 +40,9 @@ The most important part is the ``config`` object. You need to pass the ``config`
 
 .. code-block:: python
 
-    from tradebot.constants import settings
-    from tradebot.exchange.binance import BinanceAccountType
-    from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
+    from nexustrader.constants import settings
+    from nexustrader.exchange.binance import BinanceAccountType
+    from nexustrader.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
 
     BINANCE_API_KEY = settings.BINANCE.FUTURE.TESTNET_1.api_key
     BINANCE_SECRET = settings.BINANCE.FUTURE.TESTNET_1.secret

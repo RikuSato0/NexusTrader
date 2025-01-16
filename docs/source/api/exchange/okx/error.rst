@@ -1,7 +1,7 @@
-tradebot.exchange.okx.error
+nexustrader.exchange.okx.error
 =====================================
 
-.. currentmodule:: tradebot.exchange.okx.error
+.. currentmodule:: nexustrader.exchange.okx.error
 
 This module defines custom exception classes for handling OKX exchange-specific errors, including HTTP errors and API request errors.
 

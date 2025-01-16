@@ -1,7 +1,7 @@
-tradebot.exchange.bybit.connector
+nexustrader.exchange.bybit.connector
 =====================================
 
-.. currentmodule:: tradebot.exchange.bybit.connector
+.. currentmodule:: nexustrader.exchange.bybit.connector
 
 The Bybit connector is used to interact with the Bybit exchange. The PublicConnector is used to retrieve public market data, and the PrivateConnector is used for private account operations.
 

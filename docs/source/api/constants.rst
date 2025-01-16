@@ -1,7 +1,7 @@
-tradebot.constants
+nexustrader.constants
 ====================
 
-.. currentmodule:: tradebot.constants
+.. currentmodule:: nexustrader.constants
 
 Configuration
 ---------------

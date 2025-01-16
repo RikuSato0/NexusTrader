@@ -1,15 +1,15 @@
-tradebot.error
+nexustrader.error
 ====================
 
-.. currentmodule:: tradebot.error
+.. currentmodule:: nexustrader.error
 
 Classes
 -------
 
-TradebotError
+NexusTraderError
 ~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: TradebotError
+.. autoclass:: NexusTraderError
     :members:
     :undoc-members:
     :show-inheritance:

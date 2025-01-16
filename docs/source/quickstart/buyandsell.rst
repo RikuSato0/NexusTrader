@@ -7,7 +7,7 @@ First, we need to create a strategy class. You can subscribe the ``bookl1`` data
 
 .. code-block:: python
 
-        from tradebot.strategy import Strategy
+        from nexustrader.strategy import Strategy
 
         class Demo(Strategy):
             def __init__(self):

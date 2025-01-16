@@ -1,7 +1,7 @@
-tradebot.exchange.okx.oms
+nexustrader.exchange.okx.oms
 =====================================
 
-.. currentmodule:: tradebot.exchange.okx.oms
+.. currentmodule:: nexustrader.exchange.okx.oms
 
 This module implements the Order Management System (OMS) for OKX exchange, handling order tracking and status management.
 

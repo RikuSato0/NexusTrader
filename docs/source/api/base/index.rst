@@ -1,4 +1,4 @@
-tradebot.base
+nexustrader.base
 =================
 
 .. toctree::

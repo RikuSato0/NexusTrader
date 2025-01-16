@@ -1,5 +1,5 @@
-tradebot.core
-===============
+nexustrader.core
+===============================
 
 .. toctree::
    :maxdepth: 1

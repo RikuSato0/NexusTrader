@@ -1,7 +1,7 @@
-tradebot.core.cache
-=====================
+nexustrader.core.cache
+===============================
 
-.. currentmodule:: tradebot.core.cache
+.. currentmodule:: nexustrader.core.cache
 
 This module contains the AsyncCache class, which is responsible for managing in-memory and persistent storage of trading data.
 

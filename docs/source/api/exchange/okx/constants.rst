@@ -1,7 +1,7 @@
-tradebot.exchange.okx.constants
+nexustrader.exchange.okx.constants
 =====================================
 
-.. currentmodule:: tradebot.exchange.okx.constants
+.. currentmodule:: nexustrader.exchange.okx.constants
 
 This module defines constants and enumerations used throughout the OKX exchange integration, including instrument types, order types, and various trading parameters.
 

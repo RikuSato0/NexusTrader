@@ -1,7 +1,7 @@
-tradebot.core.entity
-=====================
+nexustrader.core.entity
+===============================
 
-.. currentmodule:: tradebot.core.entity
+.. currentmodule:: nexustrader.core.entity
 
 This module contains classes and functions for managing tasks, events, and data readiness in the trading system.
 

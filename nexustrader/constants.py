@@ -1,6 +1,5 @@
 import os
 import sys
-from configparser import ConfigParser
 from typing import Literal, Union, Dict, List
 from enum import Enum
 from dynaconf import Dynaconf
@@ -11,52 +10,32 @@ def is_sphinx_build():
 
 if not os.path.exists(".keys/"):
     os.makedirs(".keys/")
-if not os.path.exists(".keys/config.cfg") and not is_sphinx_build():
+if not os.path.exists(".keys/.secrets.toml") and not is_sphinx_build():
     raise FileNotFoundError(
-        "Config file not found, please create a config file at .keys/config.cfg"
+        "Config file not found, please create a config file at .keys/.secrets.toml"
     )
-
-KEYS = ConfigParser()
-KEYS.read(".keys/config.cfg")
-
 
 
 settings = Dynaconf(
-    envvar_prefix="DYNACONF",
+    envvar_prefix="NEXUS",
     settings_files=['.keys/settings.toml', '.keys/.secrets.toml'],
+    load_dotenv=True,
 )
-
 
 def get_redis_config(in_docker: bool = False):
     try:
-        import subprocess
-        
-        # 使用主密钥文件解密
-        result = subprocess.run(
-            [
-                "openssl", "enc", "-aes-256-cbc", "-salt", "-pbkdf2",
-                "-d", "-pass", "file:.keys/master.key",
-                "-in", ".keys/redis.key"
-            ],
-            capture_output=True,
-            text=True
-        )
-        if result.returncode != 0:
-            raise ValueError("Failed to decrypt Redis password, please run `start_redis.sh` first")
-        password = result.stdout.strip()
-        
         if in_docker:
             return {
                 "host": "redis",
-                "db": KEYS["redis_config"]["db"],
-                "password": password,
+                "db": settings.REDIS_DB,
+                "password": settings.REDIS_PASSWORD,
             }
 
         return {
-            "host": KEYS["redis_config"]["host"],
-            "port": KEYS["redis_config"]["port"],
-            "db": KEYS["redis_config"]["db"],
-            "password": password,
+            "host": settings.REDIS_HOST,
+            "port": settings.REDIS_PORT,
+            "db": settings.REDIS_DB,
+            "password": settings.REDIS_PASSWORD,
         }
     except Exception as e:
         raise ValueError(f"Failed to get Redis password: {e}")

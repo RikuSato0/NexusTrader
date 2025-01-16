@@ -13,10 +13,12 @@ services:
     container_name: redis
     restart: always
     ports:
-      - '6379:6379'
+      - '${NEXUS_REDIS_PORT}:6379'
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    command: redis-server --appendonly yes --requirepass ${NEXUS_REDIS_PASSWORD}
+    environment:
+      - REDIS_PASSWORD=${NEXUS_REDIS_PASSWORD}
 
   loki:
     image: grafana/loki:3.3.1

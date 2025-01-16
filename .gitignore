@@ -24,3 +24,4 @@ nautilus_trader/
 *.pkl
 env/
 dist/
+.env

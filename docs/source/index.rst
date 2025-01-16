@@ -1,4 +1,4 @@
-Welcome to TradeBot's documentation!
+Welcome to NexusTrader's documentation!
 =========================================
 .. |python-versions| image:: https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue?logo=python
    :alt: Python Versions
@@ -11,7 +11,7 @@ Welcome to TradeBot's documentation!
 Introduction
 -----------------
 
-TradeBot is a professional-grade open-source quantitative trading platform, specifically designed for **large capital
+NexusTrader is a professional-grade open-source quantitative trading platform, specifically designed for **large capital
 management** and **complex strategy development**, dedicated to providing high-performance, scalable, and user-friendly
 quantitative trading solutions.
 
@@ -20,18 +20,18 @@ Core Advantages
 
 - 🚀 **Professionally Optimized Order Algorithms**: Deep optimization for algorithmic orders including TWAP, effectively reducing market impact costs. Users can easily integrate their own execution signals to achieve more efficient and precise order execution.
 - 💰 **Professional Arbitrage Strategy Support**: Provides professional optimization for various arbitrage strategies, including funding rate arbitrage and cross-exchange arbitrage, supporting real-time tracking and trading of thousandsof trading pairs to help users easily capture arbitrage opportunities.
-- 🚧 **Full-Featured Quantitative Trading Framework**: Users don't need to build frameworks or handle complex exchange interface details themselves. TradeBot has integrated professional position management, order management, fundmanagement, and statistical analysis modules, allowing users to focus on writing strategy logic and quickly implement quantitative trading.
+- 🚧 **Full-Featured Quantitative Trading Framework**: Users don't need to build frameworks or handle complex exchange interface details themselves. NexusTrader has integrated professional position management, order management, fundmanagement, and statistical analysis modules, allowing users to focus on writing strategy logic and quickly implement quantitative trading.
 - 🚀 **Multi-Market Support and High Scalability**: Supports large-scale multi-market tracking and high-frequency strategy execution, covering a wide range of trading instruments, making it an ideal choice for professional trading needs.
 
-Why TradeBot Is More Efficient?
+Why NexusTrader Is More Efficient?
 ------------------------------------
 
 - **Enhanced Event Loop Performance**:
-  TradeBot leverages `uvloop <https://github.com/MagicStack/uvloop>`_, a high-performance event loop, delivering speeds up to 2-4 times faster than Python's default asyncio loop.
+  NexusTrader leverages `uvloop <https://github.com/MagicStack/uvloop>`_, a high-performance event loop, delivering speeds up to 2-4 times faster than Python's default asyncio loop.
 - **High-Performance WebSocket Framework**:
   Built with `picows <https://github.com/tarasko/picows>`_, a Cython-based WebSocket library that matches the speed of C++'s Boost.Beast, significantly outperforming Python alternatives like websockets and aiohttp.
 - **Optimized Data Serialization**:
-  Utilizing `msgspec` for serialization and deserialization, TradeBot achieves unmatched efficiency, surpassing tools like ``orjson``, ``ujson``, and ``json``. All data classes are implemented with ``msgspec.Struct`` for maximum performance.
+  Utilizing `msgspec` for serialization and deserialization, NexusTrader achieves unmatched efficiency, surpassing tools like ``orjson``, ``ujson``, and ``json``. All data classes are implemented with ``msgspec.Struct`` for maximum performance.
 - **Scalable Order Management**:
   Orders are handled efficiently using ``asyncio.Queue``, ensuring seamless processing even at high volumes.
 - **Rust-Powered Core Components**:

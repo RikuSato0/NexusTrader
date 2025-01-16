@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "tradebot"
+name = "nexustrader"
 version = "0.1.1"
 description = "fastest python trading bot"
 authors = ["River-Shi <nachuan.shi.quant@gmail.com>"]

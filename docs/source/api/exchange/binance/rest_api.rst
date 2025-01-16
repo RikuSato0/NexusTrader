@@ -1,5 +1,5 @@
 nexustrader.exchange.binance.rest_api
-=====================================
+=========================================
 
 .. currentmodule:: nexustrader.exchange.binance.rest_api
 

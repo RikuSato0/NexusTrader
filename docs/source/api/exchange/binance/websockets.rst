@@ -1,5 +1,5 @@
 nexustrader.exchange.binance.websockets
-=====================================
+================================================
 
 .. currentmodule:: nexustrader.exchange.binance.websockets
 

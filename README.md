@@ -1,7 +1,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/source/_static/logo-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="docs/source/_static/logo-light.png">
-  <img alt="TradeBotPro Logo" src="docs/source/_static/logo-light.png">
+  <img alt="nexustrader Logo" src="docs/source/_static/logo-light.png">
 </picture>
 
 
@@ -9,7 +9,7 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)![Python](https://img.shields.io/badge/python-3.10%2B-blue)![Version](https://img.shields.io/badge/version-1.0.0-blue)
 
-- **Docs**: https://tradebot-pro.readthedocs.io/en/latest/
+- **Docs**: https://nexustrader.readthedocs.io/en/latest/
 - **Support**: [quantweb3.ai@gmail.com](mailto:quantweb3.ai@gmail.com)
 
 ## Introduction
@@ -51,7 +51,7 @@ quantitative trading solutions.
 
 | Framework                                                    | Websocket Package                                            | Data Serialization                                 | Strategy Support | Advantages                                         | Disadvantages                                     |
 | ------------------------------------------------------------ | ------------------------------------------------------------ | -------------------------------------------------- | ---------------- | -------------------------------------------------- | ------------------------------------------------- |
-| **TradeBotPro**                                              | [picows](https://picows.readthedocs.io/en/stable/introduction.html#installation) | [msgspec](https://jcristharif.com/msgspec/)        | ✅                | Professionally optimized for speed and low latency | Requires some familiarity with async workflows    |
+| **NexusTrader**                                              | [picows](https://picows.readthedocs.io/en/stable/introduction.html#installation) | [msgspec](https://jcristharif.com/msgspec/)        | ✅                | Professionally optimized for speed and low latency | Requires some familiarity with async workflows    |
 | [HummingBot](https://github.com/hummingbot/hummingbot?tab=readme-ov-file) | aiohttp                                                      | [ujson](https://pypi.org/project/ujson/)           | ✅                | Widely adopted with robust community support       | Slower WebSocket handling and limited flexibility |
 | [Freqtrade](https://github.com/freqtrade/freqtrade)          | websockets                                                   | [orjson](https://github.com/ijl/orjson)            | ✅                | Flexible strategy support                          | Higher resource consumption                       |
 | [crypto-feed](https://github.com/bmoscon/cryptofeed)         | [websockets](https://websockets.readthedocs.io/en/stable/)   | [yapic.json](https://pypi.org/project/yapic.json/) | ❌                | Simple design for feed-only use                    | Lacks trading support and advanced features       |
@@ -105,18 +105,18 @@ poetry install
 
 ### Quick Start
 
-Here's a basic example of how to use TradeBotPro, demonstrating a simple buy and sell strategy on OKX.
+Here's a basic example of how to use nexustrader, demonstrating a simple buy and sell strategy on OKX.
 
 ```python
 from decimal import Decimal
 
-from tradebot.constants import settings
-from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
-from tradebot.strategy import Strategy
-from tradebot.constants import ExchangeType, OrderSide, OrderType
-from tradebot.exchange.okx import OkxAccountType
-from tradebot.schema import BookL1, Order
-from tradebot.engine import Engine
+from nexustrader.constants import settings
+from nexustrader.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
+from nexustrader.strategy import Strategy
+from nexustrader.constants import ExchangeType, OrderSide, OrderType
+from nexustrader.exchange.okx import OkxAccountType
+from nexustrader.schema import BookL1, Order
+from nexustrader.engine import Engine
 
 # Retrieve API credentials from settings
 OKX_API_KEY = settings.OKX.DEMO_1.api_key
@@ -209,7 +209,7 @@ class. For instance, to switch to Binance, you can adjust the configuration as f
 `BTCUSDT-PERP.BINANCE`.
 
 ```python
-from tradebot.exchange.binance import BinanceAccountType
+from nexustrader.exchange.binance import BinanceAccountType
 
 config = Config(
     strategy_id="buy_and_sell_binance",
@@ -241,7 +241,7 @@ config = Config(
 
 ## Multi-Mode Support
 
-TradeBotPro supports multiple modes of operation to cater to different trading strategies and requirements. Each mode
+nexustrader supports multiple modes of operation to cater to different trading strategies and requirements. Each mode
 allows for flexibility in how trading logic is executed based on market conditions or specific triggers.
 
 ### Event-Driven Mode
@@ -297,7 +297,7 @@ class Demo3(Strategy):
 
 ## Contributing
 
-Thank you for considering contributing to TradeBotPro! We greatly appreciate any effort to help improve the project. If
+Thank you for considering contributing to nexustrader! We greatly appreciate any effort to help improve the project. If
 you have an idea for an enhancement or a bug fix, the first step is to open
 an [issue](https://github.com/Quantweb3-ai/tradebot-pro/issues) on GitHub. This allows us to discuss your proposal and
 ensure it aligns with the project's goals, while also helping to avoid duplicate efforts.
@@ -310,7 +310,7 @@ Contributor License Agreement (CLA) to ensure it can be included in the project.
 > Pull requests should be directed to the `main` branch (the default branch), where new features and improvements are
 > integrated before release.
 
-Thank you again for your interest in TradeBotPro! We look forward to reviewing your contributions and collaborating with
+Thank you again for your interest in nexustrader! We look forward to reviewing your contributions and collaborating with
 you to make the project even better.
 
 ## VIP Privileges
@@ -348,10 +348,10 @@ Connect with us on your favorite platforms:
 We recommend exploring related tools and projects that can enhance your trading workflows:
 
 - **[Nexus](https://github.com/Quantweb3-ai/nexus):** A robust exchange interface optimization solution that integrates
-  seamlessly with trading bots like TradeBotPro, enabling faster and more reliable trading execution.
+  seamlessly with trading bots like nexustrader, enabling faster and more reliable trading execution.
 
 ## License
 
-TradeBotPro is available on GitHub under the MIT License. Contributions to the project are welcome and require the
+Nexustrader is available on GitHub under the MIT License. Contributions to the project are welcome and require the
 completion of a Contributor License Agreement (CLA). Please review the contribution guidelines and submit a pull
 request. See the [LICENSE](./LICENSE) file for details.

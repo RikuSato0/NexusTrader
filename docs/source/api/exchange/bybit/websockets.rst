@@ -1,5 +1,5 @@
 nexustrader.exchange.bybit.websockets
-=====================================
+==========================================
 
 .. currentmodule:: nexustrader.exchange.bybit.websockets
 

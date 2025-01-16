@@ -1,5 +1,5 @@
 nexustrader.exchange.binance.ems
-===============================
+====================================
 
 .. currentmodule:: nexustrader.exchange.binance.ems
 

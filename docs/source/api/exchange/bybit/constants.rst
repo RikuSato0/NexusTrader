@@ -1,5 +1,5 @@
 nexustrader.exchange.bybit.constants
-====================================
+===========================================
 
 .. currentmodule:: nexustrader.exchange.bybit.constants
 

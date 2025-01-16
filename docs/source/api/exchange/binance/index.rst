@@ -1,5 +1,5 @@
 nexustrader.exchange.binance
-==========================
+===============================
 
 .. toctree::
    :maxdepth: 1

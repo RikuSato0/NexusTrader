@@ -1,5 +1,5 @@
 nexustrader.constants
-====================
+===========================
 
 .. currentmodule:: nexustrader.constants
 

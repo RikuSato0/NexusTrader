@@ -268,10 +268,13 @@ class AsyncCache:
     async def close(self):
         """Close the cache"""
         self._shutdown_event.set()
-        await self._sync_to_redis()
-        await self._r_async.aclose()
-        await self._db_async.close()
-        self._db.close()
+        if self._storage_backend == StorageBackend.REDIS:
+            await self._sync_to_redis()
+            await self._r_async.aclose()
+        elif self._storage_backend == StorageBackend.SQLITE:
+            await self._sync_to_sqlite()
+            await self._db_async.close()
+            self._db.close()
 
     ################ # cache public data  ###################
 

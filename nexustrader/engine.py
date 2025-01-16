@@ -521,7 +521,7 @@ class Engine:
             await connector.disconnect()
         for connector in self._private_connectors.values():
             await connector.disconnect()
-
+        await self._cache.close()
         await self._task_manager.cancel()
 
     def start(self):

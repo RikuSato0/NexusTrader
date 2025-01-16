@@ -122,7 +122,7 @@ class SpdLog:
             logger.drop()
 
     @classmethod
-    def initialize(cls, level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO", log_dir: str = ".log", async_mode: bool = True, setup_error_handlers: bool = True, production_mode: bool = False):
+    def initialize(cls, level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO", log_dir: str = ".log", async_mode: bool = True, production_mode: bool = False):
         """
         Initialize the log registry.
 
@@ -133,10 +133,10 @@ class SpdLog:
         cls.production_mode = production_mode
         cls.log_dir = Path(log_dir)
         cls.async_mode = async_mode
-        if setup_error_handlers:
-            cls.setup_error_handling()
+        # if setup_error_handlers:
+        #     cls.setup_error_handling()
         if cls.production_mode:
-            daily_sink = spd.daily_file_sink_mt(filename=str(log_dir / "log.log"), rotation_hour=0, rotation_minute=0)
+            daily_sink = spd.daily_file_sink_mt(filename=str(cls.log_dir / "log.log"), rotation_hour=0, rotation_minute=0)
             daily_sink.set_level(cls.parse_level(level))
             
             stdout_sink = spd.stdout_color_sink_mt()    
@@ -153,7 +153,7 @@ class SpdLog:
 
 
 if __name__ == "__main__":
-    SpdLog.initialize(setup_error_handlers=False)  # You should initialize the logger in the main thread
+    SpdLog.initialize(level="DEBUG", log_dir="log", production_mode=True)
     logger = SpdLog.get_logger("test", level="DEBUG", flush=True)
     logger.debug("This is a debug message")
     logger.info("This is an info message")

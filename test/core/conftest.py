@@ -1,15 +1,15 @@
 import pytest
 import asyncio
-from tradebot.core.entity import TaskManager
-from tradebot.core.nautilius_core import MessageBus, LiveClock
-from tradebot.core.registry import OrderRegistry
+from nexustrader.core.entity import TaskManager
+from nexustrader.core.nautilius_core import MessageBus, LiveClock
+from nexustrader.core.registry import OrderRegistry
 from nautilus_trader.model.identifiers import TraderId
 
 import pytest
 
 from decimal import Decimal
-from tradebot.schema import Order, ExchangeType
-from tradebot.constants import OrderStatus, OrderSide, OrderType, PositionSide
+from nexustrader.schema import Order, ExchangeType
+from nexustrader.constants import OrderStatus, OrderSide, OrderType, PositionSide
 
 
 """

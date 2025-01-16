@@ -2,15 +2,15 @@ import pytest
 import time
 from decimal import Decimal
 from copy import copy
-from tradebot.schema import Order, ExchangeType, BookL1, Kline, Trade, Position
-from tradebot.constants import OrderStatus, OrderSide, OrderType
-from tradebot.core.cache import AsyncCache
+from nexustrader.schema import Order, ExchangeType, BookL1, Kline, Trade, Position
+from nexustrader.constants import OrderStatus, OrderSide, OrderType
+from nexustrader.core.cache import AsyncCache
 from test.core.conftest import create_position_orders
 
 
 @pytest.fixture
 def async_cache(task_manager, message_bus) -> AsyncCache:
-    from tradebot.core.cache import AsyncCache
+    from nexustrader.core.cache import AsyncCache
 
     cache = AsyncCache(
         strategy_id="test-strategy",

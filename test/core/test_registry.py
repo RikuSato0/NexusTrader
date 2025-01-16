@@ -1,8 +1,8 @@
 import pytest
 import asyncio
-from tradebot.schema import Order, ExchangeType
-from tradebot.constants import OrderStatus, OrderSide, OrderType
-from tradebot.core.registry import OrderRegistry
+from nexustrader.schema import Order, ExchangeType
+from nexustrader.constants import OrderStatus, OrderSide, OrderType
+from nexustrader.core.registry import OrderRegistry
 
 @pytest.fixture
 def sample_order():

@@ -1,6 +1,6 @@
 from pybit.unified_trading import WebSocket
 from time import sleep
-from tradebot.constants import settings
+from nexustrader.constants import settings
 
 BYBIT_API_KEY = settings.BYBIT.ACCOUNT1.api_key
 BYBIT_SECRET = settings.BYBIT.ACCOUNT1.secret

@@ -1,6 +1,6 @@
 import pytest
 import asyncio
-from tradebot.core.entity import TaskManager
+from nexustrader.core.entity import TaskManager
 
 
 @pytest.mark.asyncio

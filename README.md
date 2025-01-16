@@ -1,7 +1,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/source/_static/logo-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="docs/source/_static/logo-light.png">
-  <img alt="TradeBotPro Logo" src="docs/source/_static/logo-light-new.png">
+  <img alt="TradeBotPro Logo" src="docs/source/_static/logo-light.png">
 </picture>
 
 
@@ -14,7 +14,7 @@
 
 ## Introduction
 
-TradeBot is a professional-grade open-source quantitative trading platform, specifically designed for **large capital
+NexusTrader is a professional-grade open-source quantitative trading platform, specifically designed for **large capital
 management** and **complex strategy development**, dedicated to providing high-performance, scalable, and user-friendly
 quantitative trading solutions.
 
@@ -29,19 +29,19 @@ quantitative trading solutions.
    including funding rate arbitrage and cross-exchange arbitrage, supporting real-time tracking and trading of thousands
    of trading pairs to help users easily capture arbitrage opportunities.
 - 🚧 **Full-Featured Quantitative Trading Framework：** Users don't need to build frameworks or handle complex exchange
-   interface details themselves. TradeBot has integrated professional position management, order management, fund
+   interface details themselves. NexusTrader has integrated professional position management, order management, fund
    management, and statistical analysis modules, allowing users to focus on writing strategy logic and quickly implement
    quantitative trading.
 - 🚀 **Multi-Market Support and High Scalability：** Supports large-scale multi-market tracking and high-frequency strategy
    execution, covering a wide range of trading instruments, making it an ideal choice for professional trading needs.
 
-### Why TradeBot Is More Efficient?
+### Why NexusTrader Is More Efficient?
 
-  - **Enhanced Event Loop Performance**: TradeBot leverages [uvloop](https://github.com/MagicStack/uvloop), a high-performance event loop, delivering speeds up to 2-4 times faster than Python's default asyncio loop.
+  - **Enhanced Event Loop Performance**: NexusTrader leverages [uvloop](https://github.com/MagicStack/uvloop), a high-performance event loop, delivering speeds up to 2-4 times faster than Python's default asyncio loop.
 
   - **High-Performance WebSocket Framework**: Built with [picows](https://github.com/tarasko/picows), a Cython-based WebSocket library that matches the speed of C++'s Boost.Beast, significantly outperforming Python alternatives like websockets and aiohttp.
 
-  - **Optimized Data Serialization**: Utilizing `msgspec` for serialization and deserialization, TradeBot achieves unmatched efficiency, surpassing tools like `orjson`, `ujson`, and `json`. All data classes are implemented with `msgspec.Struct` for maximum performance.
+  - **Optimized Data Serialization**: Utilizing `msgspec` for serialization and deserialization, NexusTrader achieves unmatched efficiency, surpassing tools like `orjson`, `ujson`, and `json`. All data classes are implemented with `msgspec.Struct` for maximum performance.
 
   - **Scalable Order Management**: Orders are handled efficiently using `asyncio.Queue`, ensuring seamless processing even at high volumes.
 

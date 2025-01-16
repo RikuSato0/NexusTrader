@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/source/_static/logo-dark-new.png">
-  <source media="(prefers-color-scheme: light)" srcset="docs/source/_static/logo-light-new.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/source/_static/logo-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/source/_static/logo-light.png">
   <img alt="TradeBotPro Logo" src="docs/source/_static/logo-light-new.png">
 </picture>
 

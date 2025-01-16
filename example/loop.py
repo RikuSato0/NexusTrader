@@ -1,6 +1,6 @@
 import asyncio
 import platform
-from tradebot.core.log import SpdLog
+from nexustrader.core.log import SpdLog
 from typing import List
 import signal
 

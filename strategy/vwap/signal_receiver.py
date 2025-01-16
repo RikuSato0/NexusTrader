@@ -2,10 +2,10 @@ import zmq.asyncio
 import orjson
 import asyncio
 from typing import Dict, Callable
-from tradebot.exchange.bybit.schema import BybitMarket
-from tradebot.exchange.bybit import BybitExchangeManager
+from nexustrader.exchange.bybit.schema import BybitMarket
+from nexustrader.exchange.bybit import BybitExchangeManager
 from decimal import Decimal
-from tradebot.config import ZeroMQSignalConfig
+from nexustrader.config import ZeroMQSignalConfig
 
 class BybitSignal:
     def __init__(self, market: Dict[str, BybitMarket] = None):

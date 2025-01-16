@@ -1,8 +1,8 @@
 import asyncio
 import numpy as np
 from streamz import Stream
-from tradebot.exchange._binance import BinanceWebsocketManager
-from tradebot.constants import MARKET_URLS
+from nexustrader.exchange._binance import BinanceWebsocketManager
+from nexustrader.constants import MARKET_URLS
 
 
 spot_stream = Stream()

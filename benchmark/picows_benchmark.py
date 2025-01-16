@@ -4,7 +4,7 @@ import orjson
 import numpy as np
 import time
 from asynciolimiter import Limiter
-from tradebot.core.log import SpdLog
+from nexustrader.core.log import SpdLog
 from collections import defaultdict
 from abc import ABC, abstractmethod
 

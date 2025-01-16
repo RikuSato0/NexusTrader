@@ -2,9 +2,9 @@ import asyncio
 import ccxt.pro as ccxt
 import msgspec
 from decimal import Decimal
-from tradebot.schema import Asset
-from tradebot.constants import KEYS
-from tradebot.exchange.binance import BinanceExchangeManager
+from nexustrader.schema import Asset
+from nexustrader.constants import KEYS
+from nexustrader.exchange.binance import BinanceExchangeManager
 
 BINANCE_PM_API = KEYS["binance_uni"]["API_KEY"]
 BINANCE_PM_SECRET = KEYS["binance_uni"]["SECRET"]

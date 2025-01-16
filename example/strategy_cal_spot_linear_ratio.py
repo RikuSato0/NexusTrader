@@ -1,6 +1,6 @@
 import asyncio
-from tradebot.core import Strategy
-from tradebot.exchange.binance import (
+from nexustrader.core import Strategy
+from nexustrader.exchange.binance import (
     BinanceAccountType,
     BinanceExchangeManager,
     BinancePublicConnector

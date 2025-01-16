@@ -1,5 +1,5 @@
-from tradebot.constants import CONFIG
-from tradebot.exchange.bybit import BybitExchangeManager
+from nexustrader.constants import CONFIG
+from nexustrader.exchange.bybit import BybitExchangeManager
 from pprint import pprint
 
 BYBIT_API_KEY = CONFIG["bybit"]["API_KEY"]

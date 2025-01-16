@@ -1,8 +1,8 @@
 import asyncio
 import time
-from tradebot.constants import OrderSide, OrderType
-from tradebot.constants import KEYS
-from tradebot.exchange.binance import BinanceHttpClient, BinanceApiClient
+from nexustrader.constants import OrderSide, OrderType
+from nexustrader.constants import KEYS
+from nexustrader.exchange.binance import BinanceHttpClient, BinanceApiClient
 
 
 BINANCE_API_KEY = KEYS["binance_future_testnet"]["API_KEY"]

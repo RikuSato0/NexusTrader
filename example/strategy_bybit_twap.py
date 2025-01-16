@@ -1,10 +1,10 @@
 import asyncio
-from tradebot.constants import KEYS
-from tradebot.schema import Order
-from tradebot.constants import OrderSide, OrderType, OrderStatus
-from tradebot.core import Strategy
+from nexustrader.constants import KEYS
+from nexustrader.schema import Order
+from nexustrader.constants import OrderSide, OrderType, OrderStatus
+from nexustrader.core import Strategy
 from decimal import Decimal
-from tradebot.exchange.bybit import (
+from nexustrader.exchange.bybit import (
     BybitPublicConnector,
     BybitPrivateConnector,
     BybitAccountType,

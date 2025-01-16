@@ -1,6 +1,6 @@
 import asyncio
-from tradebot.constants import KEYS
-from tradebot.exchange.bybit import BybitPrivateConnector, BybitExchangeManager, BybitAccountType
+from nexustrader.constants import KEYS
+from nexustrader.exchange.bybit import BybitPrivateConnector, BybitExchangeManager, BybitAccountType
 
 BYBIT_API_KEY = KEYS['bybit_testnet']['API_KEY']
 BYBIT_API_SECRET = KEYS['bybit_testnet']['SECRET']

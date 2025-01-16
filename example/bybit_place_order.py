@@ -1,9 +1,9 @@
 import asyncio
 from decimal import Decimal
 
-from tradebot.constants import KEYS
-from tradebot.constants import OrderSide, OrderType
-from tradebot.exchange.bybit import (
+from nexustrader.constants import KEYS
+from nexustrader.constants import OrderSide, OrderType
+from nexustrader.exchange.bybit import (
     BybitExchangeManager,
     BybitPrivateConnector,
     BybitAccountType,

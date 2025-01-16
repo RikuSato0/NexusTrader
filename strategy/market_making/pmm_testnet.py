@@ -4,12 +4,12 @@ import ccxt
 from typing import Dict
 from collections import defaultdict
 
-from tradebot.constants import OrderSide, OrderType
-from tradebot.core import Strategy
-from tradebot.types import Order, BookL1
+from nexustrader.constants import OrderSide, OrderType
+from nexustrader.core import Strategy
+from nexustrader.types import Order, BookL1
 
-from tradebot.constants import CONFIG
-from tradebot.exchange.bybit import (
+from nexustrader.constants import CONFIG
+from nexustrader.exchange.bybit import (
     BybitPublicConnector,
     BybitPrivateConnector,
     BybitAccountType,

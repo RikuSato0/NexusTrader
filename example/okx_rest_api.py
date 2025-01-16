@@ -1,6 +1,6 @@
 import asyncio
-from tradebot.constants import KEYS
-from tradebot.exchange.okx.rest_api import OkxApiClient
+from nexustrader.constants import KEYS
+from nexustrader.exchange.okx.rest_api import OkxApiClient
 
 OKX_API_KEY = KEYS["okex_demo"]["API_KEY"]
 OKX_API_SECRET = KEYS["okex_demo"]["SECRET"]

@@ -1,12 +1,12 @@
 import asyncio
 
-from tradebot.core import Strategy
-from tradebot.exchange.binance import (
+from nexustrader.core import Strategy
+from nexustrader.exchange.binance import (
     BinancePrivateConnector,
     BinanceExchangeManager,
     BinanceAccountType,
 )
-from tradebot.constants import KEYS
+from nexustrader.constants import KEYS
 
 BINANCE_API_KEY = KEYS["binance_future_testnet"]["API_KEY"]
 BINANCE_API_SECRET = KEYS["binance_future_testnet"]["SECRET"]

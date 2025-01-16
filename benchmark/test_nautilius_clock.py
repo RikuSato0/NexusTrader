@@ -1,6 +1,6 @@
 import time
 import timeit
-from tradebot.core.nautilius_core import LiveClock
+from nexustrader.core.nautilius_core import LiveClock
 
 def test_nautilius_clock(clock: LiveClock = LiveClock()):
     _timestamp = clock.timestamp_ms()

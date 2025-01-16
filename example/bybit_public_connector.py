@@ -1,5 +1,5 @@
 import asyncio
-from tradebot.exchange.bybit import BybitPublicConnector, BybitAccountType, BybitExchangeManager
+from nexustrader.exchange.bybit import BybitPublicConnector, BybitAccountType, BybitExchangeManager
 
 
 async def main():

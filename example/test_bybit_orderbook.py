@@ -3,7 +3,7 @@ import json
 import msgspec
 import orjson
 from collections import defaultdict
-from tradebot.exchange.bybit.schema import BybitWsOrderbookDepthMsg, BybitOrderBook, BybitWsMessageGeneral
+from nexustrader.exchange.bybit.schema import BybitWsOrderbookDepthMsg, BybitOrderBook, BybitWsMessageGeneral
 
 
 file_path = os.path.join('test', 'test_data', 'data_ws.json')

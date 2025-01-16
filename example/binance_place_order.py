@@ -1,8 +1,8 @@
 import time
 import asyncio
-from tradebot.constants import KEYS
-from tradebot.base import ExchangeManager
-from tradebot.exchange.binance import (
+from nexustrader.constants import KEYS
+from nexustrader.base import ExchangeManager
+from nexustrader.exchange.binance import (
     BinancePrivateConnector,
     BinanceAccountType,
     BinanceExchangeManager,

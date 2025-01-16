@@ -1,6 +1,6 @@
 import asyncio
-from tradebot.exchange.okx.websockets import OkxWSClient
-from tradebot.exchange.okx import OkxExchangeManager, OkxAccountType
+from nexustrader.exchange.okx.websockets import OkxWSClient
+from nexustrader.exchange.okx import OkxExchangeManager, OkxAccountType
 
 
 async def main():

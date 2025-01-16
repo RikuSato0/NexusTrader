@@ -1,12 +1,12 @@
 import re
-from tradebot.schema import Position, Order
-from tradebot.constants import OrderStatus
+from nexustrader.schema import Position, Order
+from nexustrader.constants import OrderStatus
 from typing import Dict
 from tqdm import tqdm
 import orjson
 from typing import Optional, Any
 import msgspec
-from tradebot.core.log import SpdLog
+from nexustrader.core.log import SpdLog
 
 logger = SpdLog.get_logger(__name__, "INFO", flush=True)
 

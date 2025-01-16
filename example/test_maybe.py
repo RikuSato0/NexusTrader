@@ -3,8 +3,8 @@
 
 from typing import Optional
 from returns.maybe import Maybe, maybe
-from tradebot.schema import Order
-from tradebot.constants import OrderStatus, ExchangeType
+from nexustrader.schema import Order
+from nexustrader.constants import OrderStatus, ExchangeType
 
 
 @maybe  # decorator to convert existing Optional[int] to Maybe[int]

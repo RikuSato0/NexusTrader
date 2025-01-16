@@ -1,9 +1,9 @@
 import asyncio
 from pprint import pprint
-from tradebot.constants import KEYS
-from tradebot.base import ExchangeManager
-from tradebot.exchange.binance.constants import BinanceAccountType
-from tradebot.exchange.binance.rest_api import BinanceApiClient
+from nexustrader.constants import KEYS
+from nexustrader.base import ExchangeManager
+from nexustrader.exchange.binance.constants import BinanceAccountType
+from nexustrader.exchange.binance.rest_api import BinanceApiClient
 
 
 BINANCE_API_KEY = KEYS["binance_future_testnet"]["API_KEY"]

@@ -1,13 +1,13 @@
 from decimal import Decimal
 
-from tradebot.constants import settings
-from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
-from tradebot.strategy import Strategy
-from tradebot.constants import ExchangeType, OrderSide, OrderType
-from tradebot.exchange.okx import OkxAccountType
-from tradebot.schema import BookL1, Order, AccountBalance
-from tradebot.engine import Engine
-from tradebot.core.nautilius_core import LiveClock
+from nexustrader.constants import settings
+from nexustrader.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
+from nexustrader.strategy import Strategy
+from nexustrader.constants import ExchangeType, OrderSide, OrderType
+from nexustrader.exchange.okx import OkxAccountType
+from nexustrader.schema import BookL1, Order, AccountBalance
+from nexustrader.engine import Engine
+from nexustrader.core.nautilius_core import LiveClock
 
 
 OKX_API_KEY = settings.OKX.DEMO_1.api_key

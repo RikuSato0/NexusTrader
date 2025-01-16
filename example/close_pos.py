@@ -1,5 +1,5 @@
 import ccxt
-from tradebot.constants import CONFIG
+from nexustrader.constants import CONFIG
 
 
 

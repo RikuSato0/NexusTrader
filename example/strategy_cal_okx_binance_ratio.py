@@ -1,13 +1,13 @@
 import asyncio
 from collections import defaultdict
-from tradebot.schema import Trade
-from tradebot.core import Strategy
-from tradebot.exchange.binance import (
+from nexustrader.schema import Trade
+from nexustrader.core import Strategy
+from nexustrader.exchange.binance import (
     BinanceAccountType,
     BinanceExchangeManager,
     BinancePublicConnector,
 )
-from tradebot.exchange.okx import OkxAccountType, OkxExchangeManager, OkxPublicConnector
+from nexustrader.exchange.okx import OkxAccountType, OkxExchangeManager, OkxPublicConnector
 
 
 class Demo(Strategy):

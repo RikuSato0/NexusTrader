@@ -9,14 +9,14 @@ import zmq.asyncio
 import orjson
 from typing import Dict, Tuple
 from collections import defaultdict
-from tradebot.constants import KEYS
-from tradebot.schema import Order, BookL1
-from tradebot.constants import OrderSide, OrderType, OrderStatus
-from tradebot.core import Strategy
-from tradebot.exchange.bybit.schema import BybitMarket
+from nexustrader.constants import KEYS
+from nexustrader.schema import Order, BookL1
+from nexustrader.constants import OrderSide, OrderType, OrderStatus
+from nexustrader.core import Strategy
+from nexustrader.exchange.bybit.schema import BybitMarket
 from decimal import Decimal
-from tradebot.core.entity import EventSystem
-from tradebot.exchange.bybit import (
+from nexustrader.core.entity import EventSystem
+from nexustrader.exchange.bybit import (
     BybitPublicConnector,
     BybitPrivateConnector,
     BybitAccountType,

@@ -2,8 +2,8 @@ import asyncio
 import orjson
 import json
 import os
-from tradebot.exchange.bybit import BybitAccountType, BybitWSClient
-from tradebot.core.log import SpdLog
+from nexustrader.exchange.bybit import BybitAccountType, BybitWSClient
+from nexustrader.core.log import SpdLog
 
 log = SpdLog.get_logger(__name__, level="INFO", flush=False)
 

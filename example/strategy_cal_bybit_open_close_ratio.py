@@ -1,6 +1,6 @@
 import asyncio
-from tradebot.core import Strategy
-from tradebot.exchange.bybit import (
+from nexustrader.core import Strategy
+from nexustrader.exchange.bybit import (
     BybitPublicConnector,
     BybitAccountType,
     BybitExchangeManager,

@@ -1,4 +1,4 @@
-from tradebot.core.entity import EventSystem
+from nexustrader.core.entity import EventSystem
 from enum import Enum
 
 

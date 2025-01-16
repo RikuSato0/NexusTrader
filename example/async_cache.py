@@ -1,10 +1,10 @@
 import asyncio
 import time
 from decimal import Decimal
-from tradebot.constants import OrderStatus, ExchangeType
-from tradebot.schema import Order, OrderType, OrderSide
-from tradebot.core.cache import AsyncCache
-from tradebot.core.entity import RedisClient, TaskManager
+from nexustrader.constants import OrderStatus, ExchangeType
+from nexustrader.schema import Order, OrderType, OrderSide
+from nexustrader.core.cache import AsyncCache
+from nexustrader.core.entity import RedisClient, TaskManager
 
 async def test_async_cache():
     # Initialize test parameters

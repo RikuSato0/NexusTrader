@@ -7,8 +7,8 @@ import numpy as np
 from streamz import Stream
 
 
-from tradebot.exchange import BinanceWebsocketManager
-from tradebot.core.entity import log_register
+from nexustrader.exchange import BinanceWebsocketManager
+from nexustrader.core.entity import log_register
 
 # ratio description
 

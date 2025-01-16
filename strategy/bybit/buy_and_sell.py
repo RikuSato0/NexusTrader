@@ -1,12 +1,12 @@
 from decimal import Decimal
 
-from tradebot.constants import settings
-from tradebot.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
-from tradebot.strategy import Strategy
-from tradebot.constants import ExchangeType, OrderSide, OrderType
-from tradebot.exchange.bybit import BybitAccountType
-from tradebot.schema import BookL1, Order
-from tradebot.engine import Engine
+from nexustrader.constants import settings
+from nexustrader.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig
+from nexustrader.strategy import Strategy
+from nexustrader.constants import ExchangeType, OrderSide, OrderType
+from nexustrader.exchange.bybit import BybitAccountType
+from nexustrader.schema import BookL1, Order
+from nexustrader.engine import Engine
 
 
 

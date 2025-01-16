@@ -1,6 +1,6 @@
 import asyncio
-from tradebot.constants import KEYS
-from tradebot.exchange.okx import (
+from nexustrader.constants import KEYS
+from nexustrader.exchange.okx import (
     OkxAccountType,
     OkxPrivateConnector,
     OkxExchangeManager,

@@ -2,9 +2,9 @@ import asyncio
 import uvloop
 
 
-from tradebot.exchange.okx.websockets import OkxWSClient
-from tradebot.constants import KEYS, Url
-from tradebot.exchange.okx import OkxAccountType
+from nexustrader.exchange.okx.websockets import OkxWSClient
+from nexustrader.constants import KEYS, Url
+from nexustrader.exchange.okx import OkxAccountType
 
 OKX_API_KEY = KEYS["okex_demo"]["API_KEY"]
 OKX_SECRET = KEYS["okex_demo"]["SECRET"]

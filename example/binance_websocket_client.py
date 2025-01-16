@@ -1,7 +1,7 @@
 import orjson
 import asyncio
-from tradebot.exchange.binance import BinanceAccountType
-from tradebot.exchange.binance.websockets import BinanceWSClient
+from nexustrader.exchange.binance import BinanceAccountType
+from nexustrader.exchange.binance.websockets import BinanceWSClient
 
 
 def msg_handler(raw):

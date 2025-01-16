@@ -1,4 +1,4 @@
-from tradebot.exchange.binance import BinancePublicConnector, BinanceExchangeManager, BinanceAccountType
+from nexustrader.exchange.binance import BinancePublicConnector, BinanceExchangeManager, BinanceAccountType
 import asyncio
 
 

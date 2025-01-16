@@ -1,8 +1,8 @@
 import asyncio
-from tradebot.schema import Trade
-from tradebot.core import Strategy
-from tradebot.exchange.okx import OkxAccountType, OkxExchangeManager
-from tradebot.exchange.okx.connector import OkxPublicConnector
+from nexustrader.schema import Trade
+from nexustrader.core import Strategy
+from nexustrader.exchange.okx import OkxAccountType, OkxExchangeManager
+from nexustrader.exchange.okx.connector import OkxPublicConnector
 
 
 class Demo(Strategy):

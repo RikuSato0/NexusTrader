@@ -18,7 +18,7 @@ class ExchangeManager(ABC):
         self.exchange_id = ExchangeType(config["exchange_id"])
         self.api = self._init_exchange()
         self._log = SpdLog.get_logger(
-            name=type(self).__name__, level="INFO", flush=True
+            name=type(self).__name__, level="DEBUG", flush=True
         )
         self.is_testnet = config.get("sandbox", False)
         self.market: Dict[str, BaseMarket] = {}

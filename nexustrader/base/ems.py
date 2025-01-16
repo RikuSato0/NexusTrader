@@ -265,10 +265,11 @@ class ExecutionManagementSystem(ABC):
         market = self._market[symbol]
         position_side = order_submit.position_side
         kwargs = order_submit.kwargs
+        twap_uuid = order_submit.uuid
         
         algo_order = AlgoOrder(
             symbol=symbol,
-            uuid=order_submit.uuid,
+            uuid=twap_uuid,
             side=side,
             amount=order_submit.amount,
             duration=order_submit.duration,
@@ -320,7 +321,7 @@ class ExecutionManagementSystem(ABC):
                             ),
                             account_type=account_type,
                         )
-                        self._log.debug(f"CANCEL: {order}")
+                        self._log.debug(f"CANCEL: {order.unwrap()}")
                     elif is_closed:
                         order_id = None
                         # amount = amount_list.pop()
@@ -395,13 +396,13 @@ class ExecutionManagementSystem(ABC):
                         algo_order.status = AlgoOrderStatus.FAILED
                         self._cache._order_status_update(algo_order)
                         
-                        self._log.error(f"TWAP ORDER FAILED: symbol: {symbol}, side: {side}")
+                        self._log.error(f"TWAP ORDER FAILED: symbol: {symbol}, side: {side}, uuid: {twap_uuid}")
                         break
             
             algo_order.status = AlgoOrderStatus.FINISHED
             self._cache._order_status_update(algo_order)
             
-            self._log.debug(f"TWAP ORDER FINISHED: symbol: {symbol}, side: {side}")
+            self._log.debug(f"TWAP ORDER FINISHED: symbol: {symbol}, side: {side}, uuid: {twap_uuid}")
         except asyncio.CancelledError:
             algo_order.status = AlgoOrderStatus.CANCELING
             self._cache._order_status_update(algo_order)
@@ -421,7 +422,7 @@ class ExecutionManagementSystem(ABC):
             algo_order.status = AlgoOrderStatus.CANCELED
             self._cache._order_status_update(algo_order)
             
-            self._log.debug(f"TWAP ORDER CANCELLED: symbol: {symbol}, side: {side}")
+            self._log.debug(f"TWAP ORDER CANCELLED: symbol: {symbol}, side: {side}, uuid: {twap_uuid}")
 
 
     async def _create_twap_order(

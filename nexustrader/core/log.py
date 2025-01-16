@@ -25,8 +25,6 @@ class SpdLog:
     error_logger = None
     sinks = None
     production_mode = False
-    
-
 
     @classmethod
     def setup_error_handling(cls):
@@ -124,7 +122,7 @@ class SpdLog:
             logger.drop()
 
     @classmethod
-    def initialize(cls, log_dir: str = ".log", async_mode: bool = True, setup_error_handlers: bool = True):
+    def initialize(cls, level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO", log_dir: str = ".log", async_mode: bool = True, setup_error_handlers: bool = True, production_mode: bool = False):
         """
         Initialize the log registry.
 
@@ -132,16 +130,17 @@ class SpdLog:
         :param log_dir: Log directory
         :param async_mode: Whether to enable asynchronous mode
         """
+        cls.production_mode = production_mode
         cls.log_dir = Path(log_dir)
         cls.async_mode = async_mode
         if setup_error_handlers:
             cls.setup_error_handling()
         if cls.production_mode:
             daily_sink = spd.daily_file_sink_mt(filename=str(log_dir / "log.log"), rotation_hour=0, rotation_minute=0)
-            daily_sink.set_level(spd.LogLevel.INFO)
+            daily_sink.set_level(cls.parse_level(level))
             
             stdout_sink = spd.stdout_color_sink_mt()    
-            stdout_sink.set_level(spd.LogLevel.DEBUG)
+            stdout_sink.set_level(cls.parse_level(level))
             
             cls.sinks = [
                 daily_sink,

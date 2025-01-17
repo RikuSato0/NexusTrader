@@ -72,6 +72,8 @@ class AsyncCache:
         self._msgbus.subscribe(topic="kline", handler=self._update_kline_cache)
         self._msgbus.subscribe(topic="bookl1", handler=self._update_bookl1_cache)
         self._msgbus.subscribe(topic="trade", handler=self._update_trade_cache)
+        
+        self._storage_initialized = False
 
     ################# # base functions ####################
 
@@ -88,12 +90,13 @@ class AsyncCache:
         if self._storage_backend == StorageBackend.REDIS:
             self._r_async = RedisClient.get_async_client()
             self._r = RedisClient.get_client()
-        else:
+        elif self._storage_backend == StorageBackend.SQLITE:
             db_path = Path(self._db_path)
             db_path.parent.mkdir(parents=True, exist_ok=True)
             self._db_async = await aiosqlite.connect(str(db_path))
             self._db = sqlite3.connect(str(db_path))
             await self._init_sqlite_tables()
+        self._storage_initialized = True
 
     async def _init_sqlite_tables(self):
         """Initialize the SQLite tables"""
@@ -266,15 +269,16 @@ class AsyncCache:
             self._log.debug(f"removing algo order {uuid} from memory")
 
     async def close(self):
-        """Close the cache"""
+        """关闭缓存"""
         self._shutdown_event.set()
-        if self._storage_backend == StorageBackend.REDIS:
-            await self._sync_to_redis()
-            await self._r_async.aclose()
-        elif self._storage_backend == StorageBackend.SQLITE:
-            await self._sync_to_sqlite()
-            await self._db_async.close()
-            self._db.close()
+        if self._storage_initialized:
+            if self._storage_backend == StorageBackend.REDIS:
+                await self._sync_to_redis()
+                await self._r_async.aclose()
+            elif self._storage_backend == StorageBackend.SQLITE:
+                await self._sync_to_sqlite()
+                await self._db_async.close()
+                self._db.close()
 
     ################ # cache public data  ###################
 

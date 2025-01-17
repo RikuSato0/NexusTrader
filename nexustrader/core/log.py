@@ -4,7 +4,7 @@ import sys
 import traceback
 import asyncio
 import spdlog as spd
-     
+
 
 class SpdLog:
     """
@@ -122,13 +122,21 @@ class SpdLog:
             logger.drop()
 
     @classmethod
-    def initialize(cls, level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO", log_dir: str = ".log", async_mode: bool = True, production_mode: bool = False):
+    def initialize(
+        cls,
+        level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
+        std_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "ERROR",
+        log_dir: str = ".log",
+        async_mode: bool = True,
+        production_mode: bool = False,
+    ):
         """
         Initialize the log registry.
-
-        :param setup_error_handlers: Whether to set up global exception handlers
+        :param level: Log level
+        :param std_level: Standard output log level
         :param log_dir: Log directory
         :param async_mode: Whether to enable asynchronous mode
+        :param production_mode: Whether to enable production mode, if enable, log will be written to one file and stdout. Otherwise, each `class` will have its own log file (easy to debug)
         """
         cls.production_mode = production_mode
         cls.log_dir = Path(log_dir)
@@ -136,17 +144,21 @@ class SpdLog:
         # if setup_error_handlers:
         #     cls.setup_error_handling()
         if cls.production_mode:
-            daily_sink = spd.daily_file_sink_mt(filename=str(cls.log_dir / "log.log"), rotation_hour=0, rotation_minute=0)
+            daily_sink = spd.daily_file_sink_mt(
+                filename=str(cls.log_dir / "log.log"),
+                rotation_hour=0,
+                rotation_minute=0,
+            )
             daily_sink.set_level(cls.parse_level(level))
-            
-            stdout_sink = spd.stdout_color_sink_mt()    
-            stdout_sink.set_level(cls.parse_level(level))
-            
+
+            stdout_sink = spd.stdout_color_sink_mt()
+            stdout_sink.set_level(cls.parse_level(std_level))
+
             cls.sinks = [
                 daily_sink,
                 stdout_sink,
             ]
-            
+
     @classmethod
     def __del__(cls):
         cls.close_all_loggers()

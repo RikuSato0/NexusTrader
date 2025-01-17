@@ -2,6 +2,7 @@ import zmq
 import orjson
 from zmq.asyncio import Context
 from decimal import Decimal
+from nexustrader.core.log import SpdLog
 from nexustrader.constants import settings
 from nexustrader.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig, ZeroMQSignalConfig
 from nexustrader.strategy import Strategy
@@ -12,6 +13,7 @@ from nexustrader.engine import Engine
 from nexustrader.core.entity import RateLimit, DataReady
 from collections import defaultdict
 
+SpdLog.initialize()
 
 BYBIT_API_KEY = settings.BYBIT.ACCOUNT1.API_KEY
 BYBIT_SECRET = settings.BYBIT.ACCOUNT1.SECRET

@@ -84,7 +84,7 @@ The core of Tradebot is the `Connector`, which is responsible for connecting to 
 | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | <img src="https://www.okx.com/cdn/assets/imgs/226/EB771F0EE8994DD5.png" width="100"> | <img src="https://cryptologos.cc/logos/binance-coin-bnb-logo.png" width="100"> | <img src="https://raw.githubusercontent.com/bybit-web3/bybit-web3.github.io/main/docs/images/bybit-logo.png" width="100"> |
 
-## Getting Started
+## Installation
 
 ### Prerequisites
 
@@ -100,15 +100,13 @@ sudo apt-get update
 sudo apt-get install build-essential
 ```
 
-### Installation
-
-#### From PyPI
+### From PyPI
 
 ```bash
 pip install nexustrader
 ```
 
-#### From Source
+### From Source
 
 ```bash
 git clone https://github.com/RiverTrading/NexusTrader

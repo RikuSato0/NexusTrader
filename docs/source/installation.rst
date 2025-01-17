@@ -7,6 +7,15 @@ Prerequisites
 - Python 3.11+
 - Redis
 - Poetry (recommended)
+- build-essential
+
+Install Build Essentials
+-----------------------------
+
+.. code-block:: bash
+
+   sudo apt-get update 
+   sudo apt-get install build-essential
 
 Install from PyPI
 -----------------
@@ -37,7 +46,25 @@ First, create a ``.env`` file in the root directory of the project and add the f
    NEXUS_REDIS_DB=0
    NEXUS_REDIS_PASSWORD=your_password
 
-Then, run the following command to start the Redis container:
+Create the ``docker-compose.yml`` file to the root directory of the project 
+
+.. code-block:: yaml
+
+   version: '3.8'
+   services:
+     redis:
+        image: redis:alpine
+        container_name: redis
+        restart: always
+        ports:
+           - '${NEXUS_REDIS_PORT}:6379'
+        volumes:
+           - redis_data:/data
+        command: redis-server --appendonly yes --requirepass ${NEXUS_REDIS_PASSWORD}
+        environment:
+           - REDIS_PASSWORD=${NEXUS_REDIS_PASSWORD}
+
+Run the following command to start the Redis container:
 
 .. code-block:: bash
 

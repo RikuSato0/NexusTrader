@@ -209,11 +209,9 @@ class ExecutionManagementSystem(ABC):
         wait = 10
         """
         amount_list = []
-        if total_amount == 0:
+        if total_amount == 0 or total_amount < min_order_amount:
+            self._log.info(f"TWAP ORDER: {symbol} Total amount is less than min order amount: {total_amount} < {min_order_amount}")
             return [], 0
-        elif total_amount < min_order_amount:
-            wait = 0
-            return [min_order_amount], wait
 
         interval = duration // wait
         base_amount = float(total_amount) / interval

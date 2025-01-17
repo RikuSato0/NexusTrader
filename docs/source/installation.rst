@@ -43,3 +43,6 @@ Then, run the following command to start the Redis container:
 
    docker-compose up -d redis
 
+.. note::
+
+   Currently, NexusTrader only tested on Linux and MacOS. Windows is not supported yet.

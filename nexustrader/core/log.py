@@ -126,7 +126,8 @@ class SpdLog:
         cls,
         level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
         std_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "ERROR",
-        log_dir: str = ".log",
+        file_name: str = "log",
+        file_dir: str = ".log",
         async_mode: bool = True,
         production_mode: bool = True,
     ):
@@ -134,18 +135,19 @@ class SpdLog:
         Initialize the log registry.
         :param level: Log level
         :param std_level: Standard output log level
-        :param log_dir: Log directory
+        :param file_name: Log file name
+        :param file_dir: Log file directory
         :param async_mode: Whether to enable asynchronous mode
         :param production_mode: Whether to enable production mode, if enable, log will be written to one file and stdout. Otherwise, each `class` will have its own log file (easy to debug)
         """
         cls.production_mode = production_mode
-        cls.log_dir = Path(log_dir)
+        cls.log_dir = Path(file_dir)
         cls.async_mode = async_mode
         # if setup_error_handlers:
         #     cls.setup_error_handling()
         if cls.production_mode:
             daily_sink = spd.daily_file_sink_mt(
-                filename=str(cls.log_dir / "log.log"),
+                filename=str(cls.log_dir / f"{file_name}.log"),
                 rotation_hour=0,
                 rotation_minute=0,
             )
@@ -165,7 +167,7 @@ class SpdLog:
 
 
 if __name__ == "__main__":
-    SpdLog.initialize(level="DEBUG", log_dir="log", production_mode=True)
+    SpdLog.initialize(level="DEBUG", file_name="log", file_dir="log", production_mode=True)
     logger = SpdLog.get_logger("test", level="DEBUG", flush=True)
     logger.debug("This is a debug message")
     logger.info("This is an info message")

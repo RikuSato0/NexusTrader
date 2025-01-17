@@ -128,7 +128,7 @@ class SpdLog:
         std_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "ERROR",
         log_dir: str = ".log",
         async_mode: bool = True,
-        production_mode: bool = False,
+        production_mode: bool = True,
     ):
         """
         Initialize the log registry.

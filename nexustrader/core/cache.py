@@ -322,7 +322,7 @@ class AsyncCache:
             return True
 
         if order.status not in STATUS_TRANSITIONS[previous_order.status]:
-            self._log.error(
+            self._log.debug(
                 f"Order id: {order.uuid} Invalid status transition: {previous_order.status} -> {order.status}"
             )
             return False

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nexustrader"
-version = "0.1.7"
+version = "0.1.8"
 description = "fastest python trading bot"
 authors = ["River-Shi <nachuan.shi.quant@gmail.com>"]
 maintainers = ["Chase <cjx463045792@gmail.com>"]

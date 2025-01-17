@@ -86,22 +86,38 @@ The core of Tradebot is the `Connector`, which is responsible for connecting to 
 
 ## Getting Started
 
-### Installation (From PyPI)
+### Prerequisites
 
-We recommend using the latest supported version of Python and setting
-up [tradebot](https://pypi.org/project/nautilus_trader/) in a virtual environment to isolate dependencies
+- Python 3.11+
+- Redis
+- Poetry (recommended)
+- build-essential
 
-To install the latest binary wheel (or sdist package) from PyPI using Pythons pip package manager:
+### Install Build Essentials
 
-    pip install -U tradebot
-
-### Building from Source
-
+```bash
+sudo apt-get update
+sudo apt-get install build-essential
 ```
-git clone https://github.com/RiverTrading/tradebot-pro.git
-cd tradebot-pro
+
+### Installation
+
+#### From PyPI
+
+```bash
+pip install nexustrader
+```
+
+#### From Source
+
+```bash
+git clone https://github.com/RiverTrading/NexusTrader
+cd NexusTrader
 poetry install
 ```
+
+> **Note**
+> more details can be found in the [installation guide](https://nexustrader.readthedocs.io/en/latest/installation.html)
 
 ### Quick Start
 

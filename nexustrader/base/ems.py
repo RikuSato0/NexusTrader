@@ -281,8 +281,6 @@ class ExecutionManagementSystem(ABC):
         )
         
         self._cache._order_initialized(algo_order)
-        
-        self._log.debug(f"order_submit: {order_submit}")
 
         min_order_amount: Decimal = self._get_min_order_amount(symbol, market)
         amount_list, wait = self._calculate_twap_orders(
@@ -341,8 +339,7 @@ class ExecutionManagementSystem(ABC):
                                 account_type=account_type,
                             )
                             if order.success:
-                                order_id = order.uuid
-                                algo_order.orders.append(order_id)
+                                algo_order.orders.append(order.uuid)
                                 self._cache._order_status_update(algo_order)
                             else:
                                 algo_order.status = AlgoOrderStatus.FAILED

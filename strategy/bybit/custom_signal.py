@@ -10,10 +10,11 @@ from nexustrader.exchange.bybit import BybitAccountType
 from nexustrader.schema import BookL1
 from nexustrader.engine import Engine
 from nexustrader.core.entity import RateLimit, DataReady
+from collections import defaultdict
 
 
-BYBIT_API_KEY = settings.BYBIT.ACCOUNT1.api_key
-BYBIT_SECRET = settings.BYBIT.ACCOUNT1.secret
+BYBIT_API_KEY = settings.BYBIT.ACCOUNT1.API_KEY
+BYBIT_SECRET = settings.BYBIT.ACCOUNT1.SECRET
 
 context = Context()
 socket = context.socket(zmq.SUB)
@@ -28,20 +29,27 @@ class Demo(Strategy):
         self.signal = True
         self.multiplier = 0.1
         self.data_ready = DataReady(symbols=self.symbols)
+        self.prev_target = defaultdict(Decimal)
         self.orders = {}
         
     def on_bookl1(self, bookl1: BookL1):
         self.data_ready.input(bookl1)
     
     def cal_diff(self, symbol, target_position) -> Decimal:
+        """
+        target_position: 10, current_position: 0, diff: 10
+        target_position: 10, current_position: 10, diff: 0
+        target_position: 10, current_position: -10, diff: 20
+        target_position: 10, current_position: 20, diff: -10
+        target_position: -10, current_position: -20, diff: 10
+        """
         position = self.cache.get_position(symbol).value_or(None)
-        target_position = self.amount_to_precision(symbol, target_position)
-        if position:
-            diff = target_position - position.signed_amount
-            self.log.info(f"symbol: {symbol}, current {position.signed_amount} -> target {target_position}")
-        else:
-            diff = target_position
-            self.log.info(f"symbol: {symbol}, current 0 -> target {diff}")
+        current_amount = position.signed_amount if position else Decimal('0')
+        diff = target_position - current_amount
+
+        if diff != 0:
+            self.log.info(f"symbol: {symbol}, current {current_amount} -> target {target_position}")
+            
         return diff
     
         
@@ -59,32 +67,45 @@ class Demo(Strategy):
                 continue
             
             target_position = pos["position"] * self.market(symbol).precision.amount * self.multiplier
+            target_position = self.amount_to_precision(symbol, target_position)
+            
             uuid = self.orders.get(symbol, None)
 
             if uuid:
                 order = self.cache.get_order(uuid)
                 is_opened = order.bind_optional(lambda order: order.is_opened).value_or(False)
-                if is_opened:
-                    self.cancel_twap(
-                        symbol=symbol,
-                        uuid=uuid,
-                        account_type=BybitAccountType.UNIFIED_TESTNET,
-                    )
-                    self.log.info(f"symbol: {symbol}, canceled {uuid}")
-                uuid = None
+                is_failed = order.bind_optional(lambda order: order.is_failed).value_or(False)
+                if is_opened: 
+                    if self.prev_target[symbol] != target_position:
+                        self.cancel_twap(
+                            symbol=symbol,
+                            uuid=uuid,
+                            account_type=BybitAccountType.UNIFIED_TESTNET,
+                        )
+                        self.log.info(f"symbol: {symbol}, canceled {uuid}, prev_target: {self.prev_target[symbol]} -> new_target: {target_position}")
+                        uuid = None
+                    else:
+                        self.log.info(f"symbol: {symbol}, target not changed, skip")
+                else:
+                    if is_failed:
+                        self.log.info(f"symbol: {symbol}, order {uuid} failed")
+                    uuid = None
+                
             
             if uuid is None:
                 diff = self.cal_diff(symbol, target_position)
-                uuid = self.create_twap(
-                    symbol=symbol,
-                    side=OrderSide.BUY if diff > 0 else OrderSide.SELL,
-                    amount=abs(diff),
-                    duration=65,
-                    wait=5,
-                    account_type=BybitAccountType.UNIFIED_TESTNET, # recommend to specify the account type
-                )
-                
-                self.orders[symbol] = uuid
+                if diff != 0:
+                    uuid = self.create_twap(
+                        symbol=symbol,
+                        side=OrderSide.BUY if diff > 0 else OrderSide.SELL,
+                        amount=abs(diff),
+                        duration=65,
+                        wait=5,
+                        account_type=BybitAccountType.UNIFIED_TESTNET, # recommend to specify the account type
+                    )
+                    self.orders[symbol] = uuid
+            
+            self.prev_target[symbol] = target_position
                     
 config = Config(
     strategy_id="bybit_twap",

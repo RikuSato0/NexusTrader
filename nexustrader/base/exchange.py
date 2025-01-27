@@ -70,7 +70,7 @@ class ExchangeManager(ABC):
     def linear(self):
         symbols = []
         for symbol, market in self.market.items():
-            if market.linear and market.active and not market.future:
+            if market.linear and market.active and not market.future and not market.option:
                 symbols.append(symbol)
         return symbols
 
@@ -78,7 +78,7 @@ class ExchangeManager(ABC):
     def inverse(self):
         symbols = []
         for symbol, market in self.market.items():
-            if market.inverse and market.active and not market.future:
+            if market.inverse and market.active and not market.future and not market.option:
                 symbols.append(symbol)
         return symbols
 
@@ -86,7 +86,7 @@ class ExchangeManager(ABC):
     def spot(self):
         symbols = []
         for symbol, market in self.market.items():
-            if market.spot and market.active:
+            if market.spot and market.active and not market.option:
                 symbols.append(symbol)
         return symbols
 
@@ -94,6 +94,6 @@ class ExchangeManager(ABC):
     def future(self):
         symbols = []
         for symbol, market in self.market.items():
-            if market.future and market.active:
+            if market.future and market.active and not market.option:
                 symbols.append(symbol)
         return symbols

@@ -64,6 +64,14 @@ class BookL1(Struct, gc=False):
     bid_size: float
     ask_size: float
     timestamp: int
+    
+    @property
+    def mid(self) -> float:
+        return (self.bid + self.ask) / 2
+    
+    @property
+    def spread(self) -> float:
+        return self.ask - self.bid
 
 
 class BookL2(Struct):
@@ -405,7 +413,7 @@ class Position(Struct):
     side: Optional[PositionSide] = None
     unrealized_pnl: float = 0
     realized_pnl: float = 0
-
+    
     @property
     def amount(self, contract_size: Decimal = Decimal("1")) -> Decimal:
         return abs(self.signed_amount) * contract_size

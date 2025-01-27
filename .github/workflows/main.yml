@@ -1,17 +1,14 @@
 on: [push]
 
 jobs:
-  Notion_Hook_job:
+  build-node:
     runs-on: ubuntu-latest
-    name: A job to connect to Notion
+    name: Sync commits to Notion
     steps:
-      - name: Connect to Notion step
-        id: notion
-        uses: alessandrobelli/NotionHook@1.0
+      - name: Sync Github Commit to Notion
+        id: notion-sync-commit
+        uses: marlisumarli/sync-github-to-notion@1.0.2
         with:
           notion_secret: ${{ secrets.NOTION_SECRET }}
           notion_database: ${{ secrets.NOTION_DATABASE }}
-          commit_description: ${{ github.event.head_commit.message }}
-          commit_url: ${{ github.event.head_commit.url }}
-          commit_id: ${{ github.sha }}
-          commit_project: "NexusTrader"
+          branch: ${{ github.ref_name }}

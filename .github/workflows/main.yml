@@ -15,4 +15,3 @@ jobs:
           commit_url: ${{ github.event.head_commit.url }}
           commit_id: ${{ github.sha }}
           commit_project: "NexusTrader"
-          files_format: "text-list"

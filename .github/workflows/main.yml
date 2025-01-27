@@ -11,3 +11,8 @@ jobs:
         with:
           notion_secret: ${{ secrets.NOTION_SECRET }}
           notion_database: ${{ secrets.NOTION_DATABASE }}
+          commit_description: ${{ github.event.head_commit.message }}
+          commit_url: ${{ github.event.head_commit.url }}
+          commit_id: ${{ github.sha }}
+          commit_project: "Your Project Name"  # 根据你的项目名称设置
+          files_format: "text-list"  # 这是默认值

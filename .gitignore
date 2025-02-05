@@ -25,3 +25,4 @@ nautilus_trader/
 env/
 dist/
 .env
+example_test/

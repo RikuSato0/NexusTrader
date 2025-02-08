@@ -20,7 +20,6 @@ class PureMarketMaking(Strategy):
         super().__init__()
         self.clock = LiveClock()
         # 配置交易对
-        self.subscribe_bookl1(symbols=["BTCUSDT.OKX"])
         
         # 基础策略参数
         self.bid_spread = 0.001  # 买单价差 0.1%
@@ -40,6 +39,9 @@ class PureMarketMaking(Strategy):
 
         # store balance
         self.balance: dict[str, Decimal] = {}
+    
+    def on_start(self):
+        self.subscribe_bookl1(symbols=["BTCUSDT.OKX"])
     
     def on_balance(self, balance: AccountBalance):
         self.balance = balance.balance_total

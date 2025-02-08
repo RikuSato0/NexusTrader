@@ -19,7 +19,7 @@ class BinanceWSClient(WSClient):
         url = account_type.ws_url
         super().__init__(
             url,
-            limiter=AsyncLimiter(max_rate=3, time_period=1),
+            limiter=AsyncLimiter(max_rate=4, time_period=1),
             handler=handler,
             task_manager=task_manager,
         )

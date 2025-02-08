@@ -18,8 +18,10 @@ BYBIT_SECRET = settings.BYBIT.ACCOUNT1.SECRET
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
         self.signal = True
+    
+    def on_start(self):
+        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BYBIT"])
     
     def on_failed_order(self, order: Order):
         print(order)

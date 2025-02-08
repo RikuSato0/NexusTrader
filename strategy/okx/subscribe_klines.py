@@ -18,8 +18,10 @@ OKX_PASSPHRASE = settings.OKX.DEMO_1.PASSPHRASE
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        self.subscribe_kline(symbols=["BTCUSDT.OKX"], interval=KlineInterval.MINUTE_1)
         self.signal = True
+        
+    def on_start(self):
+        self.subscribe_kline(symbols=["BTCUSDT.OKX"], interval=KlineInterval.MINUTE_1)
     
     def on_kline(self, kline: Kline):
         print(kline)

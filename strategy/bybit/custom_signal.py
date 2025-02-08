@@ -27,12 +27,14 @@ class Demo(Strategy):
     def __init__(self):
         super().__init__()
         self.symbols = ["BTCUSDT-PERP.BYBIT"]
-        self.subscribe_bookl1(symbols=self.symbols)
         self.signal = True
         self.multiplier = 0.1
         self.data_ready = DataReady(symbols=self.symbols)
         self.prev_target = defaultdict(Decimal)
         self.orders = {}
+    
+    def on_start(self):
+        self.subscribe_bookl1(symbols=self.symbols)
         
     def on_bookl1(self, bookl1: BookL1):
         self.data_ready.input(bookl1)

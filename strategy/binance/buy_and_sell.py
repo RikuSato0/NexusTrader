@@ -18,8 +18,10 @@ BINANCE_SECRET = settings.BINANCE.FUTURE.TESTNET_1.secret
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BINANCE"])
         self.signal = True
+    
+    def on_start(self):
+        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BINANCE"])
     
     def on_failed_order(self, order: Order):
         print(order)

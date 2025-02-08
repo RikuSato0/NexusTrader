@@ -19,8 +19,10 @@ OKX_PASSPHRASE = settings.OKX.DEMO_1.PASSPHRASE
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        self.subscribe_bookl1(symbols=["BTCUSDT.OKX"])
         self.signal = True
+    
+    def on_start(self):
+        self.subscribe_bookl1(symbols=["BTCUSDT.OKX"])
     
     def on_cancel_failed_order(self, order: Order):
         print(order)

@@ -1,6 +1,6 @@
 import asyncio
 import platform
-from typing import Dict, Set
+from typing import Dict
 from nexustrader.constants import AccountType, ExchangeType
 from nexustrader.config import Config
 from nexustrader.strategy import Strategy
@@ -54,7 +54,6 @@ class Engine:
 
     def __init__(self, config: Config):
         self._config = config
-        self._is_running = False
         self._is_built = False
         self._scheduler_started = False
         self.set_loop_policy()
@@ -95,10 +94,6 @@ class Engine:
             ems=self._ems,
             exchanges=self._exchanges,
             private_connectors=self._private_connectors,
-        )
-
-        self._subscriptions: Dict[DataType, Dict[str, str] | Set[str]] = (
-            self._strategy._subscriptions
         )
 
     def _public_connector_check(self):
@@ -447,7 +442,7 @@ class Engine:
         for connector in self._private_connectors.values():
             await connector.connect()
 
-        for data_type, sub in self._subscriptions.items():
+        for data_type, sub in self._strategy._subscriptions.items():
             match data_type:
                 case DataType.BOOKL1:
                     for symbol in sub:
@@ -526,7 +521,7 @@ class Engine:
 
     def start(self):
         self._build()
-        self._is_running = True
+        self._strategy.on_start()
         self._loop.run_until_complete(self._start())
 
     def dispose(self):

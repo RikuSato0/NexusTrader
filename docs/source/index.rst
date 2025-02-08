@@ -1,12 +1,16 @@
 Welcome to NexusTrader's documentation!
 =========================================
-.. |python-versions| image:: https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue?logo=python
+.. |python-versions| image:: https://img.shields.io/badge/python-3.11%20|%203.12-blue
    :alt: Python Versions
 
 .. |docs| image:: https://img.shields.io/badge/docs-passing-brightgreen
    :alt: Documentation Status
 
-|python-versions| |docs| 
+.. |version| image:: https://img.shields.io/pypi/v/nexustrader?&color=blue
+   :alt: Version
+
+
+|python-versions| |docs| |version|
 
 Introduction
 -----------------

@@ -16,9 +16,10 @@ BINANCE_SECRET = settings.BINANCE.FUTURE.TESTNET_1.secret
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
+    
+    def on_start(self):
         self.subscribe_kline(symbols=["BTCUSDT-PERP.BINANCE"], interval=KlineInterval.MINUTE_1)
-        self.signal = True
-
+        
     def on_kline(self, kline: Kline):
         print(kline)
         

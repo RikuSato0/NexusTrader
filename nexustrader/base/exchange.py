@@ -1,8 +1,8 @@
 import warnings
 
-import ccxt
+import ccxt 
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, List
 from nexustrader.schema import BaseMarket
 from nexustrader.constants import ExchangeType
 from nexustrader.core.log import SpdLog
@@ -67,7 +67,7 @@ class ExchangeManager(ABC):
         pass
 
     @property
-    def linear(self):
+    def linear(self) -> List[str]:
         symbols = []
         for symbol, market in self.market.items():
             if market.linear and market.active and not market.future and not market.option:
@@ -75,7 +75,7 @@ class ExchangeManager(ABC):
         return symbols
 
     @property
-    def inverse(self):
+    def inverse(self) -> List[str]:
         symbols = []
         for symbol, market in self.market.items():
             if market.inverse and market.active and not market.future and not market.option:
@@ -83,7 +83,7 @@ class ExchangeManager(ABC):
         return symbols
 
     @property
-    def spot(self):
+    def spot(self) -> List[str]:
         symbols = []
         for symbol, market in self.market.items():
             if market.spot and market.active and not market.option:
@@ -91,7 +91,7 @@ class ExchangeManager(ABC):
         return symbols
 
     @property
-    def future(self):
+    def future(self) -> List[str]:
         symbols = []
         for symbol, market in self.market.items():
             if market.future and market.active and not market.option:

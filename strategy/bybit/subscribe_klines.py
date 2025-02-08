@@ -16,7 +16,10 @@ BYBIT_SECRET = settings.BYBIT.ACCOUNT1.SECRET
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        self.subscribe_kline(symbols=["BTCUSDT-PERP.BYBIT"], interval=KlineInterval.MINUTE_1)
+        
+    def on_start(self):
+        symbols = self.linear_info(ExchangeType.BYBIT)
+        self.subscribe_kline(symbols=symbols, interval=KlineInterval.MINUTE_1)
     
     def on_kline(self, kline: Kline):
         print(kline)

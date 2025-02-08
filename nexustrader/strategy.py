@@ -5,6 +5,7 @@ from nexustrader.core.log import SpdLog
 from nexustrader.base import ExchangeManager
 from nexustrader.core.entity import TaskManager
 from nexustrader.core.cache import AsyncCache
+from nexustrader.error import StrategyBuildError
 from nexustrader.base import ExecutionManagementSystem, PrivateConnector
 from nexustrader.core.nautilius_core import MessageBus, UUID4
 from nexustrader.schema import (
@@ -95,6 +96,8 @@ class Strategy:
         cron: run at a specific time second, minute, hour, day, month, year
         interval: run at a specific interval  seconds, minutes, hours, days, weeks, months, years
         """
+        if not self._initialized:
+            raise RuntimeError("Strategy not initialized, please use `schedule` in `on_start` method")
 
         self._scheduler.add_job(func, trigger=trigger, **kwargs)
 
@@ -206,6 +209,9 @@ class Strategy:
         Args:
             symbols (List[str]): The symbols to subscribe to.
         """
+        if not self._initialized:
+            raise StrategyBuildError("Strategy not initialized, please use `subscribe_bookl1` in `on_start` method")
+        
         for symbol in symbols:
             self._subscriptions[DataType.BOOKL1].add(symbol)
 
@@ -216,6 +222,9 @@ class Strategy:
         Args:
             symbols (List[str]): The symbols to subscribe to.
         """
+        if not self._initialized:
+            raise StrategyBuildError("Strategy not initialized, please use `subscribe_trade` in `on_start` method")
+        
         for symbol in symbols:
             self._subscriptions[DataType.TRADE].add(symbol)
 
@@ -227,8 +236,30 @@ class Strategy:
             symbols (List[str]): The symbols to subscribe to.
             interval (str): The interval of the kline data
         """
+        if not self._initialized:
+            raise StrategyBuildError("Strategy not initialized, please use `subscribe_kline` in `on_start` method")
+        
         for symbol in symbols:
             self._subscriptions[DataType.KLINE][symbol] = interval
+    
+    def linear_info(self, exchange: ExchangeType) -> List[str]:
+        exchange: ExchangeManager = self._exchanges[exchange]
+        return exchange.linear
+    
+    def spot_info(self, exchange: ExchangeType) -> List[str]:
+        exchange: ExchangeManager = self._exchanges[exchange]
+        return exchange.spot
+    
+    def future_info(self, exchange: ExchangeType) -> List[str]:
+        exchange: ExchangeManager = self._exchanges[exchange]
+        return exchange.future
+    
+    def inverse_info(self, exchange: ExchangeType) -> List[str]:
+        exchange: ExchangeManager = self._exchanges[exchange]
+        return exchange.inverse
+    
+    def on_start(self):
+        pass
 
     def on_trade(self, trade: Trade):
         pass

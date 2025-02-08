@@ -181,6 +181,7 @@ class BybitPublicConnector(PublicConnector):
         if not market:
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
         id = market.id
+        interval = BybitEnumParser.to_bybit_kline_interval(interval)
         await self._ws_client.subscribe_kline(id, interval)
 
 

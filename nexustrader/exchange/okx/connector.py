@@ -59,7 +59,12 @@ class OkxPublicConnector(PublicConnector):
             ),
             msgbus=msgbus,
         )
-
+        self._business_ws_client = OkxWSClient(
+            account_type=account_type,
+            handler=self._business_ws_msg_handler,
+            task_manager=task_manager,
+            business_url=True,
+        )
         self._ws_msg_general_decoder = msgspec.json.Decoder(OkxWsGeneralMsg)
         self._ws_msg_bbo_tbt_decoder = msgspec.json.Decoder(OkxWsBboTbtMsg)
         self._ws_msg_candle_decoder = msgspec.json.Decoder(OkxWsCandleMsg)
@@ -82,7 +87,23 @@ class OkxPublicConnector(PublicConnector):
         if not market:
             raise ValueError(f"Symbol {symbol} not found in market")
         interval = OkxEnumParser.to_okx_kline_interval(interval)
-        await self._ws_client.subscribe_candlesticks(market.id, interval)
+        await self._business_ws_client.subscribe_candlesticks(market.id, interval)
+    
+    def _business_ws_msg_handler(self, raw: bytes):
+        if raw == b"pong":
+            self._business_ws_client._transport.notify_user_specific_pong_received()
+            self._log.debug(f"Pong received:{str(raw)}")
+            return
+        try:
+            ws_msg: OkxWsGeneralMsg = self._ws_msg_general_decoder.decode(raw)
+            if ws_msg.is_event_msg:
+                self._handle_event_msg(ws_msg)
+            else:
+                channel: str = ws_msg.arg.channel
+                if channel.startswith("candle"):
+                    self._handle_kline(raw)
+        except msgspec.DecodeError:
+            self._log.error(f"Error decoding message: {str(raw)}")
 
     def _ws_msg_handler(self, raw: bytes):
         if raw == b"pong":
@@ -167,6 +188,10 @@ class OkxPublicConnector(PublicConnector):
                 timestamp=int(d.ts),
             )
             self._msgbus.publish(topic="bookl1", msg=bookl1)
+    
+    async def disconnect(self):
+        await super().disconnect()
+        self._business_ws_client.disconnect()
 
 
 class OkxPrivateConnector(PrivateConnector):

@@ -126,8 +126,8 @@ class BinancePublicConnector(PublicConnector):
             elif msg.u:
                 # spot book ticker doesn't have "e" key. FUCK BINANCE
                 self._parse_spot_book_ticker(raw)
-        except msgspec.DecodeError:
-            self._log.error(f"Error decoding message: {str(raw)}")
+        except msgspec.DecodeError as e:
+            self._log.error(f"Error decoding message: {str(raw)} {str(e)}")
 
     def _parse_kline(self, raw: bytes) -> Kline:
         res = self._ws_kline_decoder.decode(raw)

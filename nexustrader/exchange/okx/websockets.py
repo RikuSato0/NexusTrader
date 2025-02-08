@@ -19,19 +19,24 @@ class OkxWSClient(WSClient):
         account_type: OkxAccountType,
         handler: Callable[..., Any],
         task_manager: TaskManager,
-        api_key: str = None,
-        secret: str = None,
-        passphrase: str = None,
+        api_key: str | None = None,
+        secret: str | None = None,
+        passphrase: str | None = None,
+        business_url: bool = False,
     ):
         self._api_key = api_key
         self._secret = secret
         self._passphrase = passphrase
         self._account_type = account_type
         self._authed = False
+        self._business_url = business_url
         if self.is_private:
             url = f"{account_type.stream_url}/v5/private"
         else:
-            url = f"{account_type.stream_url}/v5/public"
+            if business_url:
+                url = f"{account_type.stream_url}/v5/business"
+            else:
+                url = f"{account_type.stream_url}/v5/public"
         
         super().__init__(
             url,
@@ -158,6 +163,8 @@ class OkxWSClient(WSClient):
         """
         https://www.okx.com/docs-v5/en/#order-book-trading-market-data-ws-candlesticks-channel
         """
+        if not self._business_url:
+            raise ValueError("candlesticks are only supported on business url")
         channel = interval.value
         params = {"channel": channel, "instId": symbol}
         subscription_id = f"{channel}.{symbol}"

@@ -10,9 +10,9 @@ from nexustrader.engine import Engine
 
 
 
-OKX_API_KEY = settings.OKX.DEMO_1.api_key
-OKX_SECRET = settings.OKX.DEMO_1.secret
-OKX_PASSPHRASE = settings.OKX.DEMO_1.passphrase
+OKX_API_KEY = settings.OKX.DEMO_1.API_KEY
+OKX_SECRET = settings.OKX.DEMO_1.SECRET
+OKX_PASSPHRASE = settings.OKX.DEMO_1.PASSPHRASE
 
 
 

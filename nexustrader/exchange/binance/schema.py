@@ -198,7 +198,6 @@ class BinanceMarkPrice(msgspec.Struct):
 
 
 class BinanceKlineData(msgspec.Struct):
-    e: BinanceWsEventType
     t: int  # Kline start time
     T: int  # Kline close time
     s: str  # Symbol

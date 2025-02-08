@@ -100,13 +100,6 @@ URL Classes
    :members:
    :undoc-members:
 
-Type Aliases
----------------
-
-.. autodata:: IntervalType
-
-.. autodata:: UrlType
-
 Constants
 ---------------
 

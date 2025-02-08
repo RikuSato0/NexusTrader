@@ -21,6 +21,7 @@ from nexustrader.constants import (
     OrderStatus,
     TimeInForce,
     PositionSide,
+    KlineInterval,
 )
 from nexustrader.base import PublicConnector, PrivateConnector
 from nexustrader.core.nautilius_core import MessageBus
@@ -31,6 +32,7 @@ from nexustrader.constants import OrderSide, OrderType
 from nexustrader.exchange.okx.constants import (
     OkxTdMode,
     OkxEnumParser,
+    OkxKlineInterval,
 )
 
 
@@ -75,10 +77,11 @@ class OkxPublicConnector(PublicConnector):
             raise ValueError(f"Symbol {symbol} not found in market")
         await self._ws_client.subscribe_order_book(market.id, channel="bbo-tbt")
 
-    async def subscribe_kline(self, symbol: str, interval: str):
+    async def subscribe_kline(self, symbol: str, interval: KlineInterval):
         market = self._market.get(symbol, None)
         if not market:
             raise ValueError(f"Symbol {symbol} not found in market")
+        interval = OkxEnumParser.to_okx_kline_interval(interval)
         await self._ws_client.subscribe_candlesticks(market.id, interval)
 
     def _ws_msg_handler(self, raw: bytes):
@@ -114,18 +117,22 @@ class OkxPublicConnector(PublicConnector):
 
         id = msg.arg.instId
         symbol = self._market_id[id]
-
-        for d in msg.data:
+        okx_interval = OkxKlineInterval(msg.arg.channel)
+        interval = OkxEnumParser.parse_kline_interval(okx_interval)
+        
+        for d in msg.data:            
             kline = Kline(
                 exchange=self._exchange_id,
                 symbol=symbol,
-                interval=msg.arg.channel,
+                interval=interval,
                 open=float(d[1]),
                 high=float(d[2]),
                 low=float(d[3]),
                 close=float(d[4]),
                 volume=float(d[5]),
-                timestamp=int(d[0]),
+                start=int(d[0]),
+                timestamp=self._clock.timestamp_ms(),
+                confirm=False if d[8] == '0' else True
             )
             self._msgbus.publish(topic="kline", msg=kline)
 

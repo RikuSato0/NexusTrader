@@ -12,7 +12,7 @@ from nexustrader.constants import ExchangeType
 from nexustrader.core.log import SpdLog
 from nexustrader.core.cache import AsyncCache
 from nexustrader.core.entity import RateLimit
-from nexustrader.constants import OrderSide, OrderType, TimeInForce, PositionSide
+from nexustrader.constants import OrderSide, OrderType, TimeInForce, PositionSide, KlineInterval
 from nexustrader.core.nautilius_core import LiveClock, MessageBus
 
 
@@ -53,7 +53,7 @@ class PublicConnector(ABC):
         pass
 
     @abstractmethod
-    async def subscribe_kline(self, symbol: str, interval: str):
+    async def subscribe_kline(self, symbol: str, interval: KlineInterval):
         """Subscribe to the kline data"""
         pass
 

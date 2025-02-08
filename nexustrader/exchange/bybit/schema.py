@@ -14,10 +14,33 @@ from nexustrader.exchange.bybit.constants import (
     BybitTriggerDirection,
     BybitPositionIdx,
     BybitPositionSide,
+    BybitKlineInterval,
 )
 
 
 BYBIT_PONG: Final[str] = "pong"
+
+class BybitWsKline(msgspec.Struct):
+    start: int
+    end: int
+    interval: BybitKlineInterval
+    open: str
+    close: str
+    high: str
+    low: str
+    volume: str
+    turnover: str
+    confirm: bool
+    timestamp: int
+
+
+class BybitWsKlineMsg(msgspec.Struct):
+    # Topic name
+    topic: str
+    ts: int
+    type: str
+    data: list[BybitWsKline]
+
 
 class BybitOrder(msgspec.Struct, omit_defaults=True, kw_only=True):
     orderId: str

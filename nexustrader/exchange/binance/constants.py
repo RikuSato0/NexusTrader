@@ -1,5 +1,6 @@
 from enum import Enum
 from nexustrader.constants import (
+    KlineInterval,
     AccountType,
     OrderStatus,
     OrderType,
@@ -7,7 +8,7 @@ from nexustrader.constants import (
     OrderSide,
     TimeInForce,
 )
-
+from nexustrader.error import KlineSupportedError
 
 class BinanceAccountEventReasonType(Enum):
     """
@@ -518,6 +519,25 @@ BINANCE_RETRY_ERRORS: set[BinanceErrorCode] = {
 
 
 class BinanceEnumParser:
+    _binance_kline_interval_map = {
+       BinanceKlineInterval.SECOND_1: KlineInterval.SECOND_1,
+       BinanceKlineInterval.MINUTE_1: KlineInterval.MINUTE_1,
+       BinanceKlineInterval.MINUTE_3: KlineInterval.MINUTE_3,
+       BinanceKlineInterval.MINUTE_5: KlineInterval.MINUTE_5,
+       BinanceKlineInterval.MINUTE_15: KlineInterval.MINUTE_15,
+       BinanceKlineInterval.MINUTE_30: KlineInterval.MINUTE_30,
+       BinanceKlineInterval.HOUR_1: KlineInterval.HOUR_1,
+       BinanceKlineInterval.HOUR_2: KlineInterval.HOUR_2,
+       BinanceKlineInterval.HOUR_4: KlineInterval.HOUR_4,
+       BinanceKlineInterval.HOUR_6: KlineInterval.HOUR_6,
+       BinanceKlineInterval.HOUR_8: KlineInterval.HOUR_8,
+       BinanceKlineInterval.HOUR_12: KlineInterval.HOUR_12,
+       BinanceKlineInterval.DAY_1: KlineInterval.DAY_1,
+       BinanceKlineInterval.DAY_3: KlineInterval.DAY_3,
+       BinanceKlineInterval.WEEK_1: KlineInterval.WEEK_1,
+       BinanceKlineInterval.MONTH_1: KlineInterval.MONTH_1,
+    }
+    
     _binance_order_status_map = {
         BinanceOrderStatus.NEW: OrderStatus.ACCEPTED,
         BinanceOrderStatus.PARTIALLY_FILLED: OrderStatus.PARTIALLY_FILLED,
@@ -555,7 +575,12 @@ class BinanceEnumParser:
         v: k for k, v in _binance_order_time_in_force_map.items()
     }
     _order_type_to_binance_map = {v: k for k, v in _binance_order_type_map.items()}
-
+    _kline_interval_to_binance_map = {v: k for k, v in _binance_kline_interval_map.items()}
+    
+    @classmethod
+    def parse_kline_interval(cls, interval: BinanceKlineInterval) -> KlineInterval:
+        return cls._binance_kline_interval_map[interval]
+    
     @classmethod
     def parse_order_status(cls, status: BinanceOrderStatus) -> OrderStatus:
         return cls._binance_order_status_map[status]
@@ -595,3 +620,9 @@ class BinanceEnumParser:
     @classmethod
     def to_binance_order_type(cls, order_type: OrderType) -> BinanceOrderType:
         return cls._order_type_to_binance_map[order_type]
+
+    @classmethod
+    def to_binance_kline_interval(cls, interval: KlineInterval) -> BinanceKlineInterval:
+        if interval not in cls._kline_interval_to_binance_map:
+            raise KlineSupportedError(f"Kline interval {interval} is not supported by Binance")
+        return cls._kline_interval_to_binance_map[interval]

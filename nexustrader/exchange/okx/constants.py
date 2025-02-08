@@ -6,9 +6,27 @@ from nexustrader.constants import (
     OrderSide,
     TimeInForce,
     OrderType,
+    KlineInterval,
 )
+from nexustrader.error import KlineSupportedError
 
 
+class OkxKlineInterval(Enum):
+    SECOND_1 = "candle1s"
+    MINUTE_1 = "candle1m"
+    MINUTE_3 = "candle3m"
+    MINUTE_5 = "candle5m"
+    MINUTE_15 = "candle15m"
+    MINUTE_30 = "candle30m"
+    HOUR_1 = "candle1h"
+    HOUR_4 = "candle4h"
+    HOUR_6 = "candle6h"
+    HOUR_12 = "candle12h"
+    DAY_1 = "candle1D"
+    DAY_3 = "candle3D"
+    WEEK_1 = "candle1W"
+    MONTH_1 = "candle1M"
+    
 class OkxInstrumentType(Enum):
     SPOT = "SPOT"
     MARGIN = "MARGIN"
@@ -119,6 +137,24 @@ class OkxOrderStatus(Enum):  # "state"
 
 
 class OkxEnumParser:
+    
+    _okx_kline_interval_map = {
+        OkxKlineInterval.SECOND_1: KlineInterval.SECOND_1,
+        OkxKlineInterval.MINUTE_1: KlineInterval.MINUTE_1,
+        OkxKlineInterval.MINUTE_3: KlineInterval.MINUTE_3,
+        OkxKlineInterval.MINUTE_5: KlineInterval.MINUTE_5,
+        OkxKlineInterval.MINUTE_15: KlineInterval.MINUTE_15,
+        OkxKlineInterval.MINUTE_30: KlineInterval.MINUTE_30,
+        OkxKlineInterval.HOUR_1: KlineInterval.HOUR_1,
+        OkxKlineInterval.HOUR_4: KlineInterval.HOUR_4,
+        OkxKlineInterval.HOUR_6: KlineInterval.HOUR_6,
+        OkxKlineInterval.HOUR_12: KlineInterval.HOUR_12,
+        OkxKlineInterval.DAY_1: KlineInterval.DAY_1,
+        OkxKlineInterval.DAY_3: KlineInterval.DAY_3,
+        OkxKlineInterval.WEEK_1: KlineInterval.WEEK_1,
+        OkxKlineInterval.MONTH_1: KlineInterval.MONTH_1,
+    }
+    
     _okx_order_status_map = {
         OkxOrderStatus.LIVE: OrderStatus.ACCEPTED,
         OkxOrderStatus.PARTIALLY_FILLED: OrderStatus.PARTIALLY_FILLED,
@@ -146,6 +182,12 @@ class OkxEnumParser:
         PositionSide.SHORT: OkxPositionSide.SHORT,
     }
     _order_side_to_okx_map = {v: k for k, v in _okx_order_side_map.items()}
+    
+    _kline_interval_to_okx_map = {v: k for k, v in _okx_kline_interval_map.items()}
+    
+    @classmethod
+    def parse_kline_interval(cls, interval: OkxKlineInterval) -> KlineInterval:
+        return cls._okx_kline_interval_map[interval]
 
     # Add reverse parsing methods
     @classmethod
@@ -227,3 +269,9 @@ class OkxEnumParser:
                 raise RuntimeError(
                     f"Could not determine OKX order type from order_type {order_type} and time_in_force {time_in_force}, valid OKX order types are: {list(OkxOrderType)}",
                 )
+
+    @classmethod
+    def to_okx_kline_interval(cls, interval: KlineInterval) -> OkxKlineInterval:
+        if interval not in cls._kline_interval_to_okx_map:
+            raise KlineSupportedError(f"Kline interval {interval} is not supported by OKX")
+        return cls._kline_interval_to_okx_map[interval]

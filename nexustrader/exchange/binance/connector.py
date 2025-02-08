@@ -9,6 +9,7 @@ from nexustrader.constants import (
     OrderType,
     PositionSide,
     TimeInForce,
+    KlineInterval,
 )
 from nexustrader.schema import Order
 from nexustrader.schema import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
@@ -103,7 +104,8 @@ class BinancePublicConnector(PublicConnector):
         symbol = market.id if market else symbol
         await self._ws_client.subscribe_book_ticker(symbol)
 
-    async def subscribe_kline(self, symbol: str, interval: str):
+    async def subscribe_kline(self, symbol: str, interval: KlineInterval):
+        interval = BinanceEnumParser.to_binance_kline_interval(interval)
         market = self._market.get(symbol, None)
         symbol = market.id if market else symbol
         await self._ws_client.subscribe_kline(symbol, interval)
@@ -131,17 +133,19 @@ class BinancePublicConnector(PublicConnector):
         res = self._ws_kline_decoder.decode(raw)
         id = res.s + self.market_type
         symbol = self._market_id[id]
-
+        interval = BinanceEnumParser.parse_kline_interval(res.k.i)
         ticker = Kline(
             exchange=self._exchange_id,
             symbol=symbol,
-            interval=res.k.i,
+            interval=interval,
             open=float(res.k.o),
             high=float(res.k.h),
             low=float(res.k.l),
             close=float(res.k.c),
             volume=float(res.k.v),
+            start=res.k.t,
             timestamp=res.E,
+            confirm=res.k.x,
         )
         self._log.debug(f"{ticker}")
         self._msgbus.publish(topic="kline", msg=ticker)
@@ -273,6 +277,12 @@ class BinancePrivateConnector(PrivateConnector):
         self._ws_msg_futures_order_update_decoder = msgspec.json.Decoder(
             BinanceFuturesOrderUpdateMsg
         )
+    
+    async def _init_account_balance(self):
+        pass
+
+    async def _init_position(self):
+        pass
 
     @property
     def market_type(self):

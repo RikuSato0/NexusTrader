@@ -5,8 +5,25 @@ from nexustrader.constants import (
     OrderSide,
     TimeInForce,
     OrderType,
+    KlineInterval,
 )
 from enum import Enum
+from nexustrader.error import KlineSupportedError
+
+class BybitKlineInterval(Enum):
+    MINUTE_1 = "1"
+    MINUTE_3 = "3"
+    MINUTE_5 = "5"
+    MINUTE_15 = "15"
+    MINUTE_30 = "30"
+    HOUR_1 = "60"
+    HOUR_2 = "120"
+    HOUR_4 = "240"
+    HOUR_6 = "360"
+    HOUR_12 = "720"
+    DAY_1 = "D"
+    WEEK_1 = "W"
+    MONTH_1 = "M"
 
 
 class BybitAccountType(AccountType):
@@ -20,11 +37,11 @@ class BybitAccountType(AccountType):
     OPTION_TESTNET = "OPTION_TESTNET"
     UNIFIED = "UNIFIED"
     UNIFIED_TESTNET = "UNIFIED_TESTNET"
-    
+
     @property
     def exchange_id(self):
         return "bybit"
-    
+
     @property
     def is_testnet(self):
         return self in {
@@ -70,9 +87,6 @@ WS_PUBLIC_URL = {
 }
 
 
-
-
-
 class BybitBaseUrl(Enum):
     MAINNET_1 = "MAINNET_1"
     MAINNET_2 = "MAINNET_2"
@@ -81,10 +95,11 @@ class BybitBaseUrl(Enum):
     HONGKONG = "HONGKONG"
     TURKEY = "TURKEY"
     HAZAKHSTAN = "HAZAKHSTAN"
-    
+
     @property
     def base_url(self):
         return REST_API_URL[self]
+
 
 REST_API_URL = {
     BybitBaseUrl.MAINNET_1: "https://api.bybit.com",
@@ -95,6 +110,7 @@ REST_API_URL = {
     BybitBaseUrl.TURKEY: "https://api.bybit-tr.com",
     BybitBaseUrl.HAZAKHSTAN: "https://api.bybit.kz",
 }
+
 
 class BybitOrderSide(Enum):
     BUY = "Buy"
@@ -125,11 +141,12 @@ class BybitPositionIdx(Enum):
     LONG = 1
     SHORT = 2
 
+
 class BybitPositionSide(Enum):
     FLAT = ""
     BUY = "Buy"
     SELL = "Sell"
-    
+
     def parse_to_position_side(self) -> PositionSide:
         if self == self.FLAT:
             return PositionSide.FLAT
@@ -138,6 +155,7 @@ class BybitPositionSide(Enum):
         elif self == self.SELL:
             return PositionSide.SHORT
         raise RuntimeError(f"Invalid position side: {self}")
+
 
 class BybitOrderType(Enum):
     MARKET = "Market"
@@ -150,19 +168,19 @@ class BybitProductType(Enum):
     LINEAR = "linear"
     INVERSE = "inverse"
     OPTION = "option"
-    
+
     @property
     def is_spot(self):
         return self == self.SPOT
-    
+
     @property
     def is_linear(self):
         return self == self.LINEAR
-    
+
     @property
     def is_inverse(self):
         return self == self.INVERSE
-    
+
     @property
     def is_option(self):
         return self == self.OPTION
@@ -197,6 +215,22 @@ class BybitStopOrderType(Enum):
 
 
 class BybitEnumParser:
+    _bybit_kline_interval_map = {
+        BybitKlineInterval.MINUTE_1: KlineInterval.MINUTE_1,
+        BybitKlineInterval.MINUTE_3: KlineInterval.MINUTE_3,
+        BybitKlineInterval.MINUTE_5: KlineInterval.MINUTE_5,
+        BybitKlineInterval.MINUTE_15: KlineInterval.MINUTE_15,
+        BybitKlineInterval.MINUTE_30: KlineInterval.MINUTE_30,
+        BybitKlineInterval.HOUR_1: KlineInterval.HOUR_1,
+        BybitKlineInterval.HOUR_2: KlineInterval.HOUR_2,
+        BybitKlineInterval.HOUR_4: KlineInterval.HOUR_4,
+        BybitKlineInterval.HOUR_6: KlineInterval.HOUR_6,
+        BybitKlineInterval.HOUR_12: KlineInterval.HOUR_12,
+        BybitKlineInterval.DAY_1: KlineInterval.DAY_1,
+        BybitKlineInterval.WEEK_1: KlineInterval.WEEK_1,
+        BybitKlineInterval.MONTH_1: KlineInterval.MONTH_1,
+    }
+    
     _bybit_order_status_map = {
         BybitOrderStatus.NEW: OrderStatus.ACCEPTED,
         BybitOrderStatus.PARTIALLY_FILLED: OrderStatus.PARTIALLY_FILLED,
@@ -240,6 +274,14 @@ class BybitEnumParser:
     _order_type_to_bybit_map = {
         v: k for k, v in _bybit_order_type_map.items() if v is not None
     }
+    _kline_interval_to_bybit_map = {
+        v: k for k, v in _bybit_kline_interval_map.items() if v is not None
+    }
+    
+    
+    @classmethod
+    def parse_kline_interval(cls, interval: BybitKlineInterval) -> KlineInterval:
+        return cls._bybit_kline_interval_map[interval]
 
     # Add reverse parsing methods
     @classmethod
@@ -281,3 +323,9 @@ class BybitEnumParser:
     @classmethod
     def to_bybit_order_type(cls, order_type: OrderType) -> BybitOrderType:
         return cls._order_type_to_bybit_map[order_type]
+
+    @classmethod
+    def to_bybit_kline_interval(cls, interval: KlineInterval) -> BybitKlineInterval:
+        if interval not in cls._kline_interval_to_bybit_map:
+            raise KlineSupportedError(f"Kline interval {interval} is not supported by Bybit")
+        return cls._kline_interval_to_bybit_map[interval]

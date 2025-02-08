@@ -10,7 +10,7 @@ from typing import Dict
 from aiolimiter import AsyncLimiter
 
 from nexustrader.base import WSClient
-from nexustrader.exchange.okx.constants import OkxAccountType
+from nexustrader.exchange.okx.constants import OkxAccountType, OkxKlineInterval
 from nexustrader.core.entity import TaskManager
 
 class OkxWSClient(WSClient):
@@ -153,27 +153,12 @@ class OkxWSClient(WSClient):
     async def subscribe_candlesticks(
         self,
         symbol: str,
-        interval: Literal[
-            "1s",
-            "1m",
-            "3m",
-            "5m",
-            "15m",
-            "30m",
-            "1H",
-            "2H",
-            "4H",
-            "6H",
-            "12H",
-            "1D",
-            "1W",
-            "1M",
-        ],
+        interval: OkxKlineInterval,
     ):
         """
         https://www.okx.com/docs-v5/en/#order-book-trading-market-data-ws-candlesticks-channel
         """
-        channel = f"candle{interval}"
+        channel = interval.value
         params = {"channel": channel, "instId": symbol}
         subscription_id = f"{channel}.{symbol}"
         await self._subscribe(params, subscription_id)

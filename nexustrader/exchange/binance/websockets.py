@@ -4,7 +4,7 @@ from aiolimiter import AsyncLimiter
 
 
 from nexustrader.base import WSClient
-from nexustrader.exchange.binance.constants import BinanceAccountType
+from nexustrader.exchange.binance.constants import BinanceAccountType, BinanceKlineInterval
 from nexustrader.core.entity import TaskManager
 
 
@@ -91,24 +91,7 @@ class BinanceWSClient(WSClient):
     async def subscribe_kline(
         self,
         symbol: str,
-        interval: Literal[
-            "1s",
-            "1m",
-            "3m",
-            "5m",
-            "15m",
-            "30m",
-            "1h",
-            "2h",
-            "4h",
-            "6h",
-            "8h",
-            "12h",
-            "1d",
-            "3d",
-            "1w",
-            "1M",
-        ],
+        interval: BinanceKlineInterval,
     ):
         if (
             self._account_type.is_isolated_margin_or_margin
@@ -117,10 +100,11 @@ class BinanceWSClient(WSClient):
             raise ValueError(
                 "Not Supported for `Margin Account` or `Portfolio Margin Account`"
             )
-        subscription_id = f"kline.{symbol}.{interval}"
-        params = f"{symbol.lower()}@kline_{interval}"
+        subscription_id = f"kline.{symbol}.{interval.value}"
+        params = f"{symbol.lower()}@kline_{interval.value}"
         await self._subscribe(params, subscription_id)
 
     async def _resubscribe(self):
         for _, payload in self._subscriptions.items():
             await self._send(payload)
+

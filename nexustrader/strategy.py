@@ -26,6 +26,7 @@ from nexustrader.constants import (
     AccountType,
     SubmitType,
     ExchangeType,
+    KlineInterval,
 )
 
 
@@ -35,7 +36,7 @@ class Strategy:
             name=type(self).__name__, level="DEBUG", flush=True
         )
 
-        self._subscriptions: Dict[DataType, Dict[str, str] | Set[str]] = {
+        self._subscriptions: Dict[DataType, Dict[str, KlineInterval] | Set[str]] = {
             DataType.BOOKL1: set(),
             DataType.TRADE: set(),
             DataType.KLINE: {},
@@ -218,7 +219,7 @@ class Strategy:
         for symbol in symbols:
             self._subscriptions[DataType.TRADE].add(symbol)
 
-    def subscribe_kline(self, symbols: List[str], interval: str):
+    def subscribe_kline(self, symbols: List[str], interval: KlineInterval):
         """
         Subscribe to kline data for the given symbols.
 

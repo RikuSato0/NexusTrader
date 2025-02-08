@@ -7,7 +7,7 @@ from aiolimiter import AsyncLimiter
 
 from nexustrader.base import WSClient
 from nexustrader.core.entity import TaskManager
-from nexustrader.exchange.bybit.constants import BybitAccountType
+from nexustrader.exchange.bybit.constants import BybitAccountType, BybitKlineInterval
 
 
 class BybitWSClient(WSClient):
@@ -91,9 +91,9 @@ class BybitWSClient(WSClient):
         topic = f"tickers.{symbol}"
         await self._subscribe(topic)
     
-    async def subscribe_kline(self, symbol: str, interval: int):
+    async def subscribe_kline(self, symbol: str, interval: BybitKlineInterval):
         """subscribe to kline"""
-        topic = f"kline.{interval}.{symbol}"
+        topic = f"kline.{interval.value}.{symbol}"
         await self._subscribe(topic)
 
     async def _resubscribe(self):

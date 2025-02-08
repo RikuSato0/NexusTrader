@@ -6,13 +6,14 @@ from nexustrader.base import PublicConnector, PrivateConnector
 from nexustrader.core.nautilius_core import MessageBus
 from nexustrader.core.entity import TaskManager, RateLimit
 from nexustrader.core.cache import AsyncCache
-from nexustrader.schema import BookL1, Order, Trade, Position
+from nexustrader.schema import BookL1, Order, Trade, Position, Kline
 from nexustrader.constants import (
     OrderSide,
     OrderStatus,
     OrderType,
     TimeInForce,
     PositionSide,
+    KlineInterval,
 )
 from nexustrader.exchange.bybit.schema import (
     BybitWsMessageGeneral,
@@ -23,6 +24,7 @@ from nexustrader.exchange.bybit.schema import (
     BybitWsTradeMsg,
     BybitWsPositionMsg,
     BybitWsAccountWalletMsg,
+    BybitWsKlineMsg,
     BybitWalletBalanceResponse,
     BybitPositionResponse,
 )
@@ -66,7 +68,7 @@ class BybitPublicConnector(PublicConnector):
         self._ws_msg_trade_decoder = msgspec.json.Decoder(BybitWsTradeMsg)
         self._ws_msg_orderbook_decoder = msgspec.json.Decoder(BybitWsOrderbookDepthMsg)
         self._ws_msg_general_decoder = msgspec.json.Decoder(BybitWsMessageGeneral)
-
+        self._ws_msg_kline_decoder = msgspec.json.Decoder(BybitWsKlineMsg)
         self._orderbook = defaultdict(BybitOrderBook)
 
     @property
@@ -95,9 +97,32 @@ class BybitPublicConnector(PublicConnector):
                 self._handle_orderbook(raw, ws_msg.topic)
             elif "publicTrade" in ws_msg.topic:
                 self._handle_trade(raw)
+            elif "kline" in ws_msg.topic:
+                self._handle_kline(raw)
 
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
+    
+    def _handle_kline(self, raw: bytes):
+        msg: BybitWsKlineMsg = self._ws_msg_kline_decoder.decode(raw)
+        id = msg.topic.split(".")[-1] + self.market_type
+        symbol = self._market_id[id]
+        for d in msg.data:
+            interval = BybitEnumParser.parse_kline_interval(d.interval)
+            kline = Kline(
+                exchange=self._exchange_id,
+                symbol=symbol,
+                interval=interval,
+                open=float(d.open),
+                high=float(d.high),
+                low=float(d.low),
+                close=float(d.close),
+                volume=float(d.volume),
+                start=d.start,
+                confirm=d.confirm,
+                timestamp=msg.ts,
+            )
+            self._msgbus.publish(topic="kline", msg=kline)
 
     def _handle_trade(self, raw: bytes):
         msg: BybitWsTradeMsg = self._ws_msg_trade_decoder.decode(raw)
@@ -151,7 +176,7 @@ class BybitPublicConnector(PublicConnector):
         id = market.id
         await self._ws_client.subscribe_trade(id)
 
-    async def subscribe_kline(self, symbol: str, interval: str):
+    async def subscribe_kline(self, symbol: str, interval: KlineInterval):
         market = self._market.get(symbol, None)
         if not market:
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")

@@ -13,6 +13,7 @@ from nexustrader.constants import (
     ExchangeType,
     SubmitType,
     AlgoOrderStatus,
+    KlineInterval,
 )
 
 
@@ -93,13 +94,15 @@ class Trade(Struct, gc=False):
 class Kline(Struct, gc=False):
     exchange: ExchangeType
     symbol: str
-    interval: str
+    interval: KlineInterval
     open: float
     high: float
     low: float
     close: float
     volume: float
+    start: int
     timestamp: int
+    confirm: bool
 
 
 class MarkPrice(Struct, gc=False):

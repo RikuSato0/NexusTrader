@@ -20,7 +20,7 @@ from nexustrader.schema import (
     AccountBalance,
     Balance,
 )
-from nexustrader.constants import STATUS_TRANSITIONS, AccountType
+from nexustrader.constants import STATUS_TRANSITIONS, AccountType, KlineInterval
 from nexustrader.core.entity import TaskManager, RedisClient
 from nexustrader.core.log import SpdLog
 from nexustrader.core.nautilius_core import LiveClock, MessageBus
@@ -283,7 +283,8 @@ class AsyncCache:
     ################ # cache public data  ###################
 
     def _update_kline_cache(self, kline: Kline):
-        self._kline_cache[kline.symbol] = kline
+        key = f"{kline.symbol}-{kline.interval.value}"
+        self._kline_cache[key] = kline
 
     def _update_bookl1_cache(self, bookl1: BookL1):
         self._bookl1_cache[bookl1.symbol] = bookl1
@@ -291,14 +292,15 @@ class AsyncCache:
     def _update_trade_cache(self, trade: Trade):
         self._trade_cache[trade.symbol] = trade
 
-    def kline(self, symbol: str) -> Optional[Kline]:
+    def kline(self, symbol: str, interval: KlineInterval) -> Optional[Kline]:
         """
         Retrieve a Kline object from the cache by symbol.
 
         :param symbol: The symbol of the Kline to retrieve.
         :return: The Kline object if found, otherwise None.
         """
-        return self._kline_cache.get(symbol, None)
+        key = f"{symbol}-{interval.value}"
+        return self._kline_cache.get(key, None)
 
     def bookl1(self, symbol: str) -> Optional[BookL1]:
         """

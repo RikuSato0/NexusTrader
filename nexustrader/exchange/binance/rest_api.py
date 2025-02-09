@@ -10,7 +10,7 @@ from typing import Any, Dict
 from urllib.parse import urljoin, urlencode
 
 from nexustrader.base import ApiClient
-from nexustrader.exchange.binance.schema import BinanceOrder, BinanceListenKey
+from nexustrader.exchange.binance.schema import BinanceOrder, BinanceListenKey, BinanceSpotAccountInfo, BinanceFuturesAccountInfo
 from nexustrader.exchange.binance.constants import BinanceAccountType
 from nexustrader.exchange.binance.error import BinanceClientError, BinanceServerError
 from nexustrader.core.nautilius_core import hmac_signature
@@ -35,6 +35,8 @@ class BinanceApiClient(ApiClient):
         }
         self._testnet = testnet
         self._order_decoder = msgspec.json.Decoder(BinanceOrder)
+        self._spot_account_decoder = msgspec.json.Decoder(BinanceSpotAccountInfo)
+        self._futures_account_decoder = msgspec.json.Decoder(BinanceFuturesAccountInfo)
         self._listen_key_decoder = msgspec.json.Decoder(BinanceListenKey)
 
     def _generate_signature(self, query: str) -> str:
@@ -478,3 +480,31 @@ class BinanceApiClient(ApiClient):
         }
         raw = await self._fetch("DELETE", base_url, end_point, payload=data, signed=True)
         return self._order_decoder.decode(raw)
+    
+    async def get_api_v3_account(self) -> BinanceSpotAccountInfo:
+        """
+        https://developers.binance.com/docs/binance-spot-api-docs/rest-api/account-endpoints#account-information-user_data
+        """
+        base_url = self._get_base_url(BinanceAccountType.SPOT)
+        end_point = "/api/v3/account"
+        raw = await self._fetch("GET", base_url, end_point, signed=True)
+        return self._spot_account_decoder.decode(raw)
+    
+    async def get_fapi_v2_account(self) -> BinanceFuturesAccountInfo:
+        """
+        https://developers.binance.com/docs/derivatives/usds-margined-futures/account/rest-api/Account-Information-V2
+        """
+        base_url = self._get_base_url(BinanceAccountType.USD_M_FUTURE)
+        end_point = "/fapi/v2/account"
+        raw = await self._fetch("GET", base_url, end_point, signed=True)
+        return self._futures_account_decoder.decode(raw)
+    
+    async def get_dapi_v1_account(self) -> BinanceFuturesAccountInfo:
+        """
+        https://developers.binance.com/docs/derivatives/coin-margined-futures/account/Account-Information
+        """
+        base_url = self._get_base_url(BinanceAccountType.COIN_M_FUTURE)
+        end_point = "/dapi/v1/account"
+        
+        raw = await self._fetch("GET", base_url, end_point, signed=True)
+        return self._futures_account_decoder.decode(raw)

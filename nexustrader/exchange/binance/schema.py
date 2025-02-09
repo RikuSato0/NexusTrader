@@ -46,6 +46,25 @@ class BinanceFuturesBalanceInfo(msgspec.Struct, frozen=True):
             locked=locked,
         )
 
+class BinanceFuturesPositionInfo(msgspec.Struct, kw_only=True):
+    symbol: str # symbol name
+    initialMargin: str # initial margin required with current mark price
+    maintMargin: str # maintenance margin required
+    unrealizedProfit: str # unrealized profit
+    positionInitialMargin: str # initial margin required for positions with current mark price
+    openOrderInitialMargin: str # initial margin required for open orders with current mark price
+    leverage: str # current initial leverage
+    isolated: bool # if the position is isolated
+    entryPrice: str # average entry price
+    maxNotional: str | None = None # maximum available notional with current leverage
+    bidNotional: str | None = None # bids notional, ignore
+    askNotional: str | None = None # ask notional, ignore
+    positionSide: BinancePositionSide # position side
+    positionAmt: str # position amount
+    updateTime: int
+    breakEvenPrice: str | None = None # break-even price
+    maxQty: str | None = None # maximum quantity of base asset
+
 class BinanceFuturesAccountInfo(msgspec.Struct, kw_only=True):
 
     feeTier: int  # account commission tier
@@ -70,6 +89,7 @@ class BinanceFuturesAccountInfo(msgspec.Struct, kw_only=True):
     availableBalance: str | None = None  # available balance, only for USDT asset
     maxWithdrawAmount: str | None = None  # maximum amount for transfer out, only for USDT asset
     assets: list[BinanceFuturesBalanceInfo]
+    positions: list[BinanceFuturesPositionInfo]
 
     def parse_to_balances(self) -> List[Balance]:
         return [balance.parse_to_balance() for balance in self.assets]

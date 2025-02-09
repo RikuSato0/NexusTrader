@@ -244,6 +244,3 @@ class BybitApiClient(ApiClient):
         }
         raw = await self._fetch("GET", self._base_url, endpoint, payload, signed=True)
         return self._wallet_balance_response_decoder.decode(raw)
-
-    def raise_error(self, raw: bytes, status: int, headers: Dict[str, Any]):
-        pass

@@ -11,7 +11,7 @@ from nexustrader.constants import (
     TimeInForce,
     KlineInterval,
 )
-from nexustrader.schema import Order
+from nexustrader.schema import Order, Position
 from nexustrader.schema import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
 from nexustrader.exchange.binance.schema import BinanceMarket
 from nexustrader.exchange.binance.rest_api import BinanceApiClient
@@ -35,6 +35,8 @@ from nexustrader.exchange.binance.schema import (
     BinanceUserDataStreamMsg,
     BinanceSpotOrderUpdateMsg,
     BinanceFuturesOrderUpdateMsg,
+    BinanceSpotAccountInfo,
+    BinanceFuturesAccountInfo,
 )
 from nexustrader.core.cache import AsyncCache
 from nexustrader.core.nautilius_core import MessageBus
@@ -272,9 +274,44 @@ class BinancePrivateConnector(PrivateConnector):
         )
     
     async def _init_account_balance(self):
-        pass
+        if self._account_type.is_spot or self._account_type.is_isolated_margin_or_margin:
+            res: BinanceSpotAccountInfo = await self._api_client.get_api_v3_account()
+        elif self._account_type.is_linear:
+            res: BinanceFuturesAccountInfo = await self._api_client.get_fapi_v2_account()
+        elif self._account_type.is_inverse:
+            res: BinanceFuturesAccountInfo = await self._api_client.get_dapi_v1_account()
+        elif self._account_type.is_portfolio_margin:
+            #TODO: Implement portfolio margin account balance. it is not supported now.
+            pass
+        self._cache._apply_balance(self._account_type, res.parse_to_balances())
+        
+        if self._account_type.is_linear or self._account_type.is_inverse:
+            for position in res.positions:
+                id = position.symbol + self.market_type
+                symbol = self._market_id[id]
+                side = position.positionSide.parse_to_position_side()
+                signed_amount = Decimal(position.positionAmt)
+                
+                if signed_amount == 0:
+                    side = None
+                else:
+                    if side == PositionSide.FLAT:
+                        if signed_amount > 0:
+                            side = PositionSide.LONG
+                        elif signed_amount < 0:
+                            side = PositionSide.SHORT
+                position = Position(
+                    symbol=symbol,
+                    exchange=self._exchange_id,
+                    signed_amount=signed_amount,
+                    side=side,
+                    entry_price=float(position.entryPrice),
+                    unrealized_pnl=float(position.unrealizedProfit),
+                )
+                self._cache._apply_position(position)
 
     async def _init_position(self):
+        #NOTE: Implement in `_init_account_balance`
         pass
 
     @property

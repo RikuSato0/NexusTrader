@@ -172,6 +172,15 @@ class BinancePositionSide(Enum):
     BOTH = "BOTH"
     LONG = "LONG"
     SHORT = "SHORT"
+    
+    def parse_to_position_side(self) -> PositionSide:
+        if self == self.BOTH:
+            return PositionSide.FLAT
+        elif self == self.LONG:
+            return PositionSide.LONG
+        elif self == self.SHORT:
+            return PositionSide.SHORT
+        raise RuntimeError(f"Invalid position side: {self}")
 
 
 class BinanceAccountType(AccountType):

@@ -35,9 +35,9 @@ class BinanceWSClient(WSClient):
             }
             self._subscriptions[subscription_id] = payload
             await self._send(payload)
-            self._log.info(f"Subscribing to {subscription_id}...")
+            self._log.debug(f"Subscribing to {subscription_id}...")
         else:
-            self._log.info(f"Already subscribed to {subscription_id}")
+            self._log.debug(f"Already subscribed to {subscription_id}")
 
     async def subscribe_agg_trade(self, symbol: str):
         if (

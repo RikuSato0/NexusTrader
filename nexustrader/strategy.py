@@ -97,7 +97,9 @@ class Strategy:
         interval: run at a specific interval  seconds, minutes, hours, days, weeks, months, years
         """
         if not self._initialized:
-            raise RuntimeError("Strategy not initialized, please use `schedule` in `on_start` method")
+            raise RuntimeError(
+                "Strategy not initialized, please use `schedule` in `on_start` method"
+            )
 
         self._scheduler.add_job(func, trigger=trigger, **kwargs)
 
@@ -192,7 +194,9 @@ class Strategy:
         self._ems[order.instrument_id.exchange]._submit_order(order, account_type)
         return order.uuid
 
-    def cancel_twap(self, symbol: str, uuid: str, account_type: AccountType | None = None) -> str:
+    def cancel_twap(
+        self, symbol: str, uuid: str, account_type: AccountType | None = None
+    ) -> str:
         order = OrderSubmit(
             symbol=symbol,
             instrument_id=InstrumentId.from_str(symbol),
@@ -210,8 +214,10 @@ class Strategy:
             symbols (List[str]): The symbols to subscribe to.
         """
         if not self._initialized:
-            raise StrategyBuildError("Strategy not initialized, please use `subscribe_bookl1` in `on_start` method")
-        
+            raise StrategyBuildError(
+                "Strategy not initialized, please use `subscribe_bookl1` in `on_start` method"
+            )
+
         for symbol in symbols:
             self._subscriptions[DataType.BOOKL1].add(symbol)
 
@@ -223,8 +229,10 @@ class Strategy:
             symbols (List[str]): The symbols to subscribe to.
         """
         if not self._initialized:
-            raise StrategyBuildError("Strategy not initialized, please use `subscribe_trade` in `on_start` method")
-        
+            raise StrategyBuildError(
+                "Strategy not initialized, please use `subscribe_trade` in `on_start` method"
+            )
+
         for symbol in symbols:
             self._subscriptions[DataType.TRADE].add(symbol)
 
@@ -237,27 +245,37 @@ class Strategy:
             interval (str): The interval of the kline data
         """
         if not self._initialized:
-            raise StrategyBuildError("Strategy not initialized, please use `subscribe_kline` in `on_start` method")
-        
+            raise StrategyBuildError(
+                "Strategy not initialized, please use `subscribe_kline` in `on_start` method"
+            )
+
         for symbol in symbols:
             self._subscriptions[DataType.KLINE][symbol] = interval
-    
-    def linear_info(self, exchange: ExchangeType) -> List[str]:
+
+    def linear_info(
+        self, exchange: ExchangeType, base: str | None = None, quote: str | None = None
+    ) -> List[str]:
         exchange: ExchangeManager = self._exchanges[exchange]
-        return exchange.linear
-    
-    def spot_info(self, exchange: ExchangeType) -> List[str]:
+        return exchange.linear(base, quote)
+
+    def spot_info(
+        self, exchange: ExchangeType, base: str | None = None, quote: str | None = None
+    ) -> List[str]:
         exchange: ExchangeManager = self._exchanges[exchange]
-        return exchange.spot
-    
-    def future_info(self, exchange: ExchangeType) -> List[str]:
+        return exchange.spot(base, quote)
+
+    def future_info(
+        self, exchange: ExchangeType, base: str | None = None, quote: str | None = None
+    ) -> List[str]:
         exchange: ExchangeManager = self._exchanges[exchange]
         return exchange.future
-    
-    def inverse_info(self, exchange: ExchangeType) -> List[str]:
+
+    def inverse_info(
+        self, exchange: ExchangeType, base: str | None = None, quote: str | None = None
+    ) -> List[str]:
         exchange: ExchangeManager = self._exchanges[exchange]
         return exchange.inverse
-    
+
     def on_start(self):
         pass
 
@@ -296,5 +314,3 @@ class Strategy:
 
     def on_balance(self, balance: AccountBalance):
         pass
-    
-        

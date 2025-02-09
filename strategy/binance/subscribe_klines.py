@@ -8,8 +8,8 @@ from nexustrader.engine import Engine
 
 
 
-BINANCE_API_KEY = settings.BINANCE.FUTURE.TESTNET_1.api_key
-BINANCE_SECRET = settings.BINANCE.FUTURE.TESTNET_1.secret
+BINANCE_API_KEY = settings.BINANCE.FUTURE.TESTNET_1.API_KEY
+BINANCE_SECRET = settings.BINANCE.FUTURE.TESTNET_1.SECRET
 
 
 

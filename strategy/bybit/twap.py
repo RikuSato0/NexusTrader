@@ -10,8 +10,8 @@ from nexustrader.engine import Engine
 
 
 
-BYBIT_API_KEY = settings.BYBIT.ACCOUNT1.api_key
-BYBIT_SECRET = settings.BYBIT.ACCOUNT1.secret
+BYBIT_API_KEY = settings.BYBIT.ACCOUNT1.API_KEY
+BYBIT_SECRET = settings.BYBIT.ACCOUNT1.SECRET
 
 
 

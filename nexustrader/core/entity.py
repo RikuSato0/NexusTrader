@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from nexustrader.constants import get_redis_config
 from nexustrader.core.log import SpdLog
 from nexustrader.core.nautilius_core import LiveClock
+from nexustrader.schema import Kline, BookL1, Trade
 
 
 @dataclass
@@ -210,7 +211,7 @@ class DataReady:
         self._clock = LiveClock()
         self._first_data_time: int | None = None
 
-    def input(self, data) -> None:
+    def input(self, data: Kline | BookL1 | Trade) -> None:
         """
         Input data, update the status of the corresponding symbol
 

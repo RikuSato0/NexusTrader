@@ -391,7 +391,6 @@ class BinancePrivateConnector(PrivateConnector):
 
     def _ws_msg_handler(self, raw: bytes):
         try:
-            self._log.debug(f"Received message: {raw}")
             msg = self._ws_msg_general_decoder.decode(raw)
             if msg.e:
                 match msg.e:
@@ -602,10 +601,10 @@ class BinancePrivateConnector(PrivateConnector):
         market = self._market.get(symbol)
         if not market:
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
-        symbol = market.id
+        id = market.id
 
         params = {
-            "symbol": symbol,
+            "symbol": id,
             "side": BinanceEnumParser.to_binance_order_side(side).value,
             "type": BinanceEnumParser.to_binance_order_type(type).value,
             "quantity": amount,

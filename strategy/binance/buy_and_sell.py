@@ -22,7 +22,14 @@ class Demo(Strategy):
     
     def on_start(self):
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BINANCE"])
+        self.schedule(func=self.query_position, trigger="interval", seconds=1)
     
+    def query_position(self):
+        position = self.cache.get_position(symbol="BTCUSDT-PERP.BINANCE")
+        print("BTCUSDT-PERP.BINANCE: ",position.value_or(Decimal("0")))
+        
+        
+        
     def on_failed_order(self, order: Order):
         print(order)
     
@@ -43,12 +50,12 @@ class Demo(Strategy):
                 type=OrderType.MARKET,
                 amount=Decimal("0.01"),
             )
-            self.create_order(
-                symbol="BTCUSDT-PERP.BINANCE",
-                side=OrderSide.SELL,
-                type=OrderType.MARKET,
-                amount=Decimal("0.01"),
-            )
+            # self.create_order(
+            #     symbol="BTCUSDT-PERP.BINANCE",
+            #     side=OrderSide.SELL,
+            #     type=OrderType.MARKET,
+            #     amount=Decimal("0.01"),
+            # )
             self.signal = False
 
 config = Config(

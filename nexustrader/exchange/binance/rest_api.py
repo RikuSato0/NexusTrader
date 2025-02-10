@@ -56,12 +56,14 @@ class BinanceApiClient(ApiClient):
         endpoint: str,
         payload: Dict[str, Any] = None,
         signed: bool = False,
+        required_timestamp: bool = True,
     ) -> Any:
         self._init_session()
         
         url = urljoin(base_url, endpoint)
         payload = payload or {}
-        payload["timestamp"] = self._clock.timestamp_ms()
+        if required_timestamp:
+            payload["timestamp"] = self._clock.timestamp_ms()
         payload = urlencode(payload)
 
         if signed:
@@ -122,7 +124,7 @@ class BinanceApiClient(ApiClient):
         """
         base_url = self._get_base_url(BinanceAccountType.COIN_M_FUTURE)
         end_point = "/dapi/v1/listenKey"
-        raw = await self._fetch("PUT", base_url, end_point)
+        raw = await self._fetch("PUT", base_url, end_point, required_timestamp=False)
         return orjson.loads(raw)
 
     async def post_dapi_v1_listen_key(self):
@@ -131,7 +133,7 @@ class BinanceApiClient(ApiClient):
         """
         base_url = self._get_base_url(BinanceAccountType.COIN_M_FUTURE)
         end_point = "/dapi/v1/listenKey"
-        raw = await self._fetch("POST", base_url, end_point)
+        raw = await self._fetch("POST", base_url, end_point, required_timestamp=False)
         return self._listen_key_decoder.decode(raw)
 
     async def post_api_v3_user_data_stream(self) -> BinanceListenKey:
@@ -140,7 +142,7 @@ class BinanceApiClient(ApiClient):
         """
         base_url = self._get_base_url(BinanceAccountType.SPOT)
         end_point = "/api/v3/userDataStream"
-        raw = await self._fetch("POST", base_url, end_point)
+        raw = await self._fetch("POST", base_url, end_point, required_timestamp=False)
         return self._listen_key_decoder.decode(raw)
 
     async def put_api_v3_user_data_stream(self, listen_key: str):
@@ -150,7 +152,7 @@ class BinanceApiClient(ApiClient):
         base_url = self._get_base_url(BinanceAccountType.SPOT)
         end_point = "/api/v3/userDataStream"
         raw = await self._fetch(
-            "PUT", base_url, end_point, payload={"listenKey": listen_key}
+            "PUT", base_url, end_point, payload={"listenKey": listen_key}, required_timestamp=False
         )
         return orjson.loads(raw)
 
@@ -160,7 +162,7 @@ class BinanceApiClient(ApiClient):
         """
         base_url = self._get_base_url(BinanceAccountType.MARGIN)
         end_point = "/sapi/v1/userDataStream"
-        raw = await self._fetch("POST", base_url, end_point)
+        raw = await self._fetch("POST", base_url, end_point, required_timestamp=False)
         return self._listen_key_decoder.decode(raw)
 
     async def put_sapi_v1_user_data_stream(self, listen_key: str):
@@ -170,7 +172,7 @@ class BinanceApiClient(ApiClient):
         base_url = self._get_base_url(BinanceAccountType.MARGIN)
         end_point = "/sapi/v1/userDataStream"
         raw = await self._fetch(
-            "PUT", base_url, end_point, payload={"listenKey": listen_key}
+            "PUT", base_url, end_point, payload={"listenKey": listen_key}, required_timestamp=False
         )
         return orjson.loads(raw)
 
@@ -180,7 +182,7 @@ class BinanceApiClient(ApiClient):
         """
         base_url = self._get_base_url(BinanceAccountType.ISOLATED_MARGIN)
         end_point = "/sapi/v1/userDataStream/isolated"
-        raw = await self._fetch("POST", base_url, end_point, payload={"symbol": symbol})
+        raw = await self._fetch("POST", base_url, end_point, payload={"symbol": symbol}, required_timestamp=False)
         return self._listen_key_decoder.decode(raw)
 
     async def put_sapi_v1_user_data_stream_isolated(self, symbol: str, listen_key: str):
@@ -194,6 +196,7 @@ class BinanceApiClient(ApiClient):
             base_url,
             end_point,
             payload={"symbol": symbol, "listenKey": listen_key},
+            required_timestamp=False
         )
         return orjson.loads(raw)
 
@@ -203,7 +206,7 @@ class BinanceApiClient(ApiClient):
         """
         base_url = self._get_base_url(BinanceAccountType.USD_M_FUTURE)
         end_point = "/fapi/v1/listenKey"
-        raw = await self._fetch("POST", base_url, end_point)
+        raw = await self._fetch("POST", base_url, end_point, required_timestamp=False)
         return self._listen_key_decoder.decode(raw)
 
     async def put_fapi_v1_listen_key(self):
@@ -212,7 +215,7 @@ class BinanceApiClient(ApiClient):
         """
         base_url = self._get_base_url(BinanceAccountType.USD_M_FUTURE)
         end_point = "/fapi/v1/listenKey"
-        raw = await self._fetch("PUT", base_url, end_point)
+        raw = await self._fetch("PUT", base_url, end_point, required_timestamp=False)
         return orjson.loads(raw)
 
     async def post_papi_v1_listen_key(self) -> BinanceListenKey:
@@ -221,7 +224,7 @@ class BinanceApiClient(ApiClient):
         """
         base_url = self._get_base_url(BinanceAccountType.PORTFOLIO_MARGIN)
         end_point = "/papi/v1/listenKey"
-        raw = await self._fetch("POST", base_url, end_point)
+        raw = await self._fetch("POST", base_url, end_point, required_timestamp=False)
         return self._listen_key_decoder.decode(raw)
 
     async def put_papi_v1_listen_key(self):
@@ -230,7 +233,7 @@ class BinanceApiClient(ApiClient):
         """
         base_url = self._get_base_url(BinanceAccountType.PORTFOLIO_MARGIN)
         end_point = "/papi/v1/listenKey"
-        raw = await self._fetch("PUT", base_url, end_point)
+        raw = await self._fetch("PUT", base_url, end_point, required_timestamp=False)
         return orjson.loads(raw)
 
     async def post_sapi_v1_margin_order(

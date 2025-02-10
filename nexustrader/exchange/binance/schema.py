@@ -407,13 +407,20 @@ class BinanceMarket(BaseMarket):
     feeSide: str
 
 
-class BinanceAccountBalanceData(msgspec.Struct):
+class BinanceFuturesBalanceData(msgspec.Struct):
     a: str
-    wb: str
-    cw: str
-    bc: str
+    wb: str # wallet balance
+    cw: str # cross wallet balance
+    bc: str # wallet change except PnL and Commission
+    
+    def parse_to_balance(self) -> Balance:
+        return Balance(
+            asset=self.a,
+            free=Decimal(self.wb),
+            locked=Decimal(0),
+        )
 
-class BinanceAccountPositionData(msgspec.Struct, kw_only=True):
+class BinanceFuturesPositionData(msgspec.Struct, kw_only=True):
     s: str
     pa: str # position amount
     ep: str # entry price
@@ -424,14 +431,40 @@ class BinanceAccountPositionData(msgspec.Struct, kw_only=True):
     iw: str | None = None # isolated wallet (if isolated position)
     ps: BinancePositionSide
 
-class BinanceAccountUpdateData(msgspec.Struct, kw_only=True):
+class BinanceFuturesUpdateData(msgspec.Struct, kw_only=True):
     m: BinanceAccountEventReasonType
-    B: list[BinanceAccountBalanceData]
-    P: list[BinanceAccountPositionData]
+    B: list[BinanceFuturesBalanceData]
+    P: list[BinanceFuturesPositionData]
+    
+    def parse_to_balances(self) -> List[Balance]:
+        return [balance.parse_to_balance() for balance in self.B]
+    
 
-class BinanceAccountUpdateMsg(msgspec.Struct, kw_only=True):
+class BinanceFuturesUpdateMsg(msgspec.Struct, kw_only=True):
     e: BinanceUserDataStreamWsEventType
     E: int
     T: int
     fs: BinanceBusinessUnit | None = None
-    a: BinanceAccountUpdateData
+    a: BinanceFuturesUpdateData
+
+
+class BinanceSpotBalanceData(msgspec.Struct):
+    a: str # asset
+    f: str # free
+    l: str # locked
+    
+    def parse_to_balance(self) -> Balance:
+        return Balance(
+            asset=self.a,
+            free=Decimal(self.f),
+            locked=Decimal(self.l),
+        )
+
+class BinanceSpotUpdateMsg(msgspec.Struct, kw_only=True):
+    e: BinanceUserDataStreamWsEventType # event type
+    E: int # event time
+    u: int # Time of last account update
+    B: list[BinanceSpotBalanceData] # balance array of the account
+    
+    def parse_to_balances(self) -> List[Balance]:
+        return [balance.parse_to_balance() for balance in self.B]

@@ -37,6 +37,8 @@ from nexustrader.exchange.binance.schema import (
     BinanceFuturesOrderUpdateMsg,
     BinanceSpotAccountInfo,
     BinanceFuturesAccountInfo,
+    BinanceSpotUpdateMsg,
+    BinanceFuturesUpdateMsg,
 )
 from nexustrader.core.cache import AsyncCache
 from nexustrader.core.nautilius_core import MessageBus
@@ -272,6 +274,13 @@ class BinancePrivateConnector(PrivateConnector):
         self._ws_msg_futures_order_update_decoder = msgspec.json.Decoder(
             BinanceFuturesOrderUpdateMsg
         )
+        self._ws_msg_spot_account_update_decoder = msgspec.json.Decoder(
+            BinanceSpotUpdateMsg
+        )
+        self._ws_msg_futures_account_update_decoder = msgspec.json.Decoder(
+            BinanceFuturesUpdateMsg
+        )
+        
     
     async def _init_account_balance(self):
         if self._account_type.is_spot or self._account_type.is_isolated_margin_or_margin:
@@ -382,16 +391,64 @@ class BinancePrivateConnector(PrivateConnector):
 
     def _ws_msg_handler(self, raw: bytes):
         try:
+            self._log.debug(f"Received message: {raw}")
             msg = self._ws_msg_general_decoder.decode(raw)
             if msg.e:
                 match msg.e:
-                    case BinanceUserDataStreamWsEventType.ORDER_TRADE_UPDATE:
+                    case BinanceUserDataStreamWsEventType.ORDER_TRADE_UPDATE: # futures order update
                         self._parse_order_trade_update(raw)
-                    case BinanceUserDataStreamWsEventType.EXECUTION_REPORT:
+                    case BinanceUserDataStreamWsEventType.EXECUTION_REPORT: # spot order update
                         self._parse_execution_report(raw)
+                    case BinanceUserDataStreamWsEventType.ACCOUNT_UPDATE: # futures account update
+                        self._parse_account_update(raw)
+                    case BinanceUserDataStreamWsEventType.OUT_BOUND_ACCOUNT_POSITION: # spot account update
+                        self._parse_out_bound_account_position(raw)
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
-
+        
+    def _parse_out_bound_account_position(self, raw: bytes):
+        res = self._ws_msg_spot_account_update_decoder.decode(raw)
+        balances = res.parse_to_balances()
+        self._cache._apply_balance(account_type=self._account_type, balances=balances)
+    
+    def _parse_account_update(self, raw: bytes):
+        res = self._ws_msg_futures_account_update_decoder.decode(raw)
+        balances = res.a.parse_to_balances()
+        self._cache._apply_balance(account_type=self._account_type, balances=balances)
+        
+        event_unit = res.fs
+        for position in res.a.P:
+            if event_unit == BinanceBusinessUnit.UM:
+                id = position.s + "_linear"
+                symbol = self._market_id[id]
+            elif event_unit == BinanceBusinessUnit.CM:
+                id = position.s + "_inverse"
+                symbol = self._market_id[id]
+            else:
+                id = position.s + self.market_type
+                symbol = self._market_id[id]
+            
+            signed_amount = Decimal(position.pa)
+            side = position.ps.parse_to_position_side()
+            if signed_amount == 0:
+                side = None # 0 means no position side 
+            else:
+                if side == PositionSide.FLAT:
+                    if signed_amount > 0:
+                        side = PositionSide.LONG
+                    elif signed_amount < 0:
+                        side = PositionSide.SHORT
+            position = Position(
+                symbol=symbol,
+                exchange=self._exchange_id,
+                signed_amount=signed_amount,
+                side=side,
+                entry_price=float(position.ep),
+                unrealized_pnl=float(position.up),
+                realized_pnl=float(position.cr),
+            )
+            self._cache._apply_position(position)
+        
     def _parse_order_trade_update(self, raw: bytes) -> Order:
         res = self._ws_msg_futures_order_update_decoder.decode(raw)
 

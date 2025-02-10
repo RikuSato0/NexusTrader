@@ -57,7 +57,7 @@ WebSocket Message Models
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: BinanceAccountUpdateMsg
+.. autoclass:: BinanceFuturesUpdateMsg
    :members:
    :undoc-members:
    :show-inheritance:

@@ -10,6 +10,7 @@ from nexustrader.constants import (
     PositionSide,
     TimeInForce,
     KlineInterval,
+    TriggerType,
 )
 from nexustrader.schema import Order, Position
 from nexustrader.schema import BookL1, Trade, Kline, MarkPrice, FundingRate, IndexPrice
@@ -23,7 +24,6 @@ from nexustrader.exchange.binance.constants import (
     BinanceUserDataStreamWsEventType,
     BinanceBusinessUnit,
     BinanceEnumParser,
-    BinanceOrderType,
 )
 from nexustrader.exchange.binance.schema import (
     BinanceWsMessageGeneral,
@@ -280,27 +280,33 @@ class BinancePrivateConnector(PrivateConnector):
         self._ws_msg_futures_account_update_decoder = msgspec.json.Decoder(
             BinanceFuturesUpdateMsg
         )
-        
-    
+
     async def _init_account_balance(self):
-        if self._account_type.is_spot or self._account_type.is_isolated_margin_or_margin:
+        if (
+            self._account_type.is_spot
+            or self._account_type.is_isolated_margin_or_margin
+        ):
             res: BinanceSpotAccountInfo = await self._api_client.get_api_v3_account()
         elif self._account_type.is_linear:
-            res: BinanceFuturesAccountInfo = await self._api_client.get_fapi_v2_account()
+            res: BinanceFuturesAccountInfo = (
+                await self._api_client.get_fapi_v2_account()
+            )
         elif self._account_type.is_inverse:
-            res: BinanceFuturesAccountInfo = await self._api_client.get_dapi_v1_account()
+            res: BinanceFuturesAccountInfo = (
+                await self._api_client.get_dapi_v1_account()
+            )
         elif self._account_type.is_portfolio_margin:
-            #TODO: Implement portfolio margin account balance. it is not supported now.
+            # TODO: Implement portfolio margin account balance. it is not supported now.
             pass
         self._cache._apply_balance(self._account_type, res.parse_to_balances())
-        
+
         if self._account_type.is_linear or self._account_type.is_inverse:
             for position in res.positions:
                 id = position.symbol + self.market_type
                 symbol = self._market_id[id]
                 side = position.positionSide.parse_to_position_side()
                 signed_amount = Decimal(position.positionAmt)
-                
+
                 if signed_amount == 0:
                     side = None
                 else:
@@ -320,7 +326,7 @@ class BinancePrivateConnector(PrivateConnector):
                 self._cache._apply_position(position)
 
     async def _init_position(self):
-        #NOTE: Implement in `_init_account_balance`
+        # NOTE: Implement in `_init_account_balance`
         pass
 
     @property
@@ -394,27 +400,27 @@ class BinancePrivateConnector(PrivateConnector):
             msg = self._ws_msg_general_decoder.decode(raw)
             if msg.e:
                 match msg.e:
-                    case BinanceUserDataStreamWsEventType.ORDER_TRADE_UPDATE: # futures order update
+                    case BinanceUserDataStreamWsEventType.ORDER_TRADE_UPDATE:  # futures order update
                         self._parse_order_trade_update(raw)
-                    case BinanceUserDataStreamWsEventType.EXECUTION_REPORT: # spot order update
+                    case BinanceUserDataStreamWsEventType.EXECUTION_REPORT:  # spot order update
                         self._parse_execution_report(raw)
-                    case BinanceUserDataStreamWsEventType.ACCOUNT_UPDATE: # futures account update
+                    case BinanceUserDataStreamWsEventType.ACCOUNT_UPDATE:  # futures account update
                         self._parse_account_update(raw)
-                    case BinanceUserDataStreamWsEventType.OUT_BOUND_ACCOUNT_POSITION: # spot account update
+                    case BinanceUserDataStreamWsEventType.OUT_BOUND_ACCOUNT_POSITION:  # spot account update
                         self._parse_out_bound_account_position(raw)
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
-        
+
     def _parse_out_bound_account_position(self, raw: bytes):
         res = self._ws_msg_spot_account_update_decoder.decode(raw)
         balances = res.parse_to_balances()
         self._cache._apply_balance(account_type=self._account_type, balances=balances)
-    
+
     def _parse_account_update(self, raw: bytes):
         res = self._ws_msg_futures_account_update_decoder.decode(raw)
         balances = res.a.parse_to_balances()
         self._cache._apply_balance(account_type=self._account_type, balances=balances)
-        
+
         event_unit = res.fs
         for position in res.a.P:
             if event_unit == BinanceBusinessUnit.UM:
@@ -426,11 +432,11 @@ class BinancePrivateConnector(PrivateConnector):
             else:
                 id = position.s + self.market_type
                 symbol = self._market_id[id]
-            
+
             signed_amount = Decimal(position.pa)
             side = position.ps.parse_to_position_side()
             if signed_amount == 0:
-                side = None # 0 means no position side 
+                side = None  # 0 means no position side
             else:
                 if side == PositionSide.FLAT:
                     if signed_amount > 0:
@@ -447,7 +453,7 @@ class BinancePrivateConnector(PrivateConnector):
                 realized_pnl=float(position.cr),
             )
             self._cache._apply_position(position)
-        
+
     def _parse_order_trade_update(self, raw: bytes) -> Order:
         res = self._ws_msg_futures_order_update_decoder.decode(raw)
 
@@ -466,10 +472,11 @@ class BinancePrivateConnector(PrivateConnector):
             symbol = self._market_id[id]
 
         # we use the last filled quantity to calculate the cost, instead of the accumulated filled quantity
-        if (type := event_data.o) == BinanceOrderType.MARKET:
+        type = event_data.o
+        if type.is_market:
             cost = Decimal(event_data.l) * Decimal(event_data.ap)
             cum_cost = Decimal(event_data.z) * Decimal(event_data.ap)
-        elif type == BinanceOrderType.LIMIT:
+        elif type.is_limit:
             price = Decimal(event_data.ap) or Decimal(
                 event_data.p
             )  # if average price is 0 or empty, use price
@@ -485,7 +492,7 @@ class BinancePrivateConnector(PrivateConnector):
             filled=Decimal(event_data.z),
             client_order_id=event_data.c,
             timestamp=res.E,
-            type=BinanceEnumParser.parse_order_type(event_data.o),
+            type=BinanceEnumParser.parse_futures_order_type(event_data.o),
             side=BinanceEnumParser.parse_order_side(event_data.S),
             time_in_force=BinanceEnumParser.parse_time_in_force(event_data.f),
             price=float(event_data.p),
@@ -508,6 +515,9 @@ class BinancePrivateConnector(PrivateConnector):
 
         id = event_data.s + self.market_type
         symbol = self._market_id[id]
+        
+        # Calculate average price only if filled amount is non-zero
+        average = float(event_data.Z) / float(event_data.z) if float(event_data.z) != 0 else None
 
         order = Order(
             exchange=self._exchange_id,
@@ -518,10 +528,11 @@ class BinancePrivateConnector(PrivateConnector):
             filled=Decimal(event_data.z),
             client_order_id=event_data.c,
             timestamp=event_data.E,
-            type=BinanceEnumParser.parse_order_type(event_data.o),
+            type=BinanceEnumParser.parse_spot_order_type(event_data.o),
             side=BinanceEnumParser.parse_order_side(event_data.S),
             time_in_force=BinanceEnumParser.parse_time_in_force(event_data.f),
             price=float(event_data.p),
+            average=average,
             last_filled_price=float(event_data.L),
             last_filled=float(event_data.l),
             remaining=Decimal(event_data.q) - Decimal(event_data.z),
@@ -584,7 +595,134 @@ class BinancePrivateConnector(PrivateConnector):
                 return await self._api_client.post_papi_v1_um_order(**params)
             elif market.inverse:
                 return await self._api_client.post_papi_v1_cm_order(**params)
+    
+    async def create_stop_loss_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        amount: Decimal,
+        trigger_price: Decimal,
+        trigger_type: TriggerType = TriggerType.LAST_PRICE,
+        price: Decimal | None = None,
+        time_in_force: TimeInForce = TimeInForce.GTC,
+        position_side: PositionSide | None = None,
+        **kwargs,
+    ):
+        return await self.create_take_profit_order(
+            symbol=symbol,
+            side=side,
+            type=type,
+            amount=amount,
+            trigger_price=trigger_price,
+            trigger_type=trigger_type,
+            price=price,
+            time_in_force=time_in_force,
+            position_side=position_side,
+            **kwargs,
+        )
+    
+    async def create_take_profit_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        amount: Decimal,
+        trigger_price: Decimal,
+        trigger_type: TriggerType = TriggerType.LAST_PRICE,
+        price: Decimal | None = None,
+        time_in_force: TimeInForce = TimeInForce.GTC,
+        position_side: PositionSide | None = None,
+        **kwargs,
+    ):
+        #NOTE: This function is also used for stop loss order 
+        if self._limiter:
+            await self._limiter.acquire()
+        market = self._market.get(symbol)
+        if not market:
+            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
+    
+        id = market.id
+        
+        if market.inverse or market.linear:
+            binance_type = BinanceEnumParser.to_binance_futures_order_type(type)
+        elif market.spot:
+            binance_type = BinanceEnumParser.to_binance_spot_order_type(type)
+        elif market.margin:
+            #TODO: margin order is not supported yet
+            pass
 
+        params = {
+            "symbol": id,
+            "side": BinanceEnumParser.to_binance_order_side(side).value,
+            "type": binance_type.value,
+            "quantity": amount,
+            "stopPrice": trigger_price,
+            "workingType": BinanceEnumParser.to_binance_trigger_type(trigger_type).value,
+        }
+        
+        if type.is_limit:
+            params["price"] = price
+            params["timeInForce"] = BinanceEnumParser.to_binance_time_in_force(
+                time_in_force
+            ).value
+        
+        if position_side:
+            params["positionSide"] = BinanceEnumParser.to_binance_position_side(
+                position_side
+            ).value
+            
+        reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop(
+            "reduce_only", False
+        )
+        if reduce_only:
+            params["reduceOnly"] = True
+
+        params.update(kwargs)
+        
+        try:
+            res = await self._execute_order_request(market, symbol, params)
+            order = Order(
+                exchange=self._exchange_id,
+                symbol=symbol,
+                status=OrderStatus.PENDING,
+                id=res.orderId,
+                amount=amount,
+                filled=Decimal(0),
+                client_order_id=res.clientOrderId,
+                timestamp=res.updateTime,
+                type=type,
+                side=side,
+                time_in_force=time_in_force,
+                price=float(res.price) if res.price else None,
+                average=float(res.avgPrice) if res.avgPrice else None,
+                trigger_price=float(res.stopPrice),
+                remaining=amount,
+                reduce_only=res.reduceOnly if res.reduceOnly else None,
+                position_side=BinanceEnumParser.parse_position_side(res.positionSide)
+                if res.positionSide
+                else None,
+            )
+            return order
+        except Exception as e:
+            self._log.error(f"Error creating order: {e} params: {str(params)}")
+            order = Order(
+                exchange=self._exchange_id,
+                timestamp=self._clock.timestamp_ms(),
+                symbol=symbol,
+                type=type,
+                side=side,
+                amount=amount,
+                trigger_price=trigger_price,
+                price=float(price) if price else None,
+                time_in_force=time_in_force,
+                position_side=position_side,
+                status=OrderStatus.FAILED,
+                filled=Decimal(0),
+                remaining=amount,
+            )
+            return order
+            
     async def create_order(
         self,
         symbol: str,
@@ -593,7 +731,7 @@ class BinancePrivateConnector(PrivateConnector):
         amount: Decimal,
         price: Decimal = None,
         time_in_force: TimeInForce = TimeInForce.GTC,
-        position_side: PositionSide = None,
+        position_side: PositionSide | None = None,
         **kwargs,
     ):
         if self._limiter:
@@ -645,11 +783,13 @@ class BinancePrivateConnector(PrivateConnector):
                 type=type,
                 side=side,
                 time_in_force=time_in_force,
-                price=res.price if res.price else None,
-                average=res.avgPrice if res.avgPrice else None,
+                price=float(res.price) if res.price else None,
+                average=float(res.avgPrice) if res.avgPrice else None,
                 remaining=amount,
                 reduce_only=res.reduceOnly if res.reduceOnly else None,
-                position_side=BinanceEnumParser.parse_position_side(res.positionSide) if res.positionSide else None,
+                position_side=BinanceEnumParser.parse_position_side(res.positionSide)
+                if res.positionSide
+                else None,
             )
             return order
         except Exception as e:
@@ -669,23 +809,33 @@ class BinancePrivateConnector(PrivateConnector):
                 remaining=amount,
             )
             return order
-    
-    async def _execute_cancel_order_request(self, market: BinanceMarket, symbol: str, params: Dict[str, Any]):
+
+    async def _execute_cancel_order_request(
+        self, market: BinanceMarket, symbol: str, params: Dict[str, Any]
+    ):
         if self._account_type.is_spot:
             if not market.spot:
-                raise ValueError(f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}")
+                raise ValueError(
+                    f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}"
+                )
             return await self._api_client.delete_api_v3_order(**params)
         elif self._account_type.is_isolated_margin_or_margin:
             if not market.margin:
-                raise ValueError(f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}")
+                raise ValueError(
+                    f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}"
+                )
             return await self._api_client.delete_sapi_v1_margin_order(**params)
         elif self._account_type.is_linear:
             if not market.linear:
-                raise ValueError(f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}")
+                raise ValueError(
+                    f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}"
+                )
             return await self._api_client.delete_fapi_v1_order(**params)
         elif self._account_type.is_inverse:
             if not market.inverse:
-                raise ValueError(f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}")
+                raise ValueError(
+                    f"BinanceAccountType.{self._account_type.value} is not supported for {symbol}"
+                )
             return await self._api_client.delete_dapi_v1_order(**params)
         elif self._account_type.is_portfolio_margin:
             if market.margin:
@@ -706,7 +856,7 @@ class BinancePrivateConnector(PrivateConnector):
 
             params = {
                 "symbol": symbol,
-                "orderId": order_id,
+                "order_id": order_id,
                 **kwargs,
             }
 
@@ -722,12 +872,16 @@ class BinancePrivateConnector(PrivateConnector):
                 timestamp=res.updateTime,
                 type=BinanceEnumParser.parse_order_type(res.type) if res.type else None,
                 side=BinanceEnumParser.parse_order_side(res.side) if res.side else None,
-                time_in_force=BinanceEnumParser.parse_time_in_force(res.timeInForce) if res.timeInForce else None,
+                time_in_force=BinanceEnumParser.parse_time_in_force(res.timeInForce)
+                if res.timeInForce
+                else None,
                 price=res.price,
                 average=res.avgPrice,
                 remaining=Decimal(res.origQty) - Decimal(res.executedQty),
                 reduce_only=res.reduceOnly,
-                position_side=BinanceEnumParser.parse_position_side(res.positionSide) if res.positionSide else None,
+                position_side=BinanceEnumParser.parse_position_side(res.positionSide)
+                if res.positionSide
+                else None,
             )
             return order
         except Exception as e:

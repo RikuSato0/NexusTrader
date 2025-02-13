@@ -46,7 +46,7 @@ class OrderManagementSystem(ABC):
                 # handle the ACCEPTED, PARTIALLY_FILLED, CANCELED, FILLED, EXPIRED arived early than the order submit uuid
                 uuid = self._registry.get_uuid(order.id)
                 if not uuid:
-                    await self._registry.wait_for_order_id(order.id)
+                    await self._registry.wait_for_order_id(order.id) #NOTE: need to wait for the order id to be registered
                     uuid = self._registry.get_uuid(order.id)
                 order.uuid = uuid
 

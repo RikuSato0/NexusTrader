@@ -12,9 +12,15 @@ from nexustrader.constants import ExchangeType
 from nexustrader.core.log import SpdLog
 from nexustrader.core.cache import AsyncCache
 from nexustrader.core.entity import RateLimit
-from nexustrader.constants import OrderSide, OrderType, TimeInForce, PositionSide, KlineInterval
+from nexustrader.constants import (
+    OrderSide,
+    OrderType,
+    TimeInForce,
+    PositionSide,
+    KlineInterval,
+    TriggerType,
+)
 from nexustrader.core.nautilius_core import LiveClock, MessageBus
-
 
 
 class PublicConnector(ABC):
@@ -101,10 +107,44 @@ class PrivateConnector(ABC):
     async def _init_account_balance(self):
         """Initialize the account balance"""
         pass
-    
+
     @abstractmethod
     async def _init_position(self):
         """Initialize the position"""
+        pass
+
+    @abstractmethod
+    async def create_stop_loss_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        amount: Decimal,
+        trigger_price: Decimal,
+        trigger_type: TriggerType = TriggerType.LAST_PRICE,
+        price: Decimal | None = None,
+        time_in_force: TimeInForce = TimeInForce.GTC,
+        position_side: PositionSide | None = None,
+        **kwargs,
+    ) -> Order:
+        """Create a stop loss order"""
+        pass
+
+    @abstractmethod
+    async def create_take_profit_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        amount: Decimal,
+        trigger_price: Decimal,
+        trigger_type: TriggerType = TriggerType.LAST_PRICE,
+        price: Decimal | None = None,
+        time_in_force: TimeInForce = TimeInForce.GTC,
+        position_side: PositionSide | None = None,
+        **kwargs,
+    ) -> Order:
+        """Create a take profit order"""
         pass
 
     @abstractmethod

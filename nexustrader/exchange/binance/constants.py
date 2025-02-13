@@ -7,29 +7,16 @@ from nexustrader.constants import (
     PositionSide,
     OrderSide,
     TimeInForce,
+    TriggerType,
 )
 from nexustrader.error import KlineSupportedError
 
+
+class BinanceTriggerType(Enum):
+    MARK_PRICE = "MARK_PRICE"
+    CONTRACT_PRICE = "CONTRACT_PRICE"
+
 class BinanceAccountEventReasonType(Enum):
-    """
-    DEPOSIT
-    WITHDRAW
-    ORDER
-    FUNDING_FEE
-    WITHDRAW_REJECT
-    ADJUSTMENT
-    INSURANCE_CLEAR
-    ADMIN_DEPOSIT
-    ADMIN_WITHDRAW
-    MARGIN_TRANSFER
-    MARGIN_TYPE_CHANGE
-    ASSET_TRANSFER
-    OPTIONS_PREMIUM_FEE
-    OPTIONS_SETTLE_PROFIT
-    AUTO_EXCHANGE
-    COIN_SWAP_DEPOSIT
-    COIN_SWAP_WITHDRAW
-    """
     DEPOSIT = "DEPOSIT"
     WITHDRAW = "WITHDRAW"
     ORDER = "ORDER"
@@ -139,15 +126,28 @@ class BinanceUserDataStreamWsEventType(Enum):
 class BinanceOrderType(Enum):
     LIMIT = "LIMIT"
     MARKET = "MARKET"
-    STOP = "STOP"
-    STOP_LOSS = "STOP_LOSS"
-    STOP_LOSS_LIMIT = "STOP_LOSS_LIMIT"
-    TAKE_PROFIT = "TAKE_PROFIT"
-    TAKE_PROFIT_LIMIT = "TAKE_PROFIT_LIMIT"
-    LIMIT_MAKER = "LIMIT_MAKER"
+    
+    STOP = "STOP" # futures only
+    TAKE_PROFIT = "TAKE_PROFIT" # futures/spot in spot it is MARKET order in futures it is LIMIT order
+    TAKE_PROFIT_MARKET = "TAKE_PROFIT_MARKET" # futures only
+    STOP_MARKET = "STOP_MARKET" # futures only
+    
+    STOP_LOSS = "STOP_LOSS" # spot only
+    STOP_LOSS_LIMIT = "STOP_LOSS_LIMIT" # spot only
+    TAKE_PROFIT_LIMIT = "TAKE_PROFIT_LIMIT" # spot only
+    
+    
+    LIMIT_MAKER = "LIMIT_MAKER" # spot only
     TRAILING_STOP_MARKET = "TRAILING_STOP_MARKET"
-    TAKE_PROFIT_MARKET = "TAKE_PROFIT_MARKET"
-    STOP_MARKET = "STOP_MARKET"
+    
+    @property
+    def is_market(self):
+        return self in (self.STOP_MARKET, self.TAKE_PROFIT_MARKET, self.STOP_LOSS, self.TAKE_PROFIT, self.MARKET)
+    
+    @property
+    def is_limit(self):
+        return self in (self.TAKE_PROFIT_LIMIT, self.STOP_LOSS_LIMIT, self.STOP, self.TAKE_PROFIT, self.LIMIT)
+    
 
 
 class BinanceExecutionType(Enum):
@@ -528,6 +528,12 @@ BINANCE_RETRY_ERRORS: set[BinanceErrorCode] = {
 
 
 class BinanceEnumParser:
+    
+    _binance_trigger_type_map = {
+        BinanceTriggerType.MARK_PRICE: TriggerType.MARK_PRICE,
+        BinanceTriggerType.CONTRACT_PRICE: TriggerType.LAST_PRICE,
+    }
+    
     _binance_kline_interval_map = {
        BinanceKlineInterval.SECOND_1: KlineInterval.SECOND_1,
        BinanceKlineInterval.MINUTE_1: KlineInterval.MINUTE_1,
@@ -576,6 +582,27 @@ class BinanceEnumParser:
         BinanceOrderType.LIMIT: OrderType.LIMIT,
         BinanceOrderType.MARKET: OrderType.MARKET,
     }
+    
+    # ref1: https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/trade/rest-api
+    # ref2: https://developers.binance.com/docs/zh-CN/derivatives/coin-margined-futures/trade
+    _binance_futures_order_type_map = {
+        BinanceOrderType.LIMIT: OrderType.LIMIT,
+        BinanceOrderType.MARKET: OrderType.MARKET,
+        BinanceOrderType.STOP: OrderType.STOP_LOSS_LIMIT,
+        BinanceOrderType.TAKE_PROFIT: OrderType.TAKE_PROFIT_LIMIT,
+        BinanceOrderType.STOP_MARKET: OrderType.STOP_LOSS_MARKET,
+        BinanceOrderType.TAKE_PROFIT_MARKET: OrderType.TAKE_PROFIT_MARKET,
+    }
+    
+    # ref: https://developers.binance.com/docs/zh-CN/binance-spot-api-docs/rest-api/trading-endpoints
+    _binance_spot_order_type_map = {
+        BinanceOrderType.LIMIT: OrderType.LIMIT,
+        BinanceOrderType.MARKET: OrderType.MARKET,
+        BinanceOrderType.STOP_LOSS: OrderType.STOP_LOSS_MARKET,
+        BinanceOrderType.STOP_LOSS_LIMIT: OrderType.STOP_LOSS_LIMIT,
+        BinanceOrderType.TAKE_PROFIT: OrderType.TAKE_PROFIT_MARKET,
+        BinanceOrderType.TAKE_PROFIT_LIMIT: OrderType.TAKE_PROFIT_LIMIT,
+    }
 
     _order_status_to_binance_map = {v: k for k, v in _binance_order_status_map.items()}
     _position_side_to_binance_map = {v: k for k, v in _binance_position_side_map.items()}
@@ -586,6 +613,10 @@ class BinanceEnumParser:
     _order_type_to_binance_map = {v: k for k, v in _binance_order_type_map.items()}
     _kline_interval_to_binance_map = {v: k for k, v in _binance_kline_interval_map.items()}
     
+    _futures_order_type_to_binance_map = {v: k for k, v in _binance_futures_order_type_map.items()}
+    _spot_order_type_to_binance_map = {v: k for k, v in _binance_spot_order_type_map.items()}
+    _trigger_type_to_binance_map = {v: k for k, v in _binance_trigger_type_map.items()}
+    
     @classmethod
     def parse_kline_interval(cls, interval: BinanceKlineInterval) -> KlineInterval:
         return cls._binance_kline_interval_map[interval]
@@ -593,6 +624,18 @@ class BinanceEnumParser:
     @classmethod
     def parse_order_status(cls, status: BinanceOrderStatus) -> OrderStatus:
         return cls._binance_order_status_map[status]
+    
+    @classmethod
+    def parse_futures_order_type(cls, order_type: BinanceOrderType) -> OrderType:
+        return cls._binance_futures_order_type_map[order_type]
+    
+    @classmethod
+    def parse_spot_order_type(cls, order_type: BinanceOrderType) -> OrderType:
+        return cls._binance_spot_order_type_map[order_type]
+    
+    @classmethod
+    def parse_trigger_type(cls, trigger_type: BinanceTriggerType) -> TriggerType:
+        return cls._binance_trigger_type_map[trigger_type]
     
     @classmethod
     def parse_position_side(cls, side: BinancePositionSide) -> PositionSide:
@@ -629,6 +672,18 @@ class BinanceEnumParser:
     @classmethod
     def to_binance_order_type(cls, order_type: OrderType) -> BinanceOrderType:
         return cls._order_type_to_binance_map[order_type]
+    
+    @classmethod
+    def to_binance_futures_order_type(cls, order_type: OrderType) -> BinanceOrderType:
+        return cls._futures_order_type_to_binance_map[order_type]
+    
+    @classmethod
+    def to_binance_spot_order_type(cls, order_type: OrderType) -> BinanceOrderType:
+        return cls._spot_order_type_to_binance_map[order_type]
+    
+    @classmethod
+    def to_binance_trigger_type(cls, trigger_type: TriggerType) -> BinanceTriggerType:
+        return cls._trigger_type_to_binance_map[trigger_type]
 
     @classmethod
     def to_binance_kline_interval(cls, interval: KlineInterval) -> BinanceKlineInterval:

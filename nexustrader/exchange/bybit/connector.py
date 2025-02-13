@@ -14,6 +14,7 @@ from nexustrader.constants import (
     TimeInForce,
     PositionSide,
     KlineInterval,
+    TriggerType,
 )
 from nexustrader.exchange.bybit.schema import (
     BybitWsMessageGeneral,
@@ -102,7 +103,7 @@ class BybitPublicConnector(PublicConnector):
 
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
-    
+
     def _handle_kline(self, raw: bytes):
         msg: BybitWsKlineMsg = self._ws_msg_kline_decoder.decode(raw)
         id = msg.topic.split(".")[-1] + self.market_type
@@ -207,7 +208,10 @@ class BybitPrivateConnector(PrivateConnector):
         if not exchange.api_key or not exchange.secret:
             raise ValueError("API key and secret are required for private endpoints")
 
-        if account_type not in {BybitAccountType.UNIFIED, BybitAccountType.UNIFIED_TESTNET}:
+        if account_type not in {
+            BybitAccountType.UNIFIED,
+            BybitAccountType.UNIFIED_TESTNET,
+        }:
             raise ValueError(
                 "Please using `BybitAccountType.UNIFIED` or `BybitAccountType.UNIFIED_TESTNET` in `PrivateConnector`"
             )
@@ -260,7 +264,7 @@ class BybitPrivateConnector(PrivateConnector):
             elif "position" in ws_msg.topic:
                 self._parse_position_update(raw)
             elif "wallet" == ws_msg.topic:
-                self._parse_wallet_update(raw)       
+                self._parse_wallet_update(raw)
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
 
@@ -311,23 +315,27 @@ class BybitPrivateConnector(PrivateConnector):
                 status=OrderStatus.CANCEL_FAILED,
             )
             return order
-    
+
     async def _init_account_balance(self):
-        res: BybitWalletBalanceResponse = await self._api_client.get_v5_account_wallet_balance(account_type="UNIFIED")
+        res: BybitWalletBalanceResponse = (
+            await self._api_client.get_v5_account_wallet_balance(account_type="UNIFIED")
+        )
         for result in res.result.list:
             self._cache._apply_balance(self._account_type, result.parse_to_balances())
-    
+
     async def _init_position(self):
-        res_linear: BybitPositionResponse = await self._api_client.get_v5_position_list(category="linear", settleCoin="USDT", limit=200) # TODO: position must be smaller than 200
-        res_inverse: BybitPositionResponse = await self._api_client.get_v5_position_list(category="inverse", limit=200)
-        
-        
+        res_linear: BybitPositionResponse = await self._api_client.get_v5_position_list(
+            category="linear", settleCoin="USDT", limit=200
+        )  # TODO: position must be smaller than 200
+        res_inverse: BybitPositionResponse = (
+            await self._api_client.get_v5_position_list(category="inverse", limit=200)
+        )
+
         cache_positions = self._cache.get_all_positions(self._exchange_id)
 
         self._apply_cache_position(res_linear, cache_positions)
         self._apply_cache_position(res_inverse, cache_positions)
-            
-        
+
         for symbol, position in cache_positions.items():
             position = Position(
                 symbol=symbol,
@@ -339,8 +347,10 @@ class BybitPrivateConnector(PrivateConnector):
                 realized_pnl=0,
             )
             self._cache._apply_position(position)
-    
-    def _apply_cache_position(self, res: BybitPositionResponse, cache_positions: Dict[str, Position]):
+
+    def _apply_cache_position(
+        self, res: BybitPositionResponse, cache_positions: Dict[str, Position]
+    ):
         category = res.result.category
         for result in res.result.list:
             side = result.side.parse_to_position_side()
@@ -351,16 +361,16 @@ class BybitPrivateConnector(PrivateConnector):
                 signed_amount = Decimal(result.size)
             elif side == PositionSide.SHORT:
                 signed_amount = -Decimal(result.size)
-            
+
             if category.is_inverse:
                 id = result.symbol + "_inverse"
             elif category.is_linear:
                 id = result.symbol + "_linear"
-            
-            symbol = self._market_id[id]    
-            
+
+            symbol = self._market_id[id]
+
             cache_positions.pop(symbol, None)
-            
+
             position = Position(
                 symbol=symbol,
                 exchange=self._exchange_id,
@@ -371,8 +381,39 @@ class BybitPrivateConnector(PrivateConnector):
                 realized_pnl=float(result.cumRealisedPnl),
             )
             self._cache._apply_position(position)
-        
-        
+
+    async def create_stop_loss_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        amount: Decimal,
+        trigger_price: Decimal,
+        trigger_type: TriggerType = TriggerType.LAST_PRICE,
+        price: Decimal | None = None,
+        time_in_force: TimeInForce = TimeInForce.GTC,
+        position_side: PositionSide | None = None,
+        **kwargs,
+    ) -> Order:
+        # TODO: implement
+        pass
+
+    async def create_take_profit_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        amount: Decimal,
+        trigger_price: Decimal,
+        trigger_type: TriggerType = TriggerType.LAST_PRICE,
+        price: Decimal | None = None,
+        time_in_force: TimeInForce = TimeInForce.GTC,
+        position_side: PositionSide | None = None,
+        **kwargs,
+    ) -> Order:
+        # TODO: implement
+        pass
+
     async def create_order(
         self,
         symbol: str,
@@ -487,7 +528,10 @@ class BybitPrivateConnector(PrivateConnector):
                 average=float(data.avgPrice) if data.avgPrice else None,
                 amount=Decimal(data.qty),
                 filled=Decimal(data.cumExecQty),
-                remaining=Decimal(data.qty) - Decimal(data.cumExecQty), # TODO: check if this is correct leavsQty is not correct
+                remaining=Decimal(data.qty)
+                - Decimal(
+                    data.cumExecQty
+                ),  # TODO: check if this is correct leavsQty is not correct
                 fee=Decimal(data.cumExecFee),
                 fee_currency=data.feeCurrency,
                 cum_cost=Decimal(data.cumExecValue),
@@ -496,19 +540,19 @@ class BybitPrivateConnector(PrivateConnector):
             )
 
             self._msgbus.send(endpoint="bybit.order", msg=order)
-    
+
     def _parse_position_update(self, raw: bytes):
         position_msg = self._ws_msg_position_decoder.decode(raw)
         self._log.debug(f"Position update: {str(position_msg)}")
-        
+
         for data in position_msg.data:
             category = data.category
-            if category.is_linear: # only linear/inverse/ position is supported
+            if category.is_linear:  # only linear/inverse/ position is supported
                 id = data.symbol + "_linear"
             elif category.is_inverse:
                 id = data.symbol + "_inverse"
             symbol = self._market_id[id]
-            
+
             side = data.side.parse_to_position_side()
             if side == PositionSide.LONG:
                 signed_amount = Decimal(data.size)
@@ -517,7 +561,7 @@ class BybitPrivateConnector(PrivateConnector):
             else:
                 side = None
                 signed_amount = Decimal(0)
-            
+
             position = Position(
                 symbol=symbol,
                 exchange=self._exchange_id,
@@ -527,17 +571,17 @@ class BybitPrivateConnector(PrivateConnector):
                 unrealized_pnl=float(data.unrealisedPnl),
                 realized_pnl=float(data.cumRealisedPnl),
             )
-            
+
             self._cache._apply_position(position)
-        
+
     def _parse_wallet_update(self, raw: bytes):
         wallet_msg = self._ws_msg_wallet_decoder.decode(raw)
         self._log.debug(f"Wallet update: {str(wallet_msg)}")
-        
+
         for data in wallet_msg.data:
             balances = data.parse_to_balances()
             self._cache._apply_balance(self._account_type, balances)
-        
+
     async def disconnect(self):
         await super().disconnect()
         await self._api_client.close_session()

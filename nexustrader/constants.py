@@ -88,6 +88,8 @@ class SubmitType(Enum):
     CANCEL_TWAP = 3
     VWAP = 4
     CANCEL_VWAP = 5
+    STOP_LOSS = 6
+    TAKE_PROFIT = 7
 
 
 class EventType(Enum):
@@ -152,6 +154,32 @@ class AccountType(Enum):
 class OrderType(Enum):
     MARKET = "MARKET"
     LIMIT = "LIMIT"
+    TAKE_PROFIT_MARKET = "TAKE_PROFIT_MARKET"
+    TAKE_PROFIT_LIMIT = "TAKE_PROFIT_LIMIT"
+    STOP_LOSS_MARKET = "STOP_LOSS_MARKET"
+    STOP_LOSS_LIMIT = "STOP_LOSS_LIMIT"
+    
+    @property
+    def is_take_profit(self) -> bool:
+        return self in (OrderType.TAKE_PROFIT_MARKET, OrderType.TAKE_PROFIT_LIMIT)
+    
+    @property
+    def is_stop_loss(self) -> bool:
+        return self in (OrderType.STOP_LOSS_MARKET, OrderType.STOP_LOSS_LIMIT)
+    
+    @property
+    def is_market(self) -> bool:
+        return self in (OrderType.MARKET, OrderType.TAKE_PROFIT_MARKET, OrderType.STOP_LOSS_MARKET)
+    
+    @property
+    def is_limit(self) -> bool:
+        return self in (OrderType.LIMIT, OrderType.TAKE_PROFIT_LIMIT, OrderType.STOP_LOSS_LIMIT)
+
+
+class TriggerType(Enum):
+    LAST_PRICE = "LAST_PRICE"
+    MARK_PRICE = "MARK_PRICE"
+    INDEX_PRICE = "INDEX_PRICE"
 
 
 class OrderSide(Enum):

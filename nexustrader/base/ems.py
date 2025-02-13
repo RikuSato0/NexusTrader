@@ -185,7 +185,59 @@ class ExecutionManagementSystem(ABC):
             self._cache._order_status_update(order)  # INITIALIZED -> FAILED
             self._msgbus.send(endpoint="failed", msg=order)
         return order
-
+    
+    async def _create_stop_loss_order(self, order_submit: OrderSubmit, account_type: AccountType):
+        """
+        Create a stop loss order
+        """
+        order: Order = await self._private_connectors[account_type].create_stop_loss_order(
+            symbol=order_submit.symbol,
+            side=order_submit.side,
+            type=order_submit.type,
+            amount=order_submit.amount,
+            trigger_type=order_submit.trigger_type,
+            trigger_price=order_submit.trigger_price,
+            price=order_submit.price,
+            time_in_force=order_submit.time_in_force,
+            position_side=order_submit.position_side,
+            **order_submit.kwargs,
+        )
+        order.uuid = order_submit.uuid
+        if order.success:
+            self._registry.register_order(order)
+            self._cache._order_initialized(order)  # INITIALIZED -> PENDING
+            self._msgbus.send(endpoint="pending", msg=order)
+        else:
+            self._cache._order_status_update(order)  # INITIALIZED -> FAILED
+            self._msgbus.send(endpoint="failed", msg=order)
+        return order
+    
+    async def _create_take_profit_order(self, order_submit: OrderSubmit, account_type: AccountType):
+        """
+        Create a take profit order
+        """
+        order: Order = await self._private_connectors[account_type].create_take_profit_order(
+            symbol=order_submit.symbol,
+            side=order_submit.side,
+            type=order_submit.type,
+            amount=order_submit.amount,
+            trigger_price=order_submit.trigger_price,
+            trigger_type=order_submit.trigger_type,
+            price=order_submit.price,
+            time_in_force=order_submit.time_in_force,
+            position_side=order_submit.position_side,
+            **order_submit.kwargs,
+        )
+        order.uuid = order_submit.uuid
+        if order.success:
+            self._registry.register_order(order)
+            self._cache._order_initialized(order)  # INITIALIZED -> PENDING
+            self._msgbus.send(endpoint="pending", msg=order)
+        else:
+            self._cache._order_status_update(order)  # INITIALIZED -> FAILED
+            self._msgbus.send(endpoint="failed", msg=order)
+        return order
+    
     @abstractmethod
     def _get_min_order_amount(self, symbol: str, market: BaseMarket) -> Decimal:
         """
@@ -442,18 +494,21 @@ class ExecutionManagementSystem(ABC):
         """
         Handle the order submit
         """
+        submit_handlers = {
+            SubmitType.CANCEL: self._cancel_order,
+            SubmitType.CREATE: self._create_order,
+            SubmitType.TWAP: self._create_twap_order,
+            SubmitType.CANCEL_TWAP: self._cancel_twap_order,
+            SubmitType.STOP_LOSS: self._create_stop_loss_order,
+            SubmitType.TAKE_PROFIT: self._create_take_profit_order,
+        }
+        
         self._log.debug(f"Handling orders for account type: {account_type}")
         while True:
             order_submit = await queue.get()
             self._log.debug(f"[ORDER SUBMIT]: {order_submit}")
-            if order_submit.submit_type == SubmitType.CANCEL:
-                await self._cancel_order(order_submit, account_type)
-            elif order_submit.submit_type == SubmitType.CREATE:
-                await self._create_order(order_submit, account_type)
-            elif order_submit.submit_type == SubmitType.TWAP:
-                await self._create_twap_order(order_submit, account_type)
-            elif order_submit.submit_type == SubmitType.CANCEL_TWAP:
-                await self._cancel_twap_order(order_submit, account_type)
+            handler = submit_handlers[order_submit.submit_type]
+            await handler(order_submit, account_type)
             queue.task_done()
 
     async def start(self):

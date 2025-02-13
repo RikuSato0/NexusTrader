@@ -22,6 +22,7 @@ from nexustrader.constants import (
     TimeInForce,
     PositionSide,
     KlineInterval,
+    TriggerType,
 )
 from nexustrader.base import PublicConnector, PrivateConnector
 from nexustrader.core.nautilius_core import MessageBus
@@ -88,7 +89,7 @@ class OkxPublicConnector(PublicConnector):
             raise ValueError(f"Symbol {symbol} not found in market")
         interval = OkxEnumParser.to_okx_kline_interval(interval)
         await self._business_ws_client.subscribe_candlesticks(market.id, interval)
-    
+
     def _business_ws_msg_handler(self, raw: bytes):
         if raw == b"pong":
             self._business_ws_client._transport.notify_user_specific_pong_received()
@@ -140,8 +141,8 @@ class OkxPublicConnector(PublicConnector):
         symbol = self._market_id[id]
         okx_interval = OkxKlineInterval(msg.arg.channel)
         interval = OkxEnumParser.parse_kline_interval(okx_interval)
-        
-        for d in msg.data:            
+
+        for d in msg.data:
             kline = Kline(
                 exchange=self._exchange_id,
                 symbol=symbol,
@@ -153,7 +154,7 @@ class OkxPublicConnector(PublicConnector):
                 volume=float(d[5]),
                 start=int(d[0]),
                 timestamp=self._clock.timestamp_ms(),
-                confirm=False if d[8] == '0' else True
+                confirm=False if d[8] == "0" else True,
             )
             self._msgbus.publish(topic="kline", msg=kline)
 
@@ -188,7 +189,7 @@ class OkxPublicConnector(PublicConnector):
                 timestamp=int(d.ts),
             )
             self._msgbus.publish(topic="bookl1", msg=bookl1)
-    
+
     async def disconnect(self):
         await super().disconnect()
         self._business_ws_client.disconnect()
@@ -277,9 +278,9 @@ class OkxPrivateConnector(PrivateConnector):
                 signed_amount = Decimal(data.pos)
             elif side == PositionSide.SHORT:
                 signed_amount = -Decimal(data.pos)
-            
+
             symbol = self._market_id[data.instId]
-            
+
             position = Position(
                 symbol=symbol,
                 exchange=self._exchange_id,
@@ -290,8 +291,6 @@ class OkxPrivateConnector(PrivateConnector):
                 realized_pnl=float(data.realizedPnl) if data.realizedPnl else 0,
             )
             self._cache._apply_position(position)
-            
-            
 
     def _handle_event_msg(self, msg: OkxWsGeneralMsg):
         if msg.event == "error":
@@ -398,6 +397,36 @@ class OkxPrivateConnector(PrivateConnector):
 
     def _get_td_mode(self, market: OkxMarket):
         return OkxTdMode.CASH if market.spot else OkxTdMode.CROSS
+
+    async def create_stop_loss_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        amount: Decimal,
+        trigger_price: Decimal,
+        trigger_type: TriggerType = TriggerType.LAST_PRICE,
+        price: Decimal | None = None,
+        time_in_force: TimeInForce = TimeInForce.GTC,
+        position_side: PositionSide | None = None,
+        **kwargs,
+    ) -> Order:
+        pass
+
+    async def create_take_profit_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        type: OrderType,
+        amount: Decimal,
+        trigger_price: Decimal,
+        trigger_type: TriggerType = TriggerType.LAST_PRICE,
+        price: Decimal | None = None,
+        time_in_force: TimeInForce = TimeInForce.GTC,
+        position_side: PositionSide | None = None,
+        **kwargs,
+    ) -> Order:
+        pass
 
     async def create_order(
         self,

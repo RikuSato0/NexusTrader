@@ -28,6 +28,7 @@ from nexustrader.constants import (
     SubmitType,
     ExchangeType,
     KlineInterval,
+    TriggerType,
 )
 
 
@@ -127,7 +128,7 @@ class Strategy:
         instrument_id = InstrumentId.from_str(symbol)
         ems = self._ems[instrument_id.exchange]
         return ems._price_to_precision(instrument_id.symbol, price, mode)
-
+    
     def create_order(
         self,
         symbol: str,
@@ -137,19 +138,30 @@ class Strategy:
         price: Decimal | None = None,
         time_in_force: TimeInForce | None = TimeInForce.GTC,
         position_side: PositionSide | None = None,
+        trigger_price: Decimal | None = None,
+        trigger_type: TriggerType = TriggerType.LAST_PRICE,
         account_type: AccountType | None = None,
         **kwargs,
     ) -> str:
+        if type.is_stop_loss:
+            submit_type = SubmitType.STOP_LOSS
+        elif type.is_take_profit:
+            submit_type = SubmitType.TAKE_PROFIT
+        else:
+            submit_type = SubmitType.CREATE
+        
         order = OrderSubmit(
             symbol=symbol,
             instrument_id=InstrumentId.from_str(symbol),
-            submit_type=SubmitType.CREATE,
+            submit_type=submit_type,
             side=side,
             type=type,
             amount=amount,
             price=price,
             time_in_force=time_in_force,
             position_side=position_side,
+            trigger_price=trigger_price,
+            trigger_type=trigger_type,
             kwargs=kwargs,
         )
         self._ems[order.instrument_id.exchange]._submit_order(order, account_type)

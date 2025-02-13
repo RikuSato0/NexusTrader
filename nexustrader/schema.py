@@ -14,6 +14,7 @@ from nexustrader.constants import (
     SubmitType,
     AlgoOrderStatus,
     KlineInterval,
+    TriggerType,
 )
 
 
@@ -141,6 +142,8 @@ class OrderSubmit(Struct):
     position_side: PositionSide | None = None
     duration: int | None = None
     wait: int | None = None
+    trigger_price: Decimal | None = None
+    trigger_type: TriggerType = TriggerType.LAST_PRICE
     kwargs: Dict[str, Any] = {}
     status: OrderStatus = OrderStatus.INITIALIZED
 
@@ -159,6 +162,7 @@ class Order(Struct):
     side: Optional[OrderSide] = None
     time_in_force: Optional[TimeInForce] = None
     price: Optional[float] = None
+    trigger_price: Optional[float] = None
     average: Optional[float] = None
     last_filled_price: Optional[float] = None
     last_filled: Optional[Decimal] = None

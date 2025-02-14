@@ -8,7 +8,7 @@ from nexustrader.config import (
     BasicConfig,
 )
 from nexustrader.strategy import Strategy
-from nexustrader.constants import ExchangeType, OrderSide, OrderType
+from nexustrader.constants import ExchangeType, OrderSide
 from nexustrader.exchange.binance import BinanceAccountType
 from nexustrader.schema import BookL1, Order
 from nexustrader.engine import Engine
@@ -56,13 +56,12 @@ class Demo(Strategy):
             self.order_id = self.create_adp_maker(
                 symbol="BTCUSDT-PERP.BINANCE",
                 side=OrderSide.BUY,
-                amount=Decimal("0.01"),
+                amount=Decimal("0.08"),
                 duration=10,
                 wait=8,
-                trigger_tp_ratio=0.002,
                 trigger_sl_ratio=0.002,
-                tp_ratio=0.0025,
-                sl_ratio=0.0025,
+                trigger_tp_ratio=0.002,
+                sl_tp_duration=20,
             )
             self.signal = False
 

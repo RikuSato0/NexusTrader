@@ -109,6 +109,7 @@ class BinanceWsEventType(Enum):
 
 
 class BinanceUserDataStreamWsEventType(Enum):
+    TRADE_LITE = "TRADE_LITE"
     MARGIN_CALL = "MARGIN_CALL"
     ACCOUNT_UPDATE = "ACCOUNT_UPDATE"
     ORDER_TRADE_UPDATE = "ORDER_TRADE_UPDATE"

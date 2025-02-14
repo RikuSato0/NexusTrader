@@ -187,14 +187,11 @@ class Strategy:
         amount: Decimal,
         duration: int,
         wait: int,
+        trigger_tp_ratio: float,
+        trigger_sl_ratio: float,
+        sl_tp_duration: float,
         check_interval: float = 0.1,
-        position_side: PositionSide | None = None,
         account_type: AccountType | None = None,
-        trigger_tp_ratio: float | None = None,
-        trigger_sl_ratio: float | None = None,
-        tp_ratio: float | None = None,
-        sl_ratio: float | None = None,
-        **kwargs,
     ) -> str:
         """create adaptive maker order with tp and sl
         
@@ -226,12 +223,9 @@ class Strategy:
             duration=duration,
             wait=wait,
             check_interval=check_interval,
-            position_side=position_side,
             trigger_tp_ratio=trigger_tp_ratio,
             trigger_sl_ratio=trigger_sl_ratio,
-            tp_ratio=tp_ratio,
-            sl_ratio=sl_ratio,
-            kwargs=kwargs,
+            sl_tp_duration=sl_tp_duration,
         )
         self._ems[order.instrument_id.exchange]._submit_order(order, account_type)
         return order.uuid

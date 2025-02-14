@@ -147,8 +147,7 @@ class OrderSubmit(Struct):
     trigger_type: TriggerType = TriggerType.LAST_PRICE
     trigger_tp_ratio: float | None = None
     trigger_sl_ratio: float | None = None
-    tp_ratio: float | None = None
-    sl_ratio: float | None = None
+    sl_tp_duration: float | None = None
     kwargs: Dict[str, Any] = {}
     status: OrderStatus = OrderStatus.INITIALIZED
 
@@ -227,8 +226,6 @@ class AlgoOrder(Struct):
     exchange: ExchangeType
     timestamp: int 
     orders: List[str] = field(default_factory=list) # [uuid1, uuid2, ...]
-    tp_orders: List[str] = field(default_factory=list) # [uuid1, uuid2, ...]
-    sl_orders: List[str] = field(default_factory=list) # [uuid1, uuid2, ...]
     position_side: PositionSide | None = None
     filled: Decimal | None = None
     cost: float | None = None

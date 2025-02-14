@@ -141,9 +141,14 @@ class OrderSubmit(Struct):
     time_in_force: TimeInForce | None = TimeInForce.GTC
     position_side: PositionSide | None = None
     duration: int | None = None
-    wait: int | None = None
+    check_interval: float = 0.1
+    wait: float | None = None
     trigger_price: Decimal | None = None
     trigger_type: TriggerType = TriggerType.LAST_PRICE
+    trigger_tp_ratio: float | None = None
+    trigger_sl_ratio: float | None = None
+    tp_ratio: float | None = None
+    sl_ratio: float | None = None
     kwargs: Dict[str, Any] = {}
     status: OrderStatus = OrderStatus.INITIALIZED
 
@@ -222,7 +227,17 @@ class AlgoOrder(Struct):
     exchange: ExchangeType
     timestamp: int 
     orders: List[str] = field(default_factory=list) # [uuid1, uuid2, ...]
+    tp_orders: List[str] = field(default_factory=list) # [uuid1, uuid2, ...]
+    sl_orders: List[str] = field(default_factory=list) # [uuid1, uuid2, ...]
     position_side: PositionSide | None = None
+    filled: Decimal | None = None
+    cost: float | None = None
+    average: float | None = None
+    make_ratio: float = 0 # make_amount / amount, only for adp_maker_order
+    
+    @property
+    def success(self) -> bool:
+        return not self.is_failed
     
     @property
     def is_running(self) -> bool:

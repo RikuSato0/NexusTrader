@@ -91,4 +91,12 @@ class BinanceExecutionManagementSystem(ExecutionManagementSystem):
         self._order_submit_queues[account_type].put_nowait(order)
     
     def _get_min_order_amount(self, symbol: str, market: BinanceMarket) -> Decimal:
-        pass
+        book = self._cache.bookl1(symbol)
+        cost_min = market.limits.cost.min * 1.1 # 10% more than the minimum cost
+        amount_min = market.limits.amount.min
+        
+        min_order_amount = max(cost_min / book.mid, amount_min)
+        min_order_amount = self._amount_to_precision(symbol, min_order_amount, mode="ceil")
+        return min_order_amount
+        
+        

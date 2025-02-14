@@ -18,3 +18,7 @@ class KlineSupportedError(NexusTraderError):
 class StrategyBuildError(NexusTraderError):
     def __init__(self, message: str):
         super().__init__(message)
+
+class OrderError(NexusTraderError):
+    def __init__(self, message: str):
+        super().__init__(message)

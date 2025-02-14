@@ -11,10 +11,15 @@ from nexustrader.core.entity import TaskManager
 from nexustrader.core.nautilius_core import MessageBus, LiveClock
 from nexustrader.core.cache import AsyncCache
 from nexustrader.core.registry import OrderRegistry
-from nexustrader.constants import AccountType, SubmitType, OrderType, OrderSide, AlgoOrderStatus
+from nexustrader.constants import (
+    AccountType,
+    SubmitType,
+    OrderType,
+    OrderSide,
+    AlgoOrderStatus,
+)
 from nexustrader.schema import OrderSubmit, AlgoOrder
 from nexustrader.base.connector import PrivateConnector
-
 
 
 class ExecutionManagementSystem(ABC):
@@ -65,19 +70,21 @@ class ExecutionManagementSystem(ABC):
             precision_decimal = Decimal(str(precision))
 
         if mode == "round":
-            amount = (amount / exp).quantize(
+            format_amount = (amount / exp).quantize(
                 precision_decimal, rounding=ROUND_HALF_UP
             ) * exp
         elif mode == "ceil":
-            amount = (amount / exp).quantize(
+            format_amount = (amount / exp).quantize(
                 precision_decimal, rounding=ROUND_CEILING
             ) * exp
         elif mode == "floor":
-            amount = (amount / exp).quantize(
+            format_amount = (amount / exp).quantize(
                 precision_decimal, rounding=ROUND_FLOOR
             ) * exp
 
-        return amount
+        self._log.debug(f"{symbol} Amount to precision: {amount} -> {format_amount} {mode}")
+        
+        return format_amount
 
     def _price_to_precision(
         self,
@@ -101,19 +108,20 @@ class ExecutionManagementSystem(ABC):
             precision_decimal = Decimal(str(decimal))
 
         if mode == "round":
-            price = (price / exp).quantize(
+            format_price = (price / exp).quantize(
                 precision_decimal, rounding=ROUND_HALF_UP
             ) * exp
         elif mode == "ceil":
-            price = (price / exp).quantize(
+            format_price = (price / exp).quantize(
                 precision_decimal, rounding=ROUND_CEILING
             ) * exp
         elif mode == "floor":
-            price = (price / exp).quantize(
+            format_price = (price / exp).quantize(
                 precision_decimal, rounding=ROUND_FLOOR
             ) * exp
 
-        return price
+        self._log.debug(f"{symbol} Price to precision: {price} -> {format_price} {mode}")
+        return format_price
 
     @abstractmethod
     def _build_order_submit_queues(self):
@@ -185,12 +193,16 @@ class ExecutionManagementSystem(ABC):
             self._cache._order_status_update(order)  # INITIALIZED -> FAILED
             self._msgbus.send(endpoint="failed", msg=order)
         return order
-    
-    async def _create_stop_loss_order(self, order_submit: OrderSubmit, account_type: AccountType):
+
+    async def _create_stop_loss_order(
+        self, order_submit: OrderSubmit, account_type: AccountType
+    ):
         """
         Create a stop loss order
         """
-        order: Order = await self._private_connectors[account_type].create_stop_loss_order(
+        order: Order = await self._private_connectors[
+            account_type
+        ].create_stop_loss_order(
             symbol=order_submit.symbol,
             side=order_submit.side,
             type=order_submit.type,
@@ -211,12 +223,16 @@ class ExecutionManagementSystem(ABC):
             self._cache._order_status_update(order)  # INITIALIZED -> FAILED
             self._msgbus.send(endpoint="failed", msg=order)
         return order
-    
-    async def _create_take_profit_order(self, order_submit: OrderSubmit, account_type: AccountType):
+
+    async def _create_take_profit_order(
+        self, order_submit: OrderSubmit, account_type: AccountType
+    ) -> Order:
         """
         Create a take profit order
         """
-        order: Order = await self._private_connectors[account_type].create_take_profit_order(
+        order: Order = await self._private_connectors[
+            account_type
+        ].create_take_profit_order(
             symbol=order_submit.symbol,
             side=order_submit.side,
             type=order_submit.type,
@@ -237,7 +253,7 @@ class ExecutionManagementSystem(ABC):
             self._cache._order_status_update(order)  # INITIALIZED -> FAILED
             self._msgbus.send(endpoint="failed", msg=order)
         return order
-    
+
     @abstractmethod
     def _get_min_order_amount(self, symbol: str, market: BaseMarket) -> Decimal:
         """
@@ -262,7 +278,9 @@ class ExecutionManagementSystem(ABC):
         """
         amount_list = []
         if total_amount == 0 or total_amount < min_order_amount:
-            self._log.info(f"TWAP ORDER: {symbol} Total amount is less than min order amount: {total_amount} < {min_order_amount}")
+            self._log.info(
+                f"TWAP ORDER: {symbol} Total amount is less than min order amount: {total_amount} < {min_order_amount}"
+            )
             return [], 0
 
         interval = duration // wait
@@ -293,17 +311,355 @@ class ExecutionManagementSystem(ABC):
         basis_point = market.precision.price
         book = self._cache.bookl1(symbol)
 
-        if side == OrderSide.BUY:
-            if book.ask - book.bid > basis_point:
-                price = book.bid + basis_point
+        if side.is_buy:
+            # if the spread is greater than the basis point
+            if book.spread > basis_point:
+                price = book.ask - basis_point
             else:
                 price = book.bid
-        else:
-            if book.ask - book.bid > basis_point:
-                price = book.ask - basis_point
+        elif side.is_sell:
+            # if the spread is greater than the basis point
+            if book.spread > basis_point:
+                price = book.bid + basis_point
             else:
                 price = book.ask
         return self._price_to_precision(symbol, price)
+
+    def _cal_filled_info(self, order_ids: List[str]) -> Dict[str, Decimal | float]:
+        """
+        Calculate the filled info
+        """
+        filled = Decimal(0)
+        cost = 0
+        for order_id in order_ids:
+            order = self._cache.get_order(order_id).unwrap()
+            if order.is_closed:
+                filled += order.filled
+                cost += order.average * float(order.filled)
+
+        if filled == 0:
+            return {
+                "filled": Decimal(0),
+                "cost": 0,
+                "average": 0,
+            }
+
+        average = cost / float(filled)
+        return {
+            "filled": filled,
+            "cost": cost,
+            "average": average,
+        }
+
+    async def _adp_maker_order(
+        self, order_submit: OrderSubmit, account_type: AccountType
+    ):
+        """
+        adaptive maker order
+        make first, if not filled, then take the order
+        """
+        symbol = order_submit.symbol
+        instrument_id = order_submit.instrument_id
+        side = order_submit.side
+        market = self._market[symbol]
+        amount: Decimal = order_submit.amount
+        position_side = order_submit.position_side 
+        kwargs = order_submit.kwargs
+        check_interval = order_submit.check_interval  # seconds
+        wait = order_submit.wait  # seconds
+        duration = order_submit.duration  # seconds
+        adp_maker_order_uuid = order_submit.uuid
+        trigger_tp_ratio = order_submit.trigger_tp_ratio
+        trigger_sl_ratio = order_submit.trigger_sl_ratio
+        tp_ratio = order_submit.tp_ratio
+        sl_ratio = order_submit.sl_ratio
+        min_order_amount: Decimal = self._get_min_order_amount(symbol, market)
+
+        # 0) initialize the algo order
+        algo_order = AlgoOrder(
+            symbol=symbol,
+            uuid=adp_maker_order_uuid,
+            side=side,
+            amount=amount,
+            duration=duration,
+            wait=wait,
+            status=AlgoOrderStatus.RUNNING,
+            exchange=instrument_id.exchange,
+            timestamp=self._clock.timestamp_ms(),
+            position_side=position_side,
+        )
+
+        self._cache._order_initialized(algo_order)
+
+        # 1) check the amount
+        if amount < min_order_amount:
+            algo_order.status = AlgoOrderStatus.FAILED
+            self._cache._order_status_update(algo_order)
+            self._log.error(
+                f"ADAPTIVE MAKER ORDER FAILED: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid}"
+            )
+            return
+
+        try:
+            # 2) create maker order
+            price = self._cal_limit_order_price(symbol, side, market)
+            order = await self._create_order(
+                order_submit=OrderSubmit(
+                    symbol=symbol,
+                    instrument_id=instrument_id,
+                    submit_type=SubmitType.CREATE,
+                    side=side,
+                    type=OrderType.LIMIT,
+                    amount=amount,
+                    price=price,
+                    position_side=position_side,
+                    kwargs=kwargs,
+                ),
+                account_type=account_type,
+            )
+
+            # 3) check the order is success
+            if not order.success:
+                algo_order.status = AlgoOrderStatus.FAILED
+                self._cache._order_status_update(algo_order)
+                self._log.error(
+                    f"ADAPTIVE MAKER ORDER FAILED: symbol: {symbol}, side: {side}, uuid: {order_submit.uuid}"
+                )
+                return
+
+            order_id = order.uuid
+            algo_order.orders.append(order_id)
+
+            # 4) wait for the order to be filled
+            await asyncio.sleep(wait)
+
+            # 5) check the order the order status and the book price
+            # 5.1) if side.is_buy and bid > price, then cancel the order
+            # 5.2) if side.is_sell and ask < price, then cancel the order
+            start_time = self._clock.timestamp_ms()
+            while True:
+                order = self._cache.get_order(order_id)  # Maybe[Order]
+                is_opened = order.bind_optional(lambda order: order.is_opened).value_or(
+                    False
+                )
+                on_flight = order.bind_optional(lambda order: order.on_flight).value_or(
+                    False
+                )
+                is_closed = order.bind_optional(lambda order: order.is_closed).value_or(
+                    False
+                )
+                self._log.debug(
+                    f"ADAPTIVE MAKER ORDER: status: {order.unwrap().status}, is_opened: {is_opened}, on_flight: {on_flight}, is_closed: {is_closed}"
+                )
+                if is_opened and not on_flight:
+                    book = self._cache.bookl1(symbol)
+                    if (
+                        side.is_buy
+                        and book.bid > price
+                        or side.is_sell
+                        and book.ask < price
+                    ) or self._clock.timestamp_ms() - start_time > (
+                        duration - wait
+                    ) * 1000:
+                        await self._cancel_order(
+                            order_submit=OrderSubmit(
+                                symbol=symbol,
+                                instrument_id=instrument_id,
+                                submit_type=SubmitType.CANCEL,
+                                uuid=order_id,
+                            ),
+                            account_type=account_type,
+                        )
+                elif is_closed:
+                    # 6) closed has 2 status: FILLED and CANCELED
+                    # 6.1) if FILLED, then remaining amount is 0 -> break
+                    # 6.2) if CANCELED, then check the remaining amount
+                    # 6.3) if remaining amount is greater than min order amount, then create a market order
+                    # 6.4) if remaining amount is less than min order amount, then break
+                    # 6.5) if reduce_only is True, then no need to follow the min order amount filter
+                    remaining = order.unwrap().remaining
+                    if remaining > min_order_amount or 'reduce_only' in kwargs: 
+                        order_take = await self._create_order(
+                            order_submit=OrderSubmit(
+                                symbol=symbol,
+                                instrument_id=instrument_id,
+                                submit_type=SubmitType.CREATE,
+                                side=side,
+                                type=OrderType.MARKET,
+                                amount=remaining,
+                                position_side=position_side,
+                                kwargs=kwargs,
+                            ),
+                            account_type=account_type,
+                        )
+
+                        if order_take.success:
+                            algo_order.orders.append(order_take.uuid)
+
+                            # 6.5) wait for the order to be closed
+                            while True:
+                                take_order = self._cache.get_order(order_take.uuid)
+                                is_closed = take_order.bind_optional(
+                                    lambda order: order.is_closed
+                                ).value_or(False)
+                                if is_closed:
+                                    break
+                                await asyncio.sleep(check_interval)
+                    break
+                await asyncio.sleep(check_interval)
+
+            # 7) calculate the make ratio and update the algo order status
+            make_ratio = 1 - float(remaining) / float(amount)
+            algo_order.make_ratio = make_ratio
+
+            # 8) calculate the filled info
+            filled_info = self._cal_filled_info(algo_order.orders)
+            algo_order.filled = filled_info["filled"]
+            algo_order.cost = filled_info["cost"]
+            algo_order.average = filled_info["average"]
+            self._log.debug(
+                f"ADAPTIVE MAKER ORDER: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid} filled: {algo_order.filled}, cost: {algo_order.cost}, average: {algo_order.average}"
+            )
+
+            # 9) add tp and sl orders
+            if (price := algo_order.average) > 0:
+                if trigger_tp_ratio:
+                    if side.is_buy:
+                        _trigger_tp_ratio = 1 + trigger_tp_ratio
+                        _tp_ratio = 1 + tp_ratio
+                        mode = "ceil"
+                    else:
+                        _trigger_tp_ratio = 1 - trigger_tp_ratio
+                        _tp_ratio = 1 - tp_ratio
+                        mode = "floor"
+
+                    trigger_price = self._price_to_precision(
+                        symbol, price * _trigger_tp_ratio, mode=mode
+                    )
+                    
+                    # for buy -> trigger_price > ask
+                    # for sell -> trigger_price < bid
+                    book = self._cache.bookl1(symbol)
+                    if trigger_price < book.ask and side.is_buy:
+                        self._log.debug(f"symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid}, modify trigger price to ask: {trigger_price} -> {book.ask}")
+                        trigger_price = book.ask
+                    elif trigger_price > book.bid and side.is_sell:
+                        self._log.debug(f"symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid}, modify trigger price to bid: {trigger_price} -> {book.bid}")
+                        trigger_price = book.bid
+
+                    if tp_ratio:
+                        tp_price = self._price_to_precision(symbol, price * _tp_ratio, mode=mode)
+
+                    tp_order = await self._create_take_profit_order(
+                        order_submit=OrderSubmit(
+                            symbol=symbol,
+                            instrument_id=instrument_id,
+                            submit_type=SubmitType.TAKE_PROFIT,
+                            side=OrderSide.SELL if side.is_buy else OrderSide.BUY,
+                            type=OrderType.TAKE_PROFIT_LIMIT
+                            if tp_ratio
+                            else OrderType.TAKE_PROFIT_MARKET,
+                            amount=algo_order.filled,
+                            price=tp_price,
+                            trigger_price=trigger_price,
+                            kwargs={"reduce_only": True},
+                        ),
+                        account_type=account_type,
+                    )
+
+                    if tp_order.success:
+                        self._log.debug(
+                            f"ADAPTIVE MAKER ORDER: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid} create tp trigger price: {trigger_price}, tp price: {tp_price}"
+                        )
+                        algo_order.tp_orders.append(tp_order.uuid)
+                    else:
+                        self._log.error(
+                            f"ADAPTIVE MAKER ORDER: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid} create tp order failed"
+                        )
+
+                if trigger_sl_ratio:
+                    if side.is_buy:
+                        _trigger_sl_ratio = 1 - trigger_sl_ratio
+                        _sl_ratio = 1 - sl_ratio
+                        mode = "floor"
+                    else:
+                        _trigger_sl_ratio = 1 + trigger_sl_ratio
+                        _sl_ratio = 1 + sl_ratio
+                        mode = "ceil"
+
+                    trigger_price = self._price_to_precision(
+                        symbol, price * _trigger_sl_ratio, mode=mode
+                    )
+                    
+                    # for buy -> trigger_price < ask
+                    # for sell -> trigger_price > bid
+                    book = self._cache.bookl1(symbol)
+                    if trigger_price > book.bid and side.is_buy:
+                        self._log.debug(f"symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid}, modify trigger price to bid: {trigger_price} -> {book.bid}")
+                        trigger_price = book.bid
+                    elif trigger_price < book.ask and side.is_sell:
+                        self._log.debug(f"symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid}, modify trigger price to ask: {trigger_price} -> {book.ask}")
+                        trigger_price = book.ask
+
+                    if sl_ratio:
+                        sl_price = self._price_to_precision(symbol, price * _sl_ratio, mode=mode)
+
+                    sl_order = await self._create_stop_loss_order(
+                        order_submit=OrderSubmit(
+                            symbol=symbol,
+                            instrument_id=instrument_id,
+                            submit_type=SubmitType.STOP_LOSS,
+                            side=OrderSide.SELL if side.is_buy else OrderSide.BUY,
+                            amount=algo_order.filled,
+                            type=OrderType.STOP_LOSS_LIMIT
+                            if sl_ratio
+                            else OrderType.STOP_LOSS_MARKET,
+                            price=sl_price,
+                            trigger_price=trigger_price,
+                            kwargs={"reduce_only": True},
+                        ),
+                        account_type=account_type,
+                    )
+
+                    if sl_order.success:
+                        self._log.debug(
+                            f"ADAPTIVE MAKER ORDER: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid} create sl trigger price: {trigger_price}, sl price: {sl_price}"
+                        )
+                        algo_order.sl_orders.append(sl_order.uuid)
+                    else:
+                        self._log.error(
+                            f"ADAPTIVE MAKER ORDER: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid} create sl order failed"
+                        )
+
+            algo_order.status = AlgoOrderStatus.FINISHED
+            self._cache._order_status_update(algo_order)
+        except asyncio.CancelledError:
+            algo_order.status = AlgoOrderStatus.CANCELING
+            self._cache._order_status_update(algo_order)
+
+            open_orders = self._cache.get_open_orders(symbol=symbol)
+            for uuid in open_orders.copy():
+                await self._cancel_order(
+                    order_submit=OrderSubmit(
+                        symbol=symbol,
+                        instrument_id=instrument_id,
+                        submit_type=SubmitType.CANCEL,
+                        uuid=uuid,
+                    ),
+                    account_type=account_type,
+                )
+
+            filled_info = self._cal_filled_info(algo_order.orders)
+            algo_order.filled = filled_info["filled"]
+            algo_order.cost = filled_info["cost"]
+            algo_order.average = filled_info["average"]
+
+            algo_order.status = AlgoOrderStatus.CANCELED
+            self._cache._order_status_update(algo_order)
+
+            self._log.debug(
+                f"ADAPTIVE MAKER ORDER CANCELLED: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid}"
+            )
 
     async def _twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
         """
@@ -316,7 +672,8 @@ class ExecutionManagementSystem(ABC):
         position_side = order_submit.position_side
         kwargs = order_submit.kwargs
         twap_uuid = order_submit.uuid
-        
+        check_interval = order_submit.check_interval
+
         algo_order = AlgoOrder(
             symbol=symbol,
             uuid=twap_uuid,
@@ -329,7 +686,7 @@ class ExecutionManagementSystem(ABC):
             timestamp=self._clock.timestamp_ms(),
             position_side=position_side,
         )
-        
+
         self._cache._order_initialized(algo_order)
 
         min_order_amount: Decimal = self._get_min_order_amount(symbol, market)
@@ -340,23 +697,28 @@ class ExecutionManagementSystem(ABC):
             wait=order_submit.wait,
             min_order_amount=min_order_amount,
         )
-        
+
         self._log.debug(
             f"amount_list: {amount_list}, min_order_amount: {min_order_amount}, wait: {wait}"
         )
 
         order_id = None
-        check_interval = 0.1
         elapsed_time = 0
-        
+
         try:
             while amount_list:
                 if order_id:
                     order = self._cache.get_order(order_id)
-                    
-                    is_opened = order.bind_optional(lambda order: order.is_opened).value_or(False)
-                    on_flight = order.bind_optional(lambda order: order.on_flight).value_or(False)
-                    is_closed = order.bind_optional(lambda order: order.is_closed).value_or(False)
+
+                    is_opened = order.bind_optional(
+                        lambda order: order.is_opened
+                    ).value_or(False)
+                    on_flight = order.bind_optional(
+                        lambda order: order.on_flight
+                    ).value_or(False)
+                    is_closed = order.bind_optional(
+                        lambda order: order.is_closed
+                    ).value_or(False)
 
                     # 检查现价单是否已成交，不然的话立刻下市价单成交 或者 把remaining amount加到下一个市价单上
                     if is_opened and not on_flight:
@@ -394,7 +756,9 @@ class ExecutionManagementSystem(ABC):
                             else:
                                 algo_order.status = AlgoOrderStatus.FAILED
                                 self._cache._order_status_update(algo_order)
-                                self._log.error(f"TWAP ORDER FAILED: symbol: {symbol}, side: {side}")
+                                self._log.error(
+                                    f"TWAP ORDER FAILED: symbol: {symbol}, side: {side}"
+                                )
                                 break
                         else:
                             if amount_list:
@@ -442,18 +806,22 @@ class ExecutionManagementSystem(ABC):
                     else:
                         algo_order.status = AlgoOrderStatus.FAILED
                         self._cache._order_status_update(algo_order)
-                        
-                        self._log.error(f"TWAP ORDER FAILED: symbol: {symbol}, side: {side}, uuid: {twap_uuid}")
+
+                        self._log.error(
+                            f"TWAP ORDER FAILED: symbol: {symbol}, side: {side}, uuid: {twap_uuid}"
+                        )
                         break
-            
+
             algo_order.status = AlgoOrderStatus.FINISHED
             self._cache._order_status_update(algo_order)
-            
-            self._log.debug(f"TWAP ORDER FINISHED: symbol: {symbol}, side: {side}, uuid: {twap_uuid}")
+
+            self._log.debug(
+                f"TWAP ORDER FINISHED: symbol: {symbol}, side: {side}, uuid: {twap_uuid}"
+            )
         except asyncio.CancelledError:
             algo_order.status = AlgoOrderStatus.CANCELING
             self._cache._order_status_update(algo_order)
-            
+
             open_orders = self._cache.get_open_orders(symbol=symbol)
             for uuid in open_orders.copy():
                 await self._cancel_order(
@@ -465,12 +833,33 @@ class ExecutionManagementSystem(ABC):
                     ),
                     account_type=account_type,
                 )
-            
+
             algo_order.status = AlgoOrderStatus.CANCELED
             self._cache._order_status_update(algo_order)
-            
-            self._log.debug(f"TWAP ORDER CANCELLED: symbol: {symbol}, side: {side}, uuid: {twap_uuid}")
 
+            self._log.debug(
+                f"TWAP ORDER CANCELLED: symbol: {symbol}, side: {side}, uuid: {twap_uuid}"
+            )
+
+    async def _create_adp_maker_order(
+        self, order_submit: OrderSubmit, account_type: AccountType
+    ):
+        """
+        Create an adp maker order
+        """
+        uuid = order_submit.uuid
+        self._task_manager.create_task(
+            self._adp_maker_order(order_submit, account_type), name=uuid
+        )
+
+    async def _cancel_adp_maker_order(
+        self, order_submit: OrderSubmit, account_type: AccountType
+    ):
+        """
+        Cancel an adp maker order
+        """
+        uuid = order_submit.uuid
+        self._task_manager.cancel_task(uuid)
 
     async def _create_twap_order(
         self, order_submit: OrderSubmit, account_type: AccountType
@@ -479,9 +868,13 @@ class ExecutionManagementSystem(ABC):
         Create a twap order
         """
         uuid = order_submit.uuid
-        self._task_manager.create_task(self._twap_order(order_submit, account_type), name = uuid)
-    
-    async def _cancel_twap_order(self, order_submit: OrderSubmit, account_type: AccountType):
+        self._task_manager.create_task(
+            self._twap_order(order_submit, account_type), name=uuid
+        )
+
+    async def _cancel_twap_order(
+        self, order_submit: OrderSubmit, account_type: AccountType
+    ):
         """
         Cancel a twap order
         """
@@ -501,8 +894,10 @@ class ExecutionManagementSystem(ABC):
             SubmitType.CANCEL_TWAP: self._cancel_twap_order,
             SubmitType.STOP_LOSS: self._create_stop_loss_order,
             SubmitType.TAKE_PROFIT: self._create_take_profit_order,
+            SubmitType.ADP_MAKER: self._create_adp_maker_order,
+            SubmitType.CANCEL_ADP_MAKER: self._cancel_adp_maker_order,
         }
-        
+
         self._log.debug(f"Handling orders for account type: {account_type}")
         while True:
             order_submit = await queue.get()

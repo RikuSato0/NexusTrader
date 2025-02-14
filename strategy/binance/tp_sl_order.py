@@ -22,10 +22,17 @@ class Demo(Strategy):
     def __init__(self):
         super().__init__()
         self.signal = True
+        self.order_id = None
 
     def on_start(self):
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BINANCE"])
-
+        # self.schedule(self.query_order, trigger="interval", seconds=1)
+        
+    def query_order(self):
+        if self.order_id:   
+            order = self.cache.get_order(self.order_id).unwrap()
+            print(order, "\n")
+        
     def on_canceled_order(self, order: Order):
         print(order, "\n")
 
@@ -46,49 +53,17 @@ class Demo(Strategy):
 
     def on_bookl1(self, bookl1: BookL1):
         if self.signal:
-            self.create_order(
+            self.order_id = self.create_adp_maker(
                 symbol="BTCUSDT-PERP.BINANCE",
                 side=OrderSide.BUY,
-                type=OrderType.MARKET,
                 amount=Decimal("0.01"),
+                duration=10,
+                wait=8,
+                trigger_tp_ratio=0.002,
+                trigger_sl_ratio=0.002,
+                tp_ratio=0.0025,
+                sl_ratio=0.0025,
             )
-
-            bid_price = bookl1.bid
-            trigger_price_tp = self.price_to_precision(
-                symbol="BTCUSDT-PERP.BINANCE", price=bid_price * 1.009
-            )  # trigger price is the price at which the order will be triggered
-            tp = self.price_to_precision(
-                symbol="BTCUSDT-PERP.BINANCE", price=bid_price * 1.01
-            )  # price is the price at which the order will be filled
-            trigger_price_sl = self.price_to_precision(
-                symbol="BTCUSDT-PERP.BINANCE", price=bid_price * 0.991
-            )  # trigger price is the price at which the order will be triggered
-            sl = self.price_to_precision(
-                symbol="BTCUSDT-PERP.BINANCE", price=bid_price * 0.99
-            )  # price is the price at which the order will be filled
-            uuid_tp = self.create_order(
-                symbol="BTCUSDT-PERP.BINANCE",
-                side=OrderSide.SELL,
-                type=OrderType.TAKE_PROFIT_LIMIT,
-                amount=Decimal("0.01"),
-                trigger_price=trigger_price_tp,
-                price=tp,
-                reduce_only=True,
-            )
-            print(uuid_tp)
-
-            self.cancel_order(symbol="BTCUSDT-PERP.BINANCE", uuid=uuid_tp)
-
-            uuid_sl = self.create_order(
-                symbol="BTCUSDT-PERP.BINANCE",
-                side=OrderSide.SELL,
-                type=OrderType.STOP_LOSS_LIMIT,
-                amount=Decimal("0.01"),
-                trigger_price=trigger_price_sl,
-                price=sl,
-                reduce_only=True,
-            )
-            print(uuid_sl)
             self.signal = False
 
 

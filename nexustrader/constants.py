@@ -90,6 +90,8 @@ class SubmitType(Enum):
     CANCEL_VWAP = 5
     STOP_LOSS = 6
     TAKE_PROFIT = 7
+    ADP_MAKER = 8
+    CANCEL_ADP_MAKER = 9
 
 
 class EventType(Enum):
@@ -185,7 +187,14 @@ class TriggerType(Enum):
 class OrderSide(Enum):
     BUY = "BUY"
     SELL = "SELL"
-
+    
+    @property
+    def is_buy(self) -> bool:
+        return self == OrderSide.BUY
+    
+    @property
+    def is_sell(self) -> bool:
+        return self == OrderSide.SELL
 
 class TimeInForce(Enum):
     GTC = "GTC"

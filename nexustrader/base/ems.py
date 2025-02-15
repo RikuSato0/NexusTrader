@@ -11,6 +11,7 @@ from nexustrader.core.entity import TaskManager
 from nexustrader.core.nautilius_core import MessageBus, LiveClock
 from nexustrader.core.cache import AsyncCache
 from nexustrader.core.registry import OrderRegistry
+from nexustrader.error import OrderError
 from nexustrader.constants import (
     AccountType,
     SubmitType,
@@ -318,7 +319,9 @@ class ExecutionManagementSystem(ABC):
                 price = book.bid + basis_point
             else:
                 price = book.ask
-        return self._price_to_precision(symbol, price)
+        price = self._price_to_precision(symbol, price)
+        self._log.info(f"CALCULATE LIMIT ORDER PRICE: symbol: {symbol}, side: {side}, price: {price}, ask: {book.ask}, bid: {book.bid}")
+        return price
 
     def _cal_filled_info(self, order_ids: List[str]) -> Dict[str, Decimal | float]:
         """
@@ -436,7 +439,7 @@ class ExecutionManagementSystem(ABC):
                 # 6.4) if remaining amount is less than min order amount, then break
                 # 6.5) if reduce_only is True, then no need to follow the min order amount filter
                 remaining = _order_make.unwrap().remaining
-                if remaining > min_order_amount or (kwargs.get('reduce_only', False) and remaining > Decimal(0)): 
+                if remaining >= min_order_amount or (kwargs.get('reduce_only', False) and remaining > Decimal(0)): 
                     order_take = await self._create_order(
                         order_submit=OrderSubmit(
                             symbol=symbol,
@@ -491,6 +494,9 @@ class ExecutionManagementSystem(ABC):
         min_order_amount: Decimal = self._get_min_order_amount(symbol, market)
         sl_tp_duration = order_submit.sl_tp_duration  # seconds #TODO: need to divide the take profit and stop loss duration
         
+        if wait > duration:
+            raise OrderError("wait must be less than duration")
+        
         # 0) initialize the algo order
         algo_order = AlgoOrder(
             symbol=symbol,
@@ -544,7 +550,7 @@ class ExecutionManagementSystem(ABC):
             open_average = filled_info["average"]
             
             
-            self._log.debug(
+            self._log.info(
                 f"ADAPTIVE MAKER ORDER: symbol: {symbol}, uuid: {adp_maker_order_uuid} filled: {open_filled}, cost: {open_cost}, average: {open_average}"
             )
             
@@ -576,7 +582,7 @@ class ExecutionManagementSystem(ABC):
             while True:
                 book = self._cache.bookl1(symbol)
                 if ((open_side.is_buy and book.mid >= tp_trigger_price) or (open_side.is_sell and book.mid <= tp_trigger_price)) and not tp_order_id:
-                    self._log.debug(
+                    self._log.info(
                         f"ADAPTIVE MAKER ORDER: symbol: {symbol}, uuid: {adp_maker_order_uuid} take profit trigger price: {tp_trigger_price}, book mid: {book.mid}"
                     )
                     tp_order = await self._create_order(
@@ -598,7 +604,7 @@ class ExecutionManagementSystem(ABC):
                         break
                         
                 if ((open_side.is_buy and book.mid <= sl_trigger_price) or (open_side.is_sell and book.mid >= sl_trigger_price)) and not sl_order_id:
-                    self._log.debug(
+                    self._log.info(
                         f"ADAPTIVE MAKER ORDER: symbol: {symbol}, uuid: {adp_maker_order_uuid} stop loss trigger price: {sl_trigger_price}, book mid: {book.mid}"
                     )
                     sl_order = await self._create_order(
@@ -640,7 +646,7 @@ class ExecutionManagementSystem(ABC):
                         ),
                         account_type=account_type,
                     )
-                    self._log.debug(
+                    self._log.info(
                         f"ADAPTIVE MAKER ORDER: symbol: {symbol}, uuid: {adp_maker_order_uuid} tp hit but not filled, cancel tp order: {tp_order_id}"
                     )
             if sl_order_id:
@@ -655,7 +661,7 @@ class ExecutionManagementSystem(ABC):
                         ),
                         account_type=account_type,
                     )
-                    self._log.debug(
+                    self._log.info(
                         f"ADAPTIVE MAKER ORDER: symbol: {symbol}, uuid: {adp_maker_order_uuid} sl hit but not filled, cancel sl order: {sl_order_id}"
                     )
             
@@ -664,7 +670,7 @@ class ExecutionManagementSystem(ABC):
             tp_sl_make_ratio = 1 - float(remaining) / float(amount)
             close_make_ratio = tp_sl_make_ratio
             if remaining > 0:
-                self._log.debug(
+                self._log.info(
                     f"ADAPTIVE MAKER ORDER: symbol: {symbol}, uuid: {adp_maker_order_uuid} close the remaining amount: {remaining}"
                 )
                 close_make_ratio = await self._maker_taker_order(
@@ -683,7 +689,7 @@ class ExecutionManagementSystem(ABC):
                 )
             algo_order.status = AlgoOrderStatus.FINISHED
             self._cache._order_status_update(algo_order)
-            self._log.debug(
+            self._log.info(
                 f"ADAPTIVE MAKER ORDER FINISHED: symbol: {symbol}, uuid: {adp_maker_order_uuid} open_make_ratio: {open_make_ratio}, tp_sl_make_ratio: {tp_sl_make_ratio}, close_make_ratio: {close_make_ratio}"
             )
         except asyncio.CancelledError:
@@ -710,7 +716,7 @@ class ExecutionManagementSystem(ABC):
             algo_order.status = AlgoOrderStatus.CANCELED
             self._cache._order_status_update(algo_order)
 
-            self._log.debug(
+            self._log.info(
                 f"ADAPTIVE MAKER ORDER CANCELLED: symbol: {symbol}, uuid: {adp_maker_order_uuid}"
             )
 

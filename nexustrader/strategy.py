@@ -5,7 +5,7 @@ from nexustrader.core.log import SpdLog
 from nexustrader.base import ExchangeManager
 from nexustrader.core.entity import TaskManager
 from nexustrader.core.cache import AsyncCache
-from nexustrader.error import StrategyBuildError, OrderError
+from nexustrader.error import StrategyBuildError
 from nexustrader.base import ExecutionManagementSystem, PrivateConnector
 from nexustrader.core.nautilius_core import MessageBus, UUID4
 from nexustrader.schema import (
@@ -209,10 +209,7 @@ class Strategy:
             tp_ratio: float | None = None The take profit ratio of the take profit order
             sl_ratio: float | None = None The stop loss ratio of the stop loss order
             kwargs: Dict[str, Any] = {} The additional arguments for the order
-        """
-        if wait > duration:
-            raise OrderError("wait must be less than duration")
-        
+        """        
         order = OrderSubmit(
             symbol=symbol,
             instrument_id=InstrumentId.from_str(symbol),

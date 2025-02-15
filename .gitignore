@@ -26,3 +26,6 @@ env/
 dist/
 .env
 example_test/
+.python-version
+ecosystem.config.js
+settings.toml

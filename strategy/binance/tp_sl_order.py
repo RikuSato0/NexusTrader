@@ -1,4 +1,5 @@
 from nexustrader.constants import settings
+from decimal import Decimal
 from nexustrader.config import (
     Config,
     PublicConnectorConfig,
@@ -53,13 +54,13 @@ class Demo(Strategy):
         if self.signal:
             self.order_id = self.create_adp_maker(
                 symbol="BTCUSDT-PERP.BINANCE",
-                side=OrderSide.SELL,
+                side=OrderSide.BUY,
                 amount=None,
                 duration=10,
                 wait=8,
                 trigger_sl_ratio=0.002,
                 trigger_tp_ratio=0.002,
-                sl_tp_duration=60 * 2,
+                sl_tp_duration=20,
             )
             self.signal = False
 

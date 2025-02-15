@@ -1,1 +1,22 @@
+# the ratio trigger the take profit or stop loss
+TRIGGER_TP_RATIO = 0.0025
+TRIGGER_SL_RATIO = 0.006
 
+# the duration of the open trade and close trade (in seconds)
+DURATION = 10
+
+# the wait time of the maker order (in seconds)
+# no longer than DURATION
+WAIT = 8
+
+# the duration of the stop loss or take profit (in seconds)
+SL_TP_DURATION = 300
+
+# the rate of the needle body
+K_NEEDLE_BODY_RATE = 1.3
+
+# minimum needle / range(high - close)
+K_MIN_NEEDLE_RATE = 0.25
+
+# the return of the needle
+K_ABS_RETURN = 0.03

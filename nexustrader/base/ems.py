@@ -1,6 +1,6 @@
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 from typing import Literal
 from decimal import Decimal
 from decimal import ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
@@ -11,6 +11,7 @@ from nexustrader.core.entity import TaskManager
 from nexustrader.core.nautilius_core import MessageBus, LiveClock
 from nexustrader.core.cache import AsyncCache
 from nexustrader.core.registry import OrderRegistry
+from nexustrader.error import OrderError
 from nexustrader.constants import (
     AccountType,
     SubmitType,
@@ -18,7 +19,7 @@ from nexustrader.constants import (
     OrderSide,
     AlgoOrderStatus,
 )
-from nexustrader.schema import OrderSubmit, AlgoOrder
+from nexustrader.schema import OrderSubmit, AlgoOrder, InstrumentId
 from nexustrader.base.connector import PrivateConnector
 
 
@@ -81,16 +82,13 @@ class ExecutionManagementSystem(ABC):
             format_amount = (amount / exp).quantize(
                 precision_decimal, rounding=ROUND_FLOOR
             ) * exp
-
-        self._log.debug(f"{symbol} Amount to precision: {amount} -> {format_amount} {mode}")
-        
         return format_amount
 
     def _price_to_precision(
         self,
         symbol: str,
         price: float,
-        mode: Literal["round", "ceil", "floor"] = "round",
+        mode: Literal["round", "ceil", "floor"] = "round"
     ) -> Decimal:
         """
         Convert the price to the precision of the market
@@ -119,8 +117,6 @@ class ExecutionManagementSystem(ABC):
             format_price = (price / exp).quantize(
                 precision_decimal, rounding=ROUND_FLOOR
             ) * exp
-
-        self._log.debug(f"{symbol} Price to precision: {price} -> {format_price} {mode}")
         return format_price
 
     @abstractmethod
@@ -323,7 +319,9 @@ class ExecutionManagementSystem(ABC):
                 price = book.bid + basis_point
             else:
                 price = book.ask
-        return self._price_to_precision(symbol, price)
+        price = self._price_to_precision(symbol, price)
+        self._log.info(f"CALCULATE LIMIT ORDER PRICE: symbol: {symbol}, side: {side}, price: {price}, ask: {book.ask}, bid: {book.bid}")
+        return price
 
     def _cal_filled_info(self, order_ids: List[str]) -> Dict[str, Decimal | float]:
         """
@@ -350,6 +348,129 @@ class ExecutionManagementSystem(ABC):
             "cost": cost,
             "average": average,
         }
+        
+    
+    
+    async def _maker_taker_order(
+        self, 
+        symbol: str,
+        side: OrderSide,
+        amount: Decimal,
+        wait: float,
+        duration: float,
+        check_interval: float,
+        account_type: AccountType,
+        instrument_id: InstrumentId,
+        algo_order: AlgoOrder,
+        market: BaseMarket,
+        min_order_amount: Decimal,
+        kwargs: Dict[str, Any] = {}, 
+    ):
+        
+        # 1) calculate the limit order price and create the make order
+        price = self._cal_limit_order_price(symbol, side, market)
+        order_make = await self._create_order(
+            order_submit=OrderSubmit(
+                symbol=symbol,
+                instrument_id=instrument_id,
+                submit_type=SubmitType.CREATE,
+                side=side,
+                type=OrderType.LIMIT,
+                amount=amount,
+                price=price,
+                kwargs=kwargs,
+            ),
+            account_type=account_type,
+        )
+        
+        # 2) check the order is success
+        if not order_make.success:
+            algo_order.status = AlgoOrderStatus.FAILED
+            self._cache._order_status_update(algo_order)
+            self._log.error(
+                f"ADAPTIVE MAKER ORDER FAILED: symbol: {symbol}, uuid: {order_make.uuid}"
+            )
+            return
+        order_make_id = order_make.uuid
+        algo_order.orders.append(order_make_id)
+        
+        # 4) wait for the order to be filled
+        await asyncio.sleep(wait)
+        
+        # 5) check the order the order status and the book price
+        # 5.1) if side.is_buy and bid > price, then cancel the order
+        # 5.2) if side.is_sell and ask < price, then cancel the order
+        start_time = self._clock.timestamp_ms()
+        while True:
+            _order_make = self._cache.get_order(order_make_id)  # Maybe[Order] _ added before means the order is Maybe[Order]
+            is_opened = _order_make.bind_optional(lambda order: order.is_opened).value_or(
+                False
+            )
+            on_flight = _order_make.bind_optional(lambda order: order.on_flight).value_or(
+                False
+            )
+            is_closed = _order_make.bind_optional(lambda order: order.is_closed).value_or(
+                False
+            )
+            if is_opened and not on_flight:
+                book = self._cache.bookl1(symbol)
+                if (
+                    side.is_buy
+                    and book.bid > price
+                    or side.is_sell
+                    and book.ask < price
+                ) or self._clock.timestamp_ms() - start_time > (
+                    duration - wait
+                ) * 1000:
+                    await self._cancel_order(
+                        order_submit=OrderSubmit(
+                            symbol=symbol,
+                            instrument_id=instrument_id,
+                            submit_type=SubmitType.CANCEL,
+                            uuid=order_make_id,
+                        ),
+                        account_type=account_type,
+                    )
+            elif is_closed:
+                # 6) closed has 2 status: FILLED and CANCELED
+                # 6.1) if FILLED, then remaining amount is 0 -> break
+                # 6.2) if CANCELED, then check the remaining amount
+                # 6.3) if remaining amount is greater than min order amount, then create a market order
+                # 6.4) if remaining amount is less than min order amount, then break
+                # 6.5) if reduce_only is True, then no need to follow the min order amount filter
+                remaining = _order_make.unwrap().remaining
+                if remaining >= min_order_amount or (kwargs.get('reduce_only', False) and remaining > Decimal(0)): 
+                    order_take = await self._create_order(
+                        order_submit=OrderSubmit(
+                            symbol=symbol,
+                            instrument_id=instrument_id,
+                            submit_type=SubmitType.CREATE,
+                            side=side,
+                            type=OrderType.MARKET,
+                            amount=remaining,
+                            kwargs=kwargs,
+                        ),
+                        account_type=account_type,
+                    )
+                    if order_take.success:
+                        algo_order.orders.append(order_take.uuid)
+                        # 6.5) wait for the order to be closed
+                        while True:
+                            _order_taker = self._cache.get_order(order_take.uuid)
+                            is_closed = _order_taker.bind_optional(
+                                lambda order: order.is_closed
+                            ).value_or(False)
+                            if is_closed:
+                                break
+                            await asyncio.sleep(check_interval)
+                break
+            await asyncio.sleep(check_interval)
+        
+        make_ratio = 1 - float(remaining) / float(amount)
+        return make_ratio
+    
+    
+    
 
     async def _adp_maker_order(
         self, order_submit: OrderSubmit, account_type: AccountType
@@ -360,279 +481,217 @@ class ExecutionManagementSystem(ABC):
         """
         symbol = order_submit.symbol
         instrument_id = order_submit.instrument_id
-        side = order_submit.side
+        open_side = order_submit.side
+        close_side = OrderSide.SELL if open_side.is_buy else OrderSide.BUY
         market = self._market[symbol]
         amount: Decimal = order_submit.amount
-        position_side = order_submit.position_side 
-        kwargs = order_submit.kwargs
         check_interval = order_submit.check_interval  # seconds
         wait = order_submit.wait  # seconds
         duration = order_submit.duration  # seconds
         adp_maker_order_uuid = order_submit.uuid
         trigger_tp_ratio = order_submit.trigger_tp_ratio
         trigger_sl_ratio = order_submit.trigger_sl_ratio
-        tp_ratio = order_submit.tp_ratio
-        sl_ratio = order_submit.sl_ratio
         min_order_amount: Decimal = self._get_min_order_amount(symbol, market)
-
+        sl_tp_duration = order_submit.sl_tp_duration  # seconds #TODO: need to divide the take profit and stop loss duration
+        
+        if wait > duration:
+            raise OrderError("wait must be less than duration")
+        
         # 0) initialize the algo order
         algo_order = AlgoOrder(
             symbol=symbol,
             uuid=adp_maker_order_uuid,
-            side=side,
+            side=open_side,
             amount=amount,
             duration=duration,
             wait=wait,
             status=AlgoOrderStatus.RUNNING,
             exchange=instrument_id.exchange,
             timestamp=self._clock.timestamp_ms(),
-            position_side=position_side,
         )
-
+        
         self._cache._order_initialized(algo_order)
-
-        # 1) check the amount
-        if amount < min_order_amount:
-            algo_order.status = AlgoOrderStatus.FAILED
-            self._cache._order_status_update(algo_order)
-            self._log.error(
-                f"ADAPTIVE MAKER ORDER FAILED: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid}"
-            )
-            return
-
-        try:
-            # 2) create maker order
-            price = self._cal_limit_order_price(symbol, side, market)
-            order = await self._create_order(
-                order_submit=OrderSubmit(
-                    symbol=symbol,
-                    instrument_id=instrument_id,
-                    submit_type=SubmitType.CREATE,
-                    side=side,
-                    type=OrderType.LIMIT,
-                    amount=amount,
-                    price=price,
-                    position_side=position_side,
-                    kwargs=kwargs,
-                ),
-                account_type=account_type,
-            )
-
-            # 3) check the order is success
-            if not order.success:
+        
+        if not amount:
+            amount = min_order_amount
+        else:
+            # 1) check the amount
+            if amount < min_order_amount:
                 algo_order.status = AlgoOrderStatus.FAILED
                 self._cache._order_status_update(algo_order)
                 self._log.error(
-                    f"ADAPTIVE MAKER ORDER FAILED: symbol: {symbol}, side: {side}, uuid: {order_submit.uuid}"
+                    f"ADAPTIVE MAKER ORDER FAILED: symbol: {symbol}, side: {open_side}, uuid: {adp_maker_order_uuid}"
                 )
                 return
+        try:
+            
+            # 2) open position
+            open_make_ratio = await self._maker_taker_order(
+                symbol=symbol,
+                side=open_side,
+                amount=amount,
+                wait=wait,
+                duration=duration,
+                check_interval=check_interval,
+                account_type=account_type,
+                instrument_id=instrument_id,
+                algo_order=algo_order,
+                market=market,
+                min_order_amount=min_order_amount,
+            )
+            
 
-            order_id = order.uuid
-            algo_order.orders.append(order_id)
+            # 2) calculate the filled info
+            # 2.1) if the filled is 0, then the order is failed
+            filled_info = self._cal_filled_info(algo_order.orders)
+            
+            open_filled = filled_info["filled"]
+            open_cost = filled_info["cost"]
+            open_average = filled_info["average"]
+            
+            
+            self._log.info(
+                f"ADAPTIVE MAKER ORDER: symbol: {symbol}, uuid: {adp_maker_order_uuid} filled: {open_filled}, cost: {open_cost}, average: {open_average}"
+            )
+            
+            if algo_order.filled == 0:
+                algo_order.status = AlgoOrderStatus.FAILED
+                self._cache._order_status_update(algo_order)
+                self._log.error(
+                    f"ADAPTIVE MAKER ORDER FAILED: symbol: {symbol}, side: {open_side}, uuid: {adp_maker_order_uuid}"
+                )
+                return
+            
+            # 3) create tp and sl orders -> close the position
+            if open_side.is_buy:
+                _tp_trigger_ratio = 1 + trigger_tp_ratio
+                _sl_trigger_ratio = 1 - trigger_sl_ratio
+            else:
+                _tp_trigger_ratio = 1 - trigger_tp_ratio
+                _sl_trigger_ratio = 1 + trigger_sl_ratio
+            
+            
+            tp_trigger_price = _tp_trigger_ratio * open_average
+            sl_trigger_price = _sl_trigger_ratio * open_average
 
-            # 4) wait for the order to be filled
-            await asyncio.sleep(wait)
-
-            # 5) check the order the order status and the book price
-            # 5.1) if side.is_buy and bid > price, then cancel the order
-            # 5.2) if side.is_sell and ask < price, then cancel the order
             start_time = self._clock.timestamp_ms()
+            
+            tp_order_id = None
+            sl_order_id = None
+            
             while True:
-                order = self._cache.get_order(order_id)  # Maybe[Order]
-                is_opened = order.bind_optional(lambda order: order.is_opened).value_or(
-                    False
-                )
-                on_flight = order.bind_optional(lambda order: order.on_flight).value_or(
-                    False
-                )
-                is_closed = order.bind_optional(lambda order: order.is_closed).value_or(
-                    False
-                )
-                self._log.debug(
-                    f"ADAPTIVE MAKER ORDER: status: {order.unwrap().status}, is_opened: {is_opened}, on_flight: {on_flight}, is_closed: {is_closed}"
-                )
-                if is_opened and not on_flight:
-                    book = self._cache.bookl1(symbol)
-                    if (
-                        side.is_buy
-                        and book.bid > price
-                        or side.is_sell
-                        and book.ask < price
-                    ) or self._clock.timestamp_ms() - start_time > (
-                        duration - wait
-                    ) * 1000:
-                        await self._cancel_order(
-                            order_submit=OrderSubmit(
-                                symbol=symbol,
-                                instrument_id=instrument_id,
-                                submit_type=SubmitType.CANCEL,
-                                uuid=order_id,
-                            ),
-                            account_type=account_type,
-                        )
-                elif is_closed:
-                    # 6) closed has 2 status: FILLED and CANCELED
-                    # 6.1) if FILLED, then remaining amount is 0 -> break
-                    # 6.2) if CANCELED, then check the remaining amount
-                    # 6.3) if remaining amount is greater than min order amount, then create a market order
-                    # 6.4) if remaining amount is less than min order amount, then break
-                    # 6.5) if reduce_only is True, then no need to follow the min order amount filter
-                    remaining = order.unwrap().remaining
-                    if remaining > min_order_amount or 'reduce_only' in kwargs: 
-                        order_take = await self._create_order(
-                            order_submit=OrderSubmit(
-                                symbol=symbol,
-                                instrument_id=instrument_id,
-                                submit_type=SubmitType.CREATE,
-                                side=side,
-                                type=OrderType.MARKET,
-                                amount=remaining,
-                                position_side=position_side,
-                                kwargs=kwargs,
-                            ),
-                            account_type=account_type,
-                        )
-
-                        if order_take.success:
-                            algo_order.orders.append(order_take.uuid)
-
-                            # 6.5) wait for the order to be closed
-                            while True:
-                                take_order = self._cache.get_order(order_take.uuid)
-                                is_closed = take_order.bind_optional(
-                                    lambda order: order.is_closed
-                                ).value_or(False)
-                                if is_closed:
-                                    break
-                                await asyncio.sleep(check_interval)
+                book = self._cache.bookl1(symbol)
+                if ((open_side.is_buy and book.mid >= tp_trigger_price) or (open_side.is_sell and book.mid <= tp_trigger_price)) and not tp_order_id:
+                    self._log.info(
+                        f"ADAPTIVE MAKER ORDER: symbol: {symbol}, uuid: {adp_maker_order_uuid} take profit trigger price: {tp_trigger_price}, book mid: {book.mid}"
+                    )
+                    tp_order = await self._create_order(
+                        order_submit=OrderSubmit(
+                            symbol=symbol,
+                            instrument_id=instrument_id,
+                            submit_type=SubmitType.CREATE,
+                            side=close_side,
+                            type=OrderType.LIMIT,
+                            amount=open_filled,
+                            price=self._cal_limit_order_price(symbol, close_side, market),
+                            kwargs={"reduce_only": True},
+                        ),
+                        account_type=account_type,
+                    )
+                    if tp_order.success:
+                        tp_order_id = tp_order.uuid
+                        algo_order.orders.append(tp_order_id)
+                        break
+                        
+                if ((open_side.is_buy and book.mid <= sl_trigger_price) or (open_side.is_sell and book.mid >= sl_trigger_price)) and not sl_order_id:
+                    self._log.info(
+                        f"ADAPTIVE MAKER ORDER: symbol: {symbol}, uuid: {adp_maker_order_uuid} stop loss trigger price: {sl_trigger_price}, book mid: {book.mid}"
+                    )
+                    sl_order = await self._create_order(
+                        order_submit=OrderSubmit(
+                            symbol=symbol,
+                            instrument_id=instrument_id,
+                            submit_type=SubmitType.CREATE,
+                            side=close_side,
+                            type=OrderType.LIMIT,
+                            amount=open_filled,
+                            price=self._cal_limit_order_price(symbol, close_side, market),
+                            kwargs={"reduce_only": True},
+                        ),
+                        account_type=account_type,
+                    )
+                    if sl_order.success:
+                        sl_order_id = sl_order.uuid
+                        algo_order.orders.append(sl_order_id)
+                        break
+                    
+                if self._clock.timestamp_ms() - start_time > sl_tp_duration * 1000:
                     break
                 await asyncio.sleep(check_interval)
-
-            # 7) calculate the make ratio and update the algo order status
-            make_ratio = 1 - float(remaining) / float(amount)
-            algo_order.make_ratio = make_ratio
-
-            # 8) calculate the filled info
-            filled_info = self._cal_filled_info(algo_order.orders)
-            algo_order.filled = filled_info["filled"]
-            algo_order.cost = filled_info["cost"]
-            algo_order.average = filled_info["average"]
-            self._log.debug(
-                f"ADAPTIVE MAKER ORDER: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid} filled: {algo_order.filled}, cost: {algo_order.cost}, average: {algo_order.average}"
-            )
-
-            # 9) add tp and sl orders
-            if (price := algo_order.average) > 0:
-                if trigger_tp_ratio:
-                    if side.is_buy:
-                        _trigger_tp_ratio = 1 + trigger_tp_ratio
-                        _tp_ratio = 1 + tp_ratio
-                        mode = "ceil"
-                    else:
-                        _trigger_tp_ratio = 1 - trigger_tp_ratio
-                        _tp_ratio = 1 - tp_ratio
-                        mode = "floor"
-
-                    trigger_price = self._price_to_precision(
-                        symbol, price * _trigger_tp_ratio, mode=mode
-                    )
-                    
-                    # for buy -> trigger_price > ask
-                    # for sell -> trigger_price < bid
-                    book = self._cache.bookl1(symbol)
-                    if trigger_price < book.ask and side.is_buy:
-                        self._log.debug(f"symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid}, modify trigger price to ask: {trigger_price} -> {book.ask}")
-                        trigger_price = book.ask
-                    elif trigger_price > book.bid and side.is_sell:
-                        self._log.debug(f"symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid}, modify trigger price to bid: {trigger_price} -> {book.bid}")
-                        trigger_price = book.bid
-
-                    if tp_ratio:
-                        tp_price = self._price_to_precision(symbol, price * _tp_ratio, mode=mode)
-
-                    tp_order = await self._create_take_profit_order(
+            
+            # 4) cancel the tp and sl orders
+            # 4.1) if the break loop time is earlier than the sl_tp_duration, then wait for the rest of the time
+            time_elapsed = self._clock.timestamp_ms() - start_time
+            await asyncio.sleep(max(0, sl_tp_duration * 1000 - time_elapsed) / 1000)
+            
+            if tp_order_id:
+                tp_order = self._cache.get_order(tp_order_id).unwrap()
+                if tp_order.is_opened:
+                    await self._cancel_order(
                         order_submit=OrderSubmit(
                             symbol=symbol,
                             instrument_id=instrument_id,
-                            submit_type=SubmitType.TAKE_PROFIT,
-                            side=OrderSide.SELL if side.is_buy else OrderSide.BUY,
-                            type=OrderType.TAKE_PROFIT_LIMIT
-                            if tp_ratio
-                            else OrderType.TAKE_PROFIT_MARKET,
-                            amount=algo_order.filled,
-                            price=tp_price,
-                            trigger_price=trigger_price,
-                            kwargs={"reduce_only": True},
+                            submit_type=SubmitType.CANCEL,
+                            uuid=tp_order_id,
                         ),
                         account_type=account_type,
                     )
-
-                    if tp_order.success:
-                        self._log.debug(
-                            f"ADAPTIVE MAKER ORDER: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid} create tp trigger price: {trigger_price}, tp price: {tp_price}"
-                        )
-                        algo_order.tp_orders.append(tp_order.uuid)
-                    else:
-                        self._log.error(
-                            f"ADAPTIVE MAKER ORDER: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid} create tp order failed"
-                        )
-
-                if trigger_sl_ratio:
-                    if side.is_buy:
-                        _trigger_sl_ratio = 1 - trigger_sl_ratio
-                        _sl_ratio = 1 - sl_ratio
-                        mode = "floor"
-                    else:
-                        _trigger_sl_ratio = 1 + trigger_sl_ratio
-                        _sl_ratio = 1 + sl_ratio
-                        mode = "ceil"
-
-                    trigger_price = self._price_to_precision(
-                        symbol, price * _trigger_sl_ratio, mode=mode
+                    self._log.info(
+                        f"ADAPTIVE MAKER ORDER: symbol: {symbol}, uuid: {adp_maker_order_uuid} tp hit but not filled, cancel tp order: {tp_order_id}"
                     )
-                    
-                    # for buy -> trigger_price < ask
-                    # for sell -> trigger_price > bid
-                    book = self._cache.bookl1(symbol)
-                    if trigger_price > book.bid and side.is_buy:
-                        self._log.debug(f"symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid}, modify trigger price to bid: {trigger_price} -> {book.bid}")
-                        trigger_price = book.bid
-                    elif trigger_price < book.ask and side.is_sell:
-                        self._log.debug(f"symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid}, modify trigger price to ask: {trigger_price} -> {book.ask}")
-                        trigger_price = book.ask
-
-                    if sl_ratio:
-                        sl_price = self._price_to_precision(symbol, price * _sl_ratio, mode=mode)
-
-                    sl_order = await self._create_stop_loss_order(
+            if sl_order_id:
+                sl_order = self._cache.get_order(sl_order_id).unwrap()
+                if sl_order.is_opened:
+                    await self._cancel_order(
                         order_submit=OrderSubmit(
                             symbol=symbol,
                             instrument_id=instrument_id,
-                            submit_type=SubmitType.STOP_LOSS,
-                            side=OrderSide.SELL if side.is_buy else OrderSide.BUY,
-                            amount=algo_order.filled,
-                            type=OrderType.STOP_LOSS_LIMIT
-                            if sl_ratio
-                            else OrderType.STOP_LOSS_MARKET,
-                            price=sl_price,
-                            trigger_price=trigger_price,
-                            kwargs={"reduce_only": True},
+                            submit_type=SubmitType.CANCEL,
+                            uuid=sl_order_id,
                         ),
                         account_type=account_type,
                     )
-
-                    if sl_order.success:
-                        self._log.debug(
-                            f"ADAPTIVE MAKER ORDER: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid} create sl trigger price: {trigger_price}, sl price: {sl_price}"
-                        )
-                        algo_order.sl_orders.append(sl_order.uuid)
-                    else:
-                        self._log.error(
-                            f"ADAPTIVE MAKER ORDER: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid} create sl order failed"
-                        )
-
+                    self._log.info(
+                        f"ADAPTIVE MAKER ORDER: symbol: {symbol}, uuid: {adp_maker_order_uuid} sl hit but not filled, cancel sl order: {sl_order_id}"
+                    )
+            
+            # 5) close the remaining amount
+            remaining = self._cache.get_position(symbol).unwrap().amount
+            tp_sl_make_ratio = 1 - float(remaining) / float(amount)
+            close_make_ratio = tp_sl_make_ratio
+            if remaining > 0:
+                self._log.info(
+                    f"ADAPTIVE MAKER ORDER: symbol: {symbol}, uuid: {adp_maker_order_uuid} close the remaining amount: {remaining}"
+                )
+                close_make_ratio = await self._maker_taker_order(
+                    symbol=symbol,
+                    side=close_side,
+                    amount=remaining,
+                    wait=wait,
+                    duration=duration,
+                    check_interval=check_interval,
+                    account_type=account_type,
+                    instrument_id=instrument_id,
+                    algo_order=algo_order,
+                    market=market,
+                    min_order_amount=min_order_amount,
+                    kwargs={"reduce_only": True},
+                )
             algo_order.status = AlgoOrderStatus.FINISHED
             self._cache._order_status_update(algo_order)
+            self._log.info(
+                f"ADAPTIVE MAKER ORDER FINISHED: symbol: {symbol}, uuid: {adp_maker_order_uuid} open_make_ratio: {open_make_ratio}, tp_sl_make_ratio: {tp_sl_make_ratio}, close_make_ratio: {close_make_ratio}"
+            )
         except asyncio.CancelledError:
             algo_order.status = AlgoOrderStatus.CANCELING
             self._cache._order_status_update(algo_order)
@@ -657,8 +716,8 @@ class ExecutionManagementSystem(ABC):
             algo_order.status = AlgoOrderStatus.CANCELED
             self._cache._order_status_update(algo_order)
 
-            self._log.debug(
-                f"ADAPTIVE MAKER ORDER CANCELLED: symbol: {symbol}, side: {side}, uuid: {adp_maker_order_uuid}"
+            self._log.info(
+                f"ADAPTIVE MAKER ORDER CANCELLED: symbol: {symbol}, uuid: {adp_maker_order_uuid}"
             )
 
     async def _twap_order(self, order_submit: OrderSubmit, account_type: AccountType):

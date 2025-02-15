@@ -47,7 +47,7 @@ class Demo(Strategy):
                 symbol="BTCUSDT-PERP.BINANCE",
                 side=OrderSide.SELL,
                 type=OrderType.MARKET,
-                amount=Decimal("0.01"),
+                amount=Decimal("0.001"),
                 reduce_only=True,
             )
             self.signal = False

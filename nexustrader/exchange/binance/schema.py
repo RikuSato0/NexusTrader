@@ -341,7 +341,7 @@ class BinanceOrder(msgspec.Struct, frozen=True):
     timeInForce: TimeInForce | None = None
     goodTillDate: int | None = None
     type: BinanceOrderType | None = None
-    side: OrderSide | None = None
+    side: BinanceOrderSide | None = None
     stopPrice: str | None = (
         None  # please ignore when order type is TRAILING_STOP_MARKET
     )

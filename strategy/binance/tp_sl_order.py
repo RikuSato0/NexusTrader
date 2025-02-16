@@ -11,7 +11,9 @@ from nexustrader.constants import ExchangeType, OrderSide
 from nexustrader.exchange.binance import BinanceAccountType
 from nexustrader.schema import BookL1, Order
 from nexustrader.engine import Engine
+from nexustrader.core.log import SpdLog
 
+SpdLog.initialize(level="DEBUG", file_name="tp_sl_order", production_mode=True)
 
 BINANCE_API_KEY = settings.BINANCE.FUTURE.TESTNET_1.API_KEY
 BINANCE_SECRET = settings.BINANCE.FUTURE.TESTNET_1.SECRET
@@ -32,35 +34,35 @@ class Demo(Strategy):
             order = self.cache.get_order(self.order_id).unwrap()
             print(order, "\n")
         
-    def on_canceled_order(self, order: Order):
-        print(order, "\n")
+    # def on_canceled_order(self, order: Order):
+    #     print(order, "\n")
 
-    def on_failed_order(self, order: Order):
-        print(order, "\n")
+    # def on_failed_order(self, order: Order):
+    #     print(order, "\n")
 
-    def on_partially_filled_order(self, order: Order):
-        print(order, "\n")
+    # def on_partially_filled_order(self, order: Order):
+    #     print(order, "\n")
 
-    def on_pending_order(self, order: Order):
-        print(order, "\n")
+    # def on_pending_order(self, order: Order):
+    #     print(order, "\n")
 
-    def on_accepted_order(self, order: Order):
-        print(order, "\n")
+    # def on_accepted_order(self, order: Order):
+    #     print(order, "\n")
 
-    def on_filled_order(self, order: Order):
-        print(order, "\n")
+    # def on_filled_order(self, order: Order):
+    #     print(order, "\n")
 
     def on_bookl1(self, bookl1: BookL1):
         if self.signal:
             self.order_id = self.create_adp_maker(
                 symbol="BTCUSDT-PERP.BINANCE",
                 side=OrderSide.BUY,
-                amount=None,
+                amount=Decimal("0.04"),
                 duration=10,
-                wait=8,
+                wait=1,
                 trigger_sl_ratio=0.002,
                 trigger_tp_ratio=0.002,
-                sl_tp_duration=20,
+                sl_tp_duration=10,
             )
             self.signal = False
 

@@ -479,7 +479,7 @@ class ExecutionManagementSystem(ABC):
             await asyncio.sleep(check_interval)
         
         make_ratio = 1 - float(remaining) / float(amount)
-        filled_info = self._cal_filled_info(algo_order.orders)
+        filled_info = self._cal_filled_info(order_list)
             
         filled = filled_info["filled"]
         cost = filled_info["cost"]

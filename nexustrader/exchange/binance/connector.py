@@ -861,6 +861,7 @@ class BinancePrivateConnector(PrivateConnector):
             }
 
             res = await self._execute_cancel_order_request(market, symbol, params)
+
             order = Order(
                 exchange=self._exchange_id,
                 symbol=symbol,
@@ -885,7 +886,8 @@ class BinancePrivateConnector(PrivateConnector):
             )
             return order
         except Exception as e:
-            self._log.error(f"Error canceling order: {e} params: {str(params)}")
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            self._log.error(f"Error canceling order: {error_msg} params: {str(params)}")
             order = Order(
                 exchange=self._exchange_id,
                 timestamp=self._clock.timestamp_ms(),

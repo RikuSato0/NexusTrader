@@ -156,7 +156,7 @@ class Order(Struct):
     exchange: ExchangeType
     symbol: str
     status: OrderStatus
-    id: Optional[str] = None
+    id: Optional[str | int] = None
     uuid: Optional[str] = None
     amount: Optional[Decimal] = None
     filled: Optional[Decimal] = None

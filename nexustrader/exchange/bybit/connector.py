@@ -307,7 +307,8 @@ class BybitPrivateConnector(PrivateConnector):
             )
             return order
         except Exception as e:
-            self._log.error(f"Error canceling order: {e} params: {str(params)}")
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            self._log.error(f"Error canceling order: {error_msg} params: {str(params)}")
             order = Order(
                 exchange=self._exchange_id,
                 timestamp=self._clock.timestamp_ms(),
@@ -484,7 +485,8 @@ class BybitPrivateConnector(PrivateConnector):
             )
             return order
         except Exception as e:
-            self._log.error(f"Error creating order: {e} params: {str(params)}")
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            self._log.error(f"Error creating order: {error_msg} params: {str(params)}")
             order = Order(
                 exchange=self._exchange_id,
                 timestamp=self._clock.timestamp_ms(),

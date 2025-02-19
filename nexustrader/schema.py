@@ -92,7 +92,7 @@ class Trade(Struct, gc=False):
     timestamp: int
 
 
-class Kline(Struct, gc=False):
+class Kline(Struct, gc=False, kw_only=True):
     exchange: ExchangeType
     symbol: str
     interval: KlineInterval
@@ -101,6 +101,7 @@ class Kline(Struct, gc=False):
     low: float
     close: float
     volume: float
+    volume_quote: Optional[float] = None
     start: int
     timestamp: int
     confirm: bool
@@ -215,11 +216,11 @@ class Order(Struct):
         ]
 
 
-class AlgoOrder(Struct):
+class AlgoOrder(Struct, kw_only=True):
     symbol: str
     uuid: str # start with "ALGO-"
     side: OrderSide
-    amount: Decimal
+    amount: Optional[Decimal] = None
     duration: int
     wait: int
     status: AlgoOrderStatus
@@ -227,9 +228,9 @@ class AlgoOrder(Struct):
     timestamp: int 
     orders: List[str] = field(default_factory=list) # [uuid1, uuid2, ...]
     position_side: PositionSide | None = None
-    filled: Decimal | None = None
-    cost: float | None = None
-    average: float | None = None
+    filled: Optional[Decimal] = None
+    cost: Optional[float] = None
+    average: Optional[float] = None
     make_ratio: float = 0 # make_amount / amount, only for adp_maker_order
     
     @property

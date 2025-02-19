@@ -2,7 +2,6 @@ import msgspec
 from decimal import Decimal
 from typing import Any, Dict, List
 from nexustrader.schema import BaseMarket, Balance
-from nexustrader.constants import OrderSide, TimeInForce
 from nexustrader.exchange.binance.constants import (
     BinanceAccountEventReasonType,
     BinanceOrderStatus,
@@ -322,7 +321,7 @@ class BinanceUserTrade(msgspec.Struct, frozen=True):
     buyer: bool | None = None
     maker: bool | None = None
     realizedPnl: str | None = None
-    side: OrderSide | None = None
+    side: BinanceOrderSide | None = None
     positionSide: str | None = None
     baseQty: str | None = None  # COIN-M FUTURES only
     pair: str | None = None  # COIN-M FUTURES only
@@ -337,8 +336,8 @@ class BinanceOrder(msgspec.Struct, frozen=True):
     price: str | None = None
     origQty: str | None = None
     executedQty: str | None = None
-    status: BinanceOrderStatus | None = None
-    timeInForce: TimeInForce | None = None
+    status: BinanceOrderStatus | None = None 
+    timeInForce: BinanceTimeInForce | None = None
     goodTillDate: int | None = None
     type: BinanceOrderType | None = None
     side: BinanceOrderSide | None = None

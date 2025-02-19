@@ -365,6 +365,7 @@ class ExecutionManagementSystem(ABC):
         market: BaseMarket,
         min_order_amount: Decimal,
         stage: str,
+        is_take_remaining: bool = True,
         kwargs: Dict[str, Any] = {}, 
     ):
         order_list = []
@@ -447,7 +448,7 @@ class ExecutionManagementSystem(ABC):
                 # 6.4) if remaining amount is less than min order amount, then break
                 # 6.5) if reduce_only is True, then no need to follow the min order amount filter
                 remaining = _order_make.unwrap().remaining
-                if remaining >= min_order_amount or (kwargs.get('reduce_only', False) and remaining > Decimal(0)): 
+                if (remaining >= min_order_amount or (kwargs.get('reduce_only', False) and remaining > Decimal(0))) and is_take_remaining: 
                     order_take = await self._create_order(
                         order_submit=OrderSubmit(
                             symbol=symbol,
@@ -574,6 +575,7 @@ class ExecutionManagementSystem(ABC):
                 market=market,
                 min_order_amount=min_order_amount,
                 stage="OPEN",
+                is_take_remaining=False,
             )
             
 
@@ -707,8 +709,8 @@ class ExecutionManagementSystem(ABC):
                     symbol=symbol,
                     side=close_side,
                     amount=remaining,
-                    wait=wait,
-                    duration=duration,
+                    wait=15,
+                    duration=20,
                     check_interval=check_interval,
                     account_type=account_type,
                     instrument_id=instrument_id,
@@ -716,6 +718,7 @@ class ExecutionManagementSystem(ABC):
                     market=market,
                     min_order_amount=min_order_amount,
                     stage=f"CLOSE_{close_source}",
+                    is_take_remaining=True,
                     kwargs={"reduce_only": True},
                 )
                 close_make_ratio = close_result["make_ratio"]

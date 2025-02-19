@@ -13,7 +13,7 @@ from nexustrader.schema import BookL1, Order
 from nexustrader.engine import Engine
 from nexustrader.core.log import SpdLog
 
-SpdLog.initialize(level="DEBUG", file_name="tp_sl_order", production_mode=True)
+SpdLog.initialize(level="INFO", file_name="tp_sl_order", production_mode=True)
 
 BINANCE_API_KEY = settings.BINANCE.FUTURE.TESTNET_1.API_KEY
 BINANCE_SECRET = settings.BINANCE.FUTURE.TESTNET_1.SECRET
@@ -34,23 +34,23 @@ class Demo(Strategy):
             order = self.cache.get_order(self.order_id).unwrap()
             print(order, "\n")
         
-    # def on_canceled_order(self, order: Order):
-    #     print(order, "\n")
+    def on_canceled_order(self, order: Order):
+        print(order, "\n")
 
-    # def on_failed_order(self, order: Order):
-    #     print(order, "\n")
+    def on_failed_order(self, order: Order):
+        print(order, "\n")
 
-    # def on_partially_filled_order(self, order: Order):
-    #     print(order, "\n")
+    def on_partially_filled_order(self, order: Order):
+        print(order, "\n")
 
-    # def on_pending_order(self, order: Order):
-    #     print(order, "\n")
+    def on_pending_order(self, order: Order):
+        print(order, "\n")
 
-    # def on_accepted_order(self, order: Order):
-    #     print(order, "\n")
+    def on_accepted_order(self, order: Order):
+        print(order, "\n")
 
-    # def on_filled_order(self, order: Order):
-    #     print(order, "\n")
+    def on_filled_order(self, order: Order):
+        print(order, "\n")
 
     def on_bookl1(self, bookl1: BookL1):
         if self.signal:

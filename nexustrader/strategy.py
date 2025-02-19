@@ -179,65 +179,6 @@ class Strategy:
         )
         self._ems[order.instrument_id.exchange]._submit_order(order, account_type)
         return order.uuid
-    
-    def create_adp_maker(
-        self,
-        symbol: str,
-        side: OrderSide,
-        amount: Decimal,
-        duration: int,
-        wait: int,
-        trigger_tp_ratio: float,
-        trigger_sl_ratio: float,
-        sl_tp_duration: float,
-        check_interval: float = 0.1,
-        account_type: AccountType | None = None,
-    ) -> str:
-        """create adaptive maker order with tp and sl
-        
-        Args:
-            symbol: str The symbol of the order
-            side: OrderSide The side of the order
-            amount: Decimal The amount of the order
-            duration: int The duration of the order
-            wait: int The waiting time for the maker order to be filled
-            check_interval: float = 0.1 The interval to check the order status
-            position_side: PositionSide | None = None The position side of the order
-            account_type: AccountType | None = None The account type of the order
-            trigger_tp_ratio: float | None = None The trigger price ratio of the take profit order
-            trigger_sl_ratio: float | None = None The trigger price ratio of the stop loss order
-            tp_ratio: float | None = None The take profit ratio of the take profit order
-            sl_ratio: float | None = None The stop loss ratio of the stop loss order
-            kwargs: Dict[str, Any] = {} The additional arguments for the order
-        """        
-        order = OrderSubmit(
-            symbol=symbol,
-            instrument_id=InstrumentId.from_str(symbol),
-            uuid=f"ALGO-{UUID4().value}",
-            submit_type=SubmitType.ADP_MAKER,
-            side=side,
-            amount=amount,
-            duration=duration,
-            wait=wait,
-            check_interval=check_interval,
-            trigger_tp_ratio=trigger_tp_ratio,
-            trigger_sl_ratio=trigger_sl_ratio,
-            sl_tp_duration=sl_tp_duration,
-        )
-        self._ems[order.instrument_id.exchange]._submit_order(order, account_type)
-        return order.uuid
-    
-    def cancel_adp_maker(
-        self, symbol: str, uuid: str, account_type: AccountType | None = None
-    ) -> str:
-        order = OrderSubmit(
-            symbol=symbol,
-            instrument_id=InstrumentId.from_str(symbol),
-            submit_type=SubmitType.CANCEL_ADP_MAKER,
-            uuid=uuid,
-        )
-        self._ems[order.instrument_id.exchange]._submit_order(order, account_type)
-        return order.uuid
 
     def create_twap(
         self,

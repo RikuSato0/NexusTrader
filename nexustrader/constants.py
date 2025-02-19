@@ -90,8 +90,6 @@ class SubmitType(Enum):
     CANCEL_VWAP = 5
     STOP_LOSS = 6
     TAKE_PROFIT = 7
-    ADP_MAKER = 8
-    CANCEL_ADP_MAKER = 9
 
 
 class EventType(Enum):

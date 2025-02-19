@@ -457,6 +457,7 @@ class OkxPrivateConnector(PrivateConnector):
             "side": OkxEnumParser.to_okx_order_side(side).value,
             "ord_type": OkxEnumParser.to_okx_order_type(type, time_in_force).value,
             "sz": str(amount),
+            "tag": "f50cdd72d3b6BCDE", 
         }
 
         if type == OrderType.LIMIT:

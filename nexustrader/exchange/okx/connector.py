@@ -47,6 +47,7 @@ class OkxPublicConnector(PublicConnector):
         exchange: OkxExchangeManager,
         msgbus: MessageBus,
         task_manager: TaskManager,
+        rate_limit: RateLimit | None = None,
     ):
         super().__init__(
             account_type=account_type,
@@ -59,6 +60,11 @@ class OkxPublicConnector(PublicConnector):
                 task_manager=task_manager,
             ),
             msgbus=msgbus,
+            api_client=OkxApiClient(
+                testnet=account_type.is_testnet,
+            ),
+            task_manager=task_manager,
+            rate_limit=rate_limit,
         )
         self._business_ws_client = OkxWSClient(
             account_type=account_type,
@@ -70,6 +76,17 @@ class OkxPublicConnector(PublicConnector):
         self._ws_msg_bbo_tbt_decoder = msgspec.json.Decoder(OkxWsBboTbtMsg)
         self._ws_msg_candle_decoder = msgspec.json.Decoder(OkxWsCandleMsg)
         self._ws_msg_trade_decoder = msgspec.json.Decoder(OkxWsTradeMsg)
+
+    def request_klines(
+        self,
+        symbol: str,
+        interval: KlineInterval,
+        limit: int | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
+    ) -> list[Kline]:
+        # TODO: implement
+        pass
 
     async def subscribe_trade(self, symbol: str):
         market = self._market.get(symbol, None)
@@ -457,7 +474,7 @@ class OkxPrivateConnector(PrivateConnector):
             "side": OkxEnumParser.to_okx_order_side(side).value,
             "ord_type": OkxEnumParser.to_okx_order_type(type, time_in_force).value,
             "sz": str(amount),
-            "tag": "f50cdd72d3b6BCDE", 
+            "tag": "f50cdd72d3b6BCDE",
         }
 
         if type == OrderType.LIMIT:

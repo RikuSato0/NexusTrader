@@ -1,5 +1,6 @@
 import asyncio
 import msgspec
+import sys
 from typing import Dict, Any
 from decimal import Decimal
 from nexustrader.base import PublicConnector, PrivateConnector
@@ -26,6 +27,7 @@ from nexustrader.exchange.binance.constants import (
     BinanceEnumParser,
 )
 from nexustrader.exchange.binance.schema import (
+    BinanceResponseKline,
     BinanceWsMessageGeneral,
     BinanceTradeData,
     BinanceSpotBookTicker,
@@ -50,6 +52,7 @@ class BinancePublicConnector(PublicConnector):
     _account_type: BinanceAccountType
     _market: Dict[str, BinanceMarket]
     _market_id: Dict[str, str]
+    _api_client: BinanceApiClient
 
     def __init__(
         self,
@@ -57,6 +60,7 @@ class BinancePublicConnector(PublicConnector):
         exchange: BinanceExchangeManager,
         msgbus: MessageBus,
         task_manager: TaskManager,
+        rate_limit: RateLimit | None = None,
     ):
         if not account_type.is_spot and not account_type.is_future:
             raise ValueError(
@@ -74,8 +78,12 @@ class BinancePublicConnector(PublicConnector):
                 task_manager=task_manager,
             ),
             msgbus=msgbus,
+            api_client=BinanceApiClient(
+                testnet=account_type.is_testnet,
+            ),
+            task_manager=task_manager,
+            rate_limit=rate_limit,
         )
-
         self._ws_general_decoder = msgspec.json.Decoder(BinanceWsMessageGeneral)
         self._ws_trade_decoder = msgspec.json.Decoder(BinanceTradeData)
         self._ws_spot_book_ticker_decoder = msgspec.json.Decoder(BinanceSpotBookTicker)
@@ -97,6 +105,82 @@ class BinancePublicConnector(PublicConnector):
             raise ValueError(
                 f"Unsupported BinanceAccountType.{self._account_type.value}"
             )
+
+    async def _request_klines(
+        self,
+        symbol: str,
+        interval: KlineInterval,
+        limit: int | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
+    ) -> list[Kline]:
+        if self._limiter:
+            await self._limiter.acquire()
+        
+        bnc_interval = BinanceEnumParser.to_binance_kline_interval(interval)
+
+        if self._account_type.is_spot:
+            query_klines = self._api_client.get_api_v3_klines
+        elif self._account_type.is_linear:
+            query_klines = self._api_client.get_fapi_v1_klines
+        elif self._account_type.is_inverse:
+            query_klines = self._api_client.get_dapi_v1_klines
+        else:
+            raise ValueError(
+                f"Unsupported BinanceAccountType.{self._account_type.value}"
+            )
+
+        end_time_ms = int(end_time) if end_time is not None else sys.maxsize
+        limit = int(limit) if limit is not None else 500
+        all_klines: list[Kline] = []
+        while True:
+            klines_response: list[BinanceResponseKline] = await query_klines(
+                symbol=self._market[symbol].id,
+                interval=bnc_interval.value,
+                limit=limit,
+                startTime=start_time,
+                endTime=end_time,
+            )
+            klines: list[Kline] = [
+                self._parse_kline_response(
+                    symbol=symbol, interval=interval, kline=kline
+                )
+                for kline in klines_response
+            ]
+            all_klines.extend(klines)
+
+            # Update the start_time to fetch the next set of bars
+            if klines:
+                next_start_time = klines[-1].start + 1
+            else:
+                # Handle the case when klines is empty
+                break
+
+            # No more bars to fetch
+            if (limit and len(klines) < limit) or next_start_time >= end_time_ms:
+                break
+
+            start_time = next_start_time
+
+        return all_klines
+
+    def request_klines(
+        self,
+        symbol: str,
+        interval: KlineInterval,
+        limit: int | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
+    ) -> list[Kline]:
+        return self._task_manager._loop.run_until_complete(
+            self._request_klines(
+                symbol=symbol,
+                interval=interval,
+                limit=limit,
+                start_time=start_time,
+                end_time=end_time,
+            )
+        )
 
     async def subscribe_trade(self, symbol: str):
         market = self._market.get(symbol, None)
@@ -132,6 +216,30 @@ class BinancePublicConnector(PublicConnector):
                 self._parse_spot_book_ticker(raw)
         except msgspec.DecodeError as e:
             self._log.error(f"Error decoding message: {str(raw)} {str(e)}")
+
+    def _parse_kline_response(
+        self, symbol: str, interval: KlineInterval, kline: BinanceResponseKline
+    ) -> Kline:
+        timestamp = self._clock.timestamp_ms()
+
+        if kline.close_time > timestamp:
+            confirm = False
+        else:
+            confirm = True
+
+        return Kline(
+            exchange=self._exchange_id,
+            symbol=symbol,
+            interval=interval,
+            open=float(kline.open),
+            high=float(kline.high),
+            low=float(kline.low),
+            close=float(kline.close),
+            volume=float(kline.volume),
+            start=kline.open_time,
+            timestamp=timestamp,
+            confirm=confirm,
+        )
 
     def _parse_kline(self, raw: bytes) -> Kline:
         res = self._ws_kline_decoder.decode(raw)
@@ -364,7 +472,7 @@ class BinancePrivateConnector(PrivateConnector):
             await self._api_client.put_papi_v1_listen_key()
 
     async def _keep_alive_user_data_stream(
-        self, listen_key: str, interval: int = 20, max_retry: int = 3
+        self, listen_key: str, interval: int = 20, max_retry: int = 5
     ):
         retry_count = 0
         while retry_count < max_retry:
@@ -373,7 +481,8 @@ class BinancePrivateConnector(PrivateConnector):
                 await self._keep_alive_listen_key(listen_key)
                 retry_count = 0  # Reset retry count on successful keep-alive
             except Exception as e:
-                self._log.error(f"Failed to keep alive listen key: {str(e)}")
+                error_msg = f"{type(e).__name__}: {str(e)}"
+                self._log.error(f"Failed to keep alive listen key: {error_msg}")
                 retry_count += 1
                 if retry_count < max_retry:
                     await asyncio.sleep(5)
@@ -400,13 +509,21 @@ class BinancePrivateConnector(PrivateConnector):
             msg = self._ws_msg_general_decoder.decode(raw)
             if msg.e:
                 match msg.e:
-                    case BinanceUserDataStreamWsEventType.ORDER_TRADE_UPDATE:  # futures order update
+                    case (
+                        BinanceUserDataStreamWsEventType.ORDER_TRADE_UPDATE
+                    ):  # futures order update
                         self._parse_order_trade_update(raw)
-                    case BinanceUserDataStreamWsEventType.EXECUTION_REPORT:  # spot order update
+                    case (
+                        BinanceUserDataStreamWsEventType.EXECUTION_REPORT
+                    ):  # spot order update
                         self._parse_execution_report(raw)
-                    case BinanceUserDataStreamWsEventType.ACCOUNT_UPDATE:  # futures account update
+                    case (
+                        BinanceUserDataStreamWsEventType.ACCOUNT_UPDATE
+                    ):  # futures account update
                         self._parse_account_update(raw)
-                    case BinanceUserDataStreamWsEventType.OUT_BOUND_ACCOUNT_POSITION:  # spot account update
+                    case (
+                        BinanceUserDataStreamWsEventType.OUT_BOUND_ACCOUNT_POSITION
+                    ):  # spot account update
                         self._parse_out_bound_account_position(raw)
         except msgspec.DecodeError:
             self._log.error(f"Error decoding message: {str(raw)}")
@@ -515,9 +632,13 @@ class BinancePrivateConnector(PrivateConnector):
 
         id = event_data.s + self.market_type
         symbol = self._market_id[id]
-        
+
         # Calculate average price only if filled amount is non-zero
-        average = float(event_data.Z) / float(event_data.z) if float(event_data.z) != 0 else None
+        average = (
+            float(event_data.Z) / float(event_data.z)
+            if float(event_data.z) != 0
+            else None
+        )
 
         order = Order(
             exchange=self._exchange_id,
@@ -595,7 +716,7 @@ class BinancePrivateConnector(PrivateConnector):
                 return await self._api_client.post_papi_v1_um_order(**params)
             elif market.inverse:
                 return await self._api_client.post_papi_v1_cm_order(**params)
-    
+
     async def create_stop_loss_order(
         self,
         symbol: str,
@@ -621,7 +742,7 @@ class BinancePrivateConnector(PrivateConnector):
             position_side=position_side,
             **kwargs,
         )
-    
+
     async def create_take_profit_order(
         self,
         symbol: str,
@@ -635,21 +756,21 @@ class BinancePrivateConnector(PrivateConnector):
         position_side: PositionSide | None = None,
         **kwargs,
     ):
-        #NOTE: This function is also used for stop loss order 
+        # NOTE: This function is also used for stop loss order
         if self._limiter:
             await self._limiter.acquire()
         market = self._market.get(symbol)
         if not market:
             raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
-    
+
         id = market.id
-        
+
         if market.inverse or market.linear:
             binance_type = BinanceEnumParser.to_binance_futures_order_type(type)
         elif market.spot:
             binance_type = BinanceEnumParser.to_binance_spot_order_type(type)
         elif market.margin:
-            #TODO: margin order is not supported yet
+            # TODO: margin order is not supported yet
             pass
 
         params = {
@@ -658,20 +779,22 @@ class BinancePrivateConnector(PrivateConnector):
             "type": binance_type.value,
             "quantity": amount,
             "stopPrice": trigger_price,
-            "workingType": BinanceEnumParser.to_binance_trigger_type(trigger_type).value,
+            "workingType": BinanceEnumParser.to_binance_trigger_type(
+                trigger_type
+            ).value,
         }
-        
+
         if type.is_limit:
             params["price"] = price
             params["timeInForce"] = BinanceEnumParser.to_binance_time_in_force(
                 time_in_force
             ).value
-        
+
         if position_side:
             params["positionSide"] = BinanceEnumParser.to_binance_position_side(
                 position_side
             ).value
-            
+
         reduce_only = kwargs.pop("reduceOnly", False) or kwargs.pop(
             "reduce_only", False
         )
@@ -679,7 +802,7 @@ class BinancePrivateConnector(PrivateConnector):
             params["reduceOnly"] = True
 
         params.update(kwargs)
-        
+
         try:
             res = await self._execute_order_request(market, symbol, params)
             order = Order(
@@ -723,7 +846,7 @@ class BinancePrivateConnector(PrivateConnector):
                 remaining=amount,
             )
             return order
-            
+
     async def create_order(
         self,
         symbol: str,

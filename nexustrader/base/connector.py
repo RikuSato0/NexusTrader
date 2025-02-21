@@ -7,11 +7,11 @@ from aiolimiter import AsyncLimiter
 
 from nexustrader.base.ws_client import WSClient
 from nexustrader.base.api_client import ApiClient
-from nexustrader.schema import Order, BaseMarket
+from nexustrader.schema import Order, BaseMarket, Kline
 from nexustrader.constants import ExchangeType
 from nexustrader.core.log import SpdLog
 from nexustrader.core.cache import AsyncCache
-from nexustrader.core.entity import RateLimit
+from nexustrader.core.entity import RateLimit, TaskManager
 from nexustrader.constants import (
     OrderSide,
     OrderType,
@@ -32,6 +32,9 @@ class PublicConnector(ABC):
         exchange_id: ExchangeType,
         ws_client: WSClient,
         msgbus: MessageBus,
+        api_client: ApiClient,
+        task_manager: TaskManager,
+        rate_limit: RateLimit | None = None,
     ):
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="DEBUG", flush=True
@@ -42,11 +45,30 @@ class PublicConnector(ABC):
         self._exchange_id = exchange_id
         self._ws_client = ws_client
         self._msgbus = msgbus
+        self._api_client = api_client
         self._clock = LiveClock()
-
+        self._task_manager = task_manager
+        
+        if rate_limit:
+            self._limiter = AsyncLimiter(rate_limit.max_rate, rate_limit.time_period)
+        else:
+            self._limiter = None
+        
     @property
     def account_type(self):
         return self._account_type
+
+    @abstractmethod
+    def request_klines(
+        self,
+        symbol: str,
+        interval: KlineInterval,
+        limit: int | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
+    ) -> list[Kline]:
+        """Request klines"""
+        pass
 
     @abstractmethod
     async def subscribe_trade(self, symbol: str):

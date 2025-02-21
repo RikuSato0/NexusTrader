@@ -15,6 +15,7 @@ class BasicConfig:
 @dataclass
 class PublicConnectorConfig:
     account_type: AccountType
+    rate_limit: RateLimit | None = None
 
 @dataclass
 class PrivateConnectorConfig:

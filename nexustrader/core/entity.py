@@ -35,7 +35,7 @@ class TaskManager:
         self._shutdown_event = asyncio.Event()
         self._loop = loop
         if enable_signal_handlers:
-            self._setup_signal_handlers()
+            self._setup_signal_handlers()    
 
     def _setup_signal_handlers(self):
         try:
@@ -49,7 +49,7 @@ class TaskManager:
     async def _shutdown(self):
         self._shutdown_event.set()
         self._log.debug("Shutdown signal received, cleaning up...")
-
+    
     def create_task(self, coro: asyncio.coroutines, name: str = None) -> asyncio.Task:
         task = asyncio.create_task(coro, name=name)
         self._tasks[task.get_name()] = task

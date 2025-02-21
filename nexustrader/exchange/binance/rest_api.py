@@ -10,7 +10,7 @@ from typing import Any, Dict
 from urllib.parse import urljoin, urlencode
 
 from nexustrader.base import ApiClient
-from nexustrader.exchange.binance.schema import BinanceOrder, BinanceListenKey, BinanceSpotAccountInfo, BinanceFuturesAccountInfo
+from nexustrader.exchange.binance.schema import BinanceOrder, BinanceListenKey, BinanceSpotAccountInfo, BinanceFuturesAccountInfo, BinanceResponseKline
 from nexustrader.exchange.binance.constants import BinanceAccountType
 from nexustrader.exchange.binance.error import BinanceClientError, BinanceServerError
 from nexustrader.core.nautilius_core import hmac_signature
@@ -31,13 +31,17 @@ class BinanceApiClient(ApiClient):
         self._headers = {
             "Content-Type": "application/json",
             "User-Agent": "TradingBot/1.0",
-            "X-MBX-APIKEY": api_key,
         }
+        
+        if api_key:
+            self._headers["X-MBX-APIKEY"] = api_key
+        
         self._testnet = testnet
         self._order_decoder = msgspec.json.Decoder(BinanceOrder)
         self._spot_account_decoder = msgspec.json.Decoder(BinanceSpotAccountInfo)
         self._futures_account_decoder = msgspec.json.Decoder(BinanceFuturesAccountInfo)
         self._listen_key_decoder = msgspec.json.Decoder(BinanceListenKey)
+        self._kline_response_decoder = msgspec.json.Decoder(list[BinanceResponseKline])
 
     def _generate_signature(self, query: str) -> str:
         signature = hmac.new(
@@ -511,3 +515,83 @@ class BinanceApiClient(ApiClient):
         
         raw = await self._fetch("GET", base_url, end_point, signed=True)
         return self._futures_account_decoder.decode(raw)
+
+    async def get_fapi_v1_klines(self, symbol: str, interval: str, startTime: int = None, endTime: int = None, limit: int | None = None):
+        """
+        https://developers.binance.com/docs/derivatives/usds-margined-futures/market-data/rest-api/Kline-Candlestick-Data
+        """
+        base_url = self._get_base_url(BinanceAccountType.USD_M_FUTURE)
+        end_point = "/fapi/v1/klines"
+        data = {
+            "symbol": symbol,
+            "interval": interval,
+        }
+        
+        if startTime is not None:
+            data["startTime"] = startTime
+        if endTime is not None:
+            data["endTime"] = endTime
+        if limit is not None:
+            data["limit"] = limit
+        
+        raw = await self._fetch("GET", base_url, end_point, payload=data)
+        return self._kline_response_decoder.decode(raw)
+    
+    async def get_dapi_v1_klines(self, symbol: str, interval: str, startTime: int = None, endTime: int = None, limit: int | None = None):
+        """
+        https://developers.binance.com/docs/derivatives/coin-margined-futures/market-data/rest-api/Kline-Candlestick-Data
+        """
+        base_url = self._get_base_url(BinanceAccountType.COIN_M_FUTURE)
+        end_point = "/dapi/v1/klines"
+        data = {
+            "symbol": symbol,
+            "interval": interval,
+        }
+        
+        if startTime is not None:
+            data["startTime"] = startTime
+        if endTime is not None:
+            data["endTime"] = endTime
+        if limit is not None:
+            data["limit"] = limit
+        
+        raw = await self._fetch("GET", base_url, end_point, payload=data)
+        return self._kline_response_decoder.decode(raw)
+    
+    async def get_api_v3_klines(self, symbol: str, interval: str, startTime: int = None, endTime: int = None, limit: int | None = None):
+        """
+        https://developers.binance.com/docs/binance-spot-api-docs/rest-api/market-data-endpoints#klinecandlestick-data
+        
+        [
+            [
+                1499040000000,      // Kline open time
+                "0.01634790",       // Open price
+                "0.80000000",       // High price
+                "0.01575800",       // Low price
+                "0.01577100",       // Close price
+                "148976.11427815",  // Volume
+                1499644799999,      // Kline Close time
+                "2434.19055334",    // Quote asset volume
+                308,                // Number of trades
+                "1756.87402397",    // Taker buy base asset volume
+                "28.46694368",      // Taker buy quote asset volume
+                "0"                 // Unused field, ignore.
+            ]
+        ]
+        """
+        base_url = self._get_base_url(BinanceAccountType.SPOT)
+        end_point = "/api/v3/klines"
+        data = {
+            "symbol": symbol,
+            "interval": interval,
+        }
+        
+        if startTime is not None:
+            data["startTime"] = startTime
+        if endTime is not None:
+            data["endTime"] = endTime
+        if limit is not None:
+            data["limit"] = limit
+        
+        raw = await self._fetch("GET", base_url, end_point, payload=data)
+        return self._kline_response_decoder.decode(raw)

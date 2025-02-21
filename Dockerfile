@@ -4,6 +4,7 @@ RUN pip install --no-cache-dir --upgrade pip
 # 安装 git 和 build-essential
 RUN apt-get update && apt-get install -y \
     nano \
+    python3-dev \
     git \
     npm \
     build-essential \

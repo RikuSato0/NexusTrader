@@ -1,7 +1,8 @@
 import msgspec
 from decimal import Decimal
 from typing import Any, Dict, List
-from nexustrader.schema import BaseMarket, Balance
+from nexustrader.schema import BaseMarket, Balance, Kline
+from nexustrader.constants import ExchangeType, KlineInterval
 from nexustrader.exchange.binance.constants import (
     BinanceAccountEventReasonType,
     BinanceOrderStatus,
@@ -467,3 +468,33 @@ class BinanceSpotUpdateMsg(msgspec.Struct, kw_only=True):
     
     def parse_to_balances(self) -> List[Balance]:
         return [balance.parse_to_balance() for balance in self.B]
+
+class BinanceResponseKline(msgspec.Struct, array_like=True):
+    """
+    [
+        1499040000000,      // Kline open time
+        "0.01634790",       // Open price
+        "0.80000000",       // High price
+        "0.01575800",       // Low price
+        "0.01577100",       // Close price
+        "148976.11427815",  // Volume
+        1499644799999,      // Kline Close time
+        "2434.19055334",    // Quote asset volume
+        308,                // Number of trades
+        "1756.87402397",    // Taker buy base asset volume
+        "28.46694368",      // Taker buy quote asset volume
+        "0"                 // Unused field, ignore.
+    ]
+    """
+    open_time: int
+    open: str
+    high: str
+    low: str
+    close: str
+    volume: str
+    close_time: int
+    asset_volume: str
+    trades_count: int
+    taker_base_volume: str
+    taker_quote_volume: str
+    ignore: str

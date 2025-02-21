@@ -3,4 +3,3 @@ config.cfg
 
 # Ignore dynaconf secret files
 .secrets.*
-settings.toml

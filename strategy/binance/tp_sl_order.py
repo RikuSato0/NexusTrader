@@ -12,7 +12,7 @@ from nexustrader.exchange.binance import BinanceAccountType
 from nexustrader.schema import BookL1, Order
 from nexustrader.engine import Engine
 from nexustrader.core.log import SpdLog
-
+from nexustrader.constants import KlineInterval
 SpdLog.initialize(level="INFO", file_name="tp_sl_order", production_mode=True)
 
 BINANCE_API_KEY = settings.BINANCE.FUTURE.TESTNET_1.API_KEY
@@ -27,6 +27,18 @@ class Demo(Strategy):
 
     def on_start(self):
         self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BINANCE"])
+        
+        end_time = self.clock.timestamp_ms()
+        klines = self.request_klines(
+            symbol="BTCUSDT-PERP.BINANCE",
+            account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
+            interval=KlineInterval.MINUTE_15,
+            limit=24 * 60 / 15,
+            end_time=end_time,
+        )
+        close_price = [kline.close for kline in klines]
+        print(f"max: {max(close_price)}, min: {min(close_price)}")
+        
         # self.schedule(self.query_order, trigger="interval", seconds=1)
         
     def query_order(self):
@@ -54,17 +66,21 @@ class Demo(Strategy):
 
     def on_bookl1(self, bookl1: BookL1):
         if self.signal:
-            self.order_id = self.create_adp_maker(
-                symbol="BTCUSDT-PERP.BINANCE",
-                side=OrderSide.BUY,
-                amount=Decimal("0.04"),
-                duration=10,
-                wait=1,
-                trigger_sl_ratio=0.002,
-                trigger_tp_ratio=0.002,
-                sl_tp_duration=10,
-            )
-            self.signal = False
+            pass
+            
+            
+            
+            # self.order_id = self.create_adp_maker(
+            #     symbol="BTCUSDT-PERP.BINANCE",
+            #     side=OrderSide.BUY,
+            #     amount=Decimal("0.04"),
+            #     duration=10,
+            #     wait=1,
+            #     trigger_sl_ratio=0.002,
+            #     trigger_tp_ratio=0.002,
+            #     sl_tp_duration=10,
+            # )
+            # self.signal = False
 
 
 config = Config(

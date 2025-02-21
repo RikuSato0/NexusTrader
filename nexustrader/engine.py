@@ -94,6 +94,7 @@ class Engine:
             ems=self._ems,
             exchanges=self._exchanges,
             private_connectors=self._private_connectors,
+            public_connectors=self._public_connectors,
         )
 
     def _public_connector_check(self):
@@ -171,6 +172,7 @@ class Engine:
                         exchange=exchange,
                         msgbus=self._msgbus,
                         task_manager=self._task_manager,
+                        rate_limit=config.rate_limit,
                     )
                     self._public_connectors[account_type] = public_connector
 
@@ -182,6 +184,7 @@ class Engine:
                         exchange=exchange,
                         msgbus=self._msgbus,
                         task_manager=self._task_manager,
+                        rate_limit=config.rate_limit,
                     )
 
                     self._public_connectors[account_type] = public_connector
@@ -194,6 +197,7 @@ class Engine:
                         exchange=exchange,
                         msgbus=self._msgbus,
                         task_manager=self._task_manager,
+                        rate_limit=config.rate_limit,
                     )
                     self._public_connectors[account_type] = public_connector
         self._public_connector_check()

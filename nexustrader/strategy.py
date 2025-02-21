@@ -6,8 +6,12 @@ from nexustrader.base import ExchangeManager
 from nexustrader.core.entity import TaskManager
 from nexustrader.core.cache import AsyncCache
 from nexustrader.error import StrategyBuildError
-from nexustrader.base import ExecutionManagementSystem, PrivateConnector
-from nexustrader.core.nautilius_core import MessageBus, UUID4
+from nexustrader.base import (
+    ExecutionManagementSystem,
+    PrivateConnector,
+    PublicConnector,
+)
+from nexustrader.core.nautilius_core import MessageBus, UUID4, LiveClock
 from nexustrader.schema import (
     BookL1,
     Trade,
@@ -50,6 +54,7 @@ class Strategy:
     def _init_core(
         self,
         exchanges: Dict[ExchangeType, ExchangeManager],
+        public_connectors: Dict[AccountType, PublicConnector],
         private_connectors: Dict[AccountType, PrivateConnector],
         cache: AsyncCache,
         msgbus: MessageBus,
@@ -60,11 +65,12 @@ class Strategy:
             return
 
         self.cache = cache
-
+        self.clock = LiveClock()
         self._ems = ems
         self._task_manager = task_manager
         self._msgbus = msgbus
         self._private_connectors = private_connectors
+        self._public_connectors = public_connectors
         self._exchanges = exchanges
         self._msgbus.subscribe(topic="trade", handler=self.on_trade)
         self._msgbus.subscribe(topic="bookl1", handler=self.on_bookl1)
@@ -86,9 +92,24 @@ class Strategy:
         self._msgbus.register(endpoint="balance", handler=self.on_balance)
 
         self._initialized = True
-    
-    def api(self, exchange: ExchangeType):
-        return self._exchanges[exchange].api
+
+    def request_klines(
+        self,
+        symbol: str,
+        account_type: AccountType,
+        interval: KlineInterval,
+        limit: int | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
+    ) -> list[Kline]:
+        connector = self._public_connectors[account_type]
+        return connector.request_klines(
+            symbol=symbol,
+            interval=interval,
+            limit=limit,
+            start_time=start_time,
+            end_time=end_time,
+        )
 
     def schedule(
         self,
@@ -131,7 +152,7 @@ class Strategy:
         instrument_id = InstrumentId.from_str(symbol)
         ems = self._ems[instrument_id.exchange]
         return ems._price_to_precision(instrument_id.symbol, price, mode)
-    
+
     def create_order(
         self,
         symbol: str,
@@ -152,7 +173,7 @@ class Strategy:
             submit_type = SubmitType.TAKE_PROFIT
         else:
             submit_type = SubmitType.CREATE
-        
+
         order = OrderSubmit(
             symbol=symbol,
             instrument_id=InstrumentId.from_str(symbol),

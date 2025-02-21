@@ -48,6 +48,7 @@ class BybitPublicConnector(PublicConnector):
         exchange: BybitExchangeManager,
         msgbus: MessageBus,
         task_manager: TaskManager,
+        rate_limit: RateLimit | None = None,
     ):
         if account_type in {BybitAccountType.UNIFIED, BybitAccountType.UNIFIED_TESTNET}:
             raise ValueError(
@@ -65,6 +66,11 @@ class BybitPublicConnector(PublicConnector):
                 task_manager=task_manager,
             ),
             msgbus=msgbus,
+            api_client=BybitApiClient(
+                testnet=account_type.is_testnet,
+            ),
+            task_manager=task_manager,
+            rate_limit=rate_limit,
         )
         self._ws_msg_trade_decoder = msgspec.json.Decoder(BybitWsTradeMsg)
         self._ws_msg_orderbook_decoder = msgspec.json.Decoder(BybitWsOrderbookDepthMsg)
@@ -162,6 +168,17 @@ class BybitPublicConnector(PublicConnector):
             ask_size=ask_size,
         )
         self._msgbus.publish(topic="bookl1", msg=bookl1)
+
+    def request_klines(
+        self,
+        symbol: str,
+        interval: KlineInterval,
+        limit: int | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
+    ) -> list[Kline]:
+        # TODO: implement
+        pass
 
     async def subscribe_bookl1(self, symbol: str):
         market = self._market.get(symbol, None)

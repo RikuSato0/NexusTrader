@@ -86,6 +86,9 @@ class Strategy:
         self._msgbus.register(endpoint="balance", handler=self.on_balance)
 
         self._initialized = True
+    
+    def api(self, exchange: ExchangeType):
+        return self._exchanges[exchange].api
 
     def schedule(
         self,

@@ -9,7 +9,6 @@ from nexustrader.core.log import SpdLog
 
 
 
-
 class ExchangeManager(ABC):
     def __init__(self, config: Dict[str, Any]):
         self.config = config

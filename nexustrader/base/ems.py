@@ -273,6 +273,7 @@ class ExecutionManagementSystem(ABC):
         amount_list = [10, 10, 10]
         wait = 10
         """
+        self._log.debug(f"CALCULATE TWAP ORDERS: symbol: {symbol}, total_amount: {total_amount}, duration: {duration}, wait: {wait}, min_order_amount: {min_order_amount}, reduce_only: {reduce_only}")
         amount_list = []
         if (total_amount == 0 or total_amount < min_order_amount) and not reduce_only:
             self._log.info(
@@ -321,7 +322,7 @@ class ExecutionManagementSystem(ABC):
             else:
                 price = book.ask
         price = self._price_to_precision(symbol, price)
-        self._log.info(f"CALCULATE LIMIT ORDER PRICE: symbol: {symbol}, side: {side}, price: {price}, ask: {book.ask}, bid: {book.bid}")
+        self._log.debug(f"CALCULATE LIMIT ORDER PRICE: symbol: {symbol}, side: {side}, price: {price}, ask: {book.ask}, bid: {book.bid}")
         return price
 
     async def _twap_order(self, order_submit: OrderSubmit, account_type: AccountType):

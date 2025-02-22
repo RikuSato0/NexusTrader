@@ -109,7 +109,7 @@ class Demo(Strategy):
                         duration=50,
                         wait=5,
                         account_type=BybitAccountType.UNIFIED_TESTNET, # recommend to specify the account type
-                        kwargs={"reduce_only": reduce_only},
+                        reduce_only=reduce_only,
                     )
                     self.orders[symbol] = uuid
             

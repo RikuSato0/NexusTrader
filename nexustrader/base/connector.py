@@ -88,6 +88,7 @@ class PublicConnector(ABC):
     async def disconnect(self):
         """Disconnect from the exchange"""
         self._ws_client.disconnect()  # not needed to await
+        await self._api_client.close_session()
 
 
 class PrivateConnector(ABC):

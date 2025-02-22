@@ -366,10 +366,6 @@ class ExecutionManagementSystem(ABC):
             reduce_only=reduce_only,
         )
 
-        self._log.debug(
-            f"amount_list: {amount_list}, min_order_amount: {min_order_amount}, wait: {wait}"
-        )
-
         order_id = None
         elapsed_time = 0
 
@@ -399,7 +395,7 @@ class ExecutionManagementSystem(ABC):
                             ),
                             account_type=account_type,
                         )
-                        self._log.debug(f"CANCEL: {order.unwrap()}")
+                        self._log.info(f"CANCEL: {order.unwrap()}")
                     elif is_closed:
                         order_id = None
                         remaining = order.unwrap().remaining
@@ -430,9 +426,8 @@ class ExecutionManagementSystem(ABC):
                         else:
                             if amount_list:
                                 amount_list[-1] += remaining
-                    else:
-                        await asyncio.sleep(check_interval)
-                        elapsed_time += check_interval
+                    await asyncio.sleep(check_interval)
+                    elapsed_time += check_interval
                 else:
                     price = self._cal_limit_order_price(
                         symbol=symbol,
@@ -482,7 +477,7 @@ class ExecutionManagementSystem(ABC):
             algo_order.status = AlgoOrderStatus.FINISHED
             self._cache._order_status_update(algo_order)
 
-            self._log.debug(
+            self._log.info(
                 f"TWAP ORDER FINISHED: symbol: {symbol}, side: {side}, uuid: {twap_uuid}"
             )
         except asyncio.CancelledError:
@@ -504,7 +499,7 @@ class ExecutionManagementSystem(ABC):
             algo_order.status = AlgoOrderStatus.CANCELED
             self._cache._order_status_update(algo_order)
 
-            self._log.debug(
+            self._log.info(
                 f"TWAP ORDER CANCELLED: symbol: {symbol}, side: {side}, uuid: {twap_uuid}"
             )
 

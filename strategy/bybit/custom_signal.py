@@ -26,9 +26,9 @@ socket.setsockopt(zmq.SUBSCRIBE, b"")
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        self.symbols = ["BTCUSDT-PERP.BYBIT"]
+        self.symbols = ["LDOUSDT-PERP.BYBIT"]
         self.signal = True
-        self.multiplier = 0.1
+        self.multiplier = 1
         self.data_ready = DataReady(symbols=self.symbols)
         self.prev_target = defaultdict(Decimal)
         self.orders = {}
@@ -92,7 +92,7 @@ class Demo(Strategy):
                         self.log.info(f"symbol: {symbol}, canceled {uuid}, prev_target: {self.prev_target[symbol]} -> new_target: {target_position}")
                         uuid = None
                     else:
-                        self.log.info(f"symbol: {symbol}, target not changed, skip")
+                        self.log.info(f"symbol: {symbol}, target not changed, skip, prev_target: {self.prev_target[symbol]}, new_target: {target_position}")
                 else:
                     if is_failed:
                         self.log.info(f"symbol: {symbol}, order {uuid} failed")
@@ -106,7 +106,7 @@ class Demo(Strategy):
                         symbol=symbol,
                         side=OrderSide.BUY if diff > 0 else OrderSide.SELL,
                         amount=abs(diff),
-                        duration=50,
+                        duration=65,
                         wait=5,
                         account_type=BybitAccountType.UNIFIED_TESTNET, # recommend to specify the account type
                         reduce_only=reduce_only,

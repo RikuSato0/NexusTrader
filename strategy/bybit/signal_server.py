@@ -7,32 +7,32 @@ import sys
 
 datas = [
     [{
-        "instrumentID": "BTCUSDT.BBP",
-        "position": 200,
+        "instrumentID": "LDOUSDT.BBP",
+        "position": 50,
     }],
     [{
-        "instrumentID": "BTCUSDT.BBP",
-        "position": 400,
+        "instrumentID": "LDOUSDT.BBP",
+        "position": 49,
     }],
     [{
-        "instrumentID": "BTCUSDT.BBP",
+        "instrumentID": "LDOUSDT.BBP",
+        "position": 49,
+    }],
+    [{
+        "instrumentID": "LDOUSDT.BBP",
+        "position": 47,
+    }],
+    [{
+        "instrumentID": "LDOUSDT.BBP",
+        "position": 47,
+    }],
+    [{
+        "instrumentID": "LDOUSDT.BBP",
+        "position": 45,
+    }],
+    [{
+        "instrumentID": "LDOUSDT.BBP",
         "position": 0,
-    }],
-    [{
-        "instrumentID": "BTCUSDT.BBP",
-        "position": 100,
-    }],
-    [{
-        "instrumentID": "BTCUSDT.BBP",
-        "position": -200,
-    }],
-    [{
-        "instrumentID": "BTCUSDT.BBP",
-        "position": -400,
-    }],
-    [{
-        "instrumentID": "BTCUSDT.BBP",
-        "position": -100,
     }],
 ]
 context = zmq.Context()

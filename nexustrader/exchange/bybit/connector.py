@@ -431,7 +431,7 @@ class BybitPrivateConnector(PrivateConnector):
     ) -> Order:
         # TODO: implement
         pass
-
+    
     async def create_order(
         self,
         symbol: str,
@@ -502,7 +502,7 @@ class BybitPrivateConnector(PrivateConnector):
             )
             return order
         except Exception as e:
-            error_msg = f"{type(e).__name__}: {str(e)}"
+            error_msg = f"{e.__class__.__name__}: {str(e)}"
             self._log.error(f"Error creating order: {error_msg} params: {str(params)}")
             order = Order(
                 exchange=self._exchange_id,

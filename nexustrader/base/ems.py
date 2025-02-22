@@ -264,6 +264,7 @@ class ExecutionManagementSystem(ABC):
         duration: float,
         wait: float,
         min_order_amount: Decimal,
+        reduce_only: bool = False,
     ) -> Tuple[List[Decimal], float]:
         """
         Calculate the amount list and wait time for the twap order
@@ -273,7 +274,7 @@ class ExecutionManagementSystem(ABC):
         wait = 10
         """
         amount_list = []
-        if total_amount == 0 or total_amount < min_order_amount:
+        if (total_amount == 0 or total_amount < min_order_amount) and not reduce_only:
             self._log.info(
                 f"TWAP ORDER: {symbol} Total amount is less than min order amount: {total_amount} < {min_order_amount}"
             )
@@ -335,7 +336,8 @@ class ExecutionManagementSystem(ABC):
         kwargs = order_submit.kwargs
         twap_uuid = order_submit.uuid
         check_interval = order_submit.check_interval
-
+        reduce_only = order_submit.kwargs.get("reduce_only", False)
+        
         algo_order = AlgoOrder(
             symbol=symbol,
             uuid=twap_uuid,
@@ -358,6 +360,7 @@ class ExecutionManagementSystem(ABC):
             duration=order_submit.duration,
             wait=order_submit.wait,
             min_order_amount=min_order_amount,
+            reduce_only=reduce_only,
         )
 
         self._log.debug(
@@ -396,9 +399,8 @@ class ExecutionManagementSystem(ABC):
                         self._log.debug(f"CANCEL: {order.unwrap()}")
                     elif is_closed:
                         order_id = None
-                        # amount = amount_list.pop()
                         remaining = order.unwrap().remaining
-                        if remaining > min_order_amount:
+                        if remaining > min_order_amount or reduce_only:
                             order = await self._create_order(
                                 order_submit=OrderSubmit(
                                     symbol=symbol,

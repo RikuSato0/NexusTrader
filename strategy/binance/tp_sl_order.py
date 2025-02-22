@@ -1,5 +1,4 @@
 from nexustrader.constants import settings
-from decimal import Decimal
 from nexustrader.config import (
     Config,
     PublicConnectorConfig,
@@ -7,7 +6,7 @@ from nexustrader.config import (
     BasicConfig,
 )
 from nexustrader.strategy import Strategy
-from nexustrader.constants import ExchangeType, OrderSide
+from nexustrader.constants import ExchangeType
 from nexustrader.exchange.binance import BinanceAccountType
 from nexustrader.schema import BookL1, Order
 from nexustrader.engine import Engine
@@ -39,8 +38,6 @@ class Demo(Strategy):
         close_price = [kline.close for kline in klines]
         print(f"max: {max(close_price)}, min: {min(close_price)}")
         
-        # self.schedule(self.query_order, trigger="interval", seconds=1)
-        
     def query_order(self):
         if self.order_id:   
             order = self.cache.get_order(self.order_id).unwrap()
@@ -65,22 +62,7 @@ class Demo(Strategy):
         print(order, "\n")
 
     def on_bookl1(self, bookl1: BookL1):
-        if self.signal:
-            pass
-            
-            
-            
-            # self.order_id = self.create_adp_maker(
-            #     symbol="BTCUSDT-PERP.BINANCE",
-            #     side=OrderSide.BUY,
-            #     amount=Decimal("0.04"),
-            #     duration=10,
-            #     wait=1,
-            #     trigger_sl_ratio=0.002,
-            #     trigger_tp_ratio=0.002,
-            #     sl_tp_duration=10,
-            # )
-            # self.signal = False
+        print(bookl1, "\n")
 
 
 config = Config(

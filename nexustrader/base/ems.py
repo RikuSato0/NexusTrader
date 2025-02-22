@@ -275,7 +275,9 @@ class ExecutionManagementSystem(ABC):
         """
         self._log.debug(f"CALCULATE TWAP ORDERS: symbol: {symbol}, total_amount: {total_amount}, duration: {duration}, wait: {wait}, min_order_amount: {min_order_amount}, reduce_only: {reduce_only}")
         amount_list = []
-        if (total_amount == 0 or total_amount < min_order_amount) and not reduce_only:
+        if (total_amount == 0 or total_amount < min_order_amount):
+            if reduce_only:
+                return [total_amount], 0
             self._log.info(
                 f"TWAP ORDER: {symbol} Total amount is less than min order amount: {total_amount} < {min_order_amount}"
             )

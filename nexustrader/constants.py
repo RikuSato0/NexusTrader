@@ -204,6 +204,18 @@ class PositionSide(Enum):
     LONG = "LONG"
     SHORT = "SHORT"
     FLAT = "FLAT"
+    
+    @property
+    def is_long(self) -> bool:
+        return self == PositionSide.LONG
+    
+    @property
+    def is_short(self) -> bool:
+        return self == PositionSide.SHORT
+    
+    @property
+    def is_flat(self) -> bool:
+        return self == PositionSide.FLAT
 
 
 class InstrumentType(Enum):

@@ -424,10 +424,10 @@ class AsyncCache:
     def get_all_positions(self, exchange: ExchangeType) -> Dict[str, Position]:
         positions = {symbol: position for symbol, position in self._mem_positions.copy().items() if position.exchange == exchange}
         
-        if self._storage_backend == StorageBackend.REDIS:
-            positions.update(self._get_all_positions_from_redis(exchange))
-        elif self._storage_backend == StorageBackend.SQLITE:
-            positions.update(self._get_all_positions_from_sqlite(exchange))
+        # if self._storage_backend == StorageBackend.REDIS:
+        #     positions.update(self._get_all_positions_from_redis(exchange))
+        # elif self._storage_backend == StorageBackend.SQLITE:
+        #     positions.update(self._get_all_positions_from_sqlite(exchange))
         
         return positions
 

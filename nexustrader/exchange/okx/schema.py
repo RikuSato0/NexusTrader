@@ -767,3 +767,36 @@ class OkxPositionResponse(msgspec.Struct):
     code: str
     data: List[OkxPositionResponseData]
     msg: str
+
+class OkxCandlesticksResponse(msgspec.Struct):
+    code: str
+    data: list['OkxCandlesticksResponseData']
+    msg: str
+
+class OkxCandlesticksResponseData(msgspec.Struct, array_like=True):
+    """
+    [
+        "1597026383085",
+        "3.721",
+        "3.743",
+        "3.677",
+        "3.708",
+        "8422410",
+        "22698348.04828491",
+        "12698348.04828491",
+        "1"
+    ],
+    """
+    ts: int
+    o: str
+    h: str
+    l: str
+    c: str
+    vol: str
+    volCcy: str
+    volCcyQuote: str
+    confirm: int
+    
+    
+    
+    

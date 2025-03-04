@@ -77,6 +77,20 @@ class OkxPublicConnector(PublicConnector):
         self._ws_msg_candle_decoder = msgspec.json.Decoder(OkxWsCandleMsg)
         self._ws_msg_trade_decoder = msgspec.json.Decoder(OkxWsTradeMsg)
 
+    async def _request_klines(
+        self,
+        symbol: str,
+        interval: KlineInterval,
+        limit: int | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
+    ) -> list[Kline]:
+        if self._limiter:
+            await self._limiter.acquire()
+        
+        okx_interval = OkxEnumParser.to_okx_kline_interval(interval)
+        
+        
     def request_klines(
         self,
         symbol: str,
@@ -85,7 +99,6 @@ class OkxPublicConnector(PublicConnector):
         start_time: int | None = None,
         end_time: int | None = None,
     ) -> list[Kline]:
-        # TODO: implement
         pass
 
     async def subscribe_trade(self, symbol: str):

@@ -236,6 +236,7 @@ class BinancePublicConnector(PublicConnector):
             low=float(kline.low),
             close=float(kline.close),
             volume=float(kline.volume),
+            quote_volume=float(kline.asset_volume),
             start=kline.open_time,
             timestamp=timestamp,
             confirm=confirm,

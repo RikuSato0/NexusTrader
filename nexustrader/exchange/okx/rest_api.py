@@ -190,10 +190,10 @@ class OkxApiClient(ApiClient):
             k: v
             for k, v in {
                 "instId": instId,
-                "bar": bar,
+                "bar": bar.replace("candle", ""),
                 "after": after,
                 "before": before,
-                "limit": limit,
+                "limit": str(limit),
             }.items()
             if v is not None
         }
@@ -254,6 +254,11 @@ class OkxApiClient(ApiClient):
                         status_code=response.status,
                         message=data.sMsg,
                     )
+                raise OkxRequestError(
+                    error_code=okx_error_response.code,
+                    status_code=response.status,
+                    message=okx_error_response.msg,
+                )
         except aiohttp.ClientError as e:
             self._log.error(f"Client Error {method} Url: {url} {e}")
             raise

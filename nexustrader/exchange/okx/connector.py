@@ -1,4 +1,5 @@
 import msgspec
+import sys
 from typing import Dict
 from decimal import Decimal
 from nexustrader.exchange.okx import OkxAccountType
@@ -16,6 +17,8 @@ from nexustrader.exchange.okx.schema import (
     OkxWsAccountMsg,
     OkxBalanceResponse,
     OkxPositionResponse,
+    OkxCandlesticksResponse,
+    OkxCandlesticksResponseData
 )
 from nexustrader.constants import (
     OrderStatus,
@@ -39,6 +42,7 @@ from nexustrader.exchange.okx.constants import (
 
 class OkxPublicConnector(PublicConnector):
     _ws_client: OkxWSClient
+    _api_client: OkxApiClient
     _account_type: OkxAccountType
 
     def __init__(
@@ -90,6 +94,40 @@ class OkxPublicConnector(PublicConnector):
         
         okx_interval = OkxEnumParser.to_okx_kline_interval(interval)
         
+        end_time_ms = int(end_time) if end_time is not None else sys.maxsize
+        limit = int(limit) if limit is not None else 500
+        all_klines: list[Kline] = []
+        while True:
+            klines_response: OkxCandlesticksResponse = await self._api_client.get_api_v5_market_candles(
+                instId=self._market[symbol].id,
+                bar=okx_interval.value,
+                limit=limit,
+                after=end_time,
+                before=start_time,
+            )
+            klines: list[Kline] = [
+                self._handle_candlesticks(
+                    symbol=symbol, interval=interval, kline=kline
+                )
+                for kline in klines_response.data
+            ]
+            all_klines.extend(klines)
+
+            # Update the start_time to fetch the next set of bars
+            if klines:
+                next_start_time = klines[0].start + 1
+            else:
+                # Handle the case when klines is empty
+                break
+
+            # No more bars to fetch
+            if (limit and len(klines) < limit) or next_start_time >= end_time_ms:
+                break
+
+            start_time = next_start_time
+
+        return all_klines
+        
         
     def request_klines(
         self,
@@ -99,7 +137,15 @@ class OkxPublicConnector(PublicConnector):
         start_time: int | None = None,
         end_time: int | None = None,
     ) -> list[Kline]:
-        pass
+        return self._task_manager._loop.run_until_complete(
+            self._request_klines(
+                symbol=symbol,
+                interval=interval,
+                limit=limit,
+                start_time=start_time,
+                end_time=end_time,
+            )
+        )
 
     async def subscribe_trade(self, symbol: str):
         market = self._market.get(symbol, None)
@@ -219,7 +265,23 @@ class OkxPublicConnector(PublicConnector):
                 timestamp=int(d.ts),
             )
             self._msgbus.publish(topic="bookl1", msg=bookl1)
-
+    
+    def _handle_candlesticks(self, symbol: str, interval: KlineInterval, kline: OkxCandlesticksResponseData) -> Kline:        
+        return Kline(
+            exchange=self._exchange_id,
+            symbol=symbol,
+            interval=interval,
+            open=float(kline.o),
+            high=float(kline.h),
+            low=float(kline.l),
+            close=float(kline.c),
+            volume=float(kline.vol),
+            quote_volume=float(kline.volCcyQuote),
+            start=int(kline.ts),
+            timestamp=self._clock.timestamp_ms(),
+            confirm=False if int(kline.confirm) == 0 else True,
+        )
+            
     async def disconnect(self):
         await super().disconnect()
         self._business_ws_client.disconnect()

@@ -46,6 +46,7 @@ class OrderManagementSystem(ABC):
                 # handle the ACCEPTED, PARTIALLY_FILLED, CANCELED, FILLED, EXPIRED arived early than the order submit uuid
                 uuid = self._registry.get_uuid(order.id)
                 if not uuid:
+                    self._log.debug(f"WAIT FOR ORDER ID: {order.id} TO BE REGISTERED")
                     await self._registry.wait_for_order_id(order.id) #NOTE: need to wait for the order id to be registered
                     uuid = self._registry.get_uuid(order.id)
                 order.uuid = uuid
@@ -72,6 +73,8 @@ class OrderManagementSystem(ABC):
                     case OrderStatus.EXPIRED:
                         self._log.debug(f"ORDER STATUS EXPIRED: {str(order)}")
                         self._cache._order_status_update(order)
+                    case _:
+                        self._log.error(f"ORDER STATUS UNKNOWN: {str(order)}")
                 self._order_msg_queue.task_done()
             except Exception as e:
                 self._log.error(f"Error in handle_order_event: {e}")

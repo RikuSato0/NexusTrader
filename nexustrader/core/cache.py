@@ -379,14 +379,14 @@ class AsyncCache:
     @maybe
     def get_position(self, symbol: str) -> Optional[Position]:
         # First try memory
-        instrument_id = InstrumentId.from_str(symbol)
+        # instrument_id = InstrumentId.from_str(symbol)
         if position := self._mem_positions.get(symbol, None):
             return position
             
-        if self._storage_backend == StorageBackend.REDIS:
-            return self._get_position_from_redis(instrument_id)
-        elif self._storage_backend == StorageBackend.SQLITE:
-            return self._get_position_from_sqlite(instrument_id)
+        # if self._storage_backend == StorageBackend.REDIS:
+        #     return self._get_position_from_redis(instrument_id)
+        # elif self._storage_backend == StorageBackend.SQLITE:
+        #     return self._get_position_from_sqlite(instrument_id)
     
     
     def _get_all_positions_from_redis(self, exchange: ExchangeType) -> Dict[str, Position]:

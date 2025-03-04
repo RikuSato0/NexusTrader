@@ -13,7 +13,7 @@ from nexustrader.engine import Engine
 from nexustrader.core.entity import RateLimit, DataReady
 from collections import defaultdict
 
-SpdLog.initialize(level="INFO", std_level="ERROR", production_mode=True)
+SpdLog.initialize(level="DEBUG", std_level="ERROR", production_mode=True)
 
 BYBIT_API_KEY = settings.BYBIT.ACCOUNT1.API_KEY
 BYBIT_SECRET = settings.BYBIT.ACCOUNT1.SECRET
@@ -26,7 +26,7 @@ socket.setsockopt(zmq.SUBSCRIBE, b"")
 class Demo(Strategy):
     def __init__(self):
         super().__init__()
-        self.symbols = ["LDOUSDT-PERP.BYBIT"]
+        self.symbols = ["BTCUSDT-PERP.BYBIT"]
         self.signal = True
         self.multiplier = 1
         self.data_ready = DataReady(symbols=self.symbols)

@@ -7,31 +7,31 @@ import sys
 
 datas = [
     [{
-        "instrumentID": "LDOUSDT.BBP",
-        "position": 50,
+        "instrumentID": "BTCUSDT.BBP",
+        "position": 1,
     }],
     [{
-        "instrumentID": "LDOUSDT.BBP",
-        "position": 49,
+        "instrumentID": "BTCUSDT.BBP",
+        "position": 2,
     }],
     [{
-        "instrumentID": "LDOUSDT.BBP",
-        "position": 49,
+        "instrumentID": "BTCUSDT.BBP",
+        "position": 3,
     }],
     [{
-        "instrumentID": "LDOUSDT.BBP",
-        "position": 47,
+        "instrumentID": "BTCUSDT.BBP",
+        "position": 4,
     }],
     [{
-        "instrumentID": "LDOUSDT.BBP",
-        "position": 47,
+        "instrumentID": "BTCUSDT.BBP",
+        "position": 5,
     }],
     [{
-        "instrumentID": "LDOUSDT.BBP",
-        "position": 45,
+        "instrumentID": "BTCUSDT.BBP",
+        "position": 6,
     }],
     [{
-        "instrumentID": "LDOUSDT.BBP",
+        "instrumentID": "BTCUSDT.BBP",
         "position": 0,
     }],
 ]

@@ -44,7 +44,7 @@ class TaskManager:
                     sig, lambda: self.create_task(self._shutdown())
                 )
         except NotImplementedError:
-            self._log.warning("Signal handlers not supported on this platform")
+            self._log.warn("Signal handlers not supported on this platform")
 
     async def _shutdown(self):
         self._shutdown_event.set()

@@ -272,10 +272,12 @@ class ExecutionManagementSystem(ABC):
         amount_list = [10, 10, 10]
         wait = 10
         """
-        self._log.debug(f"CALCULATE TWAP ORDERS: symbol: {symbol}, total_amount: {total_amount}, duration: {duration}, wait: {wait}, min_order_amount: {min_order_amount}, reduce_only: {reduce_only}")
         amount_list = []
         if (total_amount == 0 or total_amount < min_order_amount):
             if reduce_only:
+                self._log.info(
+                    f"TWAP ORDER: {symbol} Total amount is less than min order amount: {total_amount} < {min_order_amount}, reduce_only: {reduce_only}"
+                )
                 return [total_amount], 0
             self._log.info(
                 f"TWAP ORDER: {symbol} Total amount is less than min order amount: {total_amount} < {min_order_amount}"
@@ -291,14 +293,20 @@ class ExecutionManagementSystem(ABC):
 
         interval = int(total_amount // base_amount)
         remaining = total_amount - interval * base_amount
-
-        if remaining < min_order_amount:
-            amount_list = [base_amount] * interval
-            amount_list[-1] += remaining
+        
+        amount_list = [base_amount] * interval
+        
+        if remaining >= min_order_amount or (reduce_only and remaining > 0):
+            amount_list.append(remaining)
         else:
-            amount_list = [base_amount] * interval + [remaining]
+            amount_list[-1] += remaining
 
         wait = duration / len(amount_list)
+        
+        self._log.info(
+            f"TWAP ORDER: {symbol} Amount list: {amount_list}, Wait: {wait}"
+        )
+        
         return amount_list, wait
 
     def _cal_limit_order_price(
@@ -394,11 +402,10 @@ class ExecutionManagementSystem(ABC):
                             ),
                             account_type=account_type,
                         )
-                        self._log.info(f"CANCEL: {order.unwrap()}")
                     elif is_closed:
                         order_id = None
                         remaining = order.unwrap().remaining
-                        if remaining > min_order_amount or reduce_only:
+                        if remaining >= min_order_amount or (reduce_only and remaining > 0):
                             order = await self._create_order(
                                 order_submit=OrderSubmit(
                                     symbol=symbol,
@@ -501,26 +508,6 @@ class ExecutionManagementSystem(ABC):
             self._log.info(
                 f"TWAP ORDER CANCELLED: symbol: {symbol}, side: {side}, uuid: {twap_uuid}"
             )
-
-    async def _create_adp_maker_order(
-        self, order_submit: OrderSubmit, account_type: AccountType
-    ):
-        """
-        Create an adp maker order
-        """
-        uuid = order_submit.uuid
-        self._task_manager.create_task(
-            self._adp_maker_order(order_submit, account_type), name=uuid
-        )
-
-    async def _cancel_adp_maker_order(
-        self, order_submit: OrderSubmit, account_type: AccountType
-    ):
-        """
-        Cancel an adp maker order
-        """
-        uuid = order_submit.uuid
-        self._task_manager.cancel_task(uuid)
 
     async def _create_twap_order(
         self, order_submit: OrderSubmit, account_type: AccountType

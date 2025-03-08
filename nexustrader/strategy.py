@@ -291,28 +291,28 @@ class Strategy:
             self._subscriptions[DataType.KLINE][symbol] = interval
 
     def linear_info(
-        self, exchange: ExchangeType, base: str | None = None, quote: str | None = None
+        self, exchange: ExchangeType, base: str | None = None, quote: str | None = None, exclude: List[str] | None = None
     ) -> List[str]:
         exchange: ExchangeManager = self._exchanges[exchange]
-        return exchange.linear(base, quote)
+        return exchange.linear(base, quote, exclude)
 
     def spot_info(
-        self, exchange: ExchangeType, base: str | None = None, quote: str | None = None
+        self, exchange: ExchangeType, base: str | None = None, quote: str | None = None, exclude: List[str] | None = None
     ) -> List[str]:
         exchange: ExchangeManager = self._exchanges[exchange]
-        return exchange.spot(base, quote)
+        return exchange.spot(base, quote, exclude)
 
     def future_info(
-        self, exchange: ExchangeType, base: str | None = None, quote: str | None = None
+        self, exchange: ExchangeType, base: str | None = None, quote: str | None = None, exclude: List[str] | None = None
     ) -> List[str]:
         exchange: ExchangeManager = self._exchanges[exchange]
-        return exchange.future
+        return exchange.future(base, quote, exclude)
 
     def inverse_info(
-        self, exchange: ExchangeType, base: str | None = None, quote: str | None = None
+        self, exchange: ExchangeType, base: str | None = None, quote: str | None = None, exclude: List[str] | None = None
     ) -> List[str]:
         exchange: ExchangeManager = self._exchanges[exchange]
-        return exchange.inverse
+        return exchange.inverse(base, quote, exclude)
 
     def on_start(self):
         pass

@@ -66,7 +66,7 @@ class ExchangeManager(ABC):
         pass
 
 
-    def linear(self, base: str | None = None, quote: str | None = None) -> List[str]:
+    def linear(self, base: str | None = None, quote: str | None = None, exclude: List[str] | None = None) -> List[str]:
         symbols = []
         for symbol, market in self.market.items():
             if not (market.linear and market.active and not market.future and not market.option):
@@ -75,12 +75,12 @@ class ExchangeManager(ABC):
             base_match = base is None or market.base == base
             quote_match = quote is None or market.quote == quote
             
-            if base_match and quote_match:
+            if base_match and quote_match and (exclude is None or symbol not in exclude):
                 symbols.append(symbol)
         return symbols
 
 
-    def inverse(self, base: str | None = None, quote: str | None = None) -> List[str]:
+    def inverse(self, base: str | None = None, quote: str | None = None, exclude: List[str] | None = None) -> List[str]:
         symbols = []
         for symbol, market in self.market.items():
             if not (market.inverse and market.active and not market.future and not market.option):
@@ -89,12 +89,12 @@ class ExchangeManager(ABC):
             base_match = base is None or market.base == base
             quote_match = quote is None or market.quote == quote
             
-            if base_match and quote_match:
+            if base_match and quote_match and (exclude is None or symbol not in exclude):
                 symbols.append(symbol)
         return symbols
 
 
-    def spot(self, base: str | None = None, quote: str | None = None) -> List[str]:
+    def spot(self, base: str | None = None, quote: str | None = None, exclude: List[str] | None = None) -> List[str]:
         symbols = []
         for symbol, market in self.market.items():
             if not (market.spot and market.active and not market.option):
@@ -103,12 +103,12 @@ class ExchangeManager(ABC):
             base_match = base is None or market.base == base
             quote_match = quote is None or market.quote == quote
             
-            if base_match and quote_match:
+            if base_match and quote_match and (exclude is None or symbol not in exclude):
                 symbols.append(symbol)
         return symbols
 
 
-    def future(self, base: str | None = None, quote: str | None = None) -> List[str]:
+    def future(self, base: str | None = None, quote: str | None = None, exclude: List[str] | None = None) -> List[str]:
         symbols = []
         for symbol, market in self.market.items():
             if not (market.future and market.active and not market.option):
@@ -117,6 +117,6 @@ class ExchangeManager(ABC):
             base_match = base is None or market.base == base
             quote_match = quote is None or market.quote == quote
             
-            if base_match and quote_match:
+            if base_match and quote_match and (exclude is None or symbol not in exclude):
                 symbols.append(symbol)
         return symbols

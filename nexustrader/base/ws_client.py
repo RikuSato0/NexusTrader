@@ -24,7 +24,7 @@ class Listener(WSListener):
     Inherits from picows.WSListener to provide WebSocket event handling functionality.
     """
     
-    def __init__(self, logger, specific_ping_msg=None, *args, **kwargs):
+    def __init__(self, callback, logger, specific_ping_msg=None, *args, **kwargs):
         """Initialize the WebSocket listener.
         
         Args:
@@ -33,9 +33,9 @@ class Listener(WSListener):
         """
         super().__init__(*args, **kwargs)
         self._log = logger
-        self.msg_queue = asyncio.Queue()
         self._specific_ping_msg = specific_ping_msg
-
+        self._callback = callback
+        
     def send_user_specific_ping(self, transport: WSTransport) -> None:
         """Send a custom ping message or default ping frame.
         
@@ -80,7 +80,7 @@ class Listener(WSListener):
                     return
                 case WSMsgType.TEXT:
                     # Queue raw bytes for handler to decode
-                    self.msg_queue.put_nowait(frame.get_payload_as_bytes())
+                    self._callback(frame.get_payload_as_bytes())
                     return
                 case WSMsgType.CLOSE:
                     close_code = frame.get_close_code()
@@ -135,7 +135,7 @@ class WSClient(ABC):
         return self._transport and self._listener
 
     async def _connect(self):
-        WSListenerFactory = lambda: Listener(self._log, self._specific_ping_msg)  # noqa: E731
+        WSListenerFactory = lambda: Listener(self._callback, self._log, self._specific_ping_msg)  # noqa: E731
         self._transport, self._listener = await ws_connect(
             WSListenerFactory,
             self._url,
@@ -149,7 +149,6 @@ class WSClient(ABC):
     async def connect(self):
         if not self.connected:
             await self._connect()
-            self._task_manager.create_task(self._msg_handler(self._listener.msg_queue))
             self._task_manager.create_task(self._connection_handler())
 
     async def _connection_handler(self):
@@ -157,31 +156,24 @@ class WSClient(ABC):
             try:
                 if not self.connected:
                     await self._connect()
-                    self._task_manager.create_task(
-                        self._msg_handler(self._listener.msg_queue)
-                    )
                     await self._resubscribe()
                 await self._transport.wait_disconnected()
             except Exception as e:
                 self._log.error(f"Connection error: {e}")
-            finally:
-                self._log.debug("Websocket reconnecting...")
-                self._transport, self._listener = None, None
-                await asyncio.sleep(self._reconnect_interval)
+                
+            if self.connected:
+                self._log.warn("Websocket reconnecting...")
+                self.disconnect()
+            await asyncio.sleep(self._reconnect_interval)
 
     async def _send(self, payload: dict):
         await self._limiter.acquire()
         self._transport.send(WSMsgType.TEXT, orjson.dumps(payload))
 
-    async def _msg_handler(self, queue: asyncio.Queue):
-        while True:
-            msg = await queue.get()
-            self._callback(msg)
-            queue.task_done()
-
     def disconnect(self):
         if self.connected:
             self._transport.disconnect()
+            self._transport, self._listener = None, None
 
     @abstractmethod
     async def _resubscribe(self):

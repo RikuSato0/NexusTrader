@@ -7,8 +7,9 @@ from nexustrader.constants import ExchangeType, OrderSide, OrderType
 from nexustrader.exchange.okx import OkxAccountType
 from nexustrader.schema import BookL1, Order
 from nexustrader.engine import Engine
+from nexustrader.core.log import SpdLog
 
-
+SpdLog.initialize(level="DEBUG", std_level="ERROR", production_mode=True)
 
 OKX_API_KEY = settings.OKX.DEMO_1.API_KEY
 OKX_SECRET = settings.OKX.DEMO_1.SECRET
@@ -45,8 +46,7 @@ class Demo(Strategy):
     def on_filled_order(self, order: Order):
         print(order)
     
-    def on_bookl1(self, bookl1: BookL1):
-        
+    def on_bookl1(self, bookl1: BookL1): 
         if self.signal:
             uuid = self.create_order(
                 symbol="BTCUSDT.OKX",

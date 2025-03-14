@@ -256,6 +256,7 @@ class BinancePublicConnector(PublicConnector):
             low=float(res.k.l),
             close=float(res.k.c),
             volume=float(res.k.v),
+            quote_volume=float(res.k.q),
             start=res.k.t,
             timestamp=res.E,
             confirm=res.k.x,

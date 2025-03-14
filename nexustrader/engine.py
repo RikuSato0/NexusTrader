@@ -520,6 +520,8 @@ class Engine:
             await connector.disconnect()
         for connector in self._private_connectors.values():
             await connector.disconnect()
+            
+        await asyncio.sleep(0.1) #NOTE: wait for the websocket to disconnect
         await self._cache.close()
         await self._task_manager.cancel()
 

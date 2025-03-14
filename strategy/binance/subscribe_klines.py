@@ -5,7 +5,9 @@ from nexustrader.constants import ExchangeType, KlineInterval
 from nexustrader.exchange.binance import BinanceAccountType
 from nexustrader.schema import Kline
 from nexustrader.engine import Engine
+from nexustrader.core.log import SpdLog
 
+SpdLog.initialize(level="DEBUG", std_level="ERROR", production_mode=True)
 
 
 BINANCE_API_KEY = settings.BINANCE.FUTURE.TESTNET_1.API_KEY

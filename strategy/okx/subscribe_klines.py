@@ -6,14 +6,13 @@ from nexustrader.constants import KlineInterval
 from nexustrader.exchange.okx import OkxAccountType
 from nexustrader.schema import Kline
 from nexustrader.engine import Engine
+from nexustrader.core.log import SpdLog
 
-
+SpdLog.initialize(level="DEBUG", std_level="ERROR", production_mode=True)
 
 OKX_API_KEY = settings.OKX.DEMO_1.API_KEY
 OKX_SECRET = settings.OKX.DEMO_1.SECRET
 OKX_PASSPHRASE = settings.OKX.DEMO_1.PASSPHRASE
-
-
 
 class Demo(Strategy):
     def __init__(self):

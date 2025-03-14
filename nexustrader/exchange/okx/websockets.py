@@ -109,7 +109,7 @@ class OkxWSClient(WSClient):
             self._subscriptions[subscription_id] = payload
             await self._send(payload)
         else:
-            print(f"Already subscribed to {subscription_id}")
+            self._log.debug(f"Already subscribed to {subscription_id}")
     
     async def place_order(self, inst_id: str, td_mode: str, side: str, ord_type: str, sz: str, **kwargs):
         params = {

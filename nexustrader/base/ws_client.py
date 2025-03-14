@@ -172,6 +172,7 @@ class WSClient(ABC):
 
     def disconnect(self):
         if self.connected:
+            self._log.debug("Disconnecting from websocket...")
             self._transport.disconnect()
             self._transport, self._listener = None, None
 

@@ -52,4 +52,4 @@ class Config:
     private_conn_config: Dict[ExchangeType, List[PrivateConnectorConfig]]
     zero_mq_signal_config: ZeroMQSignalConfig | None = None
     cache_sync_interval: int = 60
-    cache_expire_time: int = 3600
+    cache_expired_time: int = 3600

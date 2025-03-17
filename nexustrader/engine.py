@@ -72,16 +72,19 @@ class Engine:
             trader_id=TraderId(trader_id),
             clock=LiveClock(),
         )
+        
+        self._registry = OrderRegistry()
+        
         self._cache: AsyncCache = AsyncCache(
             strategy_id=config.strategy_id,
             user_id=config.user_id,
             msgbus=self._msgbus,
             task_manager=self._task_manager,
+            registry=self._registry,
             sync_interval=config.cache_sync_interval,
-            expire_time=config.cache_expire_time,
+            expired_time=config.cache_expired_time,
         )
 
-        self._registry = OrderRegistry()
 
         self._oms: Dict[ExchangeType, OrderManagementSystem] = {}
         self._ems: Dict[ExchangeType, ExecutionManagementSystem] = {}

@@ -23,6 +23,7 @@ from nexustrader.schema import (
 from nexustrader.constants import STATUS_TRANSITIONS, AccountType, KlineInterval
 from nexustrader.core.entity import TaskManager, RedisClient
 from nexustrader.core.log import SpdLog
+from nexustrader.core.registry import OrderRegistry
 from nexustrader.core.nautilius_core import LiveClock, MessageBus
 from nexustrader.constants import StorageBackend
 
@@ -33,10 +34,11 @@ class AsyncCache:
         user_id: str,
         msgbus: MessageBus,
         task_manager: TaskManager,
+        registry: OrderRegistry,
         storage_backend: StorageBackend = StorageBackend.REDIS,
         db_path: str = "cache.db",
         sync_interval: int = 60,  # seconds
-        expire_time: int = 3600,  # seconds
+        expired_time: int = 3600,  # seconds
     ):
         self.strategy_id = strategy_id
         self.user_id = user_id
@@ -60,7 +62,7 @@ class AsyncCache:
 
         # set params
         self._sync_interval = sync_interval  # sync interval
-        self._expire_time = expire_time  # expire time
+        self._expired_time = expired_time  # expire time
         self._shutdown_event = asyncio.Event()
         self._task_manager = task_manager
 
@@ -74,7 +76,7 @@ class AsyncCache:
         self._msgbus.subscribe(topic="trade", handler=self._update_trade_cache)
         
         self._storage_initialized = False
-
+        self._registry = registry
     ################# # base functions ####################
 
     def _encode(self, obj: Order | Position | AlgoOrder) -> bytes:
@@ -243,14 +245,18 @@ class AsyncCache:
     def _cleanup_expired_data(self):
         """Cleanup expired data"""
         current_time = self._clock.timestamp_ms()
-        expire_before = current_time - self._expire_time * 1000
+        expire_before = current_time - self._expired_time * 1000
 
-        # Clean up expired orders
-        expired_orders = [
-            uuid
-            for uuid, order in self._mem_orders.copy().items()
-            if order.timestamp < expire_before
-        ]
+        expired_orders = []
+        for uuid, order in self._mem_orders.copy().items():
+            if order.timestamp < expire_before:
+                expired_orders.append(uuid)
+                
+                if not order.is_closed:
+                    self._log.warn(f"order {uuid} is not closed, but expired")
+                    
+                self._registry.remove_order(order)
+        
         for uuid in expired_orders:
             del self._mem_orders[uuid]
             self._mem_closed_orders.pop(uuid, None)

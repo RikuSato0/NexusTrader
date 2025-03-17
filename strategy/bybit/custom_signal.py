@@ -149,7 +149,8 @@ config = Config(
     },
     zero_mq_signal_config=ZeroMQSignalConfig(
         socket=socket,
-    )
+    ),
+    cache_expired_time=60*5,
 )
 
 engine = Engine(config)

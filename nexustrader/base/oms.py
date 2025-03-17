@@ -64,12 +64,12 @@ class OrderManagementSystem(ABC):
                         self._log.debug(f"ORDER STATUS CANCELED: {str(order)}")
                         self._cache._order_status_update(order)
                         self._msgbus.send(endpoint="canceled", msg=order)
-                        self._registry.remove_order(order)
+                        # self._registry.remove_order(order) #NOTE: order remove should be handle separately
                     case OrderStatus.FILLED:
                         self._log.debug(f"ORDER STATUS FILLED: {str(order)}")
                         self._cache._order_status_update(order)
                         self._msgbus.send(endpoint="filled", msg=order)
-                        self._registry.remove_order(order)
+                        # self._registry.remove_order(order) #NOTE: order remove should be handle separately
                     case OrderStatus.EXPIRED:
                         self._log.debug(f"ORDER STATUS EXPIRED: {str(order)}")
                         self._cache._order_status_update(order)

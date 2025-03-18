@@ -3,10 +3,7 @@ import hmac
 import base64
 import asyncio
 
-from typing import Literal
-from typing import Any
-from typing import Callable
-from typing import Dict
+from typing import Literal, Any, Callable, Dict, List
 from aiolimiter import AsyncLimiter
 
 from nexustrader.base import WSClient
@@ -93,23 +90,36 @@ class OkxWSClient(WSClient):
             "args": [params],
         }
         await self._send(payload)
-
-    async def _subscribe(self, params: Dict[str, Any], subscription_id: str, auth: bool = False):
-        if subscription_id not in self._subscriptions:
-            await self.connect()
-
-            if auth:
-                await self._auth()
-
+    
+    async def _send_payload(self, params: List[Dict[str, Any]], chunk_size: int = 100):
+        # Split params into chunks of 100 if length exceeds 100
+        params_chunks = [
+            params[i:i + chunk_size] 
+            for i in range(0, len(params), chunk_size)
+        ]
+        
+        for chunk in params_chunks:
             payload = {
                 "op": "subscribe",
-                "args": [params],
+                "args": chunk,
             }
-            
-            self._subscriptions[subscription_id] = payload
             await self._send(payload)
-        else:
-            self._log.debug(f"Already subscribed to {subscription_id}")
+
+    async def _subscribe(self, params: List[Dict[str, Any]], auth: bool = False):
+        params = [
+            param for param in params if param not in self._subscriptions
+        ]
+        
+        for param in params:
+            self._subscriptions.append(param)
+            self._log.debug(f"Subscribing to {param}...")
+        
+        await self.connect()
+        if auth:
+            await self._auth()
+        
+        await self._send_payload(params)
+        
     
     async def place_order(self, inst_id: str, td_mode: str, side: str, ord_type: str, sz: str, **kwargs):
         params = {
@@ -135,7 +145,7 @@ class OkxWSClient(WSClient):
 
     async def subscribe_order_book(
         self,
-        symbol: str,
+        symbols: List[str],
         channel: Literal[
             "books", "books5", "bbo-tbt", "books-l2-tbt", "books50-l2-tbt"
         ],
@@ -143,21 +153,19 @@ class OkxWSClient(WSClient):
         """
         https://www.okx.com/docs-v5/en/#order-book-trading-market-data-ws-order-book-channel
         """
-        params = {"channel": channel, "instId": symbol}
-        subscription_id = f"{channel}.{symbol}"
-        await self._subscribe(params, subscription_id)
+        params = [{"channel": channel, "instId": symbol} for symbol in symbols]
+        await self._subscribe(params)
 
-    async def subscribe_trade(self, symbol: str):
+    async def subscribe_trade(self, symbols: List[str]):
         """
         https://www.okx.com/docs-v5/en/#order-book-trading-market-data-ws-all-trades-channel
         """
-        params = {"channel": "trades", "instId": symbol}
-        subscription_id = f"trade.{symbol}"
-        await self._subscribe(params, subscription_id)
+        params = [{"channel": "trades", "instId": symbol} for symbol in symbols]
+        await self._subscribe(params)
 
     async def subscribe_candlesticks(
         self,
-        symbol: str,
+        symbols: List[str],
         interval: OkxKlineInterval,
     ):
         """
@@ -166,42 +174,35 @@ class OkxWSClient(WSClient):
         if not self._business_url:
             raise ValueError("candlesticks are only supported on business url")
         channel = interval.value
-        params = {"channel": channel, "instId": symbol}
-        subscription_id = f"{channel}.{symbol}"
-        await self._subscribe(params, subscription_id)
+        params = [{"channel": channel, "instId": symbol} for symbol in symbols]
+        await self._subscribe(params)
 
     async def subscribe_account(self):
         params = {"channel": "account"}
-        subscription_id = "account"
-        await self._subscribe(params, subscription_id, auth=True)
+        await self._subscribe([params], auth=True)
 
     async def subscribe_account_position(self):
         params = {"channel": "balance_and_position"}
-        subscription_id = "account_position"
-        await self._subscribe(params, subscription_id, auth=True)
+        await self._subscribe([params], auth=True)
 
     async def subscribe_positions(
         self, inst_type: Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY"
     ):
-        subscription_id = f"position.{inst_type}"
         params = {"channel": "positions", "instType": inst_type}
-        await self._subscribe(params, subscription_id, auth=True)
+        await self._subscribe([params], auth=True)
 
     async def subscribe_orders(
         self, inst_type: Literal["MARGIN", "SWAP", "FUTURES", "OPTION", "ANY"] = "ANY"
     ):
-        subscription_id = f"orders.{inst_type}"
         params = {"channel": "orders", "instType": inst_type}
-        await self._subscribe(params, subscription_id, auth=True)
+        await self._subscribe([params], auth=True)
 
     async def subscribe_fills(self):
-        subscription_id = "fills"
         params = {"channel": "fills"}
-        await self._subscribe(params, subscription_id, auth=True)
+        await self._subscribe([params], auth=True)
 
     async def _resubscribe(self):
         if self.is_private:
             self._authed = False
             await self._auth()
-        for _, payload in self._subscriptions.items():
-            await self._send(payload)
+        await self._send_payload(self._subscriptions)

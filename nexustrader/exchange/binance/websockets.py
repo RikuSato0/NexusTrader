@@ -1,4 +1,4 @@
-from typing import Literal, Callable
+from typing import Callable, List
 from typing import Any
 from aiolimiter import AsyncLimiter
 
@@ -23,23 +23,33 @@ class BinanceWSClient(WSClient):
             handler=handler,
             task_manager=task_manager,
         )
-
-    async def _subscribe(self, params: str, subscription_id: str):
-        if subscription_id not in self._subscriptions:
-            await self.connect()
-            id = self._clock.timestamp_ms()
+    
+    async def _send_payload(self, params: List[str], chunk_size: int = 100):
+        # Split params into chunks of 100 if length exceeds 100
+        params_chunks = [
+            params[i:i + chunk_size] 
+            for i in range(0, len(params), chunk_size)
+        ]
+        
+        for chunk in params_chunks:
             payload = {
                 "method": "SUBSCRIBE",
-                "params": [params],
-                "id": id,
+                "params": chunk,
+                "id": self._clock.timestamp_ms(),
             }
-            self._subscriptions[subscription_id] = payload
             await self._send(payload)
-            self._log.debug(f"Subscribing to {subscription_id}...")
-        else:
-            self._log.debug(f"Already subscribed to {subscription_id}")
 
-    async def subscribe_agg_trade(self, symbol: str):
+    async def _subscribe(self, params: List[str]):
+        params = [param for param in params if param not in self._subscriptions]
+        
+        for param in params:
+            self._subscriptions.append(param)
+            self._log.debug(f"Subscribing to {param}...")
+        
+        await self.connect()
+        await self._send_payload(params)
+
+    async def subscribe_agg_trade(self, symbols: List[str]):
         if (
             self._account_type.is_isolated_margin_or_margin
             or self._account_type.is_portfolio_margin
@@ -47,11 +57,10 @@ class BinanceWSClient(WSClient):
             raise ValueError(
                 "Not Supported for `Margin Account` or `Portfolio Margin Account`"
             )
-        subscription_id = f"agg_trade.{symbol}"
-        params = f"{symbol.lower()}@aggTrade"
-        await self._subscribe(params, subscription_id)
+        params = [f"{symbol.lower()}@aggTrade" for symbol in symbols]
+        await self._subscribe(params)
 
-    async def subscribe_trade(self, symbol: str):
+    async def subscribe_trade(self, symbols: List[str]):
         if (
             self._account_type.is_isolated_margin_or_margin
             or self._account_type.is_portfolio_margin
@@ -59,11 +68,10 @@ class BinanceWSClient(WSClient):
             raise ValueError(
                 "Not Supported for `Margin Account` or `Portfolio Margin Account`"
             )
-        subscription_id = f"trade.{symbol}"
-        params = f"{symbol.lower()}@trade"
-        await self._subscribe(params, subscription_id)
+        params = [f"{symbol.lower()}@trade" for symbol in symbols]
+        await self._subscribe(params)
 
-    async def subscribe_book_ticker(self, symbol: str):
+    async def subscribe_book_ticker(self, symbols: List[str]):
         if (
             self._account_type.is_isolated_margin_or_margin
             or self._account_type.is_portfolio_margin
@@ -71,26 +79,25 @@ class BinanceWSClient(WSClient):
             raise ValueError(
                 "Not Supported for `Margin Account` or `Portfolio Margin Account`"
             )
-        subscription_id = f"book_ticker.{symbol}"
-        params = f"{symbol.lower()}@bookTicker"
-        await self._subscribe(params, subscription_id)
-
-    async def subscribe_mark_price(
-        self, symbol: str, interval: Literal["1s", "3s"] = "1s"
-    ):
-        if not self._account_type.is_future:
-            raise ValueError("Only Supported for `Future Account`")
-        subscription_id = f"mark_price.{symbol}"
-        params = f"{symbol.lower()}@markPrice@{interval}"
-        await self._subscribe(params, subscription_id)
+        params = [f"{symbol.lower()}@bookTicker" for symbol in symbols]
+        await self._subscribe(params)
+        
+    # NOTE: Currently not supported by Binance
+    # async def subscribe_mark_price(
+    #     self, symbol: str, interval: Literal["1s", "3s"] = "1s"
+    # ):
+    #     if not self._account_type.is_future:
+    #         raise ValueError("Only Supported for `Future Account`")
+    #     subscription_id = f"mark_price.{symbol}"
+    #     params = f"{symbol.lower()}@markPrice@{interval}"
+    #     await self._subscribe(params, subscription_id)
 
     async def subscribe_user_data_stream(self, listen_key: str):
-        subscription_id = "user_data_stream"
-        await self._subscribe(listen_key, subscription_id)
+        await self._subscribe([listen_key])
 
     async def subscribe_kline(
         self,
-        symbol: str,
+        symbols: List[str],
         interval: BinanceKlineInterval,
     ):
         if (
@@ -100,11 +107,9 @@ class BinanceWSClient(WSClient):
             raise ValueError(
                 "Not Supported for `Margin Account` or `Portfolio Margin Account`"
             )
-        subscription_id = f"kline.{symbol}.{interval.value}"
-        params = f"{symbol.lower()}@kline_{interval.value}"
-        await self._subscribe(params, subscription_id)
+        params = [f"{symbol.lower()}@kline_{interval.value}" for symbol in symbols]
+        await self._subscribe(params)
 
     async def _resubscribe(self):
-        for _, payload in self._subscriptions.items():
-            await self._send(payload)
+        await self._send_payload(self._subscriptions)
 

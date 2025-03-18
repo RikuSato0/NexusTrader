@@ -10,8 +10,8 @@ from nexustrader.core.log import SpdLog
 SpdLog.initialize(level="DEBUG", std_level="ERROR", production_mode=True)
 
 
-BINANCE_API_KEY = settings.BINANCE.FUTURE.TESTNET_1.API_KEY
-BINANCE_SECRET = settings.BINANCE.FUTURE.TESTNET_1.SECRET
+BINANCE_API_KEY = settings.BINANCE.LIVE.ACCOUNT1.API_KEY
+BINANCE_SECRET = settings.BINANCE.LIVE.ACCOUNT1.SECRET
 
 
 
@@ -20,7 +20,9 @@ class Demo(Strategy):
         super().__init__()
     
     def on_start(self):
-        self.subscribe_kline(symbols=["BTCUSDT-PERP.BINANCE"], interval=KlineInterval.MINUTE_1)
+        symbols = self.linear_info(exchange=ExchangeType.BINANCE, quote="USDT")
+        self.subscribe_kline(symbols=symbols, interval=KlineInterval.MINUTE_1)
+        self.subscribe_bookl1(symbols=symbols)
         
     def on_kline(self, kline: Kline):
         print(kline)
@@ -34,20 +36,20 @@ config = Config(
         ExchangeType.BINANCE: BasicConfig(
             api_key=BINANCE_API_KEY,
             secret=BINANCE_SECRET,
-            testnet=True,
+            testnet=False,
         )
     },
     public_conn_config={
         ExchangeType.BINANCE: [
             PublicConnectorConfig(
-                account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
+                account_type=BinanceAccountType.USD_M_FUTURE,
             )
         ]
     },
     private_conn_config={
         ExchangeType.BINANCE: [
             PrivateConnectorConfig(
-                account_type=BinanceAccountType.USD_M_FUTURE_TESTNET,
+                account_type=BinanceAccountType.USD_M_FUTURE,
             )
         ]
     }

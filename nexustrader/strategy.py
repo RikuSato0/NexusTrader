@@ -1,6 +1,7 @@
 from typing import Dict, List, Set, Callable, Literal
 from decimal import Decimal
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from collections import defaultdict
 from nexustrader.core.log import SpdLog
 from nexustrader.base import ExchangeManager
 from nexustrader.core.entity import TaskManager
@@ -42,10 +43,10 @@ class Strategy:
             name=type(self).__name__, level="DEBUG", flush=True
         )
 
-        self._subscriptions: Dict[DataType, Dict[str, KlineInterval] | Set[str]] = {
+        self._subscriptions: Dict[DataType, Dict[KlineInterval, Set[str]] | Set[str]] = {
             DataType.BOOKL1: set(),
             DataType.TRADE: set(),
-            DataType.KLINE: {},
+            DataType.KLINE: defaultdict(set),
         }
 
         self._initialized = False
@@ -244,7 +245,7 @@ class Strategy:
         self._ems[order.instrument_id.exchange]._submit_order(order, account_type)
         return order.uuid
 
-    def subscribe_bookl1(self, symbols: List[str]):
+    def subscribe_bookl1(self, symbols: str | List[str]):
         """
         Subscribe to level 1 book data for the given symbols.
 
@@ -255,11 +256,13 @@ class Strategy:
             raise StrategyBuildError(
                 "Strategy not initialized, please use `subscribe_bookl1` in `on_start` method"
             )
+        if isinstance(symbols, str):
+            symbols = [symbols]
 
         for symbol in symbols:
             self._subscriptions[DataType.BOOKL1].add(symbol)
 
-    def subscribe_trade(self, symbols: List[str]):
+    def subscribe_trade(self, symbols: str | List[str]):
         """
         Subscribe to trade data for the given symbols.
 
@@ -270,11 +273,13 @@ class Strategy:
             raise StrategyBuildError(
                 "Strategy not initialized, please use `subscribe_trade` in `on_start` method"
             )
+        if isinstance(symbols, str):
+            symbols = [symbols]
 
         for symbol in symbols:
             self._subscriptions[DataType.TRADE].add(symbol)
 
-    def subscribe_kline(self, symbols: List[str], interval: KlineInterval):
+    def subscribe_kline(self, symbols: str | List[str], interval: KlineInterval):
         """
         Subscribe to kline data for the given symbols.
 
@@ -286,9 +291,11 @@ class Strategy:
             raise StrategyBuildError(
                 "Strategy not initialized, please use `subscribe_kline` in `on_start` method"
             )
+        if isinstance(symbols, str):
+            symbols = [symbols]
 
         for symbol in symbols:
-            self._subscriptions[DataType.KLINE][symbol] = interval
+            self._subscriptions[DataType.KLINE][interval].add(symbol)
 
     def linear_info(
         self, exchange: ExchangeType, base: str | None = None, quote: str | None = None, exclude: List[str] | None = None

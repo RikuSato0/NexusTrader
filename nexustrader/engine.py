@@ -1,6 +1,7 @@
 import asyncio
 import platform
 from typing import Dict
+from collections import defaultdict
 from nexustrader.constants import AccountType, ExchangeType
 from nexustrader.config import Config
 from nexustrader.strategy import Strategy
@@ -81,6 +82,8 @@ class Engine:
             msgbus=self._msgbus,
             task_manager=self._task_manager,
             registry=self._registry,
+            storage_backend=config.storage_backend,
+            db_path=config.db_path,
             sync_interval=config.cache_sync_interval,
             expired_time=config.cache_expired_time,
         )
@@ -452,41 +455,58 @@ class Engine:
         for data_type, sub in self._strategy._subscriptions.items():
             match data_type:
                 case DataType.BOOKL1:
+                    account_symbols = defaultdict(list)
+                    
                     for symbol in sub:
                         instrument_id = InstrumentId.from_str(symbol)
                         account_type = self._instrument_id_to_account_type(
                             instrument_id
                         )
+                        
+                        account_symbols[account_type].append(instrument_id.symbol)
+                        
+                    for account_type, symbols in account_symbols.items():
                         connector = self._public_connectors.get(account_type, None)
                         if connector is None:
                             raise SubscriptionError(
                                 f"Please add `{account_type}` public connector to the `config.public_conn_config`."
                             )
-                        await connector.subscribe_bookl1(instrument_id.symbol)
+                        await connector.subscribe_bookl1(symbols)
                 case DataType.TRADE:
+                    account_symbols = defaultdict(list)
+                    
                     for symbol in sub:
                         instrument_id = InstrumentId.from_str(symbol)
                         account_type = self._instrument_id_to_account_type(
                             instrument_id
                         )
+                        account_symbols[account_type].append(instrument_id.symbol)
+
+                    for account_type, symbols in account_symbols.items():
                         connector = self._public_connectors.get(account_type, None)
                         if connector is None:
                             raise SubscriptionError(
                                 f"Please add `{account_type}` public connector to the `config.public_conn_config`."
                             )
-                        await connector.subscribe_trade(instrument_id.symbol)
+                        await connector.subscribe_trade(symbols)
                 case DataType.KLINE:
-                    for symbol, interval in sub.items():
-                        instrument_id = InstrumentId.from_str(symbol)
-                        account_type = self._instrument_id_to_account_type(
-                            instrument_id
-                        )
-                        connector = self._public_connectors.get(account_type, None)
-                        if connector is None:
-                            raise SubscriptionError(
-                                f"Please add `{account_type}` public connector to the `config.public_conn_config`."
+                    account_symbols = defaultdict(list)
+                    
+                    for interval, symbols in sub.items():
+                        for symbol in symbols:
+                            instrument_id = InstrumentId.from_str(symbol)
+                            account_type = self._instrument_id_to_account_type(
+                                instrument_id
                             )
-                        await connector.subscribe_kline(instrument_id.symbol, interval)
+                            account_symbols[account_type].append(instrument_id.symbol)
+
+                        for account_type, symbols in account_symbols.items():
+                            connector = self._public_connectors.get(account_type, None)
+                            if connector is None:
+                                raise SubscriptionError(
+                                    f"Please add `{account_type}` public connector to the `config.public_conn_config`."
+                                )
+                            await connector.subscribe_kline(symbols, interval)
                 case DataType.MARK_PRICE:
                     pass  # TODO: implement
                 case DataType.FUNDING_RATE:

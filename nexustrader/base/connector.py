@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, List
 from decimal import Decimal
 
 
@@ -71,17 +71,17 @@ class PublicConnector(ABC):
         pass
 
     @abstractmethod
-    async def subscribe_trade(self, symbol: str):
+    async def subscribe_trade(self, symbol: str | List[str]):
         """Subscribe to the trade data"""
         pass
 
     @abstractmethod
-    async def subscribe_bookl1(self, symbol: str):
+    async def subscribe_bookl1(self, symbol: str | List[str]):
         """Subscribe to the bookl1 data"""
         pass
 
     @abstractmethod
-    async def subscribe_kline(self, symbol: str, interval: KlineInterval):
+    async def subscribe_kline(self, symbol: str | List[str], interval: KlineInterval):
         """Subscribe to the kline data"""
         pass
 

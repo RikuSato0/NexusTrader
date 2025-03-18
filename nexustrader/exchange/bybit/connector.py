@@ -1,5 +1,5 @@
 import msgspec
-from typing import Dict
+from typing import Dict, List
 from decimal import Decimal
 from collections import defaultdict
 from nexustrader.base import PublicConnector, PrivateConnector
@@ -180,27 +180,45 @@ class BybitPublicConnector(PublicConnector):
         # TODO: implement
         pass
 
-    async def subscribe_bookl1(self, symbol: str):
-        market = self._market.get(symbol, None)
-        if not market:
-            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
-        id = market.id
-        await self._ws_client.subscribe_order_book(id, depth=1)
+    async def subscribe_bookl1(self, symbol: str | List[str]):
+        symbols = []
+        if isinstance(symbol, str):
+            symbol = [symbol]
+        
+        for s in symbol:
+            market = self._market.get(s)
+            if not market:
+                raise ValueError(f"Symbol {s} formated wrongly, or not supported")
+            symbols.append(market.id)
+            
+        await self._ws_client.subscribe_order_book(symbols, depth=1)
 
-    async def subscribe_trade(self, symbol: str):
-        market = self._market.get(symbol, None)
-        if not market:
-            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
-        id = market.id
-        await self._ws_client.subscribe_trade(id)
+    async def subscribe_trade(self, symbol: str | List[str]):
+        symbols = []
+        if isinstance(symbol, str):
+            symbol = [symbol]
+        
+        for s in symbol:
+            market = self._market.get(s)
+            if not market:
+                raise ValueError(f"Symbol {s} formated wrongly, or not supported")
+            symbols.append(market.id)
+            
+        await self._ws_client.subscribe_trade(symbols)
 
-    async def subscribe_kline(self, symbol: str, interval: KlineInterval):
-        market = self._market.get(symbol, None)
-        if not market:
-            raise ValueError(f"Symbol {symbol} formated wrongly, or not supported")
-        id = market.id
+    async def subscribe_kline(self, symbol: str | List[str], interval: KlineInterval):
+        symbols = []
+        if isinstance(symbol, str):
+            symbol = [symbol]
+        
+        for s in symbol:
+            market = self._market.get(s)
+            if not market:
+                raise ValueError(f"Symbol {s} formated wrongly, or not supported")
+            symbols.append(market.id)
+            
         interval = BybitEnumParser.to_bybit_kline_interval(interval)
-        await self._ws_client.subscribe_kline(id, interval)
+        await self._ws_client.subscribe_kline(symbols, interval)
 
 
 class BybitPrivateConnector(PrivateConnector):

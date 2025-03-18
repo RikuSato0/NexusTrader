@@ -2,7 +2,7 @@ import hmac
 import orjson
 import asyncio
 
-from typing import Any, Callable
+from typing import Any, Callable, List
 from aiolimiter import AsyncLimiter
 
 from nexustrader.base import WSClient
@@ -63,54 +63,67 @@ class BybitWSClient(WSClient):
             await self._send(self._get_auth_payload())
             self._authed = True
             await asyncio.sleep(5)
-
-    async def _subscribe(self, topic: str, auth: bool = False):
-        if topic not in self._subscriptions:
-            await self.connect()
-            payload = {"op": "subscribe", "args": [topic]}
-            if auth:
-                await self._auth()
-            self._subscriptions[topic] = payload
-            await self._send(payload)
-            self._log.debug(f"Subscribing to {topic}.{self._account_type.value}...")
-        else:
-            self._log.debug(f"Already subscribed to {topic}")
-
-    async def subscribe_order_book(self, symbol: str, depth: int):
-        """subscribe to orderbook"""
-        topic = f"orderbook.{depth}.{symbol}"
-        await self._subscribe(topic)
-
-    async def subscribe_trade(self, symbol: str):
-        """subscribe to trade"""
-        topic = f"publicTrade.{symbol}"
-        await self._subscribe(topic)
-
-    async def subscribe_ticker(self, symbol: str):
-        """subscribe to ticker"""
-        topic = f"tickers.{symbol}"
-        await self._subscribe(topic)
     
-    async def subscribe_kline(self, symbol: str, interval: BybitKlineInterval):
+    async def _send_payload(self, params: List[str], chunk_size: int = 100):
+        # Split params into chunks of 100 if length exceeds 100
+        params_chunks = [
+            params[i:i + chunk_size] 
+            for i in range(0, len(params), chunk_size)
+        ]
+        
+        for chunk in params_chunks:
+            payload = {"op": "subscribe", "args": chunk}
+            await self._send(payload)
+
+    async def _subscribe(self, topics: List[str], auth: bool = False):
+        topics = [
+            topic for topic in topics if topic not in self._subscriptions
+        ]
+        
+        for topic in topics:
+            self._subscriptions.append(topic)
+            self._log.debug(f"Subscribing to {topic}...")
+        
+        await self.connect()
+        if auth:
+            await self._auth()
+        await self._send_payload(topics)
+            
+
+    async def subscribe_order_book(self, symbols: List[str], depth: int):
+        """subscribe to orderbook"""
+        topics = [f"orderbook.{depth}.{symbol}" for symbol in symbols]
+        await self._subscribe(topics)
+
+    async def subscribe_trade(self, symbols: List[str]):
+        """subscribe to trade"""
+        topics = [f"publicTrade.{symbol}" for symbol in symbols]
+        await self._subscribe(topics)
+
+    async def subscribe_ticker(self, symbols: List[str]):
+        """subscribe to ticker"""
+        topics = [f"tickers.{symbol}" for symbol in symbols]
+        await self._subscribe(topics)
+    
+    async def subscribe_kline(self, symbols: List[str], interval: BybitKlineInterval):
         """subscribe to kline"""
-        topic = f"kline.{interval.value}.{symbol}"
-        await self._subscribe(topic)
+        topics = [f"kline.{interval.value}.{symbol}" for symbol in symbols]
+        await self._subscribe(topics)
 
     async def _resubscribe(self):
         if self.is_private:
             self._authed = False
             await self._auth()
-        for _, payload in self._subscriptions.items():
-            await self._send(payload)
+        await self._send_payload(self._subscriptions)
 
     async def subscribe_order(self, topic: str = "order"):
         """subscribe to order"""
-        await self._subscribe(topic, auth=True)
+        await self._subscribe([topic], auth=True)
     
     async def subscribe_position(self, topic: str = "position"):
         """subscribe to position"""
-        await self._subscribe(topic, auth=True)
+        await self._subscribe([topic], auth=True)
     
     async def subscribe_wallet(self, topic: str = "wallet"):
         """subscribe to wallet"""
-        await self._subscribe(topic, auth=True)
+        await self._subscribe([topic], auth=True)

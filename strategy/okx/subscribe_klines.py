@@ -20,7 +20,9 @@ class Demo(Strategy):
         self.signal = True
         
     def on_start(self):
-        self.subscribe_kline(symbols=["BTCUSDT.OKX"], interval=KlineInterval.MINUTE_1)
+        symbols = self.linear_info(exchange=ExchangeType.OKX, quote="USDT")
+        self.subscribe_bookl1(symbols=symbols)
+        self.subscribe_kline(symbols=symbols, interval=KlineInterval.MINUTE_1)
     
     def on_kline(self, kline: Kline):
         print(kline)

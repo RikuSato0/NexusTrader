@@ -1,7 +1,7 @@
 import asyncio
 import msgspec
 import sys
-from typing import Dict, Any
+from typing import Dict, Any, List
 from decimal import Decimal
 from nexustrader.base import PublicConnector, PrivateConnector
 from nexustrader.constants import (
@@ -182,21 +182,45 @@ class BinancePublicConnector(PublicConnector):
             )
         )
 
-    async def subscribe_trade(self, symbol: str):
-        market = self._market.get(symbol, None)
-        symbol = market.id if market else symbol
-        await self._ws_client.subscribe_trade(symbol)
+    async def subscribe_trade(self, symbol: str | List[str]):
+        symbols = []
+        if isinstance(symbol, str):
+            symbol = [symbol]
+            
+        for s in symbol:
+            market = self._market.get(s)
+            if market is None:
+                raise ValueError(f"Symbol {s} not found")
+            symbols.append(market.id)
+            
+        await self._ws_client.subscribe_trade(symbols)
 
-    async def subscribe_bookl1(self, symbol: str):
-        market = self._market.get(symbol, None)
-        symbol = market.id if market else symbol
-        await self._ws_client.subscribe_book_ticker(symbol)
+    async def subscribe_bookl1(self, symbol: str | List[str]):
+        symbols = []
+        if isinstance(symbol, str):
+            symbol = [symbol]
+        
+        for s in symbol:
+            market = self._market.get(s)
+            if market is None:
+                raise ValueError(f"Symbol {s} not found")
+            symbols.append(market.id)
+        await self._ws_client.subscribe_book_ticker(symbols)
 
-    async def subscribe_kline(self, symbol: str, interval: KlineInterval):
+    async def subscribe_kline(self, symbol: str | List[str], interval: KlineInterval):
         interval = BinanceEnumParser.to_binance_kline_interval(interval)
-        market = self._market.get(symbol, None)
-        symbol = market.id if market else symbol
-        await self._ws_client.subscribe_kline(symbol, interval)
+        
+        symbols = []
+        if isinstance(symbol, str):
+            symbol = [symbol]
+        
+        for s in symbol:
+            market = self._market.get(s)
+            if market is None:
+                raise ValueError(f"Symbol {s} not found")
+            symbols.append(market.id)
+            
+        await self._ws_client.subscribe_kline(symbols, interval)
 
     def _ws_msg_handler(self, raw: bytes):
         try:

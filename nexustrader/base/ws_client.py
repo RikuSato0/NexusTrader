@@ -120,7 +120,7 @@ class WSClient(ABC):
         self._enable_auto_ping = enable_auto_ping
         self._listener: Listener = None
         self._transport = None
-        self._subscriptions = {}
+        self._subscriptions = []
         self._limiter = limiter
         self._callback = handler
         if auto_ping_strategy == "ping_when_idle":

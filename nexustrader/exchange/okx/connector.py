@@ -1,6 +1,6 @@
 import msgspec
 import sys
-from typing import Dict
+from typing import Dict, List
 from decimal import Decimal
 from nexustrader.exchange.okx import OkxAccountType
 from nexustrader.exchange.okx.websockets import OkxWSClient
@@ -147,24 +147,45 @@ class OkxPublicConnector(PublicConnector):
             )
         )
 
-    async def subscribe_trade(self, symbol: str):
-        market = self._market.get(symbol, None)
-        if not market:
-            raise ValueError(f"Symbol {symbol} not found in market")
-        await self._ws_client.subscribe_trade(market.id)
+    async def subscribe_trade(self, symbol: str | List[str]):
+        symbols = []
+        if isinstance(symbol, str):
+            symbol = [symbol]
+        
+        for s in symbol:
+            market = self._market.get(s)
+            if not market:
+                raise ValueError(f"Symbol {s} not found in market")
+            symbols.append(market.id)
+            
+        await self._ws_client.subscribe_trade(symbols)
 
-    async def subscribe_bookl1(self, symbol: str):
-        market = self._market.get(symbol, None)
-        if not market:
-            raise ValueError(f"Symbol {symbol} not found in market")
-        await self._ws_client.subscribe_order_book(market.id, channel="bbo-tbt")
+    async def subscribe_bookl1(self, symbol: str | List[str]):
+        symbols = []
+        if isinstance(symbol, str):
+            symbol = [symbol]
+        
+        for s in symbol:
+            market = self._market.get(s)
+            if not market:
+                raise ValueError(f"Symbol {s} not found in market")
+            symbols.append(market.id)
+            
+        await self._ws_client.subscribe_order_book(symbols, channel="bbo-tbt")
 
-    async def subscribe_kline(self, symbol: str, interval: KlineInterval):
-        market = self._market.get(symbol, None)
-        if not market:
-            raise ValueError(f"Symbol {symbol} not found in market")
+    async def subscribe_kline(self, symbol: str | List[str], interval: KlineInterval):
+        symbols = []
+        if isinstance(symbol, str):
+            symbol = [symbol]
+        
+        for s in symbol:
+            market = self._market.get(s)
+            if not market:
+                raise ValueError(f"Symbol {s} not found in market")
+            symbols.append(market.id)
+            
         interval = OkxEnumParser.to_okx_kline_interval(interval)
-        await self._business_ws_client.subscribe_candlesticks(market.id, interval)
+        await self._business_ws_client.subscribe_candlesticks(symbols, interval)
 
     def _business_ws_msg_handler(self, raw: bytes):
         if raw == b"pong":

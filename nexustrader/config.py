@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Dict, List
-from nexustrader.constants import AccountType, ExchangeType
+from nexustrader.constants import AccountType, ExchangeType, StorageBackend
 from nexustrader.core.entity import RateLimit
 from nexustrader.strategy import Strategy
 from zmq.asyncio import Socket
@@ -51,5 +51,7 @@ class Config:
     public_conn_config: Dict[ExchangeType, List[PublicConnectorConfig]]
     private_conn_config: Dict[ExchangeType, List[PrivateConnectorConfig]]
     zero_mq_signal_config: ZeroMQSignalConfig | None = None
+    db_path: str = ".keys/cache.db"
+    storage_backend: StorageBackend = StorageBackend.REDIS
     cache_sync_interval: int = 60
     cache_expired_time: int = 3600

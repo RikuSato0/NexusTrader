@@ -37,4 +37,3 @@ def message_bus():
 def order_registry():
     return OrderRegistry()
 
-

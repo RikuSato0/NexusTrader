@@ -2,7 +2,7 @@ import asyncio
 from decimal import Decimal
 from typing import Dict
 from nexustrader.constants import AccountType
-from nexustrader.schema import OrderSubmit
+from nexustrader.schema import OrderSubmit, InstrumentId
 from nexustrader.core.cache import AsyncCache
 from nexustrader.core.nautilius_core import MessageBus
 from nexustrader.core.entity import TaskManager
@@ -28,6 +28,7 @@ class OkxExecutionManagementSystem(ExecutionManagementSystem):
         msgbus: MessageBus,
         task_manager: TaskManager,
         registry: OrderRegistry,
+        is_mock: bool = False,
     ):
         super().__init__(
             market=market,
@@ -35,6 +36,7 @@ class OkxExecutionManagementSystem(ExecutionManagementSystem):
             msgbus=msgbus,
             task_manager=task_manager,
             registry=registry,
+            is_mock=is_mock,
         )
         self._okx_account_type: OkxAccountType = None
 
@@ -50,12 +52,23 @@ class OkxExecutionManagementSystem(ExecutionManagementSystem):
             if account_type in account_types:
                 self._okx_account_type = account_type
                 break
+    
+    def _instrument_id_to_account_type(self, instrument_id: InstrumentId) -> AccountType:
+        if self._is_mock:
+            if instrument_id.is_spot:
+                return OkxAccountType.SPOT_MOCK
+            elif instrument_id.is_linear:
+                return OkxAccountType.LINEAR_MOCK
+            elif instrument_id.is_inverse:
+                return OkxAccountType.INVERSE_MOCK
+        else:
+            return self._okx_account_type
 
     def _submit_order(
         self, order: OrderSubmit, account_type: AccountType | None = None
     ):
         if not account_type:
-            account_type = self._okx_account_type
+            account_type = self._instrument_id_to_account_type(order.instrument_id)
         self._order_submit_queues[account_type].put_nowait(order)
 
     def _get_min_order_amount(self, symbol: str, market: OkxMarket) -> Decimal:

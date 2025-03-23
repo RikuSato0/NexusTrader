@@ -44,6 +44,9 @@ class OkxAccountType(AccountType):
     LIVE = 0
     AWS = 1
     DEMO = 2
+    LINEAR_MOCK = 3
+    INVERSE_MOCK = 4
+    SPOT_MOCK = 5
     
     @property
     def exchange_id(self):
@@ -56,8 +59,23 @@ class OkxAccountType(AccountType):
     @property
     def stream_url(self):
         return STREAM_URLS[self]
-
-
+    
+    @property
+    def is_mock(self):
+        return self in (self.LINEAR_MOCK, self.INVERSE_MOCK, self.SPOT_MOCK)
+    
+    @property
+    def is_linear_mock(self):
+        return self == self.LINEAR_MOCK
+    
+    @property
+    def is_inverse_mock(self):
+        return self == self.INVERSE_MOCK
+    
+    @property
+    def is_spot_mock(self):
+        return self == self.SPOT_MOCK
+    
 class OkxRestUrl(Enum):
     LIVE = "https://www.okx.com"
     AWS = "https://aws.okx.com"

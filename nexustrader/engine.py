@@ -14,6 +14,7 @@ from nexustrader.base import (
     PrivateConnector,
     ExecutionManagementSystem,
     OrderManagementSystem,
+    MockLinearConnector,
 )
 from nexustrader.exchange.bybit import (
     BybitExchangeManager,
@@ -43,7 +44,6 @@ from nexustrader.core.entity import TaskManager, ZeroMQSignalRecv
 from nexustrader.core.nautilius_core import MessageBus, TraderId, LiveClock
 from nexustrader.schema import InstrumentId
 from nexustrader.constants import DataType
-
 
 class Engine:
     @staticmethod
@@ -209,62 +209,65 @@ class Engine:
         self._public_connector_check()
 
     def _build_private_connectors(self):
-        for (
-            exchange_id,
-            private_conn_configs,
-        ) in self._config.private_conn_config.items():
-            if not private_conn_configs:
-                raise EngineBuildError(
-                    f"Private connector config for {exchange_id} is not set. Please add `{exchange_id}` in `private_conn_config`."
-                )
-
-            match exchange_id:
-                case ExchangeType.BYBIT:
-                    config = private_conn_configs[0]
-                    exchange: BybitExchangeManager = self._exchanges[exchange_id]
-                    account_type = (
-                        BybitAccountType.UNIFIED_TESTNET
-                        if exchange.is_testnet
-                        else BybitAccountType.UNIFIED
+        
+        if self._config.is_mock:
+            for (
+                exchange_id,
+                mock_conn_configs,
+            ) in self._config.private_conn_config.items():
+                if not mock_conn_configs:
+                    raise EngineBuildError(
+                        f"Private connector config for {exchange_id} is not set. Please add `{exchange_id}` in `private_conn_config`."
+                    )
+                for mock_conn_config in mock_conn_configs:
+                    
+                    account_type = mock_conn_config.account_type
+                    
+                    if mock_conn_config.account_type.is_linear_mock:
+                        private_connector = MockLinearConnector(
+                            initial_balance=mock_conn_config.initial_balance,
+                            account_type=account_type,
+                            exchange=self._exchanges[exchange_id],
+                            msgbus=self._msgbus,
+                            cache=self._cache,
+                            task_manager=self._task_manager,
+                            overwrite_balance=mock_conn_config.overwrite_balance,
+                            fee_rate=mock_conn_config.fee_rate,
+                            quote_currency=mock_conn_config.quote_currency,
+                            update_interval=mock_conn_config.update_interval,
+                            leverage=mock_conn_config.leverage,
+                        )
+                        self._private_connectors[account_type] = private_connector
+                    elif mock_conn_config.account_type.is_inverse_mock:
+                        #NOTE: currently not supported
+                        pass
+                    elif mock_conn_config.account_type.is_spot_mock:
+                        #NOTE: currently not supported
+                        pass
+                    else:
+                        raise EngineBuildError(f"Unsupported account type: {account_type} for mock connector.")
+            
+        else:
+            for (
+                exchange_id,
+                private_conn_configs,
+            ) in self._config.private_conn_config.items():
+                if not private_conn_configs:
+                    raise EngineBuildError(
+                        f"Private connector config for {exchange_id} is not set. Please add `{exchange_id}` in `private_conn_config`."
                     )
 
-                    private_connector = BybitPrivateConnector(
-                        exchange=exchange,
-                        account_type=account_type,
-                        cache=self._cache,
-                        msgbus=self._msgbus,
-                        rate_limit=config.rate_limit,
-                        task_manager=self._task_manager,
-                    )
-                    self._private_connectors[account_type] = private_connector
+                match exchange_id:
+                    case ExchangeType.BYBIT:
+                        config = private_conn_configs[0]
+                        exchange: BybitExchangeManager = self._exchanges[exchange_id]
+                        account_type = (
+                            BybitAccountType.UNIFIED_TESTNET
+                            if exchange.is_testnet
+                            else BybitAccountType.UNIFIED
+                        )
 
-                case ExchangeType.OKX:
-                    assert (
-                        len(private_conn_configs) == 1
-                    ), "Only one private connector is supported for OKX, please remove the extra private connector config."
-
-                    config = private_conn_configs[0]
-                    exchange: OkxExchangeManager = self._exchanges[exchange_id]
-                    account_type = (
-                        OkxAccountType.DEMO if exchange.is_testnet else OkxAccountType.LIVE
-                    )
-
-                    private_connector = OkxPrivateConnector(
-                        exchange=exchange,
-                        account_type=account_type,
-                        cache=self._cache,
-                        msgbus=self._msgbus,
-                        rate_limit=config.rate_limit,
-                        task_manager=self._task_manager,
-                    )
-                    self._private_connectors[account_type] = private_connector
-
-                case ExchangeType.BINANCE:
-                    for config in private_conn_configs:
-                        exchange: BinanceExchangeManager = self._exchanges[exchange_id]
-                        account_type: BinanceAccountType = config.account_type
-
-                        private_connector = BinancePrivateConnector(
+                        private_connector = BybitPrivateConnector(
                             exchange=exchange,
                             account_type=account_type,
                             cache=self._cache,
@@ -273,6 +276,42 @@ class Engine:
                             task_manager=self._task_manager,
                         )
                         self._private_connectors[account_type] = private_connector
+
+                    case ExchangeType.OKX:
+                        assert (
+                            len(private_conn_configs) == 1
+                        ), "Only one private connector is supported for OKX, please remove the extra private connector config."
+
+                        config = private_conn_configs[0]
+                        exchange: OkxExchangeManager = self._exchanges[exchange_id]
+                        account_type = (
+                            OkxAccountType.DEMO if exchange.is_testnet else OkxAccountType.LIVE
+                        )
+
+                        private_connector = OkxPrivateConnector(
+                            exchange=exchange,
+                            account_type=account_type,
+                            cache=self._cache,
+                            msgbus=self._msgbus,
+                            rate_limit=config.rate_limit,
+                            task_manager=self._task_manager,
+                        )
+                        self._private_connectors[account_type] = private_connector
+
+                    case ExchangeType.BINANCE:
+                        for config in private_conn_configs:
+                            exchange: BinanceExchangeManager = self._exchanges[exchange_id]
+                            account_type: BinanceAccountType = config.account_type
+
+                            private_connector = BinancePrivateConnector(
+                                exchange=exchange,
+                                account_type=account_type,
+                                cache=self._cache,
+                                msgbus=self._msgbus,
+                                rate_limit=config.rate_limit,
+                                task_manager=self._task_manager,
+                            )
+                            self._private_connectors[account_type] = private_connector
 
     def _build_exchanges(self):
         for exchange_id, basic_config in self._config.basic_config.items():
@@ -314,6 +353,7 @@ class Engine:
                         msgbus=self._msgbus,
                         task_manager=self._task_manager,
                         registry=self._registry,
+                        is_mock=self._config.is_mock,
                     )
                     self._ems[exchange_id]._build(self._private_connectors)
                 case ExchangeType.BINANCE:
@@ -324,6 +364,7 @@ class Engine:
                         msgbus=self._msgbus,
                         task_manager=self._task_manager,
                         registry=self._registry,
+                        is_mock=self._config.is_mock,
                     )
                     self._ems[exchange_id]._build(self._private_connectors)
                 case ExchangeType.OKX:
@@ -334,6 +375,7 @@ class Engine:
                         msgbus=self._msgbus,
                         task_manager=self._task_manager,
                         registry=self._registry,
+                        is_mock=self._config.is_mock,
                     )
                     self._ems[exchange_id]._build(self._private_connectors)
 
@@ -451,7 +493,7 @@ class Engine:
     async def _start_connectors(self):
         for connector in self._private_connectors.values():
             await connector.connect()
-
+        
         for data_type, sub in self._strategy._subscriptions.items():
             match data_type:
                 case DataType.BOOKL1:
@@ -527,7 +569,7 @@ class Engine:
         self._scheduler_started = True
 
     async def _start(self):
-        await self._cache.start()
+        await self._cache.start() #NOTE: this must be the first thing to call
         await self._start_oms()
         await self._start_ems()
         await self._start_connectors()

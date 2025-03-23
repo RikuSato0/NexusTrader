@@ -15,8 +15,21 @@ from picows import (
     WSListener,
     WSMsgType,
     WSAutoPingStrategy,
+    # PICOWS_DEBUG_LL,
 )
 from nexustrader.core.nautilius_core import LiveClock
+
+# import logging
+
+# file_handler = logging.FileHandler('.log/picows.log')
+# file_handler.setLevel(PICOWS_DEBUG_LL)
+
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# file_handler.setFormatter(formatter)
+
+# picows_logger = logging.getLogger("picows")
+# picows_logger.setLevel(PICOWS_DEBUG_LL)
+# picows_logger.addHandler(file_handler)
 
 class Listener(WSListener):
     """WebSocket listener implementation that handles connection events and message frames.
@@ -76,6 +89,7 @@ class Listener(WSListener):
             match frame.msg_type:
                 case WSMsgType.PING:
                     # Only send pong if auto_pong is disabled
+                    self._log.debug("Received PING frame, sending PONG frame...")
                     transport.send_pong(frame.get_payload_as_bytes())
                     return
                 case WSMsgType.TEXT:

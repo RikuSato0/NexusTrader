@@ -1,11 +1,13 @@
 from nexustrader.constants import settings
-from nexustrader.config import Config, PublicConnectorConfig, BasicConfig
+from nexustrader.config import Config, PublicConnectorConfig, BasicConfig, MockConnectorConfig
 from nexustrader.strategy import Strategy
-from nexustrader.constants import ExchangeType, KlineInterval
+from nexustrader.constants import ExchangeType
 from nexustrader.exchange.binance import BinanceAccountType
-from nexustrader.schema import Kline
+from nexustrader.schema import BookL1, Order
 from nexustrader.engine import Engine
 from nexustrader.core.log import SpdLog
+from nexustrader.constants import OrderSide, OrderType
+from decimal import Decimal
 
 SpdLog.initialize(level="DEBUG", std_level="ERROR", production_mode=True)
 
@@ -20,9 +22,17 @@ class Demo(Strategy):
         super().__init__()
     
     def on_start(self):
-        symbols = self.linear_info(exchange=ExchangeType.BINANCE, quote="USDT")
-        self.subscribe_kline(symbols=symbols, interval=KlineInterval.MINUTE_1)
-        self.subscribe_bookl1(symbols=symbols)
+        self.subscribe_bookl1(symbols=["BTCUSDT-PERP.BINANCE"])
+        self.schedule(func=self.signal, trigger="interval", seconds=10)
+        
+    
+    def signal(self):
+        self.create_order(
+            symbol="BTCUSDT-PERP.BINANCE",
+            side=OrderSide.BUY,
+            type=OrderType.MARKET,
+            amount=Decimal("0.001"),
+        )
 
 config = Config(
     strategy_id="subscribe_klines_binance",
@@ -39,6 +49,17 @@ config = Config(
         ExchangeType.BINANCE: [
             PublicConnectorConfig(
                 account_type=BinanceAccountType.USD_M_FUTURE,
+            )
+        ]
+    },
+    private_conn_config={
+        ExchangeType.BINANCE: [
+            MockConnectorConfig(
+                account_type=BinanceAccountType.LINEAR_MOCK,
+                initial_balance={"USDT": 10_000},
+                quote_currency="USDT",
+                update_interval=20,
+                overwrite_balance=True,
             )
         ]
     },

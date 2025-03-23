@@ -6,7 +6,7 @@ from nexustrader.core.log import SpdLog
 from nexustrader.constants import settings
 from nexustrader.config import Config, PublicConnectorConfig, PrivateConnectorConfig, BasicConfig, ZeroMQSignalConfig
 from nexustrader.strategy import Strategy
-from nexustrader.constants import ExchangeType, OrderSide, StorageBackend
+from nexustrader.constants import ExchangeType, OrderSide
 from nexustrader.exchange.bybit import BybitAccountType
 from nexustrader.schema import BookL1
 from nexustrader.engine import Engine
@@ -150,7 +150,6 @@ config = Config(
     zero_mq_signal_config=ZeroMQSignalConfig(
         socket=socket,
     ),
-    storage_backend=StorageBackend.SQLITE,
 )
 
 engine = Engine(config)

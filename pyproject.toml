@@ -31,7 +31,8 @@ dependencies = [
     "dynaconf (>=3.2.7,<4.0.0)",
     "returns (>=0.24.0,<0.25.0)",
     "pathlib (>=1.0.1,<2.0.0)",
-    "aiosqlite (>=0.21.0,<0.22.0)"
+    "aiosqlite (>=0.21.0,<0.22.0)",
+    "uvloop @ git+https://github.com/tarasko/uvloop.git"
 ]
 
 

@@ -30,6 +30,7 @@ class ExecutionManagementSystem(ABC):
         msgbus: MessageBus,
         task_manager: TaskManager,
         registry: OrderRegistry,
+        is_mock: bool = False,
     ):
         self._log = SpdLog.get_logger(
             name=type(self).__name__, level="DEBUG", flush=True
@@ -43,7 +44,7 @@ class ExecutionManagementSystem(ABC):
         self._clock = LiveClock()
         self._order_submit_queues: Dict[AccountType, asyncio.Queue[OrderSubmit]] = {}
         self._private_connectors: Dict[AccountType, PrivateConnector] | None = None
-
+        self._is_mock = is_mock
     def _build(self, private_connectors: Dict[AccountType, PrivateConnector]):
         self._private_connectors = private_connectors
         self._build_order_submit_queues()

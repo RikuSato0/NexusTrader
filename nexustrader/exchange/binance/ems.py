@@ -29,6 +29,7 @@ class BinanceExecutionManagementSystem(ExecutionManagementSystem):
         msgbus: MessageBus,
         task_manager: TaskManager,
         registry: OrderRegistry,
+        is_mock: bool = False,
     ):
         super().__init__(
             market=market,
@@ -36,6 +37,7 @@ class BinanceExecutionManagementSystem(ExecutionManagementSystem):
             msgbus=msgbus,
             task_manager=task_manager,
             registry=registry,
+            is_mock=is_mock,
         )
         self._binance_spot_account_type: BinanceAccountType = None
         self._binance_linear_account_type: BinanceAccountType = None
@@ -44,27 +46,32 @@ class BinanceExecutionManagementSystem(ExecutionManagementSystem):
 
     def _set_account_type(self):
         account_types = self._private_connectors.keys()
+        
+        if self._is_mock:
+            self._binance_spot_account_type = BinanceAccountType.SPOT_MOCK
+            self._binance_linear_account_type = BinanceAccountType.LINEAR_MOCK
+            self._binance_inverse_account_type = BinanceAccountType.INVERSE_MOCK
+        else:
+            if BinanceAccountType.PORTFOLIO_MARGIN in account_types:
+                self._binance_pm_account_type = BinanceAccountType.PORTFOLIO_MARGIN
+                return
 
-        if BinanceAccountType.PORTFOLIO_MARGIN in account_types:
-            self._binance_pm_account_type = BinanceAccountType.PORTFOLIO_MARGIN
-            return
+            for account_type in self.BINANCE_SPOT_PRIORITY:
+                if account_type in account_types:
+                    self._binance_spot_account_type = account_type
+                    break
 
-        for account_type in self.BINANCE_SPOT_PRIORITY:
-            if account_type in account_types:
-                self._binance_spot_account_type = account_type
-                break
+            self._binance_linear_account_type = (
+                BinanceAccountType.USD_M_FUTURE_TESTNET
+                if BinanceAccountType.USD_M_FUTURE_TESTNET in account_types
+                else BinanceAccountType.USD_M_FUTURE
+            )
 
-        self._binance_linear_account_type = (
-            BinanceAccountType.USD_M_FUTURE_TESTNET
-            if BinanceAccountType.USD_M_FUTURE_TESTNET in account_types
-            else BinanceAccountType.USD_M_FUTURE
-        )
-
-        self._binance_inverse_account_type = (
-            BinanceAccountType.COIN_M_FUTURE_TESTNET
-            if BinanceAccountType.COIN_M_FUTURE_TESTNET in account_types
-            else BinanceAccountType.COIN_M_FUTURE
-        )
+            self._binance_inverse_account_type = (
+                BinanceAccountType.COIN_M_FUTURE_TESTNET
+                if BinanceAccountType.COIN_M_FUTURE_TESTNET in account_types
+                else BinanceAccountType.COIN_M_FUTURE
+            )
 
     def _instrument_id_to_account_type(
         self, instrument_id: InstrumentId

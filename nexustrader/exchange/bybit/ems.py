@@ -2,7 +2,7 @@ import asyncio
 from typing import Dict
 from decimal import Decimal
 from nexustrader.constants import AccountType
-from nexustrader.schema import OrderSubmit
+from nexustrader.schema import OrderSubmit, InstrumentId
 from nexustrader.core.cache import AsyncCache
 from nexustrader.core.nautilius_core import MessageBus
 from nexustrader.core.entity import TaskManager
@@ -21,6 +21,7 @@ class BybitExecutionManagementSystem(ExecutionManagementSystem):
         msgbus: MessageBus,
         task_manager: TaskManager,
         registry: OrderRegistry,
+        is_mock: bool = False,
     ):
         super().__init__(
             market=market,
@@ -28,6 +29,7 @@ class BybitExecutionManagementSystem(ExecutionManagementSystem):
             msgbus=msgbus,
             task_manager=task_manager,
             registry=registry,
+            is_mock=is_mock,
         )
         self._bybit_account_type: BybitAccountType = None
 
@@ -43,12 +45,23 @@ class BybitExecutionManagementSystem(ExecutionManagementSystem):
             if BybitAccountType.UNIFIED_TESTNET in account_types
             else BybitAccountType.UNIFIED
         )
+    
+    def _instrument_id_to_account_type(self, instrument_id: InstrumentId) -> AccountType:
+        if self._is_mock:
+            if instrument_id.is_spot:
+                return BybitAccountType.SPOT_MOCK
+            elif instrument_id.is_linear:
+                return BybitAccountType.LINEAR_MOCK
+            elif instrument_id.is_inverse:
+                return BybitAccountType.INVERSE_MOCK
+        else:
+            return self._bybit_account_type
 
     def _submit_order(
         self, order: OrderSubmit, account_type: AccountType | None = None
     ):
         if not account_type:
-            account_type = self._bybit_account_type
+            account_type = self._instrument_id_to_account_type(order.instrument_id)
         self._order_submit_queues[account_type].put_nowait(order)
         
     def _get_min_order_amount(self, symbol: str, market: BybitMarket) -> Decimal:

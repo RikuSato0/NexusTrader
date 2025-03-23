@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y \
     git \
     npm \
     build-essential \
+    automake \
+    autoconf \
+    libtool \
     && rm -rf /var/lib/apt/lists/*
 
 RUN npm install pm2 -g

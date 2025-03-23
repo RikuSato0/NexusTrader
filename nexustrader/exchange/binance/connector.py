@@ -879,7 +879,7 @@ class BinancePrivateConnector(PrivateConnector):
         side: OrderSide,
         type: OrderType,
         amount: Decimal,
-        price: Decimal = None,
+        price: Decimal | None = None,
         time_in_force: TimeInForce = TimeInForce.GTC,
         position_side: PositionSide | None = None,
         **kwargs,

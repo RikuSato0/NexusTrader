@@ -19,12 +19,13 @@ class BinanceWSClient(WSClient):
         url = account_type.ws_url
         super().__init__(
             url,
-            limiter=AsyncLimiter(max_rate=4, time_period=1),
+            limiter=AsyncLimiter(max_rate=2, time_period=1),
             handler=handler,
             task_manager=task_manager,
+            enable_auto_ping=False,
         )
     
-    async def _send_payload(self, params: List[str], chunk_size: int = 100):
+    async def _send_payload(self, params: List[str], chunk_size: int = 50):
         # Split params into chunks of 100 if length exceeds 100
         params_chunks = [
             params[i:i + chunk_size] 
@@ -112,4 +113,3 @@ class BinanceWSClient(WSClient):
 
     async def _resubscribe(self):
         await self._send_payload(self._subscriptions)
-

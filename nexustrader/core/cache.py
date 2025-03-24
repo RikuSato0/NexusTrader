@@ -494,7 +494,7 @@ class AsyncCache:
         positions = {
             symbol: position
             for symbol, position in self._mem_positions.copy().items()
-            if (exchange is None or position.exchange == exchange) and position.amount != Decimal(0)
+            if (exchange is None or (position.exchange == exchange and position.is_opened))
         }
         return positions
 

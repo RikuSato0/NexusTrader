@@ -464,12 +464,12 @@ class Position(Struct):
         return abs(self.signed_amount) * contract_size
 
     @property
-    def is_open(self) -> bool:
+    def is_opened(self) -> bool:
         return self.amount != Decimal("0")
 
     @property
     def is_closed(self) -> bool:
-        return not self.is_open
+        return not self.is_opened
 
     @property
     def is_long(self) -> bool:

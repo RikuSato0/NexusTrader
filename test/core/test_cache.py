@@ -9,7 +9,7 @@ from nexustrader.exchange.binance.constants import BinanceAccountType
 
 
 @pytest.fixture
-async def async_cache(task_manager, message_bus, order_registry) -> AsyncCache:
+async def async_cache(task_manager, message_bus, order_registry) -> AsyncCache: # type: ignore
     from nexustrader.core.cache import AsyncCache
 
     cache = AsyncCache(
@@ -153,7 +153,7 @@ async def test_cache_apply_position(async_cache: AsyncCache):
     position = Position(
         symbol="ETHUSDT-PERP.BINANCE",
         exchange=ExchangeType.BINANCE,
-        signed_amount=Decimal(0.001),
+        signed_amount=Decimal('0.001'),
         entry_price=10660,
         side=PositionSide.LONG,
         unrealized_pnl=0,
@@ -164,20 +164,20 @@ async def test_cache_apply_position(async_cache: AsyncCache):
     
     # sync position to sqlite
     await async_cache._sync_to_sqlite()
-    balances = async_cache._get_all_positions_from_sqlite(ExchangeType.BINANCE)
+    positions = async_cache._get_all_positions_from_sqlite(ExchangeType.BINANCE)
     
-    assert "ETHUSDT-PERP.BINANCE" in balances
+    assert "ETHUSDT-PERP.BINANCE" in positions
 
 async def test_cache_apply_balance(async_cache: AsyncCache):
     btc = Balance(
         asset="BTC",
-        free=Decimal(0.001),
-        locked=Decimal(0.001),
+        free=Decimal('0.001'),
+        locked=Decimal('0.001'),
     )
     usdt = Balance(
         asset="USDT",
-        free=Decimal(1000),
-        locked=Decimal(0),
+        free=Decimal('1000'),
+        locked=Decimal('0'),
     )
     
     balances = [btc, usdt]

@@ -154,6 +154,8 @@ class AsyncCache:
                 CREATE TABLE IF NOT EXISTS {self._table_prefix}_positions (
                     symbol PRIMARY KEY,
                     exchange TEXT,
+                    side TEXT,
+                    amount TEXT,
                     data BLOB
                 );
                 
@@ -337,10 +339,12 @@ class AsyncCache:
         for symbol, position in self._mem_positions.copy().items():
             await cursor.execute(
                 f"INSERT OR REPLACE INTO {self._table_prefix}_positions "
-                "(symbol, exchange, data) VALUES (?, ?, ?)",
+                "(symbol, exchange, side, amount, data) VALUES (?, ?, ?, ?, ?)",
                 (
                     symbol,
                     position.exchange.value,
+                    position.side.value,
+                    str(position.amount),
                     self._encode(position),
                 ),
             )

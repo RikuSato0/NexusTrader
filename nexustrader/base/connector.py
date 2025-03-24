@@ -223,6 +223,7 @@ class MockLinearConnector:
         cache: AsyncCache,
         task_manager: TaskManager,
         overwrite_balance: bool = False,
+        overwrite_position: bool = False,
         fee_rate: float = 0.0005,
         quote_currency: str = "USDT",
         update_interval: int = 60, # seconds
@@ -237,6 +238,7 @@ class MockLinearConnector:
         self._fee_rate = fee_rate
         self._initial_balance = initial_balance
         self._overwrite_balance = overwrite_balance
+        self._overwrite_position = overwrite_position
         self._quote_currency = quote_currency
         self._update_interval = update_interval
         self._clock = LiveClock()
@@ -246,27 +248,27 @@ class MockLinearConnector:
             name=type(self).__name__, level="DEBUG", flush=True
         )
 
-    def _init_position(self):
-        for _, position in self._cache.get_all_positions(self._exchange_id).items():
-            self._apply_position(position)
+    async def _init_position(self):
+        for _, position in self._cache._get_all_positions_from_db(self._exchange_id).items():
+            if not self._overwrite_position:
+                self._cache._apply_position(position)
+        await self._cache.sync_positions()
 
-    def _init_balance(self):
-        balances = self._cache._get_all_balances_from_db(self._account_type)
-        if not balances or self._overwrite_balance:
-            balances = {
-                asset: Balance(
+    async def _init_balance(self):
+        balances = []
+        if not self._overwrite_balance:
+            balances = self._cache._get_all_balances_from_db(self._account_type)
+    
+        if not balances:
+            balances = [
+                Balance(
                     asset=asset, free=Decimal(str(amount)), locked=Decimal(0)
                 )
                 for asset, amount in self._initial_balance.items()
-            }
-
-        if self._quote_currency not in balances:
-            raise ValueError(f"Quote currency {self._quote_currency} not found in initial balance")
-
-        for asset, balance in balances.items():
-            self._cache._mem_account_balance[self._account_type].balances[asset] = (
-                balance
-            )
+            ]
+        
+        self._cache._apply_balance(self._account_type, balances)
+        await self._cache.sync_balances()
 
 
     async def create_order(
@@ -454,7 +456,7 @@ class MockLinearConnector:
 
         # Handle new position creation
         if not position:
-            if order.side.is_buy:
+            if order.is_buy:
                 signed_amount = order.amount
                 side = PositionSide.LONG
             else:
@@ -472,8 +474,8 @@ class MockLinearConnector:
             )
         else:
             # Calculate new position amount
-            is_same_direction = (order.side.is_buy and position.side.is_long) or (
-                order.side.is_sell and position.side.is_short
+            is_same_direction = (order.is_buy and position.side.is_long) or (
+                order.is_sell and position.side.is_short
             )
             new_amount = position.amount + (order.amount if is_same_direction else -order.amount) # -10 / 10 - 15 = -5
 
@@ -517,16 +519,17 @@ class MockLinearConnector:
             self._log.debug(f"Updating pnl: {pnl}, unrealized_pnl: {unrealized_pnl}")
             await asyncio.sleep(self._update_interval)
             self._update_unrealized_pnl()
-            self._cache._update_pnl(self._clock.timestamp_ms(), pnl, unrealized_pnl)
+            await self._cache._sync_pnl(self._clock.timestamp_ms(), pnl, unrealized_pnl)
     
     async def connect(self):
         self._log.debug(f"Starting mock connector for {self._account_type}")
-        self._init_position()
-        self._init_balance()
+        await self._init_position()
+        await self._init_balance()
         self._task_manager.create_task(self._handle_pnl_update())
     
     async def disconnect(self):
-        pass
+        await self._cache._sync_pnl(self._clock.timestamp_ms(), self.pnl, self.unrealized_pnl)
+
     
                 
             

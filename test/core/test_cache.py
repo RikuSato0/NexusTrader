@@ -189,7 +189,13 @@ async def test_cache_apply_balance(async_cache: AsyncCache):
     await async_cache._init_storage() # init storage
     await async_cache._sync_to_sqlite()
     balances = async_cache._get_balance_from_sqlite(BinanceAccountType.SPOT)
-    assert balances['BTC'] == btc
-    assert balances['USDT'] == usdt
+    
+    for balance in balances:
+        if balance.asset == 'BTC':
+            assert balance.free == btc.free
+            assert balance.locked == btc.locked
+        elif balance.asset == 'USDT':
+            assert balance.free == usdt.free
+            assert balance.locked == usdt.locked
     
     

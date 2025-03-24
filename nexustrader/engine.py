@@ -587,8 +587,9 @@ class Engine:
             await connector.disconnect()
             
         await asyncio.sleep(0.1) #NOTE: wait for the websocket to disconnect
-        await self._cache.close()
+
         await self._task_manager.cancel()
+        await self._cache.close()
 
     def start(self):
         self._build()

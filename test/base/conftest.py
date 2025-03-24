@@ -123,4 +123,3 @@ async def cache(task_manager, message_bus, order_registry, bookl1_mock: BookL1Mo
     
     yield cache
     await cache.close()
-

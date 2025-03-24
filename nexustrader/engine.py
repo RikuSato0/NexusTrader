@@ -232,6 +232,7 @@ class Engine:
                             cache=self._cache,
                             task_manager=self._task_manager,
                             overwrite_balance=mock_conn_config.overwrite_balance,
+                            overwrite_position=mock_conn_config.overwrite_position,
                             fee_rate=mock_conn_config.fee_rate,
                             quote_currency=mock_conn_config.quote_currency,
                             update_interval=mock_conn_config.update_interval,

@@ -48,6 +48,7 @@ class MockConnectorConfig:
     fee_rate: float = 0.0005
     quote_currency: str = "USDT"
     overwrite_balance: bool = False
+    overwrite_position: bool = False
     update_interval: int = 60
     leverage: float = 1.0
     

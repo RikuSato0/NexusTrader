@@ -327,7 +327,7 @@ class AsyncCache:
         db_positions = {row[0] for row in await cursor.fetchall()}
         
         # Delete positions that are in DB but not in memory
-        positions_to_delete = db_positions - set(self._mem_positions.keys())
+        positions_to_delete = db_positions - set(self.get_all_positions().keys())
         if positions_to_delete:
             await cursor.executemany(
                 f"DELETE FROM {self._table_prefix}_positions WHERE symbol = ?",
@@ -343,7 +343,7 @@ class AsyncCache:
                 (
                     symbol,
                     position.exchange.value,
-                    position.side.value,
+                    position.side.value if position.side else "FLAT",
                     str(position.amount),
                     self._encode(position),
                 ),
@@ -490,11 +490,11 @@ class AsyncCache:
         if position := self._mem_positions.get(symbol, None):
             return position
 
-    def get_all_positions(self, exchange: ExchangeType) -> Dict[str, Position]:
+    def get_all_positions(self, exchange: Optional[ExchangeType] = None) -> Dict[str, Position]:
         positions = {
             symbol: position
             for symbol, position in self._mem_positions.copy().items()
-            if position.exchange == exchange and position.amount != Decimal(0)
+            if (exchange is None or position.exchange == exchange) and position.amount != Decimal(0)
         }
         return positions
 
@@ -537,7 +537,8 @@ class AsyncCache:
         cursor.execute(f"SELECT symbol, data FROM {self._table_prefix}_positions WHERE exchange = ?", (exchange_id.value,))
         for row in cursor.fetchall():
             position = self._decode(row[1], Position)
-            positions[position.symbol] = position
+            if position.side:
+                positions[position.symbol] = position
         return positions
     
     def _get_balance_from_sqlite(self, account_type: AccountType) -> List[Balance]:

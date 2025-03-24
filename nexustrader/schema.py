@@ -465,7 +465,7 @@ class Position(Struct):
 
     @property
     def is_open(self) -> bool:
-        return self.amount != 0
+        return self.amount != Decimal("0")
 
     @property
     def is_closed(self) -> bool:

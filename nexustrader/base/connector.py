@@ -455,7 +455,7 @@ class MockLinearConnector:
         position = self._cache.get_position(symbol).value_or(None)
 
         # Handle new position creation
-        if not position:
+        if not position or position.is_closed:
             if order.is_buy:
                 signed_amount = order.amount
                 side = PositionSide.LONG

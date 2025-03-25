@@ -290,7 +290,7 @@ class MockLinearConnector:
                 raise OrderError(f"Symbol {symbol} is not a linear contract")
             
             if market.quote not in self._cache.get_balance(self._account_type).balances:
-                raise OrderError(f"Not enough balance for {market.quote}.")
+                raise OrderError(f"Symbol {symbol}: Not enough balance for {market.quote}.")
             
             book = self._cache.bookl1(symbol)
             if not book:
@@ -315,7 +315,7 @@ class MockLinearConnector:
                 total_notional = self.total_notional + float(amount) * book.mid
             
             if abs(total_notional) / quote_balance > self._leverage:
-                raise OrderError(f"Not enough margin for leverage: {self._leverage}")
+                raise OrderError(f"Symbol {symbol}: Not enough margin for leverage: {self._leverage}")
 
             if side == OrderSide.BUY: #NOTE: taker order
                 price = book.ask
@@ -491,7 +491,7 @@ class MockLinearConnector:
                 )
 
             # Update position details
-            if new_amount > Decimal(0):
+            if new_amount > Decimal('0'):
                 # Position maintains direction but with updated amount
                 if is_same_direction: # NOTE: add to position
                     # Average entry price when adding to position
@@ -499,7 +499,7 @@ class MockLinearConnector:
                         float(order.amount) * order.price + float(position.amount) * position.entry_price
                     ) / float(new_amount)
                 position.signed_amount = new_amount if position.is_long else -new_amount
-            elif new_amount < Decimal(0):
+            elif new_amount < Decimal('0'):
                 # Position flips direction
                 position.side = PositionSide.SHORT if position.is_long else PositionSide.LONG
                 position.signed_amount = -new_amount if position.is_long else new_amount
@@ -508,7 +508,7 @@ class MockLinearConnector:
             else:
                 # Position closed completely
                 position.side = None
-                position.signed_amount = Decimal(0)
+                position.signed_amount = Decimal('0')
 
         self._cache._apply_position(position)
         self._apply_fee(order)

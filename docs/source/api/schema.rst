@@ -14,6 +14,46 @@ InstrumentId
     :undoc-members:
     :show-inheritance:
 
+BookL1
+~~~~~~~
+
+.. autoclass:: BookL1
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+BookL2
+~~~~~~~
+
+.. autoclass:: BookL2
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Trade
+~~~~~~~
+
+.. autoclass:: Trade
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+Kline
+~~~~~~~
+
+.. autoclass:: Kline
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+OrderSubmit
+~~~~~~~~~~~~
+
+.. autoclass:: OrderSubmit
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Order
 ~~~~~~~
 
@@ -38,6 +78,14 @@ Position
     :undoc-members:
     :show-inheritance:
 
+Balance
+~~~~~~~
+
+.. autoclass:: Balance
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
 AccountBalance
 ~~~~~~~~~~~~~~~~~~
 

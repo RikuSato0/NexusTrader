@@ -20,3 +20,4 @@ Strategy Overview
    process
    buyandsell
    custom_signal
+   mock

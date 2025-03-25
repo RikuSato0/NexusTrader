@@ -477,7 +477,10 @@ class AsyncCache:
         return True
 
     def _apply_position(self, position: Position):
-        self._mem_positions[position.symbol] = position
+        if position.is_closed:
+            self._mem_positions.pop(position.symbol, None)
+        else:
+            self._mem_positions[position.symbol] = position
 
     def _apply_balance(self, account_type: AccountType, balances: List[Balance]):
         self._mem_account_balance[account_type]._apply(balances)
@@ -494,7 +497,7 @@ class AsyncCache:
         positions = {
             symbol: position
             for symbol, position in self._mem_positions.copy().items()
-            if (exchange is None or (position.exchange == exchange and position.is_opened))
+            if ((exchange is None or position.exchange == exchange) and position.is_opened)
         }
         return positions
 

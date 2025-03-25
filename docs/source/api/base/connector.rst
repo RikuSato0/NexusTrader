@@ -18,3 +18,9 @@ Class Overview
    :undoc-members:
    :show-inheritance:
 
+.. autoclass:: MockLinearConnector
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+

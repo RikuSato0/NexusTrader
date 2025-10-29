@@ -493,9 +493,3 @@ We recommend exploring related tools and projects that can enhance your trading 
 
 - **[Nexus](https://github.com/Quantweb3-ai/nexus):** A robust exchange interface optimization solution that integrates
   seamlessly with trading bots like nexustrader, enabling faster and more reliable trading execution.
-
-## License
-
-Nexustrader is available on GitHub under the MIT License. Contributions to the project are welcome and require the
-completion of a Contributor License Agreement (CLA). Please review the contribution guidelines and submit a pull
-request. See the [LICENSE](./LICENSE) file for details.
